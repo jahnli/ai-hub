@@ -54,6 +54,20 @@ import {
 
 const { Text } = Typography;
 
+const orbitIcons = [
+  { Component: Claude.Color, angle: 0 },
+  { Component: OpenAI, angle: 60 },
+  { Component: Gemini.Color, angle: 120 },
+  { Component: Grok, angle: 180 },
+  { Component: DeepSeek.Color, angle: 240 },
+  { Component: Zhipu.Color, angle: 300 },
+];
+const orbitIconsOuter = [
+  { Component: Midjourney, angle: 30 },
+  { Component: XAI, angle: 120 },
+  { Component: Minimax.Color, angle: 210 },
+];
+
 const Home = () => {
   const { t, i18n } = useTranslation();
   const [statusState] = useContext(StatusContext);
@@ -82,7 +96,6 @@ const Home = () => {
       setHomePageContent(content);
       localStorage.setItem('home_page_content', content);
 
-      // 如果内容是 URL，则发送主题模式
       if (data.startsWith('https://')) {
         const iframe = document.querySelector('iframe');
         if (iframe) {
@@ -137,6 +150,26 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [endpointItems.length]);
 
+  const renderOrbitDots = (icons, radius) =>
+    icons.map(({ Component, angle }, i) => {
+      const rad = (angle * Math.PI) / 180;
+      const x = radius * Math.cos(rad);
+      const y = radius * Math.sin(rad);
+      return (
+        <div
+          key={i}
+          className='home-orbit-dot'
+          style={{
+            top: `calc(50% + ${y}px - 22px)`,
+            left: `calc(50% + ${x}px - 22px)`,
+            animation: 'none',
+          }}
+        >
+          <Component size={26} />
+        </div>
+      );
+    });
+
   return (
     <div className='w-full overflow-x-hidden'>
       <NoticeModal
@@ -146,27 +179,28 @@ const Home = () => {
       />
       {homePageContentLoaded && homePageContent === '' ? (
         <div className='w-full overflow-x-hidden'>
-          {/* Banner 部分 */}
-          <div className='w-full border-b border-semi-color-border min-h-[500px] md:min-h-[600px] lg:min-h-[700px] relative overflow-x-hidden'>
-            {/* 背景模糊晕染球 */}
+          {/* ====== Hero Section ====== */}
+          <div className='w-full min-h-[500px] md:min-h-[600px] lg:min-h-[680px] relative overflow-hidden'>
             <div className='blur-ball blur-ball-indigo' />
             <div className='blur-ball blur-ball-teal' />
-            <div className='flex items-center justify-center h-full px-4 py-20 md:py-24 lg:py-32 mt-10'>
-              {/* 居中内容区 */}
-              <div className='flex flex-col items-center justify-center text-center max-w-4xl mx-auto'>
-                <div className='flex flex-col items-center justify-center mb-6 md:mb-8'>
+            <div className='home-dotgrid' />
+
+            <div className='flex items-center justify-center h-full px-4 py-4 md:py-6 lg:py-8 relative z-10'>
+              <div className='flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20 max-w-6xl mx-auto w-full'>
+
+                {/* 左侧文字 */}
+                <div className='flex flex-col items-center lg:items-start text-center lg:text-left max-w-xl flex-1'>
                   <h1
-                    className={`text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
+                    className={`home-reveal text-4xl md:text-5xl lg:text-6xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide' : ''}`}
                   >
-                    <>
-                      <span className='shine-text'>{t('统一大模型接口网关')}</span>
-                    </>
+                    <span className='shine-text'>{t('统一大模型接口网关')}</span>
                   </h1>
-                  <p className='text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-xl'>
+
+                  <p className='home-reveal home-reveal-d1 text-base md:text-lg text-semi-color-text-2 mt-4 md:mt-5 max-w-md'>
                     {t('只需模型基址替换为：')}
                   </p>
-                  {/* BASE URL 与端点选择 */}
-                  <div className='flex flex-col md:flex-row items-center justify-center gap-4 w-full mt-4 md:mt-6 max-w-md'>
+
+                  <div className='home-reveal home-reveal-d2 flex items-center gap-3 w-full mt-4 max-w-md'>
                     <Input
                       readonly
                       value={serverAddress}
@@ -196,97 +230,121 @@ const Home = () => {
                       }
                     />
                   </div>
-                </div>
 
-                {/* 操作按钮 */}
-                <div className='flex flex-row gap-4 justify-center items-center'>
-                  <Link to='/console'>
-                    <Button
-                      theme='solid'
-                      type='primary'
-                      size={isMobile ? 'default' : 'large'}
-                      className='!rounded-3xl px-8 py-2'
-                      icon={<IconPlay />}
-                    >
-                      {t('获取密钥')}
-                    </Button>
-                  </Link>
-                  {isDemoSiteMode && statusState?.status?.version ? (
-                    <Button
-                      size={isMobile ? 'default' : 'large'}
-                      className='flex items-center !rounded-3xl px-6 py-2'
-                      icon={<IconGithubLogo />}
-                      onClick={() =>
-                        window.open(
-                          'https://github.com/QuantumNous/new-api',
-                          '_blank',
-                        )
-                      }
-                    >
-                      {statusState.status.version}
-                    </Button>
-                  ) : (
-                    docsLink && (
+                  <div className='home-reveal home-reveal-d3 flex flex-row gap-3 mt-6'>
+                    <Link to='/console'>
+                      <Button
+                        theme='solid'
+                        type='primary'
+                        size={isMobile ? 'default' : 'large'}
+                        className='!rounded-3xl px-8 py-2 home-glow-btn'
+                        icon={<IconPlay />}
+                      >
+                        {t('获取密钥')}
+                      </Button>
+                    </Link>
+                    {isDemoSiteMode && statusState?.status?.version ? (
                       <Button
                         size={isMobile ? 'default' : 'large'}
                         className='flex items-center !rounded-3xl px-6 py-2'
-                        icon={<IconFile />}
-                        onClick={() => window.open(docsLink, '_blank')}
+                        icon={<IconGithubLogo />}
+                        onClick={() =>
+                          window.open(
+                            'https://github.com/QuantumNous/new-api',
+                            '_blank',
+                          )
+                        }
                       >
-                        {t('文档')}
+                        {statusState.status.version}
                       </Button>
-                    )
-                  )}
+                    ) : (
+                      docsLink && (
+                        <Button
+                          size={isMobile ? 'default' : 'large'}
+                          className='flex items-center !rounded-3xl px-6 py-2'
+                          icon={<IconFile />}
+                          onClick={() => window.open(docsLink, '_blank')}
+                        >
+                          {t('文档')}
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
 
-                {/* 框架兼容性图标 */}
-                <div className='mt-12 md:mt-16 lg:mt-20 w-full'>
-                  <div className='flex items-center mb-6 md:mb-8 justify-center'>
-                    <Text
-                      type='tertiary'
-                      className='text-lg md:text-xl lg:text-2xl font-light'
-                    >
-                      {t('支持全球主流大语言模型')}
-                    </Text>
+                {/* 右侧：轨道动画（桌面端）*/}
+                {!isMobile && (
+                  <div className='flex-1 flex items-center justify-center w-full max-w-lg'>
+                    <div className='relative w-[520px] h-[520px] flex items-center justify-center'>
+                      <div className='home-orbit-ring home-orbit-ring-inner' style={{ top: '36%', left: '40%', transform: 'translate(-50%, -50%)' }}>
+                        {renderOrbitDots(orbitIcons, 170)}
+                      </div>
+                      <div className='home-orbit-ring home-orbit-ring-outer' style={{ top: 'calc(36% + 60px)', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                        {renderOrbitDots(orbitIconsOuter, 200)}
+                      </div>
+                    </div>
                   </div>
-                  <div className='flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 max-w-5xl mx-auto px-4'>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Claude.Color size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <OpenAI size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Gemini.Color size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Grok size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Midjourney size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <DeepSeek.Color size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Zhipu.Color size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Minimax.Color size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <XAI size={40} />
-                    </div>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'>
-                      <Typography.Text className='!text-lg sm:!text-xl md:!text-2xl lg:!text-3xl font-bold'>
-                        30+
-                      </Typography.Text>
-                    </div>
+                )}
+              </div>
+            </div>
+
+            {/* 终端代码块 */}
+            <div className='max-w-6xl mx-auto -mt-20 pb-10 relative z-10'>
+              <div className='home-terminal w-full max-w-xl home-reveal home-reveal-d3'>
+                <div className='home-terminal-bar'>
+                  <div className='home-terminal-circle' style={{ background: '#ff5f57' }} />
+                  <div className='home-terminal-circle' style={{ background: '#febc2e' }} />
+                  <div className='home-terminal-circle' style={{ background: '#28c840' }} />
+                  <span style={{ marginLeft: 8, fontSize: 11, color: '#6b7280' }}>api.sh</span>
+                </div>
+                <div className='home-terminal-body'>
+                  <div><span className='t-comment'>{'# quick start'}</span></div>
+                  <div>
+                    <span className='t-keyword'>export </span>
+                    <span className='t-const'>BASE_URL</span>
+                    <span className='t-punct'>=</span>
+                    <span className='t-string'>"{serverAddress}"</span>
+                  </div>
+                  <div style={{ height: 6 }} />
+                  <div>
+                    <span className='t-func'>curl </span>
+                    <span className='t-string'>$BASE_URL/v1/chat/completions</span>
+                  </div>
+                  <div>
+                    {'  '}<span className='t-punct'>-H </span>
+                    <span className='t-string'>"Authorization: Bearer $KEY"</span>
+                  </div>
+                  <div>
+                    {'  '}<span className='t-punct'>-d </span>
+                    <span className='t-string'>{'\'{"model":"opus4.6"}\''}</span>
+                    <span className='home-caret' />
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* 模型图标行（移动端展示） */}
+            {isMobile && (
+              <div className='pb-8 px-4'>
+                <div className='flex items-center mb-4 justify-center'>
+                  <Text type='tertiary' className='!text-sm font-light'>
+                    {t('支持全球主流大语言模型')}
+                  </Text>
+                </div>
+                <div className='flex flex-wrap items-center justify-center gap-3'>
+                  {[Claude.Color, OpenAI, Gemini.Color, Grok, DeepSeek.Color, Zhipu.Color, XAI].map(
+                    (Icon, i) => (
+                      <div key={i} className='w-8 h-8 flex items-center justify-center'>
+                        <Icon size={28} />
+                      </div>
+                    ),
+                  )}
+                  <Text className='!text-lg font-bold'>30+</Text>
+                </div>
+              </div>
+            )}
           </div>
+
         </div>
       ) : (
         <div className='overflow-x-hidden w-full'>
