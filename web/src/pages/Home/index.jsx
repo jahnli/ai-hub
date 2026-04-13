@@ -55,17 +55,16 @@ import {
 const { Text } = Typography;
 
 const orbitIcons = [
-  { Component: Claude.Color, angle: 0 },
-  { Component: OpenAI, angle: 60 },
-  { Component: Gemini.Color, angle: 120 },
-  { Component: Grok, angle: 180 },
-  { Component: DeepSeek.Color, angle: 240 },
-  { Component: Zhipu.Color, angle: 300 },
+  { Component: DeepSeek.Color, angle: 0 },
+  { Component: Zhipu.Color, angle: 120 },
+  { Component: Minimax.Color, angle: 240 },
 ];
 const orbitIconsOuter = [
-  { Component: Midjourney, angle: 30 },
-  { Component: XAI, angle: 120 },
-  { Component: Minimax.Color, angle: 210 },
+  { Component: Claude.Color, angle: 0 },
+  { Component: OpenAI, angle: 72 },
+  { Component: Gemini.Color, angle: 144 },
+  { Component: Grok, angle: 216 },
+  { Component: Midjourney, angle: 288 },
 ];
 
 const Home = () => {
@@ -386,6 +385,31 @@ const Home = () => {
               </div>
             </div>
 
+            {/* ====== 联系方式 ====== */}
+            <div className='w-full pb-14 md:pb-20'>
+              <div className='max-w-4xl mx-auto px-4 flex justify-center'>
+                <a
+                  href='https://applink.feishu.cn/client/chat/open?openId=ou_xxxx'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='group flex items-center gap-3 px-5 py-3 rounded-2xl bg-semi-color-bg-2 border border-semi-color-fill-2 hover:shadow-lg hover:border-semi-color-primary transition-all duration-300'
+                >
+                  <img
+                    src='https://p1-hera.feishucdn.com/tos-cn-i-jbbdkfciu3/1ec7129d900e442d8501d810efdaa369~tplv-jbbdkfciu3-image:0:0.image'
+                    alt='Feishu'
+                    className='w-9 h-9 rounded-xl object-cover flex-shrink-0'
+                  />
+                  <div className='flex flex-col'>
+                    <span className='text-sm font-medium text-semi-color-text-0 group-hover:text-semi-color-primary transition-colors'>{t('工程效率部 · 李佳衡')}</span>
+                    <span className='text-xs text-semi-color-text-2'>{t('遇到问题？飞书聊一聊')}</span>
+                  </div>
+                  <svg className='w-4 h-4 text-semi-color-text-2 group-hover:text-semi-color-primary group-hover:translate-x-0.5 transition-all ml-1' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                    <path d='M5 12h14M12 5l7 7-7 7'/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+
             {/* 模型图标行（移动端展示） */}
             {isMobile && (
               <div className='pb-8 px-4'>
@@ -395,7 +419,7 @@ const Home = () => {
                   </Text>
                 </div>
                 <div className='flex flex-wrap items-center justify-center gap-3'>
-                  {[Claude.Color, OpenAI, Gemini.Color, Grok, DeepSeek.Color, Zhipu.Color, XAI].map(
+                  {[Claude.Color, OpenAI, Gemini.Color, Grok, DeepSeek.Color, Zhipu.Color, Minimax.Color].map(
                     (Icon, i) => (
                       <div key={i} className='w-8 h-8 flex items-center justify-center'>
                         <Icon size={28} />

@@ -1025,7 +1025,7 @@ html.dark .with-pastel-balls::before {
 }
 html.dark .home-orbit-ring { border-color: rgba(139, 92, 246, 0.4); }
 .home-orbit-ring-inner { width: 340px; height: 340px; animation-duration: 20s; }
-.home-orbit-ring-outer { width: 400px; height: 400px; animation-duration: 30s; animation-name: orbit-reverse; }
+.home-orbit-ring-outer { width: 400px; height: 400px; animation-duration: 20s; animation-name: orbit-reverse; }
 @media (max-width: 767px) {
   .home-orbit-ring-inner { width: 240px; height: 240px; }
   .home-orbit-ring-outer { width: 320px; height: 320px; }
