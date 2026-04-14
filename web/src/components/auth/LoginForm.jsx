@@ -112,6 +112,12 @@ const LoginForm = () => {
   const githubTimeoutRef = useRef(null);
   const githubButtonText = t(githubButtonTextKeyByState[githubButtonState]);
   const [customOAuthLoading, setCustomOAuthLoading] = useState({});
+  const [showLDAPLogin, setShowLDAPLogin] = useState(false);
+  const [ldapLoading, setLdapLoading] = useState(false);
+  const [ldapInputs, setLdapInputs] = useState({
+    username: '',
+    password: '',
+  });
 
   const logo = getLogo();
   const systemName = getSystemName();
@@ -140,6 +146,7 @@ const LoginForm = () => {
       status.wechat_login ||
       status.linuxdo_oauth ||
       status.telegram_oauth ||
+      status.ldap_enabled ||
       hasCustomOAuthProviders,
   );
 
@@ -500,6 +507,184 @@ const LoginForm = () => {
     setInputs({ username: '', password: '', wechat_verification_code: '' });
   };
 
+  function handleLdapChange(name, value) {
+    setLdapInputs((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleLDAPSubmit(e) {
+    if ((hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms) {
+      showInfo(t('请先阅读并同意用户协议和隐私政策'));
+      return;
+    }
+    if (turnstileEnabled && turnstileToken === '') {
+      showInfo('请稍后几秒重试，Turnstile 正在检查用户环境！');
+      return;
+    }
+    if (!ldapInputs.username || !ldapInputs.password) {
+      showInfo(t('请输入用户名和密码'));
+      return;
+    }
+    setLdapLoading(true);
+    try {
+      const res = await API.post(
+        `/api/user/ldap/login?turnstile=${turnstileToken}`,
+        {
+          username: ldapInputs.username,
+          password: ldapInputs.password,
+        },
+      );
+      const { success, message, data } = res.data;
+      if (success) {
+        userDispatch({ type: 'login', payload: data });
+        setUserData(data);
+        updateAPI();
+        showSuccess(t('登录成功！'));
+        navigate('/console');
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      showError(t('登录失败，请重试'));
+    } finally {
+      setLdapLoading(false);
+    }
+  }
+
+  const handleLDAPLoginClick = () => {
+    if ((hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms) {
+      showInfo(t('请先阅读并同意用户协议和隐私政策'));
+      return;
+    }
+    setShowLDAPLogin(true);
+    setShowEmailLogin(false);
+  };
+
+  const renderLDAPLoginForm = () => {
+    const ldapLabel =
+      status.ldap_login_label || t('LDAP');
+    return (
+      <div className='flex flex-col items-center'>
+        <div className='w-full max-w-md'>
+          <div className='flex items-center justify-center mb-6 gap-2'>
+            <img src={logo} alt='Logo' className='h-10 rounded-full' />
+            <Title heading={3}>{systemName}</Title>
+          </div>
+
+          <Card className='border-0 !rounded-2xl overflow-hidden'>
+            <div className='flex justify-center pt-6 pb-2'>
+              <Title heading={3} className='text-gray-800 dark:text-gray-200'>
+                {ldapLabel} {t('登 录')}
+              </Title>
+            </div>
+            <div className='px-2 py-8'>
+              <Form className='space-y-3'>
+                <Form.Input
+                  field='ldap_username'
+                  label={t('用户名')}
+                  placeholder={t('请输入 LDAP 用户名')}
+                  name='ldap_username'
+                  onChange={(value) => handleLdapChange('username', value)}
+                  prefix={<IconMail />}
+                />
+                <Form.Input
+                  field='ldap_password'
+                  label={t('密码')}
+                  placeholder={t('请输入 LDAP 密码')}
+                  name='ldap_password'
+                  mode='password'
+                  onChange={(value) => handleLdapChange('password', value)}
+                  prefix={<IconLock />}
+                />
+
+                {(hasUserAgreement || hasPrivacyPolicy) && (
+                  <div className='pt-4'>
+                    <Checkbox
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    >
+                      <Text size='small' className='text-gray-600'>
+                        {t('我已阅读并同意')}
+                        {hasUserAgreement && (
+                          <a
+                            href='/user-agreement'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-blue-600 hover:text-blue-800 mx-1'
+                          >
+                            {t('用户协议')}
+                          </a>
+                        )}
+                        {hasUserAgreement && hasPrivacyPolicy && t('和')}
+                        {hasPrivacyPolicy && (
+                          <a
+                            href='/privacy-policy'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-blue-600 hover:text-blue-800 mx-1'
+                          >
+                            {t('隐私政策')}
+                          </a>
+                        )}
+                      </Text>
+                    </Checkbox>
+                  </div>
+                )}
+
+                <div className='space-y-2 pt-2'>
+                  <Button
+                    theme='solid'
+                    className='w-full !rounded-full'
+                    type='primary'
+                    htmlType='submit'
+                    onClick={handleLDAPSubmit}
+                    loading={ldapLoading}
+                    disabled={
+                      (hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms
+                    }
+                  >
+                    {t('继续')}
+                  </Button>
+                </div>
+              </Form>
+
+              <Divider margin='12px' align='center'>
+                {t('或')}
+              </Divider>
+
+              <div className='mt-4 text-center'>
+                <Button
+                  theme='outline'
+                  type='tertiary'
+                  className='w-full !rounded-full'
+                  onClick={() => {
+                    setShowLDAPLogin(false);
+                    setShowEmailLogin(false);
+                  }}
+                >
+                  {t('其他登录选项')}
+                </Button>
+              </div>
+
+              {!status.self_use_mode_enabled && (
+                <div className='mt-6 text-center text-sm'>
+                  <Text>
+                    {t('没有账户？')}{' '}
+                    <Link
+                      to='/register'
+                      className='text-blue-600 hover:text-blue-800 font-medium'
+                    >
+                      {t('注册')}
+                    </Link>
+                  </Text>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
   const renderOAuthOptions = () => {
     return (
       <div className='flex flex-col items-center'>
@@ -619,6 +804,24 @@ const LoginForm = () => {
                       </span>
                     </Button>
                   ))}
+
+                {status.ldap_enabled && (
+                  <Button
+                    theme='outline'
+                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    type='tertiary'
+                    icon={<IconLock size='large' />}
+                    onClick={handleLDAPLoginClick}
+                  >
+                    <span className='ml-3'>
+                      {status.ldap_login_label
+                        ? t('使用 {{name}} 继续', {
+                            name: status.ldap_login_label,
+                          })
+                        : t('使用 LDAP 登录')}
+                    </span>
+                  </Button>
+                )}
 
                 {status.telegram_oauth && (
                   <div className='flex justify-center my-2'>
@@ -958,10 +1161,11 @@ const LoginForm = () => {
         style={{ top: '50%', left: '-120px' }}
       />
       <div className='w-full max-w-sm mt-[60px]'>
-        {showEmailLogin ||
-        !hasOAuthLoginOptions
-          ? renderEmailLoginForm()
-          : renderOAuthOptions()}
+        {showLDAPLogin
+          ? renderLDAPLoginForm()
+          : showEmailLogin || !hasOAuthLoginOptions
+            ? renderEmailLoginForm()
+            : renderOAuthOptions()}
         {renderWeChatLoginModal()}
         {render2FAModal()}
 

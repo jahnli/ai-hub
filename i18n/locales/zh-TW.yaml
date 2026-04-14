@@ -276,3 +276,12 @@ custom_oauth.name_empty: "供應者名稱不能為空"
 custom_oauth.has_bindings: "無法刪除已有使用者綁定的供應者"
 custom_oauth.binding_not_found: "OAuth 綁定不存在"
 custom_oauth.provider_id_field_invalid: "無法從供應者響應中提取使用者 ID"
+
+# LDAP messages
+ldap.not_enabled: "LDAP 登入未啟用"
+ldap.auth_failed: "LDAP 認證失敗，請檢查使用者名稱和密碼"
+ldap.connect_failed: "連線 LDAP 伺服器失敗"
+ldap.user_not_found: "在 LDAP 目錄中未找到該使用者"
+ldap.bind_success: "LDAP 帳號綁定成功"
+ldap.already_bound: "該 LDAP 帳號已被其他使用者綁定"
+user.not_logged_in: "請先登入"

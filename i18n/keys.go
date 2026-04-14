@@ -276,6 +276,16 @@ const (
 	MsgAbilityRepairRunning = "ability.repair_running"
 )
 
+// LDAP related messages
+const (
+	MsgLDAPNotEnabled    = "ldap.not_enabled"
+	MsgLDAPAuthFailed    = "ldap.auth_failed"
+	MsgLDAPConnectFailed = "ldap.connect_failed"
+	MsgLDAPUserNotFound  = "ldap.user_not_found"
+	MsgLDAPBindSuccess   = "ldap.bind_success"
+	MsgLDAPAlreadyBound  = "ldap.already_bound"
+)
+
 // OAuth related messages
 const (
 	MsgOAuthInvalidCode     = "oauth.invalid_code"

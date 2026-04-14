@@ -517,6 +517,17 @@ const AccountManagement = ({
                 </div>
               </Card>
 
+              {/* LDAP绑定 */}
+              {status.ldap_enabled && (
+                <LDAPBindCard
+                  t={t}
+                  userState={userState}
+                  status={status}
+                  isBound={isBound}
+                  renderAccountInfo={renderAccountInfo}
+                />
+              )}
+
               {/* 自定义 OAuth 提供商绑定 */}
               {status.custom_oauth_providers &&
                 status.custom_oauth_providers.map((provider) => {
@@ -768,6 +779,109 @@ const AccountManagement = ({
         </TabPane>
       </Tabs>
     </Card>
+  );
+};
+
+const LDAPBindCard = ({ t, userState, status, isBound, renderAccountInfo }) => {
+  const [showModal, setShowModal] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [ldapInputs, setLdapInputs] = React.useState({
+    username: '',
+    password: '',
+  });
+
+  const handleBind = async () => {
+    if (!ldapInputs.username || !ldapInputs.password) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await API.post('/api/user/ldap/bind', {
+        username: ldapInputs.username,
+        password: ldapInputs.password,
+      });
+      if (res.data.success) {
+        showSuccess(t('绑定成功'));
+        setShowModal(false);
+        setLdapInputs({ username: '', password: '' });
+        window.location.reload();
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError(
+        error.response?.data?.message || error.message || t('操作失败'),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const ldapLabel = status.ldap_login_label || 'LDAP';
+
+  return (
+    <>
+      <Card className='!rounded-xl'>
+        <div className='flex items-center justify-between gap-3'>
+          <div className='flex items-center flex-1 min-w-0'>
+            <div className='w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mr-3 flex-shrink-0'>
+              <IconLock
+                size='default'
+                className='text-slate-600 dark:text-slate-300'
+              />
+            </div>
+            <div className='flex-1 min-w-0'>
+              <div className='font-medium text-gray-900'>{ldapLabel}</div>
+              <div className='text-sm text-gray-500 truncate'>
+                {isBound(userState.user?.ldap_id)
+                  ? renderAccountInfo(userState.user?.ldap_id, t('LDAP DN'))
+                  : t('未绑定')}
+              </div>
+            </div>
+          </div>
+          <div className='flex-shrink-0'>
+            <Button
+              type='primary'
+              theme='outline'
+              size='small'
+              disabled={isBound(userState.user?.ldap_id)}
+              onClick={() => setShowModal(true)}
+            >
+              {isBound(userState.user?.ldap_id) ? t('已绑定') : t('绑定')}
+            </Button>
+          </div>
+        </div>
+      </Card>
+      <Modal
+        title={t('绑定 LDAP 账号')}
+        visible={showModal}
+        onOk={handleBind}
+        onCancel={() => setShowModal(false)}
+        okText={t('绑定')}
+        cancelText={t('取消')}
+        confirmLoading={loading}
+      >
+        <div className='my-3 text-sm text-gray-600'>
+          {t('请输入您的 LDAP 用户名和密码进行绑定')}
+        </div>
+        <Input
+          placeholder={t('LDAP 用户名')}
+          value={ldapInputs.username}
+          onChange={(value) =>
+            setLdapInputs((prev) => ({ ...prev, username: value }))
+          }
+          style={{ marginBottom: 12 }}
+        />
+        <Input
+          placeholder={t('LDAP 密码')}
+          mode='password'
+          value={ldapInputs.password}
+          onChange={(value) =>
+            setLdapInputs((prev) => ({ ...prev, password: value }))
+          }
+        />
+      </Modal>
+    </>
   );
 };
 

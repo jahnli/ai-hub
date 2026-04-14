@@ -101,6 +101,19 @@ const SystemSetting = () => {
     LinuxDOClientSecret: '',
     LinuxDOMinimumTrustLevel: '',
     ServerAddress: '',
+    // LDAP配置
+    'ldap.enabled': '',
+    'ldap.server_url': '',
+    'ldap.bind_dn': '',
+    'ldap.bind_password': '',
+    'ldap.search_base': '',
+    'ldap.search_filter': '',
+    'ldap.username_attribute': '',
+    'ldap.email_attribute': '',
+    'ldap.display_name_attribute': '',
+    'ldap.start_tls': '',
+    'ldap.skip_tls_verify': '',
+    'ldap.login_label': '',
     // SSRF防护配置
     'fetch_setting.enable_ssrf_protection': true,
     'fetch_setting.allow_private_ip': '',
@@ -190,6 +203,9 @@ const SystemSetting = () => {
           case 'passkey.enabled':
           case 'passkey.allow_insecure_origin':
           case 'WorkerAllowHttpImageRequestEnabled':
+          case 'ldap.enabled':
+          case 'ldap.start_tls':
+          case 'ldap.skip_tls_verify':
             item.value = toBoolean(item.value);
             break;
           case 'passkey.origins':
@@ -636,6 +652,63 @@ const SystemSetting = () => {
 
     if (options.length > 0) {
       await updateOptions(options);
+    }
+  };
+
+  const submitLDAPSettings = async () => {
+    const ldapKeys = [
+      'ldap.server_url',
+      'ldap.bind_dn',
+      'ldap.bind_password',
+      'ldap.search_base',
+      'ldap.search_filter',
+      'ldap.username_attribute',
+      'ldap.email_attribute',
+      'ldap.display_name_attribute',
+      'ldap.login_label',
+    ];
+    const options = [];
+    for (const key of ldapKeys) {
+      if (
+        originInputs[key] !== inputs[key] &&
+        (inputs[key] !== '' || !key.endsWith('_password'))
+      ) {
+        options.push({ key, value: inputs[key] });
+      }
+    }
+    if (
+      originInputs['ldap.start_tls'] !== inputs['ldap.start_tls']
+    ) {
+      options.push({
+        key: 'ldap.start_tls',
+        value: inputs['ldap.start_tls'] ? 'true' : 'false',
+      });
+    }
+    if (
+      originInputs['ldap.skip_tls_verify'] !== inputs['ldap.skip_tls_verify']
+    ) {
+      options.push({
+        key: 'ldap.skip_tls_verify',
+        value: inputs['ldap.skip_tls_verify'] ? 'true' : 'false',
+      });
+    }
+    if (options.length > 0) {
+      await updateOptions(options);
+    }
+  };
+
+  const testLDAPConnection = async () => {
+    try {
+      const res = await API.post('/api/ldap/test');
+      if (res.data.success) {
+        showSuccess(t('LDAP 连接测试成功'));
+      } else {
+        showError(
+          t('LDAP 连接测试失败') + ': ' + res.data.message,
+        );
+      }
+    } catch (error) {
+      showError(t('LDAP 连接测试失败'));
     }
   };
 
@@ -1091,6 +1164,15 @@ const SystemSetting = () => {
                       >
                         {t('允许通过 OIDC 进行登录')}
                       </Form.Checkbox>
+                      <Form.Checkbox
+                        field="['ldap.enabled']"
+                        noLabel
+                        onChange={(e) =>
+                          handleCheckboxChange('ldap.enabled', e)
+                        }
+                      >
+                        {t('允许通过 LDAP 进行登录')}
+                      </Form.Checkbox>
                     </Col>
                   </Row>
                 </Form.Section>
@@ -1426,6 +1508,156 @@ const SystemSetting = () => {
                   <Button onClick={submitOIDCSettings}>
                     {t('保存 OIDC 设置')}
                   </Button>
+                </Form.Section>
+              </Card>
+
+              <Card>
+                <Form.Section text={t('配置 LDAP')}>
+                  <Text>
+                    {t(
+                      '用以支持通过 LDAP/Active Directory 进行登录注册',
+                    )}
+                  </Text>
+                  <Banner
+                    type='info'
+                    description={t(
+                      'LDAP 登录允许用户使用企业目录服务（如 OpenLDAP、Active Directory）的账号密码直接登录',
+                    )}
+                    style={{ marginBottom: 20, marginTop: 16 }}
+                  />
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                  >
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field="['ldap.server_url']"
+                        label={t('LDAP 服务器地址')}
+                        placeholder='ldap://ldap.example.com:389'
+                        extraText={t(
+                          '支持 ldap:// 和 ldaps:// 协议',
+                        )}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field="['ldap.search_base']"
+                        label={t('Search Base DN')}
+                        placeholder='ou=users,dc=example,dc=com'
+                        extraText={t(
+                          '用户搜索的基础 DN',
+                        )}
+                      />
+                    </Col>
+                  </Row>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                  >
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field="['ldap.bind_dn']"
+                        label={t('Bind DN')}
+                        placeholder='cn=admin,dc=example,dc=com'
+                        extraText={t(
+                          '用于搜索用户的服务账号 DN',
+                        )}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field="['ldap.bind_password']"
+                        label={t('Bind Password')}
+                        type='password'
+                        placeholder={t('敏感信息不会发送到前端显示')}
+                      />
+                    </Col>
+                  </Row>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                  >
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field="['ldap.search_filter']"
+                        label={t('用户搜索过滤器')}
+                        placeholder='(uid={{username}})'
+                        extraText={t(
+                          '{{username}} 会被替换为用户输入的用户名，Active Directory 可用 (sAMAccountName={{username}})',
+                        )}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field="['ldap.login_label']"
+                        label={t('登录按钮文字')}
+                        placeholder={t('使用 LDAP 登录')}
+                        extraText={t(
+                          '自定义登录页面上 LDAP 登录按钮的显示文字',
+                        )}
+                      />
+                    </Col>
+                  </Row>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                  >
+                    <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+                      <Form.Input
+                        field="['ldap.username_attribute']"
+                        label={t('用户名属性')}
+                        placeholder='uid'
+                        extraText={t(
+                          'LDAP 用户名属性名，如 uid 或 sAMAccountName',
+                        )}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+                      <Form.Input
+                        field="['ldap.email_attribute']"
+                        label={t('邮箱属性')}
+                        placeholder='mail'
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+                      <Form.Input
+                        field="['ldap.display_name_attribute']"
+                        label={t('显示名称属性')}
+                        placeholder='cn'
+                      />
+                    </Col>
+                  </Row>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                    style={{ marginTop: 16 }}
+                  >
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Checkbox
+                        field="['ldap.start_tls']"
+                        noLabel
+                        onChange={(e) =>
+                          handleCheckboxChange('ldap.start_tls', e)
+                        }
+                      >
+                        {t('启用 StartTLS')}
+                      </Form.Checkbox>
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Checkbox
+                        field="['ldap.skip_tls_verify']"
+                        noLabel
+                        onChange={(e) =>
+                          handleCheckboxChange('ldap.skip_tls_verify', e)
+                        }
+                      >
+                        {t('跳过 TLS 证书验证')}
+                      </Form.Checkbox>
+                    </Col>
+                  </Row>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                    <Button onClick={submitLDAPSettings}>
+                      {t('保存 LDAP 设置')}
+                    </Button>
+                    <Button type='secondary' onClick={testLDAPConnection}>
+                      {t('测试 LDAP 连接')}
+                    </Button>
+                  </div>
                 </Form.Section>
               </Card>
 

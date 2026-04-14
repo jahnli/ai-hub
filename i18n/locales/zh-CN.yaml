@@ -276,3 +276,12 @@ custom_oauth.name_empty: "提供商名称不能为空"
 custom_oauth.has_bindings: "无法删除已有用户绑定的提供商"
 custom_oauth.binding_not_found: "OAuth 绑定不存在"
 custom_oauth.provider_id_field_invalid: "无法从提供商响应中提取用户 ID"
+
+# LDAP messages
+ldap.not_enabled: "LDAP 登录未启用"
+ldap.auth_failed: "LDAP 认证失败，请检查用户名和密码"
+ldap.connect_failed: "连接 LDAP 服务器失败"
+ldap.user_not_found: "在 LDAP 目录中未找到该用户"
+ldap.bind_success: "LDAP 账号绑定成功"
+ldap.already_bound: "该 LDAP 账号已被其他用户绑定"
+user.not_logged_in: "请先登录"

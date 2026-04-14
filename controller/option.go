@@ -188,6 +188,17 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
+	case "ldap.enabled":
+		if option.Value == "true" {
+			ldapSettings := system_setting.GetLDAPSettings()
+			if ldapSettings.ServerURL == "" || ldapSettings.BindDN == "" || ldapSettings.SearchBase == "" {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "无法启用 LDAP 登录，请先填入 LDAP Server URL、Bind DN 和 Search Base！",
+				})
+				return
+			}
+		}
 	case "GroupRatio":
 		err = ratio_setting.CheckGroupRatio(option.Value.(string))
 		if err != nil {

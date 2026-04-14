@@ -47,6 +47,7 @@ type User struct {
 	InviterId        int            `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
 	LinuxDOId        string         `json:"linux_do_id" gorm:"column:linux_do_id;index"`
+	LdapId           string         `json:"ldap_id" gorm:"column:ldap_id;index"`
 	Setting          string         `json:"setting" gorm:"type:text;column:setting"`
 	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
@@ -551,6 +552,7 @@ func (user *User) ClearBinding(bindingType string) error {
 		"wechat":   "wechat_id",
 		"telegram": "telegram_id",
 		"linuxdo":  "linux_do_id",
+		"ldap":     "ldap_id",
 	}
 
 	column, ok := bindingColumnMap[bindingType]
@@ -679,6 +681,18 @@ func (user *User) FillUserByTelegramId() error {
 		return errors.New("该 Telegram 账户未绑定")
 	}
 	return nil
+}
+
+func (user *User) FillUserByLdapId() error {
+	if user.LdapId == "" {
+		return errors.New("LDAP id is empty")
+	}
+	DB.Where(User{LdapId: user.LdapId}).First(user)
+	return nil
+}
+
+func IsLdapIdAlreadyTaken(ldapId string) bool {
+	return DB.Unscoped().Where("ldap_id = ?", ldapId).Find(&User{}).RowsAffected == 1
 }
 
 func IsEmailAlreadyTaken(email string) bool {

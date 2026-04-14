@@ -275,3 +275,12 @@ custom_oauth.name_empty: "Provider name cannot be empty"
 custom_oauth.has_bindings: "Cannot delete provider with existing user bindings"
 custom_oauth.binding_not_found: "OAuth binding not found"
 custom_oauth.provider_id_field_invalid: "Could not extract user ID from provider response"
+
+# LDAP messages
+ldap.not_enabled: "LDAP login is not enabled"
+ldap.auth_failed: "LDAP authentication failed, please check your username and password"
+ldap.connect_failed: "Failed to connect to LDAP server"
+ldap.user_not_found: "User not found in LDAP directory"
+ldap.bind_success: "LDAP account bound successfully"
+ldap.already_bound: "This LDAP account is already bound to another user"
+user.not_logged_in: "Please log in first"

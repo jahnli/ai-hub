@@ -138,6 +138,7 @@ const RegisterForm = () => {
       status.wechat_login ||
       status.linuxdo_oauth ||
       status.telegram_oauth ||
+      status.ldap_enabled ||
       hasCustomOAuthProviders,
   );
 
@@ -510,6 +511,24 @@ const RegisterForm = () => {
                       </span>
                     </Button>
                   ))}
+
+                {status.ldap_enabled && (
+                  <Button
+                    theme='outline'
+                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    type='tertiary'
+                    icon={<IconLock size='large' />}
+                    onClick={() => navigate('/login')}
+                  >
+                    <span className='ml-3'>
+                      {status.ldap_login_label
+                        ? t('使用 {{name}} 继续', {
+                            name: status.ldap_login_label,
+                          })
+                        : t('使用 LDAP 登录')}
+                    </span>
+                  </Button>
+                )}
 
                 {status.telegram_oauth && (
                   <div className='flex justify-center my-2'>
