@@ -393,7 +393,7 @@ const Home = () => {
             <div className='w-full pb-14 md:pb-20'>
               <div className='max-w-4xl mx-auto px-4 flex justify-center'>
                 <a
-                  href='https://applink.feishu.cn/client/chat/open?openId=ou_xxxx'
+                  href='https://applink.feishu.cn/client/chat/open?openId=ou_0282612970fce9d8e5bbfb652ff62e18'
                   target='_blank'
                   rel='noopener noreferrer'
                   className='group flex items-center gap-3 px-5 py-3 rounded-2xl bg-semi-color-bg-2 border border-semi-color-fill-2 hover:shadow-lg hover:border-semi-color-primary transition-all duration-300'
