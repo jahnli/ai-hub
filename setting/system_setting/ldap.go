@@ -15,6 +15,7 @@ type LDAPSettings struct {
 	StartTLS             bool   `json:"start_tls"`
 	SkipTLSVerify        bool   `json:"skip_tls_verify"`
 	LoginLabel           string `json:"login_label"`
+	AutoSubscribePlanId  int    `json:"auto_subscribe_plan_id"`
 }
 
 var defaultLDAPSettings = LDAPSettings{

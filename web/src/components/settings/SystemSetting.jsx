@@ -114,6 +114,7 @@ const SystemSetting = () => {
     'ldap.start_tls': '',
     'ldap.skip_tls_verify': '',
     'ldap.login_label': '',
+    'ldap.auto_subscribe_plan_id': 0,
     // SSRF防护配置
     'fetch_setting.enable_ssrf_protection': true,
     'fetch_setting.allow_private_ip': '',
@@ -139,6 +140,7 @@ const SystemSetting = () => {
   const [domainList, setDomainList] = useState([]);
   const [ipList, setIpList] = useState([]);
   const [allowedPorts, setAllowedPorts] = useState([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
 
   const getOptions = async () => {
     setLoading(true);
@@ -208,6 +210,9 @@ const SystemSetting = () => {
           case 'ldap.skip_tls_verify':
             item.value = toBoolean(item.value);
             break;
+          case 'ldap.auto_subscribe_plan_id':
+            item.value = parseInt(item.value) || 0;
+            break;
           case 'passkey.origins':
             // origins是逗号分隔的字符串，直接使用
             item.value = item.value || '';
@@ -252,8 +257,23 @@ const SystemSetting = () => {
     setLoading(false);
   };
 
+  const loadSubscriptionPlans = async () => {
+    try {
+      const res = await API.get('/api/subscription/plans');
+      if (res.data?.success) {
+        const raw = res.data.data || [];
+        const plans = raw.map((item) => item.plan || item);
+        plans.sort((a, b) => a.id - b.id);
+        setSubscriptionPlans(plans);
+      }
+    } catch (e) {
+      setSubscriptionPlans([]);
+    }
+  };
+
   useEffect(() => {
     getOptions();
+    loadSubscriptionPlans();
   }, []);
 
   const updateOptions = async (options) => {
@@ -690,6 +710,14 @@ const SystemSetting = () => {
       options.push({
         key: 'ldap.skip_tls_verify',
         value: inputs['ldap.skip_tls_verify'] ? 'true' : 'false',
+      });
+    }
+    if (
+      originInputs['ldap.auto_subscribe_plan_id'] !== inputs['ldap.auto_subscribe_plan_id']
+    ) {
+      options.push({
+        key: 'ldap.auto_subscribe_plan_id',
+        value: String(inputs['ldap.auto_subscribe_plan_id'] || 0),
       });
     }
     if (options.length > 0) {
@@ -1648,6 +1676,35 @@ const SystemSetting = () => {
                       >
                         {t('跳过 TLS 证书验证')}
                       </Form.Checkbox>
+                    </Col>
+                  </Row>
+                  <Row
+                    gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+                    style={{ marginTop: 16 }}
+                  >
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Select
+                        field="['ldap.auto_subscribe_plan_id']"
+                        label={t('新用户自动订阅套餐')}
+                        placeholder={t('不自动订阅')}
+                        extraText={t(
+                          'LDAP 新用户注册后自动订阅选定的套餐，留空则不自动订阅',
+                        )}
+                        optionList={[
+                          { value: 0, label: t('不自动订阅') },
+                          ...subscriptionPlans.map((plan) => ({
+                            value: plan.id,
+                            label: `${plan.title} (ID: ${plan.id})`,
+                          })),
+                        ]}
+                        onChange={(value) => {
+                          setInputs((prev) => ({
+                            ...prev,
+                            'ldap.auto_subscribe_plan_id': value,
+                          }));
+                        }}
+                        style={{ width: '100%' }}
+                      />
                     </Col>
                   </Row>
                   <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

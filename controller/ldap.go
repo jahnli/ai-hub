@@ -126,6 +126,21 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	}
 
 	user.FinalizeOAuthUserCreation(inviterId)
+
+	ldapSettings := system_setting.GetLDAPSettings()
+	planId := ldapSettings.AutoSubscribePlanId
+	common.SysLog(fmt.Sprintf("[LDAP DEBUG] new user %d created, AutoSubscribePlanId=%d", user.Id, planId))
+	if planId > 0 {
+		msg, bindErr := model.AdminBindSubscription(user.Id, planId, "ldap_auto")
+		if bindErr != nil {
+			common.SysError(fmt.Sprintf("[LDAP DEBUG] auto-subscribe FAILED for user %d plan %d: %v", user.Id, planId, bindErr))
+		} else {
+			common.SysLog(fmt.Sprintf("[LDAP DEBUG] auto-subscribe OK for user %d plan %d, msg=%s", user.Id, planId, msg))
+		}
+	} else {
+		common.SysLog("[LDAP DEBUG] AutoSubscribePlanId is 0, skipping auto-subscribe")
+	}
+
 	return user, nil
 }
 
