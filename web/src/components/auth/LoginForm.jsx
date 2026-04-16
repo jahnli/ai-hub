@@ -806,9 +806,9 @@ const LoginForm = () => {
 
                 {status.ldap_enabled && (
                   <Button
-                    theme='outline'
+                    theme='solid'
+                    type='primary'
                     className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
-                    type='tertiary'
                     icon={<IconLock size='large' />}
                     onClick={handleLDAPLoginClick}
                   >
@@ -849,10 +849,10 @@ const LoginForm = () => {
                 </Divider>
 
                 <Button
-                  theme='solid'
-                  type='primary'
                   className='w-full h-12 flex items-center justify-center bg-black text-white !rounded-full hover:bg-gray-800 transition-colors'
+                  type='tertiary'
                   icon={<IconMail size='large' />}
+                  theme='outline'
                   onClick={handleEmailLoginClick}
                   loading={emailLoginLoading}
                 >
