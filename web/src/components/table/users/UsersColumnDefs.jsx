@@ -374,7 +374,7 @@ export const getUsersColumns = ({
       title: t('创建时间'),
       dataIndex: 'created_at',
       render: (text) => {
-        if (!text) return '-';
+        if (!text || text.startsWith('0001')) return '-';
         return new Date(text).toLocaleString();
       },
     },
