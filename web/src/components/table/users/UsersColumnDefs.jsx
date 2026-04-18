@@ -296,6 +296,25 @@ const renderOperations = (
 };
 
 /**
+ * Parse LDAP DN to extract OU hierarchy (up to 3 levels)
+ * e.g. "CN=李佳衡,OU=工程效率科,OU=软件工程部,OU=数智产品中心,..."
+ * => ["数智产品中心", "软件工程部", "工程效率科"]
+ */
+const parseLdapOUs = (dn) => {
+  if (!dn) return [];
+  const ous = [];
+  const parts = dn.split(',');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.toUpperCase().startsWith('OU=')) {
+      ous.push(trimmed.substring(3));
+    }
+  }
+  const len = ous.length;
+  return [ous[len - 4] || '', ous[len - 5] || '', ous[len - 6] || ''];
+};
+
+/**
  * Get users table column definitions
  */
 export const getUsersColumns = ({
@@ -321,21 +340,34 @@ export const getUsersColumns = ({
       render: (text, record) => renderUsername(text, record),
     },
     {
-      title: t('状态'),
-      dataIndex: 'info',
-      render: (text, record, index) =>
-        renderStatistics(text, record, showEnableDisableModal, t),
-    },
-    {
       title: t('剩余额度/总额度'),
       key: 'quota_usage',
       render: (text, record) => renderQuotaUsage(text, record, t),
     },
     {
-      title: t('分组'),
-      dataIndex: 'group',
-      render: (text, record, index) => {
-        return <div>{renderGroup(text)}</div>;
+      title: t('一级部门'),
+      dataIndex: 'ldap_id',
+      render: (text) => {
+        const ous = parseLdapOUs(text);
+        return ous[0] || '-';
+      },
+    },
+    {
+      title: t('二级部门'),
+      dataIndex: 'ldap_id',
+      key: 'dept2',
+      render: (text) => {
+        const ous = parseLdapOUs(text);
+        return ous[1] || '-';
+      },
+    },
+    {
+      title: t('三级部门'),
+      dataIndex: 'ldap_id',
+      key: 'dept3',
+      render: (text) => {
+        const ous = parseLdapOUs(text);
+        return ous[2] || '-';
       },
     },
     {
@@ -346,9 +378,17 @@ export const getUsersColumns = ({
       },
     },
     {
-      title: t('邀请信息'),
-      dataIndex: 'invite',
-      render: (text, record, index) => renderInviteInfo(text, record, t),
+      title: t('分组'),
+      dataIndex: 'group',
+      render: (text, record, index) => {
+        return <div>{renderGroup(text)}</div>;
+      },
+    },
+    {
+      title: t('状态'),
+      dataIndex: 'info',
+      render: (text, record, index) =>
+        renderStatistics(text, record, showEnableDisableModal, t),
     },
     {
       title: '',
