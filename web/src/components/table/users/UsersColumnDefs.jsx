@@ -371,6 +371,14 @@ export const getUsersColumns = ({
       },
     },
     {
+      title: t('创建时间'),
+      dataIndex: 'created_at',
+      render: (text) => {
+        if (!text) return '-';
+        return new Date(text).toLocaleString();
+      },
+    },
+    {
       title: t('角色'),
       dataIndex: 'role',
       render: (text, record, index) => {
