@@ -375,7 +375,8 @@ export const getUsersColumns = ({
       dataIndex: 'created_at',
       render: (text) => {
         if (!text || text.startsWith('0001')) return '-';
-        return new Date(text).toLocaleString();
+        const d = new Date(text);
+        return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
       },
     },
     {
