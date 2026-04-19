@@ -28,7 +28,8 @@ var TaskEnabled = true
 var DataExportEnabled = true
 var DataExportInterval = 5         // unit: minute
 var DataExportDefaultTime = "hour" // unit: minute
-var DefaultCollapseSidebar = false // default value of collapse sidebar
+var DefaultCollapseSidebar = false           // default value of collapse sidebar
+var PersonalSidebarSettingsEnabled = true // 是否允许普通用户访问个人边栏设置
 
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 

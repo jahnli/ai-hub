@@ -443,7 +443,7 @@ func calculateUserPermissions(userRole int) map[string]interface{} {
 		}
 	} else {
 		// 普通用户只能设置个人功能，不包含管理员区域
-		permissions["sidebar_settings"] = true
+		permissions["sidebar_settings"] = common.PersonalSidebarSettingsEnabled
 		permissions["sidebar_modules"] = map[string]interface{}{
 			"admin": false, // 普通用户不能访问管理员区域
 		}

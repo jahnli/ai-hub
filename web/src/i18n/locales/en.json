@@ -3671,6 +3671,8 @@
     "默认区域，如: us-central1": "Default region, e.g.: us-central1",
     "默认情况下，所有用户创建令牌时看到的可选分组列表是一样的（即「用户可选」列勾选的分组）。": "By default, all users see the same selectable group list when creating tokens (i.e., groups with \"User Selectable\" checked).",
     "默认折叠侧边栏": "Default collapse sidebar",
+    "允许普通用户设置边栏": "Allow regular users to configure sidebar",
+    "关闭后普通用户将无法在个人设置中看到边栏设置": "When disabled, regular users will not see sidebar settings in personal settings",
     "默认测试模型": "Default Test Model",
     "默认用户消息": "Default User Message",
     "默认补全倍率": "Default completion ratio",

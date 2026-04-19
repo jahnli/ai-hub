@@ -55,6 +55,7 @@ export default function GeneralSettings(props) {
     USDExchangeRate: '',
     DisplayTokenStatEnabled: false,
     DefaultCollapseSidebar: false,
+    PersonalSidebarSettingsEnabled: true,
     DemoSiteEnabled: false,
     SelfUseModeEnabled: false,
     'token_setting.max_user_tokens': 1000,
@@ -367,6 +368,17 @@ export default function GeneralSettings(props) {
                   checkedText='｜'
                   uncheckedText='〇'
                   onChange={handleFieldChange('DefaultCollapseSidebar')}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Switch
+                  field={'PersonalSidebarSettingsEnabled'}
+                  label={t('允许普通用户设置边栏')}
+                  extraText={t('关闭后普通用户将无法在个人设置中看到边栏设置')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={handleFieldChange('PersonalSidebarSettingsEnabled')}
                 />
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
