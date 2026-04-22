@@ -125,6 +125,7 @@ const UserArea = ({
               size='extra-small'
               color={stringToColor(userState.user.username)}
               className='mr-1'
+              src={userState.user.avatar_url || undefined}
             >
               {userState.user.username[0].toUpperCase()}
             </Avatar>

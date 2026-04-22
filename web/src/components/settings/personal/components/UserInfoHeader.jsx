@@ -68,7 +68,7 @@ const UserInfoHeader = ({ t, userState }) => {
           <div className='relative z-10 h-full flex flex-col justify-end p-6'>
             <div className='flex items-center'>
               <div className='flex items-stretch gap-3 sm:gap-4 flex-1 min-w-0'>
-                <Avatar size='large' color={stringToColor(getUsername())}>
+                <Avatar size='large' color={stringToColor(getUsername())} src={userState.user?.avatar_url || undefined}>
                   {getAvatarText()}
                 </Avatar>
                 <div className='flex-1 min-w-0 flex flex-col justify-between'>
