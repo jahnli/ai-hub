@@ -131,7 +131,14 @@ const UserArea = ({
             </Avatar>
             <span className='hidden md:inline'>
               <Typography.Text className='!text-xs !font-medium !text-semi-color-text-1 dark:!text-gray-300 mr-1'>
-                {userState.user.username}
+                {(() => {
+                  const dn = userState.user.ldap_id;
+                  if (dn) {
+                    const m = dn.match(/CN=([^,]+)/i);
+                    if (m) return m[1];
+                  }
+                  return userState.user.display_name || userState.user.username;
+                })()}
               </Typography.Text>
             </span>
             <ChevronDown

@@ -82,12 +82,12 @@ const UserInfoHeader = ({ t, userState }) => {
                 </Avatar>
                 <div className='flex-1 min-w-0 flex flex-col justify-between'>
                   <div
-                    className='text-3xl font-bold truncate'
+                    className='text-3xl font-bold truncate select-text'
                     style={{ color: 'white' }}
                   >
                     {getDisplayName()}
                   </div>
-                  <div className='flex flex-wrap items-center gap-2'>
+                  <div className='flex flex-wrap items-center gap-2 select-text'>
                     {isRoot() ? (
                       <Tag
                         size='large'
@@ -113,10 +113,10 @@ const UserInfoHeader = ({ t, userState }) => {
                         {t('普通用户')}
                       </Tag>
                     )}
-                    <Tag size='large' shape='circle' style={{ color: 'white' }}>
+                    <Tag size='large' shape='circle' style={{ color: 'white', userSelect: 'text' }}>
                       ID: {userState?.user?.id}
                     </Tag>
-                    <Tag size='large' shape='circle' style={{ color: 'white' }}>
+                    <Tag size='large' shape='circle' style={{ color: 'white', userSelect: 'text' }}>
                       {getUsername()}
                     </Tag>
                   </div>
