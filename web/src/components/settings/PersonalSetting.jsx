@@ -18,29 +18,70 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   API,
+  copy,
   showError,
+  showInfo,
   showSuccess,
   setStatusData,
+  prepareCredentialCreationOptions,
+  buildRegistrationResult,
+  isPasskeySupported,
   setUserData,
 } from '../../helpers';
 import { UserContext } from '../../context/User';
+import { Modal } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 
 // 导入子组件
 import UserInfoHeader from './personal/components/UserInfoHeader';
+import AccountManagement from './personal/cards/AccountManagement';
 import NotificationSettings from './personal/cards/NotificationSettings';
 import PreferencesSettings from './personal/cards/PreferencesSettings';
 import CheckinCalendar from './personal/cards/CheckinCalendar';
+import EmailBindModal from './personal/modals/EmailBindModal';
+import WeChatBindModal from './personal/modals/WeChatBindModal';
+import AccountDeleteModal from './personal/modals/AccountDeleteModal';
+import ChangePasswordModal from './personal/modals/ChangePasswordModal';
+import SecureVerificationModal from '../common/modals/SecureVerificationModal';
+import { useSecureVerification } from '../../hooks/common/useSecureVerification';
 
 const PersonalSetting = () => {
   const [userState, userDispatch] = useContext(UserContext);
+  let navigate = useNavigate();
   const { t } = useTranslation();
 
+  const [inputs, setInputs] = useState({
+    wechat_verification_code: '',
+    email_verification_code: '',
+    email: '',
+    self_account_deletion_confirmation: '',
+    original_password: '',
+    set_new_password: '',
+    set_new_password_confirmation: '',
+  });
   const [status, setStatus] = useState({});
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showWeChatBindModal, setShowWeChatBindModal] = useState(false);
+  const [showEmailBindModal, setShowEmailBindModal] = useState(false);
+  const [showAccountDeleteModal, setShowAccountDeleteModal] = useState(false);
   const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [disableButton, setDisableButton] = useState(false);
+  const [countdown, setCountdown] = useState(30);
+  const [systemToken, setSystemToken] = useState('');
+  const [passkeyStatus, setPasskeyStatus] = useState({ enabled: false });
+  const [passkeyRegisterLoading, setPasskeyRegisterLoading] = useState(false);
+  const [passkeyDeleteLoading, setPasskeyDeleteLoading] = useState(false);
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [
+    passkeyRequiredVerificationMethod,
+    setPasskeyRequiredVerificationMethod,
+  ] = useState(null);
   const [notificationSettings, setNotificationSettings] = useState({
     warningType: 'email',
     warningThreshold: 5000000,
@@ -51,7 +92,38 @@ const PersonalSetting = () => {
     gotifyUrl: '',
     gotifyToken: '',
     gotifyPriority: 5,
+    upstreamModelUpdateNotifyEnabled: false,
+    acceptUnsetModelRatioModel: false,
+    recordIpLog: false,
   });
+
+  const {
+    isModalVisible: isPasskeyVerificationModalVisible,
+    verificationMethods: passkeyVerificationMethods,
+    verificationState: passkeyVerificationState,
+    startVerification: startPasskeyVerification,
+    executeVerification: executePasskeyVerification,
+    cancelVerification: cancelPasskeyVerification,
+    setVerificationCode: setPasskeyVerificationCode,
+    switchVerificationMethod: switchPasskeyVerificationMethod,
+    checkVerificationMethods: checkPasskeyVerificationMethods,
+  } = useSecureVerification({
+    onSuccess: () => {
+      setPasskeyRequiredVerificationMethod(null);
+    },
+  });
+
+  const visiblePasskeyVerificationMethods = passkeyRequiredVerificationMethod
+    ? {
+        ...passkeyVerificationMethods,
+        has2FA:
+          passkeyRequiredVerificationMethod === '2fa' &&
+          passkeyVerificationMethods.has2FA,
+        hasPasskey:
+          passkeyRequiredVerificationMethod === 'passkey' &&
+          passkeyVerificationMethods.hasPasskey,
+      }
+    : passkeyVerificationMethods;
 
   useEffect(() => {
     let saved = localStorage.getItem('status');
@@ -88,7 +160,24 @@ const PersonalSetting = () => {
     })();
 
     getUserData();
+
+    isPasskeySupported()
+      .then(setPasskeySupported)
+      .catch(() => setPasskeySupported(false));
   }, []);
+
+  useEffect(() => {
+    let countdownInterval = null;
+    if (disableButton && countdown > 0) {
+      countdownInterval = setInterval(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setDisableButton(false);
+      setCountdown(30);
+    }
+    return () => clearInterval(countdownInterval);
+  }, [disableButton, countdown]);
 
   useEffect(() => {
     if (userState?.user?.setting) {
@@ -104,9 +193,171 @@ const PersonalSetting = () => {
         gotifyToken: settings.gotify_token || '',
         gotifyPriority:
           settings.gotify_priority !== undefined ? settings.gotify_priority : 5,
+        upstreamModelUpdateNotifyEnabled:
+          settings.upstream_model_update_notify_enabled === true,
+        acceptUnsetModelRatioModel:
+          settings.accept_unset_model_ratio_model || false,
+        recordIpLog: settings.record_ip_log || false,
       });
     }
   }, [userState?.user?.setting]);
+
+  const handleInputChange = (name, value) => {
+    setInputs((inputs) => ({ ...inputs, [name]: value }));
+  };
+
+  const generateAccessToken = async () => {
+    const res = await API.get('/api/user/token');
+    const { success, message, data } = res.data;
+    if (success) {
+      setSystemToken(data);
+      await copy(data);
+      showSuccess(t('令牌已重置并已复制到剪贴板'));
+    } else {
+      showError(message);
+    }
+  };
+
+  const loadPasskeyStatus = async () => {
+    try {
+      const res = await API.get('/api/user/passkey');
+      const { success, data, message } = res.data;
+      if (success) {
+        setPasskeyStatus({
+          enabled: data?.enabled || false,
+          last_used_at: data?.last_used_at || null,
+          backup_eligible: data?.backup_eligible || false,
+          backup_state: data?.backup_state || false,
+        });
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      // 忽略错误，保留默认状态
+    }
+  };
+
+  const startPasskeyManagementVerification = async (apiCall, options = {}) => {
+    const methods = await checkPasskeyVerificationMethods();
+    const requiredMethod = methods.has2FA
+      ? '2fa'
+      : methods.hasPasskey
+        ? 'passkey'
+        : null;
+
+    if (!requiredMethod) {
+      showError(t('您需要先启用两步验证或 Passkey 才能执行此操作'));
+      return;
+    }
+
+    if (requiredMethod === 'passkey' && !methods.passkeySupported) {
+      showInfo(t('当前设备不支持 Passkey'));
+      return;
+    }
+
+    setPasskeyRequiredVerificationMethod(requiredMethod);
+    await startPasskeyVerification(apiCall, {
+      preferredMethod: requiredMethod,
+      title: t('安全验证'),
+      ...options,
+    });
+  };
+
+  const startPasskeyRegistration = async () => {
+    const methods = await checkPasskeyVerificationMethods();
+    if (!methods.has2FA) {
+      try {
+        await registerPasskey();
+      } catch (error) {
+        showError(error.message || t('Passkey 注册失败，请重试'));
+      }
+      return;
+    }
+
+    setPasskeyRequiredVerificationMethod('2fa');
+    await startPasskeyVerification(registerPasskey, {
+      preferredMethod: '2fa',
+      title: t('安全验证'),
+    });
+  };
+
+  const registerPasskey = async () => {
+    setPasskeyRegisterLoading(true);
+    try {
+      const beginRes = await API.post('/api/user/passkey/register/begin');
+      const { success, message, data } = beginRes.data;
+      if (!success) {
+        throw new Error(message || t('无法发起 Passkey 注册'));
+      }
+
+      const publicKey = prepareCredentialCreationOptions(
+        data?.options || data?.publicKey || data,
+      );
+      const credential = await navigator.credentials.create({ publicKey });
+      const payload = buildRegistrationResult(credential);
+      if (!payload) {
+        throw new Error(t('Passkey 注册失败，请重试'));
+      }
+
+      const finishRes = await API.post(
+        '/api/user/passkey/register/finish',
+        payload,
+      );
+      if (!finishRes.data.success) {
+        throw new Error(
+          finishRes.data.message || t('Passkey 注册失败，请重试'),
+        );
+      }
+
+      showSuccess(t('Passkey 注册成功'));
+      await loadPasskeyStatus();
+      return finishRes.data;
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        showInfo(t('已取消 Passkey 注册'));
+        return { cancelled: true };
+      }
+      throw new Error(error?.message || t('Passkey 注册失败，请重试'));
+    } finally {
+      setPasskeyRegisterLoading(false);
+    }
+  };
+
+  const handleRegisterPasskey = async () => {
+    if (!passkeySupported || !window.PublicKeyCredential) {
+      showInfo(t('当前设备不支持 Passkey'));
+      return;
+    }
+    await startPasskeyRegistration();
+  };
+
+  const removePasskey = async () => {
+    setPasskeyDeleteLoading(true);
+    try {
+      const res = await API.delete('/api/user/passkey');
+      const { success, message } = res.data;
+      if (!success) {
+        throw new Error(message || t('操作失败，请重试'));
+      }
+
+      showSuccess(t('Passkey 已解绑'));
+      await loadPasskeyStatus();
+      return res.data;
+    } catch (error) {
+      throw new Error(error?.message || t('操作失败，请重试'));
+    } finally {
+      setPasskeyDeleteLoading(false);
+    }
+  };
+
+  const handleRemovePasskey = async () => {
+    await startPasskeyManagementVerification(removePasskey);
+  };
+
+  const handlePasskeyVerificationCancel = () => {
+    setPasskeyRequiredVerificationMethod(null);
+    cancelPasskeyVerification();
+  };
 
   const getUserData = async () => {
     let res = await API.get(`/api/user/self`);
@@ -114,8 +365,127 @@ const PersonalSetting = () => {
     if (success) {
       userDispatch({ type: 'login', payload: data });
       setUserData(data);
+      await loadPasskeyStatus();
     } else {
       showError(message);
+    }
+  };
+
+  const handleSystemTokenClick = async (e) => {
+    e.target.select();
+    await copy(e.target.value);
+    showSuccess(t('系统令牌已复制到剪切板'));
+  };
+
+  const deleteAccount = async () => {
+    if (inputs.self_account_deletion_confirmation !== userState.user.username) {
+      showError(t('请输入你的账户名以确认删除！'));
+      return;
+    }
+
+    const res = await API.delete('/api/user/self');
+    const { success, message } = res.data;
+
+    if (success) {
+      showSuccess(t('账户已删除！'));
+      await API.get('/api/user/logout');
+      userDispatch({ type: 'logout' });
+      localStorage.removeItem('user');
+      navigate('/login');
+    } else {
+      showError(message);
+    }
+  };
+
+  const bindWeChat = async () => {
+    if (inputs.wechat_verification_code === '') return;
+    const res = await API.post('/api/oauth/wechat/bind', {
+      code: inputs.wechat_verification_code,
+    });
+    const { success, message } = res.data;
+    if (success) {
+      showSuccess(t('微信账户绑定成功！'));
+      setShowWeChatBindModal(false);
+    } else {
+      showError(message);
+    }
+  };
+
+  const changePassword = async () => {
+    if (inputs.set_new_password === '') {
+      showError(t('请输入新密码！'));
+      return;
+    }
+    if (inputs.original_password === inputs.set_new_password) {
+      showError(t('新密码需要和原密码不一致！'));
+      return;
+    }
+    if (inputs.set_new_password !== inputs.set_new_password_confirmation) {
+      showError(t('两次输入的密码不一致！'));
+      return;
+    }
+    const res = await API.put(`/api/user/self`, {
+      original_password: inputs.original_password,
+      password: inputs.set_new_password,
+    });
+    const { success, message } = res.data;
+    if (success) {
+      showSuccess(t('密码修改成功！'));
+      setShowChangePasswordModal(false);
+    } else {
+      showError(message);
+    }
+  };
+
+  const sendVerificationCode = async () => {
+    if (inputs.email === '') {
+      showError(t('请输入邮箱！'));
+      return;
+    }
+    setDisableButton(true);
+    if (turnstileEnabled && turnstileToken === '') {
+      showInfo(t('请稍后几秒重试，Turnstile 正在检查用户环境！'));
+      return;
+    }
+    setLoading(true);
+    const res = await API.get(
+      `/api/verification?email=${inputs.email}&turnstile=${turnstileToken}`,
+    );
+    const { success, message } = res.data;
+    if (success) {
+      showSuccess(t('验证码发送成功，请检查邮箱！'));
+    } else {
+      showError(message);
+    }
+    setLoading(false);
+  };
+
+  const bindEmail = async () => {
+    if (inputs.email_verification_code === '') {
+      showError(t('请输入邮箱验证码！'));
+      return;
+    }
+    setLoading(true);
+    const res = await API.post('/api/oauth/email/bind', {
+      email: inputs.email,
+      code: inputs.email_verification_code,
+    });
+    const { success, message } = res.data;
+    if (success) {
+      showSuccess(t('邮箱账户绑定成功！'));
+      setShowEmailBindModal(false);
+      userState.user.email = inputs.email;
+    } else {
+      showError(message);
+    }
+    setLoading(false);
+  };
+
+  const copyText = async (text) => {
+    if (await copy(text)) {
+      showSuccess(t('已复制：') + text);
+    } else {
+      Modal.error({ title: t('无法复制到剪贴板，请手动复制'), content: text });
     }
   };
 
@@ -126,7 +496,7 @@ const PersonalSetting = () => {
         ? value.target.value !== undefined
           ? value.target.value
           : value.target.checked
-        : value, // handle checkbox properly
+        : value,
     }));
   };
 
@@ -147,6 +517,11 @@ const PersonalSetting = () => {
           const parsed = parseInt(notificationSettings.gotifyPriority);
           return isNaN(parsed) ? 5 : parsed;
         })(),
+        upstream_model_update_notify_enabled:
+          notificationSettings.upstreamModelUpdateNotifyEnabled === true,
+        accept_unset_model_ratio_model:
+          notificationSettings.acceptUnsetModelRatioModel,
+        record_ip_log: notificationSettings.recordIpLog,
       });
 
       if (res.data.success) {
@@ -181,8 +556,27 @@ const PersonalSetting = () => {
 
           {/* 账户管理和其他设置 */}
           <div className='grid grid-cols-1 xl:grid-cols-2 items-start gap-4 md:gap-6 mt-4 md:mt-6'>
-            {/* 左侧：偏好设置 */}
+            {/* 左侧：账户管理设置 */}
             <div className='flex flex-col gap-4 md:gap-6'>
+              <AccountManagement
+                t={t}
+                userState={userState}
+                status={status}
+                systemToken={systemToken}
+                setShowEmailBindModal={setShowEmailBindModal}
+                setShowWeChatBindModal={setShowWeChatBindModal}
+                generateAccessToken={generateAccessToken}
+                handleSystemTokenClick={handleSystemTokenClick}
+                setShowChangePasswordModal={setShowChangePasswordModal}
+                setShowAccountDeleteModal={setShowAccountDeleteModal}
+                passkeyStatus={passkeyStatus}
+                passkeySupported={passkeySupported}
+                passkeyRegisterLoading={passkeyRegisterLoading}
+                passkeyDeleteLoading={passkeyDeleteLoading}
+                onPasskeyRegister={handleRegisterPasskey}
+                onPasskeyDelete={handleRemovePasskey}
+              />
+
               {/* 偏好设置（语言等） */}
               <PreferencesSettings t={t} />
             </div>
@@ -198,6 +592,69 @@ const PersonalSetting = () => {
         </div>
       </div>
 
+      {/* 模态框组件 */}
+      <EmailBindModal
+        t={t}
+        showEmailBindModal={showEmailBindModal}
+        setShowEmailBindModal={setShowEmailBindModal}
+        inputs={inputs}
+        handleInputChange={handleInputChange}
+        sendVerificationCode={sendVerificationCode}
+        bindEmail={bindEmail}
+        disableButton={disableButton}
+        loading={loading}
+        countdown={countdown}
+        turnstileEnabled={turnstileEnabled}
+        turnstileSiteKey={turnstileSiteKey}
+        setTurnstileToken={setTurnstileToken}
+      />
+
+      <WeChatBindModal
+        t={t}
+        showWeChatBindModal={showWeChatBindModal}
+        setShowWeChatBindModal={setShowWeChatBindModal}
+        inputs={inputs}
+        handleInputChange={handleInputChange}
+        bindWeChat={bindWeChat}
+        status={status}
+      />
+
+      <AccountDeleteModal
+        t={t}
+        showAccountDeleteModal={showAccountDeleteModal}
+        setShowAccountDeleteModal={setShowAccountDeleteModal}
+        inputs={inputs}
+        handleInputChange={handleInputChange}
+        deleteAccount={deleteAccount}
+        userState={userState}
+        turnstileEnabled={turnstileEnabled}
+        turnstileSiteKey={turnstileSiteKey}
+        setTurnstileToken={setTurnstileToken}
+      />
+
+      <ChangePasswordModal
+        t={t}
+        showChangePasswordModal={showChangePasswordModal}
+        setShowChangePasswordModal={setShowChangePasswordModal}
+        inputs={inputs}
+        handleInputChange={handleInputChange}
+        changePassword={changePassword}
+        turnstileEnabled={turnstileEnabled}
+        turnstileSiteKey={turnstileSiteKey}
+        setTurnstileToken={setTurnstileToken}
+      />
+
+      <SecureVerificationModal
+        visible={isPasskeyVerificationModalVisible}
+        verificationMethods={visiblePasskeyVerificationMethods}
+        verificationState={passkeyVerificationState}
+        onVerify={executePasskeyVerification}
+        onCancel={handlePasskeyVerificationCancel}
+        onCodeChange={setPasskeyVerificationCode}
+        onMethodSwitch={switchPasskeyVerificationMethod}
+        title={passkeyVerificationState.title}
+        description={passkeyVerificationState.description}
+      />
     </div>
   );
 };
