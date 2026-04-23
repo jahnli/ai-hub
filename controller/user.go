@@ -241,13 +241,31 @@ func enrichUsersWithSubscriptionQuota(users []*model.User) {
 		userIds = append(userIds, u.Id)
 	}
 	summaries, err := model.GetActiveSubscriptionQuotaSummaryByUserIds(userIds)
-	if err != nil || len(summaries) == 0 {
-		return
+	if err == nil {
+		for _, u := range users {
+			if s, ok := summaries[u.Id]; ok {
+				u.SubscriptionQuotaTotal = s.AmountTotal
+				u.SubscriptionQuotaUsed = s.AmountUsed
+			}
+		}
 	}
-	for _, u := range users {
-		if s, ok := summaries[u.Id]; ok {
-			u.SubscriptionQuotaTotal = s.AmountTotal
-			u.SubscriptionQuotaUsed = s.AmountUsed
+	tokenCounts, err := model.CountTokensByUserIds(userIds)
+	if err == nil {
+		for _, u := range users {
+			if c, ok := tokenCounts[u.Id]; ok {
+				u.TokenCount = c
+			}
+		}
+	}
+	consumption, err := model.GetUserConsumptionSummaryByIds(userIds)
+	if err == nil {
+		for _, u := range users {
+			if c, ok := consumption[u.Id]; ok {
+				u.TotalConsumedQuota = c.TotalQuota
+				u.TotalPromptTokens = c.TotalPrompt
+				u.TotalCompletionTokens = c.TotalCompletion
+				u.TotalRequestCount = c.TotalRequestCount
+			}
 		}
 	}
 }

@@ -413,6 +413,34 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	return logs, total, err
 }
 
+type UserConsumptionSummary struct {
+	UserId           int   `gorm:"column:user_id"`
+	TotalQuota       int64 `gorm:"column:total_quota"`
+	TotalPrompt      int64 `gorm:"column:total_prompt"`
+	TotalCompletion  int64 `gorm:"column:total_completion"`
+	TotalRequestCount int64 `gorm:"column:total_request_count"`
+}
+
+func GetUserConsumptionSummaryByIds(userIds []int) (map[int]UserConsumptionSummary, error) {
+	result := make(map[int]UserConsumptionSummary, len(userIds))
+	if len(userIds) == 0 {
+		return result, nil
+	}
+	var rows []UserConsumptionSummary
+	err := LOG_DB.Model(&Log{}).
+		Select("user_id, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens), 0) as total_prompt, COALESCE(SUM(completion_tokens), 0) as total_completion, COUNT(*) as total_request_count").
+		Where("user_id IN ?", userIds).
+		Group("user_id").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		result[row.UserId] = row
+	}
+	return result, nil
+}
+
 type Stat struct {
 	Quota int `json:"quota"`
 	Rpm   int `json:"rpm"`

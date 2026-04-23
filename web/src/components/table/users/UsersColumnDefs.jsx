@@ -376,29 +376,49 @@ export const getUsersColumns = ({
       render: (text, record) => renderQuotaUsage(text, record, t),
     },
     {
-      title: t('一级部门'),
-      dataIndex: 'ldap_id',
-      render: (text) => {
-        const ous = parseLdapOUs(text);
-        return ous[0] || '-';
+      title: t('已消耗'),
+      key: 'consumed_quota',
+      render: (text, record) => {
+        const quota = parseInt(record.total_consumed_quota) || 0;
+        return renderQuota(quota);
       },
     },
     {
-      title: t('二级部门'),
-      dataIndex: 'ldap_id',
-      key: 'dept2',
-      render: (text) => {
-        const ous = parseLdapOUs(text);
-        return ous[1] || '-';
+      title: 'Token',
+      key: 'total_tokens',
+      render: (text, record) => {
+        const prompt = parseInt(record.total_prompt_tokens) || 0;
+        const completion = parseInt(record.total_completion_tokens) || 0;
+        const tokenCount = parseInt(record.token_count) || 0;
+        const tooltipContent = (
+          <div className='text-xs'>
+            <div>{t('提示 Token')}: {renderNumber(prompt)}</div>
+            <div>{t('完成 Token')}: {renderNumber(completion)}</div>
+            <div>{t('令牌数')}: {tokenCount}</div>
+          </div>
+        );
+        return (
+          <Tooltip content={tooltipContent} position='top'>
+            <span>{renderNumber(prompt + completion)}</span>
+          </Tooltip>
+        );
       },
     },
     {
-      title: t('三级部门'),
+      title: t('请求次数'),
+      key: 'request_count',
+      render: (text, record) => {
+        const requests = parseInt(record.total_request_count) || 0;
+        return renderNumber(requests);
+      },
+    },
+    {
+      title: t('部门'),
       dataIndex: 'ldap_id',
-      key: 'dept3',
       render: (text) => {
         const ous = parseLdapOUs(text);
-        return ous[2] || '-';
+        const parts = ous.filter((o) => o);
+        return parts.length > 0 ? parts.join(' / ') : '-';
       },
     },
     {

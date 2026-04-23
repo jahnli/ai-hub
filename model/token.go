@@ -439,6 +439,29 @@ func CountUserTokens(userId int) (int64, error) {
 	return total, err
 }
 
+func CountTokensByUserIds(userIds []int) (map[int]int64, error) {
+	result := make(map[int]int64, len(userIds))
+	if len(userIds) == 0 {
+		return result, nil
+	}
+	var rows []struct {
+		UserId int   `gorm:"column:user_id"`
+		Count  int64 `gorm:"column:count"`
+	}
+	err := DB.Model(&Token{}).
+		Select("user_id, COUNT(*) as count").
+		Where("user_id IN ?", userIds).
+		Group("user_id").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		result[row.UserId] = row.Count
+	}
+	return result, nil
+}
+
 // BatchDeleteTokens 删除指定用户的一组令牌，返回成功删除数量
 func BatchDeleteTokens(ids []int, userId int) (int, error) {
 	if len(ids) == 0 {

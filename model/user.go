@@ -57,6 +57,11 @@ type User struct {
 
 	SubscriptionQuotaTotal int64 `json:"subscription_quota_total" gorm:"-"`
 	SubscriptionQuotaUsed  int64 `json:"subscription_quota_used" gorm:"-"`
+	TokenCount             int64 `json:"token_count" gorm:"-"`
+	TotalConsumedQuota     int64 `json:"total_consumed_quota" gorm:"-"`
+	TotalPromptTokens      int64 `json:"total_prompt_tokens" gorm:"-"`
+	TotalCompletionTokens  int64 `json:"total_completion_tokens" gorm:"-"`
+	TotalRequestCount      int64 `json:"total_request_count" gorm:"-"`
 }
 
 func (user *User) ToBaseUser() *UserBase {
