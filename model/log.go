@@ -524,6 +524,79 @@ func SumUsedToken(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	return token
 }
 
+type UserModelDistribution struct {
+	ModelName    string `json:"model_name" gorm:"column:model_name"`
+	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
+	TotalQuota   int64  `json:"total_quota" gorm:"column:total_quota"`
+	TotalTokens  int64  `json:"total_tokens" gorm:"column:total_tokens"`
+}
+
+func GetUserModelDistribution(userId int) ([]UserModelDistribution, error) {
+	var rows []UserModelDistribution
+	err := LOG_DB.Model(&Log{}).
+		Select("model_name, COUNT(*) as request_count, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens + completion_tokens), 0) as total_tokens").
+		Where("user_id = ? AND type = ?", userId, LogTypeConsume).
+		Group("model_name").
+		Order("total_quota DESC").
+		Limit(50).
+		Find(&rows).Error
+	return rows, err
+}
+
+type UserTokenDistribution struct {
+	TokenName    string `json:"token_name" gorm:"column:token_name"`
+	TokenId      int    `json:"token_id" gorm:"column:token_id"`
+	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
+	TotalQuota   int64  `json:"total_quota" gorm:"column:total_quota"`
+}
+
+func GetUserTokenDistribution(userId int) ([]UserTokenDistribution, error) {
+	var rows []UserTokenDistribution
+	err := LOG_DB.Model(&Log{}).
+		Select("token_name, token_id, COUNT(*) as request_count, COALESCE(SUM(quota), 0) as total_quota").
+		Where("user_id = ? AND type = ?", userId, LogTypeConsume).
+		Group("token_name, token_id").
+		Order("total_quota DESC").
+		Limit(50).
+		Find(&rows).Error
+	return rows, err
+}
+
+type UserStatsOverview struct {
+	TotalQuota        int64   `json:"total_quota" gorm:"column:total_quota"`
+	TotalPrompt       int64   `json:"total_prompt" gorm:"column:total_prompt"`
+	TotalCompletion   int64   `json:"total_completion" gorm:"column:total_completion"`
+	TotalRequests     int64   `json:"total_requests" gorm:"column:total_requests"`
+	AvgResponseTime   float64 `json:"avg_response_time" gorm:"column:avg_response_time"`
+	ErrorCount        int64   `json:"error_count" gorm:"column:error_count"`
+	ConsumeCount      int64   `json:"consume_count" gorm:"column:consume_count"`
+}
+
+func GetUserStatsOverview(userId int) (*UserStatsOverview, error) {
+	var overview UserStatsOverview
+	err := LOG_DB.Model(&Log{}).
+		Select("COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) as total_prompt, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_completion, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as total_requests, "+
+			"COALESCE(AVG(CASE WHEN type = ? AND use_time > 0 THEN use_time END), 0) as avg_response_time, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as error_count, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as consume_count",
+			LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError, LogTypeConsume).
+		Where("user_id = ?", userId).
+		Scan(&overview).Error
+	return &overview, err
+}
+
+func GetUserRecentLogs(userId int, limit int) ([]*Log, error) {
+	var logs []*Log
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	err := LOG_DB.Where("user_id = ?", userId).Order("id desc").Limit(limit).Find(&logs).Error
+	return logs, err
+}
+
 func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64, error) {
 	var total int64 = 0
 

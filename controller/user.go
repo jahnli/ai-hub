@@ -1306,3 +1306,80 @@ func UpdateUserSetting(c *gin.Context) {
 
 	common.ApiSuccessI18n(c, i18n.MsgSettingSaved, nil)
 }
+
+func GetUserStats(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	startTimeStr := c.DefaultQuery("start_time", "0")
+	endTimeStr := c.DefaultQuery("end_time", "0")
+	startTime, _ := strconv.ParseInt(startTimeStr, 10, 64)
+	endTime, _ := strconv.ParseInt(endTimeStr, 10, 64)
+
+	overview, err := model.GetUserStatsOverview(id)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	tokenCount, err := model.CountUserTokens(id)
+	if err != nil {
+		tokenCount = 0
+	}
+
+	subscriptions, err := model.GetAllActiveUserSubscriptions(id)
+	var subTotal, subUsed int64
+	if err == nil {
+		for _, s := range subscriptions {
+			if s.Subscription != nil {
+				subTotal += s.Subscription.AmountTotal
+				subUsed += s.Subscription.AmountUsed
+			}
+		}
+	}
+
+	modelDist, err := model.GetUserModelDistribution(id)
+	if err != nil {
+		modelDist = []model.UserModelDistribution{}
+	}
+
+	tokenDist, err := model.GetUserTokenDistribution(id)
+	if err != nil {
+		tokenDist = []model.UserTokenDistribution{}
+	}
+
+	var trendData []*model.QuotaData
+	if startTime > 0 && endTime > 0 {
+		trendData, err = model.GetQuotaDataByUserId(id, startTime, endTime)
+		if err != nil {
+			trendData = []*model.QuotaData{}
+		}
+	}
+
+	recentLogs, err := model.GetUserRecentLogs(id, 20)
+	if err != nil {
+		recentLogs = []*model.Log{}
+	}
+
+	common.ApiSuccess(c, gin.H{
+		"overview": gin.H{
+			"total_quota":       overview.TotalQuota,
+			"total_prompt":      overview.TotalPrompt,
+			"total_completion":  overview.TotalCompletion,
+			"total_requests":    overview.TotalRequests,
+			"avg_response_time": overview.AvgResponseTime,
+			"error_count":       overview.ErrorCount,
+			"consume_count":     overview.ConsumeCount,
+			"token_count":       tokenCount,
+			"sub_quota_total":   subTotal,
+			"sub_quota_used":    subUsed,
+		},
+		"model_distribution": modelDist,
+		"token_distribution": tokenDist,
+		"trend_data":         trendData,
+		"recent_logs":        recentLogs,
+	})
+}

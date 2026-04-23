@@ -233,6 +233,7 @@ const renderOperations = (
     showResetPasskeyModal,
     showResetTwoFAModal,
     showUserSubscriptionsModal,
+    showUserStatsModal,
     t,
   },
 ) => {
@@ -272,6 +273,13 @@ const renderOperations = (
 
   return (
     <Space>
+      <Button
+        type='tertiary'
+        size='small'
+        onClick={() => showUserStatsModal(record)}
+      >
+        {t('详情')}
+      </Button>
       {record.status === 1 ? (
         <Button
           type='danger'
@@ -359,6 +367,7 @@ export const getUsersColumns = ({
   showResetPasskeyModal,
   showResetTwoFAModal,
   showUserSubscriptionsModal,
+  showUserStatsModal,
 }) => {
   return [
     {
@@ -466,6 +475,7 @@ export const getUsersColumns = ({
           showResetPasskeyModal,
           showResetTwoFAModal,
           showUserSubscriptionsModal,
+          showUserStatsModal,
           t,
         }),
     },
