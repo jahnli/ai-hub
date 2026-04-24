@@ -256,6 +256,16 @@ export function timestamp2string1(
       ? nextWeekYear + '-' + nextMonth + '-' + nextDay
       : nextMonth + '-' + nextDay;
     str += ' - ' + nextStr;
+  } else if (dataExportDefaultTime === 'month') {
+    str = showYear ? year + '-' + month : month + '月';
+  } else if (dataExportDefaultTime === 'quarter') {
+    let q = Math.ceil(parseInt(month) / 3);
+    str = showYear ? year + '-Q' + q : 'Q' + q;
+  } else if (dataExportDefaultTime === 'half_year') {
+    let h = parseInt(month) <= 6 ? 1 : 2;
+    str = showYear ? year + '-H' + h : 'H' + h;
+  } else if (dataExportDefaultTime === 'year') {
+    str = String(year);
   }
   return str;
 }

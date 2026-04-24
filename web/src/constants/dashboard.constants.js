@@ -38,15 +38,33 @@ export const ILLUSTRATION_SIZE = { width: 96, height: 96 };
 
 // ========== 时间相关常量 ==========
 export const TIME_OPTIONS = [
-  { label: '小时', value: 'hour' },
-  { label: '天', value: 'day' },
-  { label: '周', value: 'week' },
+  { label: '小时', value: 'hour', adminOnly: false },
+  { label: '天', value: 'day', adminOnly: false },
+  { label: '周', value: 'week', adminOnly: false },
+  { label: '月', value: 'month', adminOnly: true },
+  { label: '季度', value: 'quarter', adminOnly: true },
+  { label: '半年', value: 'half_year', adminOnly: true },
+  { label: '年', value: 'year', adminOnly: true },
 ];
 
 export const DEFAULT_TIME_INTERVALS = {
   hour: { seconds: 3600, minutes: 60 },
   day: { seconds: 86400, minutes: 1440 },
   week: { seconds: 604800, minutes: 10080 },
+  month: { seconds: 2592000, minutes: 43200 },
+  quarter: { seconds: 7776000, minutes: 129600 },
+  half_year: { seconds: 15552000, minutes: 259200 },
+  year: { seconds: 31536000, minutes: 525600 },
+};
+
+export const GRANULARITY_TIME_OFFSETS = {
+  hour: 3600,
+  day: 86400,
+  week: 604800,
+  month: 2592000,
+  quarter: 7776000,
+  half_year: 15552000,
+  year: 31536000,
 };
 
 // ========== 默认时间设置 ==========
@@ -54,6 +72,10 @@ export const DEFAULT_TIME_RANGE = {
   HOUR: 'hour',
   DAY: 'day',
   WEEK: 'week',
+  MONTH: 'month',
+  QUARTER: 'quarter',
+  HALF_YEAR: 'half_year',
+  YEAR: 'year',
 };
 
 // ========== 图表默认配置 ==========

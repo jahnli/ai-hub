@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { API, isAdmin, showError, timestamp2string } from '../../helpers';
 import { getDefaultTime, getInitialTimestamp } from '../../helpers/dashboard';
-import { TIME_OPTIONS } from '../../constants/dashboard.constants';
+import { TIME_OPTIONS, GRANULARITY_TIME_OFFSETS } from '../../constants/dashboard.constants';
 import { useIsMobile } from '../common/useIsMobile';
 import { useMinimumLoadingTime } from '../common/useMinimumLoadingTime';
 
@@ -98,11 +98,13 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   // ========== Memoized Values ==========
   const timeOptions = useMemo(
     () =>
-      TIME_OPTIONS.map((option) => ({
-        ...option,
-        label: t(option.label),
-      })),
-    [t],
+      TIME_OPTIONS
+        .filter((option) => !option.adminOnly || isAdminUser)
+        .map((option) => ({
+          ...option,
+          label: t(option.label),
+        })),
+    [t, isAdminUser],
   );
 
   const performanceMetrics = useMemo(() => {
@@ -165,6 +167,14 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     if (name === 'data_export_default_time') {
       setDataExportDefaultTime(value);
       localStorage.setItem('data_export_default_time', value);
+      const now = new Date().getTime() / 1000;
+      const offset =
+        GRANULARITY_TIME_OFFSETS[value] || GRANULARITY_TIME_OFFSETS.hour;
+      setInputs((prev) => ({
+        ...prev,
+        start_timestamp: timestamp2string(now - offset),
+        end_timestamp: timestamp2string(now),
+      }));
       return;
     }
     setInputs((inputs) => ({ ...inputs, [name]: value }));

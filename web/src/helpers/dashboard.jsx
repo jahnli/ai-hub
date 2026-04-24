@@ -35,6 +35,7 @@ import {
   DEFAULT_TIME_INTERVALS,
   DEFAULTS,
   ILLUSTRATION_SIZE,
+  GRANULARITY_TIME_OFFSETS,
 } from '../constants/dashboard.constants';
 
 // ========== 时间相关工具函数 ==========
@@ -51,15 +52,9 @@ export const getTimeInterval = (timeType, isSeconds = false) => {
 export const getInitialTimestamp = () => {
   const defaultTime = getDefaultTime();
   const now = new Date().getTime() / 1000;
-
-  switch (defaultTime) {
-    case 'hour':
-      return timestamp2string(now - 86400);
-    case 'week':
-      return timestamp2string(now - 86400 * 30);
-    default:
-      return timestamp2string(now - 86400 * 7);
-  }
+  const offset =
+    GRANULARITY_TIME_OFFSETS[defaultTime] || GRANULARITY_TIME_OFFSETS.hour;
+  return timestamp2string(now - offset);
 };
 
 // ========== 数据处理工具函数 ==========
