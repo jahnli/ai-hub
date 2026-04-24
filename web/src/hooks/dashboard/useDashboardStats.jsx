@@ -37,6 +37,8 @@ export const useDashboardStats = (
   consumeQuota,
   consumeTokens,
   times,
+  myRequestCount,
+  isAdminUser,
   trendData,
   performanceMetrics,
   navigate,
@@ -71,21 +73,25 @@ export const useDashboardStats = (
         color: 'bg-green-50',
         items: [
           {
-            title: t('请求次数'),
-            value: userState.user?.request_count,
+            title: t('我的请求'),
+            value: myRequestCount,
             icon: <IconSend />,
             avatarColor: 'green',
             trendData: [],
             trendColor: '#10b981',
           },
-          {
-            title: t('统计次数'),
-            value: times,
-            icon: <IconPulse />,
-            avatarColor: 'cyan',
-            trendData: trendData.times,
-            trendColor: '#06b6d4',
-          },
+          ...(isAdminUser
+            ? [
+                {
+                  title: t('平台请求'),
+                  value: times,
+                  icon: <IconPulse />,
+                  avatarColor: 'cyan',
+                  trendData: trendData.times,
+                  trendColor: '#06b6d4',
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -136,8 +142,9 @@ export const useDashboardStats = (
     [
       userState?.user?.quota,
       userState?.user?.used_quota,
-      userState?.user?.request_count,
       times,
+      myRequestCount,
+      isAdminUser,
       consumeQuota,
       consumeTokens,
       trendData,

@@ -78,6 +78,8 @@ const Dashboard = () => {
     dashboardData.consumeQuota,
     dashboardData.consumeTokens,
     dashboardData.times,
+    dashboardData.myRequestCount,
+    dashboardData.isAdminUser,
     dashboardData.trendData,
     dashboardData.performanceMetrics,
     dashboardData.navigate,
@@ -100,8 +102,11 @@ const Dashboard = () => {
         dashboardCharts.updateChartData(data);
       }
     });
-    await loadUserData();
-    await dashboardData.loadUptimeData();
+    await Promise.all([
+      loadUserData(),
+      dashboardData.loadUptimeData(),
+      dashboardData.loadMyRequestCount(),
+    ]);
   };
 
   const handleRefresh = async () => {

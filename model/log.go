@@ -644,6 +644,15 @@ func GetUserRecentLogs(userId int, limit int) ([]*Log, error) {
 	return logs, err
 }
 
+func CountUserRequests(userId int, startTimestamp int64, endTimestamp int64) (int64, error) {
+	var count int64
+	err := LOG_DB.Model(&Log{}).
+		Where("user_id = ? AND type = ? AND created_at >= ? AND created_at <= ?",
+			userId, LogTypeConsume, startTimestamp, endTimestamp).
+		Count(&count).Error
+	return count, err
+}
+
 func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64, error) {
 	var total int64 = 0
 

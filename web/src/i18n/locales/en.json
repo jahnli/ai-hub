@@ -507,6 +507,8 @@
     "使用日志": "Usage Logs",
     "使用模式": "Usage mode",
     "使用统计": "Usage Statistics",
+    "我的请求": "My Requests",
+    "平台请求": "Platform Requests",
     "使用认证器应用（如 Google Authenticator、Microsoft Authenticator）扫描下方二维码：": "Use an authenticator app (such as Google Authenticator, Microsoft Authenticator) to scan the QR code below:",
     "使用认证器应用扫描二维码": "Scan QR code with authenticator app",
     "使用说明": "Guide",
