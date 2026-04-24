@@ -3055,6 +3055,7 @@
     "请求并计费模型": "Modèle de demande et de facturation",
     "请求时长: ${time}s": "Durée de la requête : ${time}s",
     "请求次数": "Nombre de demandes",
+    "常用模型": "Modèle principal",
     "请求结束后多退少补": "Ajuster après la fin de la demande",
     "请求超时，请刷新页面后重新发起 GitHub 登录": "Délai dépassé, veuillez actualiser la page puis relancer la connexion GitHub",
     "请求路径": "Chemin de requête",

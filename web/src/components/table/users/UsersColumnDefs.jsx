@@ -242,10 +242,35 @@ const renderOperations = (
   }
 
   const moreMenu = [
+    record.status === 1
+      ? {
+          node: 'item',
+          name: t('禁用'),
+          type: 'danger',
+          onClick: () => showEnableDisableModal(record, 'disable'),
+        }
+      : {
+          node: 'item',
+          name: t('启用'),
+          onClick: () => showEnableDisableModal(record, 'enable'),
+        },
     {
       node: 'item',
-      name: t('订阅管理'),
-      onClick: () => showUserSubscriptionsModal(record),
+      name: t('编辑'),
+      onClick: () => {
+        setEditingUser(record);
+        setShowEditUser(true);
+      },
+    },
+    {
+      node: 'item',
+      name: t('提升'),
+      onClick: () => showPromoteModal(record),
+    },
+    {
+      node: 'item',
+      name: t('降级'),
+      onClick: () => showDemoteModal(record),
     },
     {
       node: 'divider',
@@ -274,51 +299,18 @@ const renderOperations = (
   return (
     <Space>
       <Button
-        type='tertiary'
+        type='primary'
         size='small'
         onClick={() => showUserStatsModal(record)}
       >
-        {t('详情')}
+        {t('统计')}
       </Button>
-      {record.status === 1 ? (
-        <Button
-          type='danger'
-          size='small'
-          onClick={() => showEnableDisableModal(record, 'disable')}
-        >
-          {t('禁用')}
-        </Button>
-      ) : (
-        <Button
-          size='small'
-          onClick={() => showEnableDisableModal(record, 'enable')}
-        >
-          {t('启用')}
-        </Button>
-      )}
       <Button
         type='tertiary'
         size='small'
-        onClick={() => {
-          setEditingUser(record);
-          setShowEditUser(true);
-        }}
+        onClick={() => showUserSubscriptionsModal(record)}
       >
-        {t('编辑')}
-      </Button>
-      <Button
-        type='warning'
-        size='small'
-        onClick={() => showPromoteModal(record)}
-      >
-        {t('提升')}
-      </Button>
-      <Button
-        type='secondary'
-        size='small'
-        onClick={() => showDemoteModal(record)}
-      >
-        {t('降级')}
+        {t('订阅')}
       </Button>
       <Dropdown menu={moreMenu} trigger='click' position='bottomRight'>
         <Button type='tertiary' size='small' icon={<IconMore />} />
@@ -422,12 +414,35 @@ export const getUsersColumns = ({
       },
     },
     {
+      title: t('常用模型'),
+      dataIndex: 'top_model',
+      render: (text) => {
+        if (!text) return '-';
+        return (
+          <Tooltip content={text} position='top'>
+            <Tag size='small' color='blue' style={{ maxWidth: 200 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                {text}
+              </span>
+            </Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: t('部门'),
       dataIndex: 'ldap_id',
       render: (text) => {
         const ous = parseLdapOUs(text);
         const parts = ous.filter((o) => o);
-        return parts.length > 0 ? parts.join(' / ') : '-';
+        if (parts.length === 0) return '-';
+        const display = parts[0];
+        if (parts.length <= 1) return display;
+        return (
+          <Tooltip content={parts.join(' / ')} position='top'>
+            <span>{display}</span>
+          </Tooltip>
+        );
       },
     },
     {

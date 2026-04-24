@@ -3070,6 +3070,7 @@
     "请求并计费模型": "Request and charge model",
     "请求时长: ${time}s": "Request time: ${time}s",
     "请求次数": "Number of Requests",
+    "常用模型": "Top Model",
     "请求结束后多退少补": "Adjust after request completion",
     "请求超时，请刷新页面后重新发起 GitHub 登录": "Request timed out, please refresh and restart GitHub login",
     "请求路径": "Request path",

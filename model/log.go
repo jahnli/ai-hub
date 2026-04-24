@@ -441,6 +441,53 @@ func GetUserConsumptionSummaryByIds(userIds []int) (map[int]UserConsumptionSumma
 	return result, nil
 }
 
+type userTopModel struct {
+	UserId    int    `gorm:"column:user_id"`
+	ModelName string `gorm:"column:model_name"`
+}
+
+func GetTopModelByUserIds(userIds []int) (map[int]string, error) {
+	result := make(map[int]string, len(userIds))
+	if len(userIds) == 0 {
+		return result, nil
+	}
+
+	var rows []userTopModel
+	subQuery := LOG_DB.Model(&Log{}).
+		Select("user_id, model_name, COUNT(*) as cnt").
+		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume).
+		Group("user_id, model_name")
+
+	if common.UsingPostgreSQL {
+		err := LOG_DB.Raw("SELECT DISTINCT ON (user_id) user_id, model_name FROM (?) AS t ORDER BY user_id, cnt DESC", subQuery).
+			Scan(&rows).Error
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var allRows []struct {
+			UserId    int    `gorm:"column:user_id"`
+			ModelName string `gorm:"column:model_name"`
+			Cnt       int64  `gorm:"column:cnt"`
+		}
+		err := subQuery.Order("cnt DESC").Find(&allRows).Error
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range allRows {
+			if _, exists := result[row.UserId]; !exists {
+				result[row.UserId] = row.ModelName
+			}
+		}
+		return result, nil
+	}
+
+	for _, row := range rows {
+		result[row.UserId] = row.ModelName
+	}
+	return result, nil
+}
+
 type Stat struct {
 	Quota int `json:"quota"`
 	Rpm   int `json:"rpm"`

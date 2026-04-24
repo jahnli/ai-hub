@@ -268,6 +268,14 @@ func enrichUsersWithSubscriptionQuota(users []*model.User) {
 			}
 		}
 	}
+	topModels, err := model.GetTopModelByUserIds(userIds)
+	if err == nil {
+		for _, u := range users {
+			if m, ok := topModels[u.Id]; ok {
+				u.TopModel = m
+			}
+		}
+	}
 }
 
 func GetAllUsers(c *gin.Context) {
