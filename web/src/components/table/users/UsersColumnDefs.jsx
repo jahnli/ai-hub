@@ -377,7 +377,7 @@ export const getUsersColumns = ({
       render: (text, record) => renderQuotaUsage(text, record, t),
     },
     {
-      title: t('已消耗'),
+      title: t('总消耗'),
       key: 'consumed_quota',
       render: (text, record) => {
         const quota = parseInt(record.total_consumed_quota) || 0;
