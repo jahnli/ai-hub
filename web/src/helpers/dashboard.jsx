@@ -36,6 +36,7 @@ import {
   DEFAULTS,
   ILLUSTRATION_SIZE,
   GRANULARITY_TIME_OFFSETS,
+  getGranularityTimeRange,
 } from '../constants/dashboard.constants';
 
 // ========== 时间相关工具函数 ==========
@@ -51,10 +52,14 @@ export const getTimeInterval = (timeType, isSeconds = false) => {
 
 export const getInitialTimestamp = () => {
   const defaultTime = getDefaultTime();
-  const now = new Date().getTime() / 1000;
-  const offset =
-    GRANULARITY_TIME_OFFSETS[defaultTime] || GRANULARITY_TIME_OFFSETS.hour;
-  return timestamp2string(now - offset);
+  const range = getGranularityTimeRange(defaultTime);
+  return timestamp2string(range.start.unix());
+};
+
+export const getInitialEndTimestamp = () => {
+  const defaultTime = getDefaultTime();
+  const range = getGranularityTimeRange(defaultTime);
+  return timestamp2string(range.end.unix());
 };
 
 // ========== 数据处理工具函数 ==========

@@ -21,8 +21,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { API, isAdmin, showError, timestamp2string } from '../../helpers';
-import { getDefaultTime, getInitialTimestamp } from '../../helpers/dashboard';
-import { TIME_OPTIONS, DASHBOARD_DATE_PRESETS, GRANULARITY_TIME_OFFSETS } from '../../constants/dashboard.constants';
+import { getDefaultTime, getInitialTimestamp, getInitialEndTimestamp } from '../../helpers/dashboard';
+import { TIME_OPTIONS, DASHBOARD_DATE_PRESETS, GRANULARITY_TIME_OFFSETS, getGranularityTimeRange } from '../../constants/dashboard.constants';
 import { useIsMobile } from '../common/useIsMobile';
 import { useMinimumLoadingTime } from '../common/useMinimumLoadingTime';
 
@@ -41,13 +41,13 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   const [resetVersion, setResetVersion] = useState(0);
 
   const TIME_LABEL_MAP = {
-    hour: '过去一小时',
-    day: '过去一天',
-    week: '过去一周',
-    month: '过去一月',
-    quarter: '过去一季度',
-    half_year: '过去半年',
-    year: '过去一年',
+    hour: '最近一小时',
+    day: '昨天',
+    week: '最近一周',
+    month: '最近一月',
+    quarter: '最近一季度',
+    half_year: '最近半年',
+    year: '最近一年',
   };
 
   // ========== 查询后的时间标签 ==========
@@ -61,7 +61,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     token_name: '',
     model_name: '',
     start_timestamp: getInitialTimestamp(),
-    end_timestamp: timestamp2string(new Date().getTime() / 1000),
+    end_timestamp: getInitialEndTimestamp(),
     channel: '',
     data_export_default_time: '',
   });
@@ -227,13 +227,11 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     if (name === 'data_export_default_time') {
       setDataExportDefaultTime(value);
       localStorage.setItem('data_export_default_time', value);
-      const now = new Date().getTime() / 1000;
-      const offset =
-        GRANULARITY_TIME_OFFSETS[value] || GRANULARITY_TIME_OFFSETS.hour;
+      const range = getGranularityTimeRange(value);
       setInputs((prev) => ({
         ...prev,
-        start_timestamp: timestamp2string(now - offset),
-        end_timestamp: timestamp2string(now),
+        start_timestamp: timestamp2string(range.start.unix()),
+        end_timestamp: timestamp2string(range.end.unix()),
       }));
       return;
     }
@@ -241,15 +239,14 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   }, []);
 
   const handleReset = useCallback(() => {
-    const now = new Date().getTime() / 1000;
-    const offset = GRANULARITY_TIME_OFFSETS.day;
+    const range = getGranularityTimeRange('day');
     setDataExportDefaultTime('day');
     localStorage.setItem('data_export_default_time', 'day');
     setInputs((prev) => ({
       ...prev,
       username: '',
-      start_timestamp: timestamp2string(now - offset),
-      end_timestamp: timestamp2string(now),
+      start_timestamp: timestamp2string(range.start.unix()),
+      end_timestamp: timestamp2string(range.end.unix()),
     }));
     setResetVersion((v) => v + 1);
   }, []);

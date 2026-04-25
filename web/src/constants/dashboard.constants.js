@@ -69,6 +69,31 @@ export const GRANULARITY_TIME_OFFSETS = {
   year: 31536000,
 };
 
+export const getGranularityTimeRange = (granularity) => {
+  const now = dayjs();
+  switch (granularity) {
+    case 'hour':
+      return { start: now.subtract(1, 'hour'), end: now };
+    case 'day':
+      return {
+        start: now.subtract(1, 'day').startOf('day'),
+        end: now.subtract(1, 'day').endOf('day'),
+      };
+    case 'week':
+      return { start: now.subtract(7, 'day').startOf('day'), end: now.endOf('day') };
+    case 'month':
+      return { start: now.subtract(1, 'month').startOf('day'), end: now.endOf('day') };
+    case 'quarter':
+      return { start: now.subtract(3, 'month').startOf('day'), end: now.endOf('day') };
+    case 'half_year':
+      return { start: now.subtract(6, 'month').startOf('day'), end: now.endOf('day') };
+    case 'year':
+      return { start: now.subtract(1, 'year').startOf('day'), end: now.endOf('day') };
+    default:
+      return { start: now.subtract(1, 'hour'), end: now };
+  }
+};
+
 // ========== 默认时间设置 ==========
 export const DEFAULT_TIME_RANGE = {
   HOUR: 'hour',
@@ -175,51 +200,51 @@ export const DEFAULTS = {
 // ========== 仪表盘日期预设 ==========
 export const DASHBOARD_DATE_PRESETS = [
   {
-    text: '过去一小时',
+    text: '最近一小时',
     start: () => dayjs().subtract(1, 'hour').toDate(),
     end: () => dayjs().toDate(),
     granularity: 'hour',
     adminOnly: false,
   },
   {
-    text: '过去一天',
-    start: () => dayjs().subtract(1, 'day').toDate(),
-    end: () => dayjs().toDate(),
+    text: '昨天',
+    start: () => dayjs().subtract(1, 'day').startOf('day').toDate(),
+    end: () => dayjs().subtract(1, 'day').endOf('day').toDate(),
     granularity: 'day',
     adminOnly: false,
   },
   {
-    text: '过去一周',
-    start: () => dayjs().subtract(1, 'week').toDate(),
-    end: () => dayjs().toDate(),
+    text: '最近一周',
+    start: () => dayjs().subtract(7, 'day').startOf('day').toDate(),
+    end: () => dayjs().endOf('day').toDate(),
     granularity: 'week',
     adminOnly: false,
   },
   {
-    text: '过去一月',
-    start: () => dayjs().subtract(1, 'month').toDate(),
-    end: () => dayjs().toDate(),
+    text: '最近一月',
+    start: () => dayjs().subtract(1, 'month').startOf('day').toDate(),
+    end: () => dayjs().endOf('day').toDate(),
     granularity: 'month',
     adminOnly: true,
   },
   {
-    text: '过去一季度',
-    start: () => dayjs().subtract(3, 'month').toDate(),
-    end: () => dayjs().toDate(),
+    text: '最近一季度',
+    start: () => dayjs().subtract(3, 'month').startOf('day').toDate(),
+    end: () => dayjs().endOf('day').toDate(),
     granularity: 'quarter',
     adminOnly: true,
   },
   {
-    text: '过去半年',
-    start: () => dayjs().subtract(6, 'month').toDate(),
-    end: () => dayjs().toDate(),
+    text: '最近半年',
+    start: () => dayjs().subtract(6, 'month').startOf('day').toDate(),
+    end: () => dayjs().endOf('day').toDate(),
     granularity: 'half_year',
     adminOnly: true,
   },
   {
-    text: '过去一年',
-    start: () => dayjs().subtract(1, 'year').toDate(),
-    end: () => dayjs().toDate(),
+    text: '最近一年',
+    start: () => dayjs().subtract(1, 'year').startOf('day').toDate(),
+    end: () => dayjs().endOf('day').toDate(),
     granularity: 'year',
     adminOnly: true,
   },
