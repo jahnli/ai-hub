@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { getRelativeTime } from '../../helpers';
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
@@ -123,8 +123,16 @@ const Dashboard = () => {
   };
 
   const handleReset = () => {
-    dashboardData.handleReset(handleRefresh);
+    dashboardData.handleReset();
   };
+
+  const resetVersionRef = useRef(dashboardData.resetVersion);
+  useEffect(() => {
+    if (resetVersionRef.current !== dashboardData.resetVersion) {
+      resetVersionRef.current = dashboardData.resetVersion;
+      handleRefresh();
+    }
+  }, [dashboardData.resetVersion]);
 
   // ========== 数据准备 ==========
   const apiInfoData = statusState?.status?.api_info || [];

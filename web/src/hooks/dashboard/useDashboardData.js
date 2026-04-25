@@ -38,7 +38,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const showLoading = useMinimumLoadingTime(loading);
 
-  const pendingRefresh = useRef(false);
+  const [resetVersion, setResetVersion] = useState(0);
 
   const TIME_LABEL_MAP = {
     hour: '过去一小时',
@@ -240,7 +240,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   }, []);
 
-  const handleReset = useCallback((onResetDone) => {
+  const handleReset = useCallback(() => {
     const now = new Date().getTime() / 1000;
     const offset = GRANULARITY_TIME_OFFSETS.day;
     setDataExportDefaultTime('day');
@@ -251,9 +251,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
       start_timestamp: timestamp2string(now - offset),
       end_timestamp: timestamp2string(now),
     }));
-    if (onResetDone) {
-      pendingRefresh.current = onResetDone;
-    }
+    setResetVersion((v) => v + 1);
   }, []);
 
   const showSearchModal = useCallback(() => {
@@ -438,13 +436,6 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     }
   }, [getUserData]);
 
-  useEffect(() => {
-    if (pendingRefresh.current) {
-      const callback = pendingRefresh.current;
-      pendingRefresh.current = false;
-      callback();
-    }
-  }, [inputs]);
 
   return {
     // 基础状态
@@ -455,6 +446,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     // 输入状态
     inputs,
     dataExportDefaultTime,
+    resetVersion,
 
     // 数据状态
     quotaData,
