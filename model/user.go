@@ -337,6 +337,40 @@ func GetUserLdapIdsByIds(userIds []int) (map[int]string, error) {
 	return result, nil
 }
 
+func GetUserDisplayNamesByUsernames(usernames []string) (map[string]string, error) {
+	result := make(map[string]string, len(usernames))
+	if len(usernames) == 0 {
+		return result, nil
+	}
+	var rows []struct {
+		Username    string `gorm:"column:username"`
+		DisplayName string `gorm:"column:display_name"`
+		LdapId      string `gorm:"column:ldap_id"`
+	}
+	err := DB.Model(&User{}).Select("username, display_name, ldap_id").Where("username IN ?", usernames).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		cn := ""
+		if row.LdapId != "" {
+			parts := strings.SplitN(row.LdapId, ",", 2)
+			if len(parts) > 0 {
+				kv := strings.SplitN(parts[0], "=", 2)
+				if len(kv) == 2 && strings.EqualFold(kv[0], "CN") {
+					cn = kv[1]
+				}
+			}
+		}
+		if cn != "" {
+			result[row.Username] = cn + " ( " + row.Username + " )"
+		} else if row.DisplayName != "" {
+			result[row.Username] = row.DisplayName + " ( " + row.Username + " )"
+		}
+	}
+	return result, nil
+}
+
 func GetUserById(id int, selectAll bool) (*User, error) {
 	if id == 0 {
 		return nil, errors.New("id 为空！")

@@ -60,6 +60,22 @@ func GetQuotaDatesByUser(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	usernameSet := make(map[string]struct{})
+	for _, d := range dates {
+		usernameSet[d.Username] = struct{}{}
+	}
+	usernames := make([]string, 0, len(usernameSet))
+	for u := range usernameSet {
+		usernames = append(usernames, u)
+	}
+	displayNames, _ := model.GetUserDisplayNamesByUsernames(usernames)
+	if displayNames != nil {
+		for _, d := range dates {
+			if dn, ok := displayNames[d.Username]; ok {
+				d.DisplayName = dn
+			}
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
