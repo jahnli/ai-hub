@@ -528,24 +528,23 @@ const SubscriptionPlansCard = ({
                     bodyStyle={{ padding: 0 }}
                   >
                     <div className='p-4 h-full flex flex-col'>
-                      {/* 当前订阅标签 */}
-                      {isCurrentPlan && (
-                        <div className='mb-2'>
-                          <Tag color='green' shape='circle' size='small'>
-                            <Check size={10} className='mr-1' />
-                            {t('当前订阅')}
-                          </Tag>
-                        </div>
-                      )}
                       {/* 套餐名称 */}
                       <div className='mb-3'>
-                        <Typography.Title
-                          heading={5}
-                          ellipsis={{ rows: 1, showTooltip: true }}
-                          style={{ margin: 0 }}
-                        >
-                          {plan?.title || t('订阅套餐')}
-                        </Typography.Title>
+                        <div className='flex items-center justify-between gap-2'>
+                          <Typography.Title
+                            heading={5}
+                            ellipsis={{ rows: 1, showTooltip: true }}
+                            style={{ margin: 0, flexShrink: 1, minWidth: 0 }}
+                          >
+                            {plan?.title || t('订阅套餐')}
+                          </Typography.Title>
+                          {isCurrentPlan && (
+                            <Tag color='green' shape='circle' size='small' style={{ flexShrink: 0 }}>
+                              <Check size={10} className='mr-1' />
+                              {t('当前订阅')}
+                            </Tag>
+                          )}
+                        </div>
                         {plan?.subtitle && (
                           <Text
                             type='tertiary'

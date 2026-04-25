@@ -416,7 +416,7 @@ export const getUsersColumns = ({
       title: t('请求次数'),
       key: 'request_count',
       render: (text, record) => {
-        const requests = parseInt(record.total_request_count) || 0;
+        const requests = parseInt(record.request_count) || 0;
         return renderNumber(requests);
       },
     },
