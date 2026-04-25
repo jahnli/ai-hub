@@ -310,6 +310,7 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/users", middleware.AdminAuth(), controller.GetQuotaDatesByUser)
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
 		dataRoute.GET("/self/count", middleware.UserAuth(), controller.GetUserRequestCount)
+		dataRoute.GET("/self/consumed", middleware.UserAuth(), controller.GetUserConsumedQuota)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{

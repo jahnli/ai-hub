@@ -429,7 +429,7 @@ func GetUserConsumptionSummaryByIds(userIds []int) (map[int]UserConsumptionSumma
 	var rows []UserConsumptionSummary
 	err := LOG_DB.Model(&Log{}).
 		Select("user_id, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens), 0) as total_prompt, COALESCE(SUM(completion_tokens), 0) as total_completion, COUNT(*) as total_request_count").
-		Where("user_id IN ?", userIds).
+		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume).
 		Group("user_id").
 		Find(&rows).Error
 	if err != nil {
@@ -439,6 +439,15 @@ func GetUserConsumptionSummaryByIds(userIds []int) (map[int]UserConsumptionSumma
 		result[row.UserId] = row
 	}
 	return result, nil
+}
+
+func GetUserConsumedQuota(userId int) (int64, error) {
+	var total int64
+	err := LOG_DB.Model(&Log{}).
+		Select("COALESCE(SUM(quota), 0)").
+		Where("user_id = ? AND type = ?", userId, LogTypeConsume).
+		Scan(&total).Error
+	return total, err
 }
 
 type userTopModel struct {

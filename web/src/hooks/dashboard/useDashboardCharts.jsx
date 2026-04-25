@@ -421,6 +421,7 @@ export const useDashboardCharts = (
         timeTokensMap,
         timeCountMap,
         dataExportDefaultTime,
+        data,
       );
       setTrendData(trendDataResult);
 

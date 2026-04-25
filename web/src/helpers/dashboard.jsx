@@ -131,10 +131,15 @@ export const getTrendSpec = (data, color) => ({
 });
 
 // ========== UI 工具函数 ==========
-export const createSectionTitle = (Icon, text) => (
+export const createSectionTitle = (Icon, text, description) => (
   <div className='flex items-center gap-2'>
-    <Icon size={16} />
-    {text}
+    <Icon size={16} className='flex-shrink-0' />
+    <span className='leading-normal'>
+      {text}
+      {description && (
+        <span className='text-xs font-normal text-gray-400 ml-1'>{description}</span>
+      )}
+    </span>
   </div>
 );
 
@@ -294,20 +299,53 @@ export const calculateTrendData = (
   timeTokensMap,
   timeCountMap,
   dataExportDefaultTime,
+  rawData,
 ) => {
-  const quotaTrend = timePoints.map((time) => timeQuotaMap.get(time) || 0);
-  const tokensTrend = timePoints.map((time) => timeTokensMap.get(time) || 0);
-  const countTrend = timePoints.map((time) => timeCountMap.get(time) || 0);
+  const trendGranularity =
+    dataExportDefaultTime === 'month' ||
+    dataExportDefaultTime === 'quarter' ||
+    dataExportDefaultTime === 'half_year' ||
+    dataExportDefaultTime === 'year'
+      ? 'day'
+      : dataExportDefaultTime;
+
+  let trendTimePoints, trendQuotaMap, trendTokensMap, trendCountMap;
+
+  if (trendGranularity !== dataExportDefaultTime && rawData && rawData.length > 0) {
+    trendQuotaMap = new Map();
+    trendTokensMap = new Map();
+    trendCountMap = new Map();
+    const trendPointsSet = new Set();
+    const showYear = isDataCrossYear(rawData.map((item) => item.created_at));
+    rawData.forEach((item) => {
+      const timeKey = timestamp2string1(item.created_at, trendGranularity, showYear);
+      trendPointsSet.add(timeKey);
+      initializeMaps(timeKey, trendQuotaMap, trendTokensMap, trendCountMap);
+      updateMapValue(trendQuotaMap, timeKey, item.quota);
+      updateMapValue(trendTokensMap, timeKey, item.token_used);
+      updateMapValue(trendCountMap, timeKey, item.count);
+    });
+    trendTimePoints = Array.from(trendPointsSet).sort();
+  } else {
+    trendTimePoints = timePoints;
+    trendQuotaMap = timeQuotaMap;
+    trendTokensMap = timeTokensMap;
+    trendCountMap = timeCountMap;
+  }
+
+  const quotaTrend = trendTimePoints.map((time) => trendQuotaMap.get(time) || 0);
+  const tokensTrend = trendTimePoints.map((time) => trendTokensMap.get(time) || 0);
+  const countTrend = trendTimePoints.map((time) => trendCountMap.get(time) || 0);
 
   const rpmTrend = [];
   const tpmTrend = [];
 
-  if (timePoints.length >= 2) {
-    const interval = getTimeInterval(dataExportDefaultTime);
+  if (trendTimePoints.length >= 2) {
+    const interval = getTimeInterval(trendGranularity);
 
-    for (let i = 0; i < timePoints.length; i++) {
-      rpmTrend.push(timeCountMap.get(timePoints[i]) / interval);
-      tpmTrend.push(timeTokensMap.get(timePoints[i]) / interval);
+    for (let i = 0; i < trendTimePoints.length; i++) {
+      rpmTrend.push(trendCountMap.get(trendTimePoints[i]) / interval);
+      tpmTrend.push(trendTokensMap.get(trendTimePoints[i]) / interval);
     }
   }
 

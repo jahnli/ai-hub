@@ -80,8 +80,11 @@ const Dashboard = () => {
     dashboardData.times,
     dashboardData.myRequestCount,
     dashboardData.isAdminUser,
+    dashboardData.subscriptionInfo,
+    dashboardData.queriedTimeLabel,
     dashboardData.trendData,
     dashboardData.performanceMetrics,
+    dashboardData.consumedQuota,
     dashboardData.navigate,
     dashboardData.t,
   );
@@ -106,6 +109,8 @@ const Dashboard = () => {
       loadUserData(),
       dashboardData.loadUptimeData(),
       dashboardData.loadMyRequestCount(),
+      dashboardData.loadConsumedQuota(),
+      dashboardData.loadSubscriptionInfo(),
     ]);
   };
 

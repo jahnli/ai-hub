@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import { useMemo } from 'react';
-import { Wallet, Activity, Zap, Gauge } from 'lucide-react';
+import { Wallet, Activity, Zap, Gauge, Info } from 'lucide-react';
 import {
   IconMoneyExchangeStroked,
   IconHistogram,
@@ -29,6 +29,7 @@ import {
   IconTypograph,
   IconSend,
 } from '@douyinfe/semi-icons';
+import { Tooltip } from '@douyinfe/semi-ui';
 import { renderQuota } from '../../helpers';
 import { createSectionTitle } from '../../helpers/dashboard';
 
@@ -39,8 +40,11 @@ export const useDashboardStats = (
   times,
   myRequestCount,
   isAdminUser,
+  subscriptionInfo,
+  timeLabel,
   trendData,
   performanceMetrics,
+  consumedQuota,
   navigate,
   t,
 ) => {
@@ -51,16 +55,19 @@ export const useDashboardStats = (
         color: 'bg-blue-50',
         items: [
           {
-            title: t('当前余额'),
-            value: renderQuota(userState?.user?.quota),
+            title: t('当前订阅'),
+            value: subscriptionInfo
+              ? `${renderQuota(subscriptionInfo.remaining)} / ${renderQuota(subscriptionInfo.total)}`
+              : t('无'),
+            planTitle: subscriptionInfo?.planTitle || '',
             icon: <IconMoneyExchangeStroked />,
             avatarColor: 'blue',
             trendData: [],
             trendColor: '#3b82f6',
           },
           {
-            title: t('历史消耗'),
-            value: renderQuota(userState?.user?.used_quota),
+            title: t('总消耗'),
+            value: renderQuota(consumedQuota),
             icon: <IconHistogram />,
             avatarColor: 'purple',
             trendData: [],
@@ -69,7 +76,7 @@ export const useDashboardStats = (
         ],
       },
       {
-        title: createSectionTitle(Activity, t('使用统计')),
+        title: createSectionTitle(Activity, t('使用统计'), timeLabel),
         color: 'bg-green-50',
         items: [
           {
@@ -95,7 +102,7 @@ export const useDashboardStats = (
         ],
       },
       {
-        title: createSectionTitle(Zap, t('资源消耗')),
+        title: createSectionTitle(Zap, t('资源消耗'), timeLabel),
         color: 'bg-yellow-50',
         items: [
           {
@@ -107,7 +114,7 @@ export const useDashboardStats = (
             trendColor: '#f59e0b',
           },
           {
-            title: t('统计Tokens'),
+            title: t('统计 Tokens'),
             value: isNaN(consumeTokens) ? 0 : consumeTokens.toLocaleString(),
             icon: <IconTextStroked />,
             avatarColor: 'pink',
@@ -117,11 +124,18 @@ export const useDashboardStats = (
         ],
       },
       {
-        title: createSectionTitle(Gauge, t('性能指标')),
+        title: createSectionTitle(Gauge, t('性能指标'), timeLabel),
         color: 'bg-indigo-50',
         items: [
           {
-            title: t('平均RPM'),
+            title: (
+              <span className='inline-flex items-center gap-1'>
+                {t('平均 RPM')}
+                <Tooltip content={t('每分钟请求数 (Requests Per Minute)')} position='top'>
+                  <Info size={12} className='text-gray-400 cursor-help' />
+                </Tooltip>
+              </span>
+            ),
             value: performanceMetrics.avgRPM,
             icon: <IconStopwatchStroked />,
             avatarColor: 'indigo',
@@ -129,7 +143,14 @@ export const useDashboardStats = (
             trendColor: '#6366f1',
           },
           {
-            title: t('平均TPM'),
+            title: (
+              <span className='inline-flex items-center gap-1'>
+                {t('平均 TPM')}
+                <Tooltip content={t('每分钟 Token 数 (Tokens Per Minute)')} position='top'>
+                  <Info size={12} className='text-gray-400 cursor-help' />
+                </Tooltip>
+              </span>
+            ),
             value: performanceMetrics.avgTPM,
             icon: <IconTypograph />,
             avatarColor: 'orange',
@@ -140,8 +161,9 @@ export const useDashboardStats = (
       },
     ],
     [
-      userState?.user?.quota,
-      userState?.user?.used_quota,
+      consumedQuota,
+      subscriptionInfo,
+      timeLabel,
       times,
       myRequestCount,
       isAdminUser,

@@ -40,13 +40,28 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
 
   const pendingRefresh = useRef(false);
 
+  const TIME_LABEL_MAP = {
+    hour: '过去一小时',
+    day: '过去一天',
+    week: '过去一周',
+    month: '过去一月',
+    quarter: '过去一季度',
+    half_year: '过去半年',
+    year: '过去一年',
+  };
+
+  // ========== 查询后的时间标签 ==========
+  const [queriedTimeLabel, setQueriedTimeLabel] = useState(
+    t(TIME_LABEL_MAP[getDefaultTime()] || ''),
+  );
+
   // ========== 输入状态 ==========
   const [inputs, setInputs] = useState({
     username: '',
     token_name: '',
     model_name: '',
     start_timestamp: getInitialTimestamp(),
-    end_timestamp: timestamp2string(new Date().getTime() / 1000 + 3600),
+    end_timestamp: timestamp2string(new Date().getTime() / 1000),
     channel: '',
     data_export_default_time: '',
   });
@@ -63,6 +78,12 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   const [pieData, setPieData] = useState([{ type: 'null', value: '0' }]);
   const [lineData, setLineData] = useState([]);
   const [modelColors, setModelColors] = useState({});
+
+  // ========== 总消耗 ==========
+  const [consumedQuota, setConsumedQuota] = useState(0);
+
+  // ========== 订阅状态 ==========
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
 
   // ========== 图表状态 ==========
   const [activeChartTab, setActiveChartTab] = useState('1');
@@ -194,7 +215,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
       .filter((p) => !p.adminOnly || isAdminUser)
       .find((p) => {
         const offset = GRANULARITY_TIME_OFFSETS[p.granularity];
-        return offset && Math.abs(diffSeconds - offset) < 60;
+        return offset && Math.abs(diffSeconds - offset) < offset * 0.05;
       });
     if (matched) {
       setDataExportDefaultTime(matched.granularity);
@@ -262,6 +283,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
       const { success, message, data } = res.data;
       if (success) {
         setQuotaData(data);
+        setQueriedTimeLabel(t(TIME_LABEL_MAP[dataExportDefaultTime] || ''));
         if (data.length === 0) {
           data.push({
             count: 0,
@@ -348,11 +370,47 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     }
   }, [userDispatch]);
 
+  const loadSubscriptionInfo = useCallback(async () => {
+    try {
+      const res = await API.get('/api/subscription/self');
+      if (res.data?.success) {
+        const activeSubs = res.data.data?.subscriptions || [];
+        if (activeSubs.length > 0) {
+          const sub = activeSubs[0];
+          const total = sub.subscription?.amount_total || 0;
+          const used = sub.subscription?.amount_used || 0;
+          setSubscriptionInfo({
+            planTitle: sub.plan_title || '',
+            total,
+            used,
+            remaining: Math.max(0, total - used),
+          });
+        } else {
+          setSubscriptionInfo(null);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const loadConsumedQuota = useCallback(async () => {
+    try {
+      const res = await API.get('/api/data/self/consumed');
+      const { success, data } = res.data;
+      if (success) {
+        setConsumedQuota(data || 0);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     const data = await loadQuotaData();
-    await Promise.all([loadUptimeData(), loadMyRequestCount()]);
+    await Promise.all([loadUptimeData(), loadMyRequestCount(), loadConsumedQuota()]);
     return data;
-  }, [loadQuotaData, loadUptimeData, loadMyRequestCount]);
+  }, [loadQuotaData, loadUptimeData, loadMyRequestCount, loadConsumedQuota]);
 
   const handleSearchConfirm = useCallback(
     async (updateChartDataCallback) => {
@@ -415,6 +473,15 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     modelColors,
     setModelColors,
 
+    // 订阅状态
+    subscriptionInfo,
+
+    // 总消耗
+    consumedQuota,
+
+    // 查询后的时间标签
+    queriedTimeLabel,
+
     // 图表状态
     activeChartTab,
     setActiveChartTab,
@@ -452,6 +519,8 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     loadQuotaData,
     loadUserQuotaData,
     loadMyRequestCount,
+    loadConsumedQuota,
+    loadSubscriptionInfo,
     loadUptimeData,
     getUserData,
     refresh,

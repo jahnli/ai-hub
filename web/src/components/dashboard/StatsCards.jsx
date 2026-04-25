@@ -80,18 +80,33 @@ const StatsCards = ({
                       </div>
                     </div>
                   </div>
-                  {item.title === t('当前余额') ? (
-                    <Tag
-                      color='white'
-                      shape='circle'
-                      size='large'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate('/console/topup');
-                      }}
-                    >
-                      {t('充值')}
-                    </Tag>
+                  {item.title === t('当前订阅') ? (
+                    item.planTitle ? (
+                      <Tag
+                        color='blue'
+                        shape='circle'
+                        size='large'
+                        style={{ cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/console/topup');
+                        }}
+                      >
+                        {item.planTitle}
+                      </Tag>
+                    ) : (
+                      <Tag
+                        color='white'
+                        shape='circle'
+                        size='large'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/console/topup');
+                        }}
+                      >
+                        {t('订阅')}
+                      </Tag>
+                    )
                   ) : (
                     (loading ||
                       (item.trendData && item.trendData.length > 0)) && (
