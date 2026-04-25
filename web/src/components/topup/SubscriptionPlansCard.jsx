@@ -407,28 +407,49 @@ const SubscriptionPlansCard = ({
                             ).toLocaleString()}
                           </div>
                         )}
-                        <div className='text-xs text-gray-500 mb-2 flex items-center flex-wrap gap-1'>
-                          {t('总额度')}:{' '}
+                        <div className='text-xs text-gray-500 mb-2 flex items-center gap-2'>
+                          <span className='whitespace-nowrap'>{t('总额度')}</span>
                           {totalAmount > 0 ? (
                             <>
                               <Tooltip
                                 content={`${t('原生额度')}：${usedAmount}/${totalAmount} · ${t('剩余')} ${remainAmount}`}
                               >
-                                <Tag size='small' color={usagePercent >= 80 ? 'red' : usagePercent >= 50 ? 'orange' : 'green'} shape='circle'>
-                                  {renderQuota(usedAmount)}/{renderQuota(totalAmount)}
-                                </Tag>
+                                <div style={{
+                                  position: 'relative',
+                                  width: 120,
+                                  height: 14,
+                                  borderRadius: 999,
+                                  background: 'var(--semi-color-fill-0)',
+                                  overflow: 'hidden',
+                                }}>
+                                  <div style={{
+                                    width: `${100 - usagePercent}%`,
+                                    height: '100%',
+                                    borderRadius: 999,
+                                    background: 'var(--semi-color-success)',
+                                    transition: 'width 0.3s ease',
+                                  }} />
+                                  <span style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    color: (100 - usagePercent) >= 50 ? '#fff' : 'var(--semi-color-text-2)',
+                                    pointerEvents: 'none',
+                                  }}>
+                                    {100 - usagePercent}%
+                                  </span>
+                                </div>
                               </Tooltip>
-                              <Tag size='small' color={usagePercent >= 80 ? 'red' : usagePercent >= 50 ? 'orange' : 'green'} shape='circle'>
-                                {t('剩余')} {renderQuota(remainAmount)}
-                              </Tag>
-                              <Tag size='small' color={usagePercent >= 80 ? 'red' : usagePercent >= 50 ? 'orange' : 'green'} shape='circle'>
-                                {t('已用')} {usagePercent}%
-                              </Tag>
+                              <span className='whitespace-nowrap'>
+                                {renderQuota(remainAmount)} / {renderQuota(totalAmount)}
+                              </span>
                             </>
                           ) : (
-                            <Tag size='small' color='white' shape='circle'>
-                              {t('不限')}
-                            </Tag>
+                            <span>{t('不限')}</span>
                           )}
                         </div>
                         {!isLast && <Divider margin={12} />}

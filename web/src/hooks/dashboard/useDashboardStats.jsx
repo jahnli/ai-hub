@@ -60,6 +60,9 @@ export const useDashboardStats = (
               ? `${renderQuota(subscriptionInfo.remaining)} / ${renderQuota(subscriptionInfo.total)}`
               : t('无'),
             planTitle: subscriptionInfo?.planTitle || '',
+            subscriptionPercent: subscriptionInfo?.total > 0
+              ? Math.round((subscriptionInfo.remaining / subscriptionInfo.total) * 100)
+              : null,
             icon: <IconMoneyExchangeStroked />,
             avatarColor: 'blue',
             trendData: [],

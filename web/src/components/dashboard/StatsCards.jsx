@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React from 'react';
-import { Card, Avatar, Skeleton, Tag } from '@douyinfe/semi-ui';
+import { Card, Avatar, Skeleton, Tag, Progress } from '@douyinfe/semi-ui';
 import { VChart } from '@visactor/react-vchart';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -78,6 +78,21 @@ const StatsCards = ({
                           {item.value}
                         </Skeleton>
                       </div>
+                      {item.subscriptionPercent != null && !loading && (
+                        <Progress
+                          percent={item.subscriptionPercent}
+                          stroke={
+                            item.subscriptionPercent <= 10
+                              ? 'var(--semi-color-danger)'
+                              : item.subscriptionPercent <= 30
+                                ? 'var(--semi-color-warning)'
+                                : undefined
+                          }
+                          aria-label='subscription quota usage'
+                          format={() => `${item.subscriptionPercent}%`}
+                          style={{ width: '100%', marginTop: '2px' }}
+                        />
+                      )}
                     </div>
                   </div>
                   {item.title === t('当前订阅') ? (
