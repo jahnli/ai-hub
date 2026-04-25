@@ -42,6 +42,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
 
   const TIME_LABEL_MAP = {
     hour: '最近一小时',
+    today: '最近一天',
     day: '昨天',
     week: '最近一周',
     month: '最近一月',
@@ -214,8 +215,14 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     const matched = DASHBOARD_DATE_PRESETS
       .filter((p) => !p.adminOnly || isAdminUser)
       .find((p) => {
-        const offset = GRANULARITY_TIME_OFFSETS[p.granularity];
-        return offset && Math.abs(diffSeconds - offset) < offset * 0.05;
+        const presetStart = p.start().getTime() / 1000;
+        const presetEnd = p.end().getTime() / 1000;
+        const presetDiff = presetEnd - presetStart;
+        return (
+          Math.abs(diffSeconds - presetDiff) < presetDiff * 0.05 &&
+          Math.abs(startTs - presetStart) < 60 &&
+          Math.abs(endTs - presetEnd) < 60
+        );
       });
     if (matched) {
       setDataExportDefaultTime(matched.granularity);
@@ -239,9 +246,9 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   }, []);
 
   const handleReset = useCallback(() => {
-    const range = getGranularityTimeRange('day');
-    setDataExportDefaultTime('day');
-    localStorage.setItem('data_export_default_time', 'day');
+    const range = getGranularityTimeRange('today');
+    setDataExportDefaultTime('today');
+    localStorage.setItem('data_export_default_time', 'today');
     setInputs((prev) => ({
       ...prev,
       username: '',

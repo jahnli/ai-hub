@@ -61,6 +61,7 @@ export const DEFAULT_TIME_INTERVALS = {
 
 export const GRANULARITY_TIME_OFFSETS = {
   hour: 3600,
+  today: 86400,
   day: 86400,
   week: 604800,
   month: 2592000,
@@ -74,6 +75,8 @@ export const getGranularityTimeRange = (granularity) => {
   switch (granularity) {
     case 'hour':
       return { start: now.subtract(1, 'hour'), end: now };
+    case 'today':
+      return { start: now.subtract(24, 'hour'), end: now };
     case 'day':
       return {
         start: now.subtract(1, 'day').startOf('day'),
@@ -204,6 +207,13 @@ export const DASHBOARD_DATE_PRESETS = [
     start: () => dayjs().subtract(1, 'hour').toDate(),
     end: () => dayjs().toDate(),
     granularity: 'hour',
+    adminOnly: false,
+  },
+  {
+    text: '最近一天',
+    start: () => dayjs().subtract(24, 'hour').toDate(),
+    end: () => dayjs().toDate(),
+    granularity: 'today',
     adminOnly: false,
   },
   {
