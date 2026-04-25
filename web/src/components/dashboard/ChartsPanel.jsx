@@ -41,9 +41,9 @@ const ChartsPanel = ({
   return (
     <Card
       {...CARD_PROPS}
-      className={`!rounded-2xl ${hasApiInfoPanel ? 'lg:col-span-3' : ''}`}
+      className={`!rounded-2xl charts-panel ${hasApiInfoPanel ? 'lg:col-span-3' : ''}`}
       title={
-        <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-3'>
+        <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-1'>
           <div className={FLEX_CENTER_GAP2}>
             <PieChart size={16} />
             {t('模型数据分析')}
@@ -66,7 +66,9 @@ const ChartsPanel = ({
           </Tabs>
         </div>
       }
+      headerStyle={{ paddingTop: 0, paddingBottom: 0 }}
       bodyStyle={{ padding: 0 }}
+
     >
       <div className='h-96 p-2'>
         {activeChartTab === '1' && (

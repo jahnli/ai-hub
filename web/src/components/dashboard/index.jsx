@@ -192,10 +192,10 @@ const Dashboard = () => {
         CHART_CONFIG={CHART_CONFIG}
       />
 
-      {/* API信息和图表面板 */}
+      {/* 图表面板和右侧面板（API信息/服务可用性） */}
       <div className='mb-4'>
         <div
-          className={`grid grid-cols-1 gap-4 ${dashboardData.hasApiInfoPanel ? 'lg:grid-cols-4' : ''}`}
+          className={`grid grid-cols-1 gap-4 ${dashboardData.hasSidePanel ? 'lg:grid-cols-4' : ''}`}
         >
           <ChartsPanel
             activeChartTab={dashboardData.activeChartTab}
@@ -210,20 +210,51 @@ const Dashboard = () => {
             CARD_PROPS={CARD_PROPS}
             CHART_CONFIG={CHART_CONFIG}
             FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
-            hasApiInfoPanel={dashboardData.hasApiInfoPanel}
+            hasApiInfoPanel={dashboardData.hasSidePanel}
             t={dashboardData.t}
           />
 
-          {dashboardData.hasApiInfoPanel && (
-            <ApiInfoPanel
-              apiInfoData={apiInfoData}
-              handleCopyUrl={(url) => handleCopyUrl(url, dashboardData.t)}
-              handleSpeedTest={handleSpeedTest}
-              CARD_PROPS={CARD_PROPS}
-              FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
-              ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
-              t={dashboardData.t}
-            />
+          {dashboardData.hasSidePanel && (
+            <div className='flex flex-col gap-4'>
+              {dashboardData.hasApiInfoPanel && (
+                <ApiInfoPanel
+                  apiInfoData={apiInfoData}
+                  handleCopyUrl={(url) => handleCopyUrl(url, dashboardData.t)}
+                  handleSpeedTest={handleSpeedTest}
+                  CARD_PROPS={CARD_PROPS}
+                  FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
+                  ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
+                  t={dashboardData.t}
+                />
+              )}
+
+              {dashboardData.uptimeEnabled && (
+                <UptimePanel
+                  uptimeData={dashboardData.uptimeData}
+                  uptimeLoading={dashboardData.uptimeLoading}
+                  activeUptimeTab={dashboardData.activeUptimeTab}
+                  setActiveUptimeTab={dashboardData.setActiveUptimeTab}
+                  loadUptimeData={dashboardData.loadUptimeData}
+                  uptimeLegendData={uptimeLegendData}
+                  renderMonitorList={(monitors) =>
+                    renderMonitorList(
+                      monitors,
+                      (status) => getUptimeStatusColor(status, UPTIME_STATUS_MAP),
+                      (status) =>
+                        getUptimeStatusText(
+                          status,
+                          UPTIME_STATUS_MAP,
+                          dashboardData.t,
+                        ),
+                      dashboardData.t,
+                    )
+                  }
+                  CARD_PROPS={CARD_PROPS}
+                  ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
+                  t={dashboardData.t}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -232,7 +263,6 @@ const Dashboard = () => {
       {dashboardData.hasInfoPanels && (
         <div className='mb-4'>
           <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
-            {/* 公告卡片 */}
             {dashboardData.announcementsEnabled && (
               <AnnouncementsPanel
                 announcementData={announcementData}
@@ -248,40 +278,11 @@ const Dashboard = () => {
               />
             )}
 
-            {/* 常见问答卡片 */}
             {dashboardData.faqEnabled && (
               <FaqPanel
                 faqData={faqData}
                 CARD_PROPS={CARD_PROPS}
                 FLEX_CENTER_GAP2={FLEX_CENTER_GAP2}
-                ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
-                t={dashboardData.t}
-              />
-            )}
-
-            {/* 服务可用性卡片 */}
-            {dashboardData.uptimeEnabled && (
-              <UptimePanel
-                uptimeData={dashboardData.uptimeData}
-                uptimeLoading={dashboardData.uptimeLoading}
-                activeUptimeTab={dashboardData.activeUptimeTab}
-                setActiveUptimeTab={dashboardData.setActiveUptimeTab}
-                loadUptimeData={dashboardData.loadUptimeData}
-                uptimeLegendData={uptimeLegendData}
-                renderMonitorList={(monitors) =>
-                  renderMonitorList(
-                    monitors,
-                    (status) => getUptimeStatusColor(status, UPTIME_STATUS_MAP),
-                    (status) =>
-                      getUptimeStatusText(
-                        status,
-                        UPTIME_STATUS_MAP,
-                        dashboardData.t,
-                      ),
-                    dashboardData.t,
-                  )
-                }
-                CARD_PROPS={CARD_PROPS}
                 ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
                 t={dashboardData.t}
               />

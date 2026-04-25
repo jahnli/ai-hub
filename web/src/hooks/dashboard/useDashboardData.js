@@ -118,7 +118,8 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   const uptimeEnabled = statusState?.status?.uptime_kuma_enabled ?? true;
 
   const hasApiInfoPanel = apiInfoEnabled;
-  const hasInfoPanels = announcementsEnabled || faqEnabled || uptimeEnabled;
+  const hasSidePanel = apiInfoEnabled || uptimeEnabled;
+  const hasInfoPanels = announcementsEnabled || faqEnabled;
 
   // ========== Memoized Values ==========
   const datePresets = useMemo(
@@ -499,6 +500,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     getDepartment,
     isAdminUser,
     hasApiInfoPanel,
+    hasSidePanel,
     hasInfoPanels,
     apiInfoEnabled,
     announcementsEnabled,

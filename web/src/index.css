@@ -955,6 +955,15 @@ html.dark .with-pastel-balls::before {
   padding: 10px !important;
 }
 
+.charts-panel .semi-card-header {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.charts-panel .semi-card-body {
+  padding: 0 !important;
+}
+
 /* ==================== 使用日志: channel affinity tag ==================== */
 .semi-tag.channel-affinity-tag {
   border: 1px solid rgba(var(--semi-cyan-5), 0.35);
