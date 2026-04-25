@@ -50,6 +50,20 @@ const parseLdapCN = (dn) => {
   return '';
 };
 
+const parseLdapOUs = (dn) => {
+  if (!dn) return [];
+  const ous = [];
+  const parts = dn.split(',');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.toUpperCase().startsWith('OU=')) {
+      ous.push(trimmed.substring(3));
+    }
+  }
+  const len = ous.length;
+  return [ous[len - 4] || '', ous[len - 5] || '', ous[len - 6] || ''];
+};
+
 const colors = [
   'amber',
   'blue',
@@ -508,15 +522,22 @@ export const getLogsColumns = ({
       render: (text, record, index) => {
         if (!isAdminUser) return <></>;
         const cn = parseLdapCN(record.ldap_id);
-        if (cn && cn !== text) {
-          return (
-            <div className='flex flex-col'>
-              <span>{cn}</span>
-              <span className='text-xs text-gray-300'>{text}</span>
-            </div>
-          );
-        }
-        return <span>{text}</span>;
+        const ous = parseLdapOUs(record.ldap_id).filter((o) => o);
+        const deptDisplay = ous.length > 0 ? ous.join(' / ') : '';
+        const content = cn && cn !== text ? (
+          <div className='flex flex-col'>
+            <span>{cn}</span>
+            <span className='text-xs text-gray-300'>{text}</span>
+          </div>
+        ) : (
+          <span>{text}</span>
+        );
+        if (!deptDisplay) return content;
+        return (
+          <Tooltip content={deptDisplay} position='top'>
+            {content}
+          </Tooltip>
+        );
       },
     },
     {
