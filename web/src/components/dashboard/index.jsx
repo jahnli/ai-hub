@@ -195,7 +195,7 @@ const Dashboard = () => {
       {/* 图表面板和右侧面板（API信息/服务可用性） */}
       <div className='mb-4'>
         <div
-          className={`grid grid-cols-1 gap-4 ${dashboardData.hasSidePanel ? 'lg:grid-cols-4' : ''}`}
+          className={`grid grid-cols-1 gap-4 ${dashboardData.hasSidePanel ? 'lg:grid-cols-[3fr_0.85fr]' : ''}`}
         >
           <ChartsPanel
             activeChartTab={dashboardData.activeChartTab}
@@ -262,7 +262,7 @@ const Dashboard = () => {
       {/* 系统公告和常见问答卡片 */}
       {dashboardData.hasInfoPanels && (
         <div className='mb-4'>
-          <div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
+          <div className='grid grid-cols-1 lg:grid-cols-[3fr_0.85fr] gap-4'>
             {dashboardData.announcementsEnabled && (
               <AnnouncementsPanel
                 announcementData={announcementData}
