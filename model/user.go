@@ -240,7 +240,6 @@ func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, 
 	var total int64
 	var err error
 
-	// 开始事务
 	tx := DB.Begin()
 	if tx.Error != nil {
 		return nil, 0, tx.Error
@@ -251,57 +250,67 @@ func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, 
 		}
 	}()
 
-	// 构建基础查询
-	query := tx.Unscoped().Model(&User{})
+	likeParam := "%" + keyword + "%"
 
-	// 构建搜索条件 — ldap_id 只匹配 CN= 到第一个逗号之间的内容
+	buildQuery := func(condition string, params ...interface{}) *gorm.DB {
+		q := tx.Unscoped().Model(&User{})
+		if group != "" {
+			q = q.Where("("+condition+") AND "+commonGroupCol+" = ?", append(params, group)...)
+		} else {
+			q = q.Where(condition, params...)
+		}
+		return q
+	}
+
+	// 第一优先级：username 模糊匹配（含 ID 精确匹配）
+	keywordInt, numErr := strconv.Atoi(keyword)
+	var primaryQuery *gorm.DB
+	if numErr == nil {
+		primaryQuery = buildQuery("id = ? OR username LIKE ?", keywordInt, likeParam)
+	} else {
+		primaryQuery = buildQuery("username LIKE ?", likeParam)
+	}
+
+	err = primaryQuery.Count(&total).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	if total > 0 {
+		err = primaryQuery.Omit("password").Order("id desc").Limit(num).Offset(startIdx).Find(&users).Error
+		if err != nil {
+			tx.Rollback()
+			return nil, 0, err
+		}
+		if err = tx.Commit().Error; err != nil {
+			return nil, 0, err
+		}
+		return users, total, nil
+	}
+
+	// 第二优先级：ldap_id 的 CN 部分模糊匹配
 	var ldapCnCondition string
 	if common.UsingPostgreSQL {
 		ldapCnCondition = "SPLIT_PART(ldap_id, ',', 1) LIKE ?"
 	} else {
 		ldapCnCondition = "SUBSTR(ldap_id, 1, INSTR(ldap_id, ',') - 1) LIKE ?"
 	}
-	likeCondition := "username LIKE ? OR email LIKE ? OR display_name LIKE ? OR " + ldapCnCondition
-	likeParam := "%" + keyword + "%"
 
-	// 尝试将关键字转换为整数ID
-	keywordInt, err := strconv.Atoi(keyword)
-	if err == nil {
-		// 如果是数字，同时搜索ID和其他字段
-		likeCondition = "id = ? OR " + likeCondition
-		if group != "" {
-			query = query.Where("("+likeCondition+") AND "+commonGroupCol+" = ?",
-				keywordInt, likeParam, likeParam, likeParam, likeParam, group)
-		} else {
-			query = query.Where(likeCondition,
-				keywordInt, likeParam, likeParam, likeParam, likeParam)
-		}
-	} else {
-		// 非数字关键字，只搜索字符串字段
-		if group != "" {
-			query = query.Where("("+likeCondition+") AND "+commonGroupCol+" = ?",
-				likeParam, likeParam, likeParam, likeParam, group)
-		} else {
-			query = query.Where(likeCondition,
-				likeParam, likeParam, likeParam, likeParam)
-		}
-	}
+	fallbackQuery := buildQuery(ldapCnCondition, likeParam)
 
-	// 获取总数
-	err = query.Count(&total).Error
+	err = fallbackQuery.Count(&total).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
 	}
 
-	// 获取分页数据
-	err = query.Omit("password").Order("id desc").Limit(num).Offset(startIdx).Find(&users).Error
+	err = fallbackQuery.Omit("password").Order("id desc").Limit(num).Offset(startIdx).Find(&users).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
 	}
 
-	// 提交事务
 	if err = tx.Commit().Error; err != nil {
 		return nil, 0, err
 	}
