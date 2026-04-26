@@ -42,13 +42,18 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
 
   const TIME_LABEL_MAP = {
     hour: '最近一小时',
-    today: '最近一天',
+    today: '今天',
     day: '昨天',
-    week: '最近一周',
-    month: '最近一月',
-    quarter: '最近一季度',
-    half_year: '最近半年',
-    year: '最近一年',
+    week: '本周',
+    last_week: '上周',
+    month: '本月',
+    last_month: '上月',
+    quarter: '本季度',
+    last_quarter: '上季度',
+    half_year: '本半年',
+    last_half_year: '上半年',
+    year: '本年',
+    last_year: '去年',
   };
 
   // ========== 查询后的时间标签 ==========

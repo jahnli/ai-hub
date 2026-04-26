@@ -18,6 +18,11 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
+import quarterOfYear from 'dayjs/plugin/quarterOfYear';
+
+dayjs.extend(isoWeek);
+dayjs.extend(quarterOfYear);
 
 // ========== UI 配置常量 ==========
 export const CHART_CONFIG = { mode: 'desktop-browser' };
@@ -211,8 +216,8 @@ export const DASHBOARD_DATE_PRESETS = [
     adminOnly: false,
   },
   {
-    text: '最近一天',
-    start: () => dayjs().subtract(24, 'hour').startOf('hour').toDate(),
+    text: '今天',
+    start: () => dayjs().startOf('day').toDate(),
     end: () => dayjs().toDate(),
     granularity: 'today',
     adminOnly: false,
@@ -225,38 +230,90 @@ export const DASHBOARD_DATE_PRESETS = [
     adminOnly: false,
   },
   {
-    text: '最近一周',
-    start: () => dayjs().subtract(7, 'day').startOf('day').toDate(),
-    end: () => dayjs().endOf('day').toDate(),
+    text: '本周',
+    start: () => dayjs().startOf('isoWeek').toDate(),
+    end: () => dayjs().toDate(),
     granularity: 'week',
     adminOnly: false,
   },
   {
-    text: '最近一月',
-    start: () => dayjs().subtract(1, 'month').startOf('day').toDate(),
-    end: () => dayjs().endOf('day').toDate(),
+    text: '上周',
+    start: () =>
+      dayjs().subtract(1, 'week').startOf('isoWeek').toDate(),
+    end: () =>
+      dayjs().subtract(1, 'week').endOf('isoWeek').toDate(),
+    granularity: 'last_week',
+    adminOnly: false,
+  },
+  {
+    text: '本月',
+    start: () => dayjs().startOf('month').toDate(),
+    end: () => dayjs().toDate(),
     granularity: 'month',
     adminOnly: true,
   },
   {
-    text: '最近一季度',
-    start: () => dayjs().subtract(3, 'month').startOf('day').toDate(),
-    end: () => dayjs().endOf('day').toDate(),
+    text: '上月',
+    start: () => dayjs().subtract(1, 'month').startOf('month').toDate(),
+    end: () => dayjs().subtract(1, 'month').endOf('month').toDate(),
+    granularity: 'last_month',
+    adminOnly: true,
+  },
+  {
+    text: '本季度',
+    start: () => dayjs().startOf('quarter').toDate(),
+    end: () => dayjs().toDate(),
     granularity: 'quarter',
     adminOnly: true,
   },
   {
-    text: '最近半年',
-    start: () => dayjs().subtract(6, 'month').startOf('day').toDate(),
-    end: () => dayjs().endOf('day').toDate(),
+    text: '上季度',
+    start: () => dayjs().subtract(1, 'quarter').startOf('quarter').toDate(),
+    end: () => dayjs().subtract(1, 'quarter').endOf('quarter').toDate(),
+    granularity: 'last_quarter',
+    adminOnly: true,
+  },
+  {
+    text: '本半年',
+    start: () => {
+      const month = dayjs().month();
+      return month < 6
+        ? dayjs().startOf('year').toDate()
+        : dayjs().month(6).startOf('month').toDate();
+    },
+    end: () => dayjs().toDate(),
     granularity: 'half_year',
     adminOnly: true,
   },
   {
-    text: '最近一年',
-    start: () => dayjs().subtract(1, 'year').startOf('day').toDate(),
-    end: () => dayjs().endOf('day').toDate(),
+    text: '上半年',
+    start: () => {
+      const month = dayjs().month();
+      return month < 6
+        ? dayjs().subtract(1, 'year').month(6).startOf('month').toDate()
+        : dayjs().startOf('year').toDate();
+    },
+    end: () => {
+      const month = dayjs().month();
+      return month < 6
+        ? dayjs().subtract(1, 'year').endOf('year').toDate()
+        : dayjs().month(5).endOf('month').toDate();
+    },
+    granularity: 'last_half_year',
+    adminOnly: true,
+  },
+  {
+    text: '本年',
+    start: () => dayjs().startOf('year').toDate(),
+    end: () => dayjs().toDate(),
     granularity: 'year',
+    adminOnly: true,
+  },
+  {
+    text: '去年',
+    start: () => dayjs().subtract(1, 'year').startOf('year').toDate(),
+    end: () => dayjs().subtract(1, 'year').endOf('year').toDate(),
+    granularity: 'last_year',
     adminOnly: true,
   },
 ];
