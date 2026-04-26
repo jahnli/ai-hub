@@ -34,7 +34,6 @@ const routerMap = {
   home: '/',
   channel: '/console/channel',
   token: '/console/token',
-  redemption: '/console/redemption',
   topup: '/console/topup',
   user: '/console/user',
   subscription: '/console/subscription',
@@ -169,12 +168,6 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('模型部署'),
         itemKey: 'deployment',
         to: '/deployment',
-        className: isAdmin() ? '' : 'tableHiddle',
-      },
-      {
-        text: t('兑换码管理'),
-        itemKey: 'redemption',
-        to: '/redemption',
         className: isAdmin() ? '' : 'tableHiddle',
       },
       {

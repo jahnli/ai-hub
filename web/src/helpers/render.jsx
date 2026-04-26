@@ -73,7 +73,6 @@ import {
   CheckSquare,
   CreditCard,
   Layers,
-  Gift,
   User,
   Settings,
   CircleUser,
@@ -139,8 +138,6 @@ export function getLucideIcon(key, selected = false) {
       return <CreditCard {...commonProps} color={iconColor} />;
     case 'channel':
       return <Layers {...commonProps} color={iconColor} />;
-    case 'redemption':
-      return <Gift {...commonProps} color={iconColor} />;
     case 'user':
     case 'personal':
       return <User {...commonProps} color={iconColor} />;

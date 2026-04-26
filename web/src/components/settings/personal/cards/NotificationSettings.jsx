@@ -88,7 +88,6 @@ const NotificationSettings = ({
       models: true,
       deployment: true,
       subscription: true,
-      redemption: true,
       user: true,
       setting: true,
     },
@@ -172,7 +171,6 @@ const NotificationSettings = ({
         models: true,
         deployment: true,
         subscription: true,
-        redemption: true,
         user: true,
         setting: true,
       },
@@ -303,11 +301,6 @@ const NotificationSettings = ({
           key: 'subscription',
           title: t('订阅管理'),
           description: t('订阅套餐管理'),
-        },
-        {
-          key: 'redemption',
-          title: t('兑换码管理'),
-          description: t('兑换码生成管理'),
         },
         { key: 'user', title: t('用户管理'), description: t('用户账户管理') },
         {

@@ -33,7 +33,6 @@ import PasswordResetForm from './components/auth/PasswordResetForm';
 import PasswordResetConfirm from './components/auth/PasswordResetConfirm';
 import Channel from './pages/Channel';
 import Token from './pages/Token';
-import Redemption from './pages/Redemption';
 import TopUp from './pages/TopUp';
 import Log from './pages/Log';
 import Chat from './pages/Chat';
@@ -153,14 +152,6 @@ function App() {
             <PrivateRoute>
               <Playground />
             </PrivateRoute>
-          }
-        />
-        <Route
-          path='/console/redemption'
-          element={
-            <AdminRoute>
-              <Redemption />
-            </AdminRoute>
           }
         />
         <Route
