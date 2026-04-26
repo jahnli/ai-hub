@@ -179,6 +179,7 @@ const Dashboard = () => {
         inputs={dashboardData.inputs}
         datePresets={dashboardData.datePresets}
         handleDateRangeChange={dashboardData.handleDateRangeChange}
+        handlePresetClick={dashboardData.handlePresetClick}
         handleInputChange={dashboardData.handleInputChange}
         onReset={handleReset}
         t={dashboardData.t}

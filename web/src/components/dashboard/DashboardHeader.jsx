@@ -32,6 +32,7 @@ const DashboardHeader = ({
   inputs,
   datePresets,
   handleDateRangeChange,
+  handlePresetClick,
   handleInputChange,
   onReset,
   t,
@@ -67,6 +68,7 @@ const DashboardHeader = ({
           presets={datePresets}
           presetPosition='left'
           onChange={handleDateRangeChange}
+          onPresetClick={handlePresetClick}
           density='compact'
           style={{ width: 430 }}
         />

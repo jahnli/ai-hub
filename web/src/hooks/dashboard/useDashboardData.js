@@ -74,6 +74,8 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
 
   const [dataExportDefaultTime, setDataExportDefaultTime] =
     useState(getDefaultTime());
+  const granularityRef = useRef(getDefaultTime());
+  const presetClickedRef = useRef(false);
 
   // ========== 数据状态 ==========
   const [quotaData, setQuotaData] = useState([]);
@@ -135,6 +137,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
           text: t(preset.text),
           start: preset.start(),
           end: preset.end(),
+          granularity: preset.granularity,
         })),
     [t, isAdminUser],
   );
@@ -217,27 +220,22 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
       end_timestamp: timestamp2string(endTs),
     }));
 
-    const diffSeconds = endTs - startTs;
-    const matched = DASHBOARD_DATE_PRESETS
-      .filter((p) => !p.adminOnly || isAdminUser)
-      .find((p) => {
-        const presetStart = p.start().getTime() / 1000;
-        const presetEnd = p.end().getTime() / 1000;
-        const presetDiff = presetEnd - presetStart;
-        return (
-          Math.abs(diffSeconds - presetDiff) < presetDiff * 0.05 &&
-          Math.abs(startTs - presetStart) < 60 &&
-          Math.abs(endTs - presetEnd) < 60
-        );
-      });
-    if (matched) {
-      setDataExportDefaultTime(matched.granularity);
+    if (presetClickedRef.current) {
+      presetClickedRef.current = false;
+    } else {
+      granularityRef.current = 'custom';
     }
-  }, [isAdminUser]);
+  }, []);
+
+  const handlePresetClick = useCallback((item) => {
+    presetClickedRef.current = true;
+    granularityRef.current = item.granularity || 'custom';
+  }, []);
 
   const handleInputChange = useCallback((value, name) => {
     if (name === 'data_export_default_time') {
       setDataExportDefaultTime(value);
+      granularityRef.current = value;
       const range = getGranularityTimeRange(value);
       setInputs((prev) => ({
         ...prev,
@@ -252,6 +250,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   const handleReset = useCallback(() => {
     const range = getGranularityTimeRange('today');
     setDataExportDefaultTime('today');
+    granularityRef.current = 'today';
     localStorage.setItem('data_export_default_time', 'today');
     setInputs((prev) => ({
       ...prev,
@@ -278,19 +277,20 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
       const { start_timestamp, end_timestamp, username } = inputs;
       let localStartTimestamp = parseLocalTimestamp(start_timestamp) / 1000;
       let localEndTimestamp = parseLocalTimestamp(end_timestamp) / 1000;
+      const granularity = granularityRef.current;
 
       if (isAdminUser) {
-        url = `/api/data/?username=${encodeURIComponent(username)}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&default_time=${dataExportDefaultTime}`;
+        url = `/api/data/?username=${encodeURIComponent(username)}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&default_time=${granularity}`;
       } else {
-        url = `/api/data/self/?start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&default_time=${dataExportDefaultTime}`;
+        url = `/api/data/self/?start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&default_time=${granularity}`;
       }
 
       const res = await API.get(url);
       const { success, message, data } = res.data;
       if (success) {
         setQuotaData(data);
-        setQueriedTimeLabel(t(TIME_LABEL_MAP[dataExportDefaultTime] || ''));
-        localStorage.setItem('data_export_default_time', dataExportDefaultTime);
+        setQueriedTimeLabel(t(TIME_LABEL_MAP[granularity] || ''));
+        localStorage.setItem('data_export_default_time', granularity);
         if (data.length === 0) {
           data.push({
             count: 0,
@@ -308,7 +308,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     } finally {
       setLoading(false);
     }
-  }, [inputs, dataExportDefaultTime, isAdminUser, now]);
+  }, [inputs, isAdminUser, now]);
 
   const loadUptimeData = useCallback(async () => {
     setUptimeLoading(true);
@@ -515,6 +515,7 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     // 函数
     handleInputChange,
     handleDateRangeChange,
+    handlePresetClick,
     handleReset,
     showSearchModal,
     handleCloseModal,
