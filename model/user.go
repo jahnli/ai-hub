@@ -369,6 +369,31 @@ func GetUserLdapIdsByIds(userIds []int) (map[int]string, error) {
 	return result, nil
 }
 
+type UserLogExtra struct {
+	LdapId    string
+	AvatarUrl string
+}
+
+func GetUserLogExtrasByIds(userIds []int) (map[int]UserLogExtra, error) {
+	result := make(map[int]UserLogExtra, len(userIds))
+	if len(userIds) == 0 {
+		return result, nil
+	}
+	var rows []struct {
+		Id        int    `gorm:"column:id"`
+		LdapId    string `gorm:"column:ldap_id"`
+		AvatarUrl string `gorm:"column:avatar_url"`
+	}
+	err := DB.Model(&User{}).Select("id, ldap_id, avatar_url").Where("id IN ?", userIds).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		result[row.Id] = UserLogExtra{LdapId: row.LdapId, AvatarUrl: row.AvatarUrl}
+	}
+	return result, nil
+}
+
 func GetUserDisplayNamesByUsernames(usernames []string) (map[string]string, error) {
 	result := make(map[string]string, len(usernames))
 	if len(usernames) == 0 {

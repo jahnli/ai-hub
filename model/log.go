@@ -38,6 +38,7 @@ type Log struct {
 	RequestId        string `json:"request_id,omitempty" gorm:"type:varchar(64);index:idx_logs_request_id;default:''"`
 	Other            string `json:"other"`
 	LdapId           string `json:"ldap_id,omitempty" gorm:"-"`
+	AvatarUrl        string `json:"avatar_url,omitempty" gorm:"-"`
 }
 
 // don't use iota, avoid change log type value

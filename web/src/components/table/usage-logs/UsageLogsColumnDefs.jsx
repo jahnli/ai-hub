@@ -524,7 +524,19 @@ export const getLogsColumns = ({
         const cn = parseLdapCN(record.ldap_id);
         const ous = parseLdapOUs(record.ldap_id).filter((o) => o);
         const deptDisplay = ous.length > 0 ? ous.join(' / ') : '';
-        const content = cn && cn !== text ? (
+        const displayName = (cn && cn !== text) ? cn : text;
+
+        const avatar = (
+          <Avatar
+            size='extra-small'
+            color={stringToColor(displayName || '?')}
+            src={record.avatar_url || undefined}
+          >
+            {(displayName || '?').slice(0, 1)}
+          </Avatar>
+        );
+
+        const nameContent = cn && cn !== text ? (
           <div className='flex flex-col'>
             <span>{cn}</span>
             <span className='text-xs text-gray-300'>{text}</span>
@@ -532,6 +544,14 @@ export const getLogsColumns = ({
         ) : (
           <span>{text}</span>
         );
+
+        const content = (
+          <Space align='center'>
+            {avatar}
+            {nameContent}
+          </Space>
+        );
+
         if (!deptDisplay) return content;
         return (
           <Tooltip content={deptDisplay} position='top'>

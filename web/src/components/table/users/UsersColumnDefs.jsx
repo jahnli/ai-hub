@@ -70,6 +70,7 @@ const renderRole = (role, t) => {
 const renderUsername = (text, record) => {
   const remark = record.remark;
   const cn = parseLdapCN(record.ldap_id);
+  const displayName = (cn && cn !== text) ? cn : text;
 
   const remarkTag = remark ? (
     <Tooltip content={remark} position='top' showArrow>
@@ -85,22 +86,38 @@ const renderUsername = (text, record) => {
     </Tooltip>
   ) : null;
 
+  const avatar = (
+    <Avatar
+      size='extra-small'
+      color={stringToColor(displayName)}
+      src={record.avatar_url || undefined}
+    >
+      {displayName.slice(0, 1)}
+    </Avatar>
+  );
+
   if (cn && cn !== text) {
     return (
-      <div className='flex flex-col'>
-        <Space spacing={2}>
-          <span>{cn}</span>
-          {remarkTag}
-        </Space>
-        <span className='text-xs text-gray-300'>{text}</span>
-      </div>
+      <Space align='center'>
+        {avatar}
+        <div className='flex flex-col'>
+          <Space spacing={2}>
+            <span>{cn}</span>
+            {remarkTag}
+          </Space>
+          <span className='text-xs text-gray-300'>{text}</span>
+        </div>
+      </Space>
     );
   }
 
   return (
-    <Space spacing={2}>
-      <span>{text}</span>
-      {remarkTag}
+    <Space align='center'>
+      {avatar}
+      <Space spacing={2}>
+        <span>{text}</span>
+        {remarkTag}
+      </Space>
     </Space>
   );
 };

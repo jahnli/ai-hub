@@ -24,13 +24,14 @@ func enrichLogsWithLdapId(logs []*model.Log) {
 	for id := range userIdSet {
 		userIds = append(userIds, id)
 	}
-	ldapMap, err := model.GetUserLdapIdsByIds(userIds)
-	if err != nil || len(ldapMap) == 0 {
+	extraMap, err := model.GetUserLogExtrasByIds(userIds)
+	if err != nil || len(extraMap) == 0 {
 		return
 	}
 	for _, l := range logs {
-		if dn, ok := ldapMap[l.UserId]; ok {
-			l.LdapId = dn
+		if extra, ok := extraMap[l.UserId]; ok {
+			l.LdapId = extra.LdapId
+			l.AvatarUrl = extra.AvatarUrl
 		}
 	}
 }
