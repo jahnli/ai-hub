@@ -527,24 +527,24 @@ export const getLogsColumns = ({
         const displayName = (cn && cn !== text) ? cn : text;
         const openId = record.open_id;
 
-        const renderNameLink = (children, className) => {
-          if (openId) {
-            return (
-              <a
-                href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className={`hover:text-semi-color-primary transition-colors ${className || ''}`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {children}
-              </a>
-            );
-          }
-          return <span className={className}>{children}</span>;
-        };
-
-        const avatar = (
+        const avatarNode = openId ? (
+          <a
+            href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='hover:opacity-70 transition-opacity'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Avatar
+              size='extra-small'
+              color={stringToColor(displayName || '?')}
+              src={record.avatar_url || undefined}
+              style={{ cursor: 'pointer' }}
+            >
+              {(displayName || '?').slice(0, 1)}
+            </Avatar>
+          </a>
+        ) : (
           <Avatar
             size='extra-small'
             color={stringToColor(displayName || '?')}
@@ -555,26 +555,17 @@ export const getLogsColumns = ({
         );
 
         const nameContent = cn && cn !== text ? (
-          openId ? (
-            renderNameLink(
-              <div className='flex flex-col'>
-                <span>{cn}</span>
-                <span className='text-xs opacity-60'>{text}</span>
-              </div>,
-            )
-          ) : (
-            <div className='flex flex-col'>
-              <span>{cn}</span>
-              <span className='text-xs text-gray-300'>{text}</span>
-            </div>
-          )
+          <div className='flex flex-col'>
+            <span>{cn}</span>
+            <span className='text-xs text-gray-300'>{text}</span>
+          </div>
         ) : (
-          renderNameLink(text)
+          <span>{text}</span>
         );
 
         const content = (
           <Space align='center'>
-            {avatar}
+            {avatarNode}
             {nameContent}
           </Space>
         );

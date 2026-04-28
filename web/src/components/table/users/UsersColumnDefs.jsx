@@ -87,7 +87,24 @@ const renderUsername = (text, record) => {
     </Tooltip>
   ) : null;
 
-  const avatar = (
+  const avatarNode = openId ? (
+    <a
+      href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
+      target='_blank'
+      rel='noopener noreferrer'
+      className='hover:opacity-70 transition-opacity'
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Avatar
+        size='extra-small'
+        color={stringToColor(displayName)}
+        src={record.avatar_url || undefined}
+        style={{ cursor: 'pointer' }}
+      >
+        {displayName.slice(0, 1)}
+      </Avatar>
+    </a>
+  ) : (
     <Avatar
       size='extra-small'
       color={stringToColor(displayName)}
@@ -97,55 +114,26 @@ const renderUsername = (text, record) => {
     </Avatar>
   );
 
-  const renderNameLink = (children, className) => {
-    if (openId) {
-      return (
-        <a
-          href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
-          target='_blank'
-          rel='noopener noreferrer'
-          className={`hover:text-semi-color-primary transition-colors ${className || ''}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {children}
-        </a>
-      );
-    }
-    return <span className={className}>{children}</span>;
-  };
-
   if (cn && cn !== text) {
     return (
       <Space align='center'>
-        {avatar}
-        {openId ? (
-          <Space align='center' spacing={2}>
-            {renderNameLink(
-              <div className='flex flex-col'>
-                <span>{cn}</span>
-                <span className='text-xs opacity-60'>{text}</span>
-              </div>,
-            )}
+        {avatarNode}
+        <div className='flex flex-col'>
+          <Space spacing={2}>
+            <span>{cn}</span>
             {remarkTag}
           </Space>
-        ) : (
-          <div className='flex flex-col'>
-            <Space spacing={2}>
-              <span>{cn}</span>
-              {remarkTag}
-            </Space>
-            <span className='text-xs text-gray-300'>{text}</span>
-          </div>
-        )}
+          <span className='text-xs text-gray-300'>{text}</span>
+        </div>
       </Space>
     );
   }
 
   return (
     <Space align='center'>
-      {avatar}
+      {avatarNode}
       <Space spacing={2}>
-        {renderNameLink(text)}
+        <span>{text}</span>
         {remarkTag}
       </Space>
     </Space>
