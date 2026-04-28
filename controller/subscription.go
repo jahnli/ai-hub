@@ -300,6 +300,73 @@ func AdminBindSubscription(c *gin.Context) {
 	common.ApiSuccess(c, nil)
 }
 
+type BatchBindSubscriptionRequest struct {
+	UserIds []int `json:"user_ids"`
+	PlanId  int   `json:"plan_id"`
+}
+
+type BatchBindUserResult struct {
+	UserId  int    `json:"user_id"`
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+}
+
+func AdminBatchBindSubscription(c *gin.Context) {
+	var req BatchBindSubscriptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.PlanId <= 0 || len(req.UserIds) == 0 {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+	// Deduplicate user IDs
+	seen := make(map[int]bool, len(req.UserIds))
+	uniqueIds := make([]int, 0, len(req.UserIds))
+	for _, id := range req.UserIds {
+		if id > 0 && !seen[id] {
+			seen[id] = true
+			uniqueIds = append(uniqueIds, id)
+		}
+	}
+	if len(uniqueIds) == 0 {
+		common.ApiErrorMsg(c, "无有效的用户ID")
+		return
+	}
+	if len(uniqueIds) > 200 {
+		common.ApiErrorMsg(c, "单次最多支持200个用户")
+		return
+	}
+	// Validate plan exists
+	if _, err := model.GetSubscriptionPlanById(req.PlanId); err != nil {
+		common.ApiErrorMsg(c, "套餐不存在")
+		return
+	}
+	results := make([]BatchBindUserResult, 0, len(uniqueIds))
+	succeeded := 0
+	failed := 0
+	for _, userId := range uniqueIds {
+		msg, err := model.AdminReplaceSubscription(userId, req.PlanId)
+		result := BatchBindUserResult{
+			UserId:  userId,
+			Success: err == nil,
+		}
+		if err != nil {
+			result.Message = err.Error()
+			failed++
+		} else if msg != "" {
+			result.Message = msg
+			succeeded++
+		} else {
+			succeeded++
+		}
+		results = append(results, result)
+	}
+	common.ApiSuccess(c, gin.H{
+		"total":     len(uniqueIds),
+		"succeeded": succeeded,
+		"failed":    failed,
+		"results":   results,
+	})
+}
+
 // ---- Admin: user subscription management ----
 
 func AdminListUserSubscriptions(c *gin.Context) {

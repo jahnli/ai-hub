@@ -25,6 +25,7 @@ import UsersFilters from './UsersFilters';
 import UsersDescription from './UsersDescription';
 import AddUserModal from './modals/AddUserModal';
 import EditUserModal from './modals/EditUserModal';
+import BatchBindSubscriptionModal from './modals/BatchBindSubscriptionModal';
 import { useUsersData } from '../../../hooks/users/useUsersData';
 import { useIsMobile } from '../../../hooks/common/useIsMobile';
 import { createCardProPagination } from '../../../helpers/utils';
@@ -42,6 +43,15 @@ const UsersPage = () => {
     closeAddUser,
     closeEditUser,
     refresh,
+
+    // Batch select state
+    enableBatchSelect,
+    setEnableBatchSelect,
+    selectedUsers,
+    setSelectedUsers,
+    showBatchBindModal,
+    setShowBatchBindModal,
+    batchBindSubscriptions,
 
     // Form state
     formInitValues,
@@ -77,6 +87,15 @@ const UsersPage = () => {
         editingUser={editingUser}
       />
 
+      <BatchBindSubscriptionModal
+        visible={showBatchBindModal}
+        onCancel={() => setShowBatchBindModal(false)}
+        selectedUsers={selectedUsers}
+        onConfirm={batchBindSubscriptions}
+        onSuccess={() => refresh?.()}
+        t={t}
+      />
+
       <CardPro
         type='type1'
         descriptionArea={
@@ -88,7 +107,14 @@ const UsersPage = () => {
         }
         actionsArea={
           <div className='flex flex-col md:flex-row justify-between items-center gap-2 w-full'>
-            <UsersActions setShowAddUser={setShowAddUser} t={t} />
+            <UsersActions
+              setShowAddUser={setShowAddUser}
+              enableBatchSelect={enableBatchSelect}
+              setEnableBatchSelect={setEnableBatchSelect}
+              selectedUsers={selectedUsers}
+              setShowBatchBindModal={setShowBatchBindModal}
+              t={t}
+            />
 
             <UsersFilters
               formInitValues={formInitValues}

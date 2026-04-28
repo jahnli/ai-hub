@@ -665,6 +665,60 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 	return "", nil
 }
 
+// AdminReplaceSubscription deletes all active subscriptions for a user,
+// then creates a new one from the specified plan.
+func AdminReplaceSubscription(userId int, planId int) (string, error) {
+	if userId <= 0 || planId <= 0 {
+		return "", errors.New("invalid userId or planId")
+	}
+	plan, err := GetSubscriptionPlanById(planId)
+	if err != nil {
+		return "", err
+	}
+	var cacheGroup string
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		now := common.GetTimestamp()
+		// Delete all active subscriptions
+		var activeSubs []UserSubscription
+		if err := tx.Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
+			Find(&activeSubs).Error; err != nil {
+			return err
+		}
+		for i := range activeSubs {
+			target, downgradeErr := downgradeUserGroupForSubscriptionTx(tx, &activeSubs[i], now)
+			if downgradeErr != nil {
+				return downgradeErr
+			}
+			if target != "" {
+				cacheGroup = target
+			}
+			if err := tx.Where("id = ?", activeSubs[i].Id).Delete(&UserSubscription{}).Error; err != nil {
+				return err
+			}
+		}
+		// Create new subscription
+		_, err := CreateUserSubscriptionFromPlanTx(tx, userId, plan, "admin")
+		if err != nil {
+			return err
+		}
+		// New subscription's upgrade group takes priority
+		if strings.TrimSpace(plan.UpgradeGroup) != "" {
+			cacheGroup = plan.UpgradeGroup
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if cacheGroup != "" {
+		_ = UpdateUserGroupCache(userId, cacheGroup)
+		if strings.TrimSpace(plan.UpgradeGroup) != "" {
+			return fmt.Sprintf("用户分组将升级到 %s", plan.UpgradeGroup), nil
+		}
+	}
+	return "", nil
+}
+
 // GetAllActiveUserSubscriptions returns all active subscriptions for a user.
 func GetAllActiveUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	if userId <= 0 {

@@ -194,31 +194,6 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
     }
   };
 
-  const invalidateSubscription = (subId) => {
-    Modal.confirm({
-      title: t('确认作废'),
-      content: t('作废后该订阅将立即失效，历史记录不受影响。是否继续？'),
-      centered: true,
-      onOk: async () => {
-        try {
-          const res = await API.post(
-            `/api/subscription/admin/user_subscriptions/${subId}/invalidate`,
-          );
-          if (res.data?.success) {
-            const msg = res.data?.data?.message;
-            showSuccess(msg ? msg : t('已作废'));
-            await loadUserSubscriptions();
-            onSuccess?.();
-          } else {
-            showError(res.data?.message || t('操作失败'));
-          }
-        } catch (e) {
-          showError(t('请求失败'));
-        }
-      },
-    });
-  };
-
   const deleteSubscription = (subId) => {
     Modal.confirm({
       title: t('确认删除'),
@@ -318,22 +293,8 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
         fixed: 'right',
         render: (_, record) => {
           const sub = record?.subscription;
-          const now = Date.now() / 1000;
-          const isExpired =
-            (sub?.end_time || 0) > 0 && (sub?.end_time || 0) < now;
-          const isActive = sub?.status === 'active' && !isExpired;
-          const isCancelled = sub?.status === 'cancelled';
           return (
             <Space>
-              <Button
-                size='small'
-                type='warning'
-                theme='light'
-                disabled={!isActive || isCancelled}
-                onClick={() => invalidateSubscription(sub?.id)}
-              >
-                {t('作废')}
-              </Button>
               <Button
                 size='small'
                 type='danger'

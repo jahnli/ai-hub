@@ -45,6 +45,11 @@ export const useUsersData = () => {
     id: undefined,
   });
 
+  // Batch select states
+  const [enableBatchSelect, setEnableBatchSelect] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [showBatchBindModal, setShowBatchBindModal] = useState(false);
+
   // Form initial values
   const formInitValues = {
     searchKeyword: '',
@@ -251,6 +256,25 @@ export const useUsersData = () => {
     }
   };
 
+  // Batch bind subscriptions
+  const batchBindSubscriptions = async (userIds, planId) => {
+    try {
+      const res = await API.post('/api/subscription/admin/batch/bind', {
+        user_ids: userIds,
+        plan_id: planId,
+      });
+      if (res.data?.success) {
+        return res.data.data;
+      } else {
+        showError(res.data?.message || t('批量操作失败'));
+        return null;
+      }
+    } catch (e) {
+      showError(t('请求失败'));
+      return null;
+    }
+  };
+
   // Refresh data
   const refresh = async (page = activePage) => {
     const { searchKeyword, searchGroup } = getFormValues();
@@ -320,6 +344,15 @@ export const useUsersData = () => {
     setShowAddUser,
     setShowEditUser,
     setEditingUser,
+
+    // Batch select state
+    enableBatchSelect,
+    setEnableBatchSelect,
+    selectedUsers,
+    setSelectedUsers,
+    showBatchBindModal,
+    setShowBatchBindModal,
+    batchBindSubscriptions,
 
     // Form state
     formInitValues,
