@@ -525,6 +525,24 @@ export const getLogsColumns = ({
         const ous = parseLdapOUs(record.ldap_id).filter((o) => o);
         const deptDisplay = ous.length > 0 ? ous.join(' / ') : '';
         const displayName = (cn && cn !== text) ? cn : text;
+        const openId = record.open_id;
+
+        const renderNameLink = (children, className) => {
+          if (openId) {
+            return (
+              <a
+                href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className={`hover:text-semi-color-primary transition-colors ${className || ''}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {children}
+              </a>
+            );
+          }
+          return <span className={className}>{children}</span>;
+        };
 
         const avatar = (
           <Avatar
@@ -537,12 +555,21 @@ export const getLogsColumns = ({
         );
 
         const nameContent = cn && cn !== text ? (
-          <div className='flex flex-col'>
-            <span>{cn}</span>
-            <span className='text-xs text-gray-300'>{text}</span>
-          </div>
+          openId ? (
+            renderNameLink(
+              <div className='flex flex-col'>
+                <span>{cn}</span>
+                <span className='text-xs opacity-60'>{text}</span>
+              </div>,
+            )
+          ) : (
+            <div className='flex flex-col'>
+              <span>{cn}</span>
+              <span className='text-xs text-gray-300'>{text}</span>
+            </div>
+          )
         ) : (
-          <span>{text}</span>
+          renderNameLink(text)
         );
 
         const content = (

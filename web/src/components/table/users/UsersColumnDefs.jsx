@@ -71,6 +71,7 @@ const renderUsername = (text, record) => {
   const remark = record.remark;
   const cn = parseLdapCN(record.ldap_id);
   const displayName = (cn && cn !== text) ? cn : text;
+  const openId = record.open_id;
 
   const remarkTag = remark ? (
     <Tooltip content={remark} position='top' showArrow>
@@ -96,17 +97,46 @@ const renderUsername = (text, record) => {
     </Avatar>
   );
 
+  const renderNameLink = (children, className) => {
+    if (openId) {
+      return (
+        <a
+          href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
+          target='_blank'
+          rel='noopener noreferrer'
+          className={`hover:text-semi-color-primary transition-colors ${className || ''}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </a>
+      );
+    }
+    return <span className={className}>{children}</span>;
+  };
+
   if (cn && cn !== text) {
     return (
       <Space align='center'>
         {avatar}
-        <div className='flex flex-col'>
-          <Space spacing={2}>
-            <span>{cn}</span>
+        {openId ? (
+          <Space align='center' spacing={2}>
+            {renderNameLink(
+              <div className='flex flex-col'>
+                <span>{cn}</span>
+                <span className='text-xs opacity-60'>{text}</span>
+              </div>,
+            )}
             {remarkTag}
           </Space>
-          <span className='text-xs text-gray-300'>{text}</span>
-        </div>
+        ) : (
+          <div className='flex flex-col'>
+            <Space spacing={2}>
+              <span>{cn}</span>
+              {remarkTag}
+            </Space>
+            <span className='text-xs text-gray-300'>{text}</span>
+          </div>
+        )}
       </Space>
     );
   }
@@ -115,7 +145,7 @@ const renderUsername = (text, record) => {
     <Space align='center'>
       {avatar}
       <Space spacing={2}>
-        <span>{text}</span>
+        {renderNameLink(text)}
         {remarkTag}
       </Space>
     </Space>

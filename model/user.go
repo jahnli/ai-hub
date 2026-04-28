@@ -54,6 +54,7 @@ type User struct {
 	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	AvatarUrl        string         `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url"`
+	OpenId           string         `json:"open_id" gorm:"type:varchar(64);column:open_id;index"`
 
 	SubscriptionQuotaTotal int64 `json:"subscription_quota_total" gorm:"-"`
 	SubscriptionQuotaUsed  int64 `json:"subscription_quota_used" gorm:"-"`
@@ -372,6 +373,7 @@ func GetUserLdapIdsByIds(userIds []int) (map[int]string, error) {
 type UserLogExtra struct {
 	LdapId    string
 	AvatarUrl string
+	OpenId    string
 }
 
 func GetUserLogExtrasByIds(userIds []int) (map[int]UserLogExtra, error) {
@@ -383,13 +385,14 @@ func GetUserLogExtrasByIds(userIds []int) (map[int]UserLogExtra, error) {
 		Id        int    `gorm:"column:id"`
 		LdapId    string `gorm:"column:ldap_id"`
 		AvatarUrl string `gorm:"column:avatar_url"`
+		OpenId    string `gorm:"column:open_id"`
 	}
-	err := DB.Model(&User{}).Select("id, ldap_id, avatar_url").Where("id IN ?", userIds).Find(&rows).Error
+	err := DB.Model(&User{}).Select("id, ldap_id, avatar_url, open_id").Where("id IN ?", userIds).Find(&rows).Error
 	if err != nil {
 		return nil, err
 	}
 	for _, row := range rows {
-		result[row.Id] = UserLogExtra{LdapId: row.LdapId, AvatarUrl: row.AvatarUrl}
+		result[row.Id] = UserLogExtra{LdapId: row.LdapId, AvatarUrl: row.AvatarUrl, OpenId: row.OpenId}
 	}
 	return result, nil
 }

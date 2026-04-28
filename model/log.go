@@ -39,6 +39,7 @@ type Log struct {
 	Other            string `json:"other"`
 	LdapId           string `json:"ldap_id,omitempty" gorm:"-"`
 	AvatarUrl        string `json:"avatar_url,omitempty" gorm:"-"`
+	OpenId           string `json:"open_id,omitempty" gorm:"-"`
 }
 
 // don't use iota, avoid change log type value

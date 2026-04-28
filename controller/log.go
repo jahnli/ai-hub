@@ -32,6 +32,7 @@ func enrichLogsWithLdapId(logs []*model.Log) {
 		if extra, ok := extraMap[l.UserId]; ok {
 			l.LdapId = extra.LdapId
 			l.AvatarUrl = extra.AvatarUrl
+			l.OpenId = extra.OpenId
 		}
 	}
 }
