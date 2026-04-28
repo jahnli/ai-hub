@@ -33,8 +33,7 @@ import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
-import { API, showError, showSuccess } from '../../../../helpers';
-import { convertUSDToCurrency } from '../../../../helpers/render';
+import { API, showError, showSuccess, renderQuota } from '../../../../helpers';
 import { useIsMobile } from '../../../../hooks/common/useIsMobile';
 import CardTable from '../../../common/ui/CardTable';
 
@@ -104,10 +103,11 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
 
   const planOptions = useMemo(() => {
     return (plans || []).map((p) => ({
-      label: `${p?.plan?.title || ''} (${convertUSDToCurrency(
-        Number(p?.plan?.price_amount || 0),
-        2,
-      )})`,
+      label: `${p?.plan?.title || ''} ( ${
+        Number(p?.plan?.total_amount || 0) > 0
+          ? renderQuota(p.plan.total_amount)
+          : t('不限')
+      } )`,
       value: p?.plan?.id,
     }));
   }, [plans]);

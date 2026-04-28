@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Modal, Select, Space, Tag, Typography } from '@douyinfe/semi-ui';
-import { API, showError, showSuccess } from '../../../../helpers';
-import { convertUSDToCurrency } from '../../../../helpers/render';
+import { API, showError, showSuccess, renderQuota } from '../../../../helpers';
 
 const BatchBindSubscriptionModal = ({
   visible,
@@ -19,10 +18,11 @@ const BatchBindSubscriptionModal = ({
 
   const planOptions = useMemo(() => {
     return (plans || []).map((p) => ({
-      label: `${p?.plan?.title || ''} (${convertUSDToCurrency(
-        Number(p?.plan?.price_amount || 0),
-        2,
-      )})`,
+      label: `${p?.plan?.title || ''} ( ${
+        Number(p?.plan?.total_amount || 0) > 0
+          ? renderQuota(p.plan.total_amount)
+          : t('不限')
+      } )`,
       value: p?.plan?.id,
     }));
   }, [plans]);
