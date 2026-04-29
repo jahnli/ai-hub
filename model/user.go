@@ -203,11 +203,12 @@ func GetMaxUserId() int {
 }
 
 var userAllowedOrderColumns = map[string]bool{
-	"id":                  true,
-	"used_quota":          true,
-	"request_count":      true,
-	"created_at":          true,
-	"total_prompt_tokens": true,
+	"id":                       true,
+	"used_quota":               true,
+	"request_count":            true,
+	"created_at":               true,
+	"total_prompt_tokens":      true,
+	"subscription_quota_remain": true,
 }
 
 func applyUserOrder(query *gorm.DB, pageInfo *common.PageInfo) *gorm.DB {
@@ -224,6 +225,21 @@ func applyUserOrder(query *gorm.DB, pageInfo *common.PageInfo) *gorm.DB {
 			Select("users.*").
 			Joins("LEFT JOIN (?) AS token_stats ON users.id = token_stats.user_id", subQuery).
 			Order(fmt.Sprintf("COALESCE(token_stats.total_tokens, 0) %s", dir))
+	}
+	if pageInfo.OrderBy == "subscription_quota_remain" {
+		dir := "DESC"
+		if pageInfo.Order == "asc" {
+			dir = "ASC"
+		}
+		now := common.GetTimestamp()
+		subQuery := DB.Model(&UserSubscription{}).
+			Select("user_id, COALESCE(SUM(amount_total - amount_used), 0) as remain").
+			Where("status = ? AND end_time > ?", "active", now).
+			Group("user_id")
+		return query.
+			Select("users.*").
+			Joins("LEFT JOIN (?) AS sub_quota ON users.id = sub_quota.user_id", subQuery).
+			Order(fmt.Sprintf("COALESCE(sub_quota.remain, 0) %s", dir))
 	}
 	orderClause := pageInfo.GetOrderClause(userAllowedOrderColumns, "id desc")
 	return query.Order(orderClause)

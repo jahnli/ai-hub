@@ -414,6 +414,8 @@ export const getUsersColumns = ({
     {
       title: t('已用额度/总额度'),
       key: 'quota_usage',
+      dataIndex: 'subscription_quota_remain',
+      sorter: true,
       render: (text, record) => renderQuotaUsage(text, record, t),
     },
     {
