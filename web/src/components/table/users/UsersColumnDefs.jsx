@@ -494,6 +494,28 @@ export const getUsersColumns = ({
       },
     },
     {
+      title: t('重置次数'),
+      key: 'reset_count',
+      dataIndex: 'subscription_reset_count',
+      sorter: false,
+      width: 100,
+      render: (text, record) => {
+        const count = parseInt(record.subscription_reset_count) || 0;
+        const lastReset = record.subscription_last_reset_time;
+        if (count <= 0) return <span className='text-gray-400'>-</span>;
+        const tooltipContent = (
+          <div className='text-xs'>
+            <div>{t('最后重置')}: {lastReset ? new Date(lastReset * 1000).toLocaleString() : '-'}</div>
+          </div>
+        );
+        return (
+          <Tooltip content={tooltipContent} position='top'>
+            <Tag color='blue' shape='circle' size='small'>{count}</Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: t('创建时间'),
       dataIndex: 'created_at',
       render: (text) => {

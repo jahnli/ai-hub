@@ -246,6 +246,8 @@ func enrichUsersWithSubscriptionQuota(users []*model.User) {
 			if s, ok := summaries[u.Id]; ok {
 				u.SubscriptionQuotaTotal = s.AmountTotal
 				u.SubscriptionQuotaUsed = s.AmountUsed
+				u.SubscriptionResetCount = s.ResetCount
+				u.SubscriptionLastResetTime = s.LastResetTime
 			}
 		}
 	}

@@ -27,8 +27,9 @@ import {
   Space,
   Tag,
   Typography,
+  Tooltip,
 } from '@douyinfe/semi-ui';
-import { IconPlusCircle } from '@douyinfe/semi-icons';
+import { IconPlusCircle, IconRefresh } from '@douyinfe/semi-icons';
 import {
   IllustrationNoResult,
   IllustrationNoResultDark,
@@ -83,6 +84,7 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
 
   const [subs, setSubs] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [resettingId, setResettingId] = useState(null);
   const pageSize = 10;
 
   const planTitleMap = useMemo(() => {
@@ -220,6 +222,34 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
     });
   };
 
+  const resetSubscriptionQuota = (subId) => {
+    Modal.confirm({
+      title: t('确认重置额度'),
+      content: t('重置会将该订阅的已用额度清零，重置次数+1。是否继续？'),
+      centered: true,
+      onOk: async () => {
+        setResettingId(subId);
+        try {
+          const res = await API.post(
+            `/api/subscription/admin/user_subscriptions/${subId}/reset_quota`,
+          );
+          if (res.data?.success) {
+            const msg = res.data?.data?.message;
+            showSuccess(msg ? msg : t('重置成功'));
+            await loadUserSubscriptions();
+            onSuccess?.();
+          } else {
+            showError(res.data?.message || t('重置失败'));
+          }
+        } catch (e) {
+          showError(t('请求失败'));
+        } finally {
+          setResettingId(null);
+        }
+      },
+    });
+  };
+
   const columns = useMemo(() => {
     return [
       {
@@ -287,6 +317,22 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
         },
       },
       {
+        title: t('重置信息'),
+        key: 'reset_info',
+        width: 160,
+        render: (_, record) => {
+          const sub = record?.subscription;
+          const resetCount = Number(sub?.reset_count || 0);
+          const lastResetTime = sub?.last_reset_time || 0;
+          return (
+            <div className='text-xs text-gray-600'>
+              <div>{t('重置次数')}: {resetCount}</div>
+              <div>{t('最后重置')}: {formatTs(lastResetTime)}</div>
+            </div>
+          );
+        },
+      },
+      {
         title: '',
         key: 'operate',
         width: 140,
@@ -295,6 +341,17 @@ const UserSubscriptionsModal = ({ visible, onCancel, user, t, onSuccess }) => {
           const sub = record?.subscription;
           return (
             <Space>
+              <Tooltip content={t('重置额度')}>
+                <Button
+                  size='small'
+                  type='tertiary'
+                  theme='light'
+                  icon={<IconRefresh />}
+                  loading={resettingId === sub?.id}
+                  disabled={sub?.status !== 'active'}
+                  onClick={() => resetSubscriptionQuota(sub?.id)}
+                />
+              </Tooltip>
               <Button
                 size='small'
                 type='danger'

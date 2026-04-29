@@ -247,6 +247,7 @@ type UserSubscription struct {
 
 	LastResetTime int64 `json:"last_reset_time" gorm:"type:bigint;default:0"`
 	NextResetTime int64 `json:"next_reset_time" gorm:"type:bigint;default:0;index"`
+	ResetCount    int   `json:"reset_count" gorm:"type:int;default:0"`
 
 	UpgradeGroup  string `json:"upgrade_group" gorm:"type:varchar(64);default:''"`
 	PrevUserGroup string `json:"prev_user_group" gorm:"type:varchar(64);default:''"`
@@ -1251,9 +1252,11 @@ func GetSubscriptionPlanInfoByUserSubscriptionId(userSubscriptionId int) (*Subsc
 }
 
 type SubscriptionQuotaSummary struct {
-	UserId      int   `json:"user_id"`
-	AmountTotal int64 `json:"amount_total"`
-	AmountUsed  int64 `json:"amount_used"`
+	UserId       int   `json:"user_id"`
+	AmountTotal  int64 `json:"amount_total"`
+	AmountUsed   int64 `json:"amount_used"`
+	ResetCount   int   `json:"reset_count"`
+	LastResetTime int64 `json:"last_reset_time"`
 }
 
 func GetActiveSubscriptionQuotaSummaryByUserIds(userIds []int) (map[int]SubscriptionQuotaSummary, error) {
@@ -1264,7 +1267,7 @@ func GetActiveSubscriptionQuotaSummaryByUserIds(userIds []int) (map[int]Subscrip
 	now := common.GetTimestamp()
 	var rows []SubscriptionQuotaSummary
 	err := DB.Model(&UserSubscription{}).
-		Select("user_id, SUM(amount_total) as amount_total, SUM(amount_used) as amount_used").
+		Select("user_id, SUM(amount_total) as amount_total, SUM(amount_used) as amount_used, SUM(reset_count) as reset_count, MAX(last_reset_time) as last_reset_time").
 		Where("user_id IN ? AND status = ? AND end_time > ?", userIds, "active", now).
 		Group("user_id").
 		Find(&rows).Error
@@ -1310,4 +1313,42 @@ func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error
 		sub.AmountUsed = newUsed
 		return tx.Save(&sub).Error
 	})
+}
+
+// AdminResetSubscriptionQuota manually resets a user subscription's used quota to 0
+// and increments the reset count. Only active subscriptions can be reset.
+func AdminResetSubscriptionQuota(subId int) (string, error) {
+	if subId <= 0 {
+		return "", errors.New("invalid subscription id")
+	}
+	now := common.GetTimestamp()
+	var updatedSub UserSubscription
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var sub UserSubscription
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").
+			Where("id = ?", subId).
+			First(&sub).Error; err != nil {
+			return err
+		}
+		if sub.Status != "active" {
+			return errors.New("只能重置生效中的订阅")
+		}
+		if sub.EndTime > 0 && sub.EndTime <= now {
+			return errors.New("订阅已过期，无法重置")
+		}
+		updates := map[string]interface{}{
+			"amount_used":     0,
+			"last_reset_time": now,
+			"reset_count":     gorm.Expr("reset_count + 1"),
+			"updated_at":      now,
+		}
+		if err := tx.Model(&UserSubscription{}).Where("id = ?", subId).Updates(updates).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", subId).First(&updatedSub).Error
+	})
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("订阅额度已重置，当前重置次数: %d", updatedSub.ResetCount), nil
 }

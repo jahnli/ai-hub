@@ -58,6 +58,8 @@ type User struct {
 
 	SubscriptionQuotaTotal int64 `json:"subscription_quota_total" gorm:"-"`
 	SubscriptionQuotaUsed  int64 `json:"subscription_quota_used" gorm:"-"`
+	SubscriptionResetCount int   `json:"subscription_reset_count" gorm:"-"`
+	SubscriptionLastResetTime int64 `json:"subscription_last_reset_time" gorm:"-"`
 	TokenCount             int64 `json:"token_count" gorm:"-"`
 	TotalConsumedQuota     int64 `json:"total_consumed_quota" gorm:"-"`
 	TotalPromptTokens      int64 `json:"total_prompt_tokens" gorm:"-"`
