@@ -1,4 +1,4 @@
-version: '3.4'
+version: "3.4"
 
 services:
   new-api:
@@ -12,18 +12,22 @@ services:
       - ./data:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=postgresql://admin:semitech@1Panel-postgresql-Umtv:5432/postgres  # ⚠️ 修改为实际的用户名和密码
+      - SQL_DSN=postgresql://admin:semitech@1Panel-postgresql-Umtv:5432/postgres
       - REDIS_CONN_STRING=redis://:semitech@1Panel-redis-SRr2
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - BATCH_UPDATE_ENABLED=true
-#      - STREAMING_TIMEOUT=300
-#      - SESSION_SECRET=random_string
-#      - SYNC_FREQUENCY=60
+    #      - STREAMING_TIMEOUT=300
+    #      - SESSION_SECRET=random_string
+    #      - SYNC_FREQUENCY=60
     networks:
       - 1panel-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
