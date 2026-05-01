@@ -32,9 +32,7 @@ import {
 import {
   timestamp2string,
   renderGroup,
-  renderQuota,
   getChannelIcon,
-  renderQuotaWithAmount,
   showSuccess,
   showError,
   showInfo,
@@ -307,7 +305,6 @@ const getUpstreamUpdateMeta = (record) => {
 export const getChannelsColumns = ({
   t,
   COLUMN_KEYS,
-  updateChannelBalance,
   manageChannel,
   manageTag,
   submitTagEdit,
@@ -458,25 +455,6 @@ export const getChannelsColumns = ({
       },
     },
     {
-      key: COLUMN_KEYS.GROUP,
-      title: t('分组'),
-      dataIndex: 'group',
-      render: (text, record, index) => (
-        <div>
-          <Space spacing={2}>
-            {text
-              ?.split(',')
-              .sort((a, b) => {
-                if (a === 'default') return -1;
-                if (b === 'default') return 1;
-                return a.localeCompare(b);
-              })
-              .map((item, index) => renderGroup(item))}
-          </Space>
-        </div>
-      ),
-    },
-    {
       key: COLUMN_KEYS.TYPE,
       title: t('类型'),
       dataIndex: 'type',
@@ -523,54 +501,23 @@ export const getChannelsColumns = ({
       render: (text, record, index) => <div>{renderResponseTime(text, t)}</div>,
     },
     {
-      key: COLUMN_KEYS.BALANCE,
-      title: t('已用/剩余'),
-      dataIndex: 'expired_time',
-      render: (text, record, index) => {
-        if (record.children === undefined) {
-          return (
-            <div>
-              <Space spacing={1}>
-                <Tooltip content={t('已用额度')}>
-                  <Tag color='white' type='ghost' shape='circle'>
-                    {renderQuota(record.used_quota)}
-                  </Tag>
-                </Tooltip>
-                <Tooltip
-                  content={
-                    record.type === 57
-                      ? t('查看 Codex 帐号信息与用量')
-                      : t('剩余额度') +
-                        ': ' +
-                        renderQuotaWithAmount(record.balance) +
-                        t('，点击更新')
-                  }
-                >
-                  <Tag
-                    color={record.type === 57 ? 'light-blue' : 'white'}
-                    type={record.type === 57 ? 'light' : 'ghost'}
-                    shape='circle'
-                    className={record.type === 57 ? 'cursor-pointer' : ''}
-                    onClick={() => updateChannelBalance(record)}
-                  >
-                    {record.type === 57
-                      ? t('帐号信息')
-                      : renderQuotaWithAmount(record.balance)}
-                  </Tag>
-                </Tooltip>
-              </Space>
-            </div>
-          );
-        } else {
-          return (
-            <Tooltip content={t('已用额度')}>
-              <Tag color='white' type='ghost' shape='circle'>
-                {renderQuota(record.used_quota)}
-              </Tag>
-            </Tooltip>
-          );
-        }
-      },
+      key: COLUMN_KEYS.GROUP,
+      title: t('分组'),
+      dataIndex: 'group',
+      render: (text, record, index) => (
+        <div>
+          <Space spacing={2}>
+            {text
+              ?.split(',')
+              .sort((a, b) => {
+                if (a === 'default') return -1;
+                if (b === 'default') return 1;
+                return a.localeCompare(b);
+              })
+              .map((item, index) => renderGroup(item))}
+          </Space>
+        </div>
+      ),
     },
     {
       key: COLUMN_KEYS.PRIORITY,

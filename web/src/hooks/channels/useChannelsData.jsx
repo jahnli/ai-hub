@@ -38,7 +38,7 @@ import { useTableCompactMode } from '../common/useTableCompactMode';
 import { useChannelUpstreamUpdates } from './useChannelUpstreamUpdates';
 import { parseUpstreamUpdateMeta } from './upstreamUpdateUtils';
 import { Modal, Button } from '@douyinfe/semi-ui';
-import { openCodexUsageModal } from '../../components/table/channels/modals/CodexUsageModal';
+
 
 export const useChannelsData = () => {
   const { t } = useTranslation();
@@ -137,7 +137,6 @@ export const useChannelsData = () => {
     TYPE: 'type',
     STATUS: 'status',
     RESPONSE_TIME: 'response_time',
-    BALANCE: 'balance',
     PRIORITY: 'priority',
     WEIGHT: 'weight',
     OPERATE: 'operate',
@@ -177,7 +176,6 @@ export const useChannelsData = () => {
       [COLUMN_KEYS.TYPE]: true,
       [COLUMN_KEYS.STATUS]: true,
       [COLUMN_KEYS.RESPONSE_TIME]: true,
-      [COLUMN_KEYS.BALANCE]: true,
       [COLUMN_KEYS.PRIORITY]: true,
       [COLUMN_KEYS.WEIGHT]: true,
       [COLUMN_KEYS.OPERATE]: true,
@@ -753,35 +751,6 @@ export const useChannelsData = () => {
     }
   };
 
-  const updateChannelBalance = async (record) => {
-    if (record?.type === 57) {
-      openCodexUsageModal({
-        t,
-        record,
-        onCopy: async (text) => {
-          const ok = await copy(text);
-          if (ok) showSuccess(t('已复制'));
-          else showError(t('复制失败'));
-        },
-      });
-      return;
-    }
-
-    const res = await API.get(`/api/channel/update_balance/${record.id}/`);
-    const { success, message, balance } = res.data;
-    if (success) {
-      updateChannelProperty(record.id, (channel) => {
-        channel.balance = balance;
-        channel.balance_updated_time = Date.now() / 1000;
-      });
-      showInfo(
-        t('通道 ${name} 余额更新成功！').replace('${name}', record.name),
-      );
-    } else {
-      showError(message);
-    }
-  };
-
   const fixChannelsAbilities = async () => {
     const res = await API.post(`/api/channel/fix`);
     const { success, message, data } = res.data;
@@ -1232,7 +1201,6 @@ export const useChannelsData = () => {
     testAllChannels,
     deleteAllDisabledChannels,
     updateAllChannelsBalance,
-    updateChannelBalance,
     fixChannelsAbilities,
     checkOllamaVersion,
     testChannel,
