@@ -48,6 +48,7 @@ type User struct {
 	InviterId        int            `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
 	CreatedAt        time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	LastLoginAt      int64          `json:"last_login_at" gorm:"type:bigint;default:0;column:last_login_at"`
 	LinuxDOId        string         `json:"linux_do_id" gorm:"column:linux_do_id;index"`
 	LdapId           string         `json:"ldap_id" gorm:"column:ldap_id;index"`
 	Setting          string         `json:"setting" gorm:"type:text;column:setting"`

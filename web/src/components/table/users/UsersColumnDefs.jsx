@@ -525,6 +525,15 @@ export const getUsersColumns = ({
       },
     },
     {
+      title: t('最后登录'),
+      dataIndex: 'last_login_at',
+      render: (text) => {
+        if (!text || text === 0) return '-';
+        const d = new Date(text * 1000);
+        return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+      },
+    },
+    {
       title: t('角色'),
       dataIndex: 'role',
       render: (text, record, index) => {
