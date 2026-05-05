@@ -45,7 +45,10 @@ const StatsCards = ({
             <div className='space-y-4'>
               {group.items.map((item, itemIdx) =>
                 item.layout === 'inline' ? (
-                  <div key={itemIdx} className='flex items-center justify-between'>
+                  <div
+                    key={itemIdx}
+                    className='flex items-center justify-between'
+                  >
                     {item.inlineItems.map((inlineItem, inlineIdx) => (
                       <div key={inlineIdx} className='flex items-center'>
                         <Avatar
@@ -56,7 +59,9 @@ const StatsCards = ({
                           {inlineItem.icon}
                         </Avatar>
                         <div>
-                          <div className='text-xs text-gray-500'>{inlineItem.title}</div>
+                          <div className='text-xs text-gray-500'>
+                            {inlineItem.title}
+                          </div>
                           <div className='text-lg font-semibold'>
                             <Skeleton
                               loading={loading}
@@ -81,93 +86,120 @@ const StatsCards = ({
                     ))}
                   </div>
                 ) : (
-                <div
-                  key={itemIdx}
-                  className='flex items-center justify-between cursor-pointer'
-                  onClick={item.onClick}
-                >
-                  <div className='flex items-center'>
-                    <Avatar
-                      className='mr-3'
-                      size='small'
-                      color={item.avatarColor}
-                    >
-                      {item.icon}
-                    </Avatar>
-                    <div>
-                      <div className='text-xs text-gray-500'>{item.title}</div>
-                      <div className='text-lg font-semibold'>
-                        <Skeleton
-                          loading={loading}
-                          active
-                          placeholder={
+                  <div
+                    key={itemIdx}
+                    className='flex items-center justify-between cursor-pointer'
+                    onClick={item.onClick}
+                  >
+                    <div className='flex items-center'>
+                      <Avatar
+                        className='mr-3'
+                        size='small'
+                        color={item.avatarColor}
+                      >
+                        {item.icon}
+                      </Avatar>
+                      <div>
+                        <div className='text-xs text-gray-500'>
+                          {item.title}
+                        </div>
+                        <div className='text-lg font-semibold'>
+                          <Skeleton
+                            loading={loading}
+                            active
+                            placeholder={
+                              <Skeleton.Paragraph
+                                active
+                                rows={1}
+                                style={{
+                                  width: '65px',
+                                  height: '24px',
+                                  marginTop: '2px',
+                                }}
+                              />
+                            }
+                          >
+                            {item.value}
+                          </Skeleton>
+                        </div>
+                        {item.title === t('当前订阅') && (
+                          <div className='text-xs text-gray-500'>
+                            {t('下一次重置')}
+                            {item.nextResetTime > 0 && (
+                              <span className='ml-1'>
+                                : {new Date(
+                                  item.nextResetTime * 1000,
+                                ).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {item.hasSubscriptionBar &&
+                          (loading || item.subscriptionPercent == null ? (
                             <Skeleton.Paragraph
                               active
                               rows={1}
                               style={{
-                                width: '65px',
-                                height: '24px',
+                                width: '100%',
+                                height: '14px',
                                 marginTop: '2px',
                               }}
                             />
-                          }
-                        >
-                          {item.value}
-                        </Skeleton>
+                          ) : (
+                            <Progress
+                              percent={item.subscriptionPercent}
+                              stroke={
+                                item.subscriptionPercent >= 90
+                                  ? 'var(--semi-color-danger)'
+                                  : item.subscriptionPercent >= 70
+                                    ? 'var(--semi-color-warning)'
+                                    : 'var(--semi-color-success)'
+                              }
+                              aria-label='subscription quota usage'
+                              format={() => `${item.subscriptionPercent}%`}
+                              style={{ width: '100%', marginTop: '2px' }}
+                            />
+                          ))}
+                        {item.title === t('当前订阅') && (
+                          <>
+                            {item.resetPeriodLabel && item.resetPeriodLabel !== t('不重置') && (
+                              <div className='text-xs text-gray-500 mt-1'>
+                                {t('额度重置')}: {item.resetPeriodLabel}
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
-                      {item.hasSubscriptionBar && (
-                        loading || item.subscriptionPercent == null ? (
-                          <Skeleton.Paragraph
-                            active
-                            rows={1}
-                            style={{ width: '100%', height: '14px', marginTop: '2px' }}
-                          />
-                        ) : (
-                          <Progress
-                            percent={item.subscriptionPercent}
-                            stroke={
-                              item.subscriptionPercent >= 90
-                                ? 'var(--semi-color-danger)'
-                                : item.subscriptionPercent >= 70
-                                  ? 'var(--semi-color-warning)'
-                                  : 'var(--semi-color-success)'
-                            }
-                            aria-label='subscription quota usage'
-                            format={() => `${item.subscriptionPercent}%`}
-                            style={{ width: '100%', marginTop: '2px' }}
-                          />
-                        )
-                      )}
                     </div>
+                    {item.title === t('当前订阅')
+                      ? item.planTitle && (
+                          <Tag
+                            color='blue'
+                            shape='circle'
+                            size='large'
+                            style={{ cursor: 'pointer' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/console/topup');
+                            }}
+                          >
+                            {item.planTitle}
+                          </Tag>
+                        )
+                      : (loading ||
+                          (item.trendData && item.trendData.length > 0)) && (
+                          <div className='w-24 h-10'>
+                            <VChart
+                              spec={getTrendSpec(
+                                item.trendData,
+                                item.trendColor,
+                              )}
+                              option={CHART_CONFIG}
+                            />
+                          </div>
+                        )}
                   </div>
-                  {item.title === t('当前订阅') ? (
-                    item.planTitle && (
-                      <Tag
-                        color='blue'
-                        shape='circle'
-                        size='large'
-                        style={{ cursor: 'pointer' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/console/topup');
-                        }}
-                      >
-                        {item.planTitle}
-                      </Tag>
-                    )
-                  ) : (
-                    (loading ||
-                      (item.trendData && item.trendData.length > 0)) && (
-                      <div className='w-24 h-10'>
-                        <VChart
-                          spec={getTrendSpec(item.trendData, item.trendColor)}
-                          option={CHART_CONFIG}
-                        />
-                      </div>
-                    )
-                  )}
-                </div>
-                )
+                ),
               )}
             </div>
           </Card>

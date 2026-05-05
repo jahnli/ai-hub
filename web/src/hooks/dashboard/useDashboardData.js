@@ -386,11 +386,18 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
           const sub = activeSubs[0];
           const total = sub.subscription?.amount_total || 0;
           const used = sub.subscription?.amount_used || 0;
+          const plan = sub.plan;
           setSubscriptionInfo({
             planTitle: sub.plan_title || '',
             total,
             used,
             remaining: Math.max(0, total - used),
+            durationUnit: plan?.duration_unit || '',
+            durationValue: plan?.duration_value || 0,
+            customSeconds: plan?.custom_seconds || 0,
+            resetPeriod: sub.subscription?.quota_reset_period || 'never',
+            resetCustomSeconds: sub.subscription?.quota_reset_custom_seconds || 0,
+            nextResetTime: sub.subscription?.next_reset_time || 0,
           });
         } else {
           setSubscriptionInfo(null);

@@ -32,6 +32,7 @@ import {
 import { Tooltip } from '@douyinfe/semi-ui';
 import { renderQuota } from '../../helpers';
 import { createSectionTitle } from '../../helpers/dashboard';
+import { formatSubscriptionDuration, formatSubscriptionResetPeriod } from '../../helpers/subscriptionFormat';
 
 export const useDashboardStats = (
   userState,
@@ -65,6 +66,13 @@ export const useDashboardStats = (
             subscriptionPercent: subscriptionInfo?.total > 0
               ? Math.round((subscriptionInfo.used / subscriptionInfo.total) * 100)
               : null,
+            resetPeriodLabel: subscriptionInfo?.resetPeriod
+              ? formatSubscriptionResetPeriod(
+                  { quota_reset_period: subscriptionInfo.resetPeriod, quota_reset_custom_seconds: subscriptionInfo.resetPeriod === 'custom' ? subscriptionInfo.resetCustomSeconds : 0 },
+                  t,
+                )
+              : subscriptionInfo ? t('不重置') : '',
+            nextResetTime: subscriptionInfo?.nextResetTime || 0,
             icon: <IconMoneyExchangeStroked />,
             avatarColor: 'blue',
             trendData: [],
