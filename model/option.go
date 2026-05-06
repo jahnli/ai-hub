@@ -138,6 +138,15 @@ func InitOptionMap() {
 	common.OptionMap["QuotaForInvitee"] = strconv.Itoa(common.QuotaForInvitee)
 	common.OptionMap["QuotaRemindThreshold"] = strconv.Itoa(common.QuotaRemindThreshold)
 	common.OptionMap["PreConsumedQuota"] = strconv.Itoa(common.PreConsumedQuota)
+	common.OptionMap["GlobalWebRateLimitEnabled"] = strconv.FormatBool(common.GlobalWebRateLimitEnable)
+	common.OptionMap["GlobalWebRateLimitNum"] = strconv.Itoa(common.GlobalWebRateLimitNum)
+	common.OptionMap["GlobalWebRateLimitDuration"] = strconv.FormatInt(common.GlobalWebRateLimitDuration, 10)
+	common.OptionMap["GlobalApiRateLimitEnabled"] = strconv.FormatBool(common.GlobalApiRateLimitEnable)
+	common.OptionMap["GlobalApiRateLimitNum"] = strconv.Itoa(common.GlobalApiRateLimitNum)
+	common.OptionMap["GlobalApiRateLimitDuration"] = strconv.FormatInt(common.GlobalApiRateLimitDuration, 10)
+	common.OptionMap["CriticalRateLimitEnabled"] = strconv.FormatBool(common.CriticalRateLimitEnable)
+	common.OptionMap["CriticalRateLimitNum"] = strconv.Itoa(common.CriticalRateLimitNum)
+	common.OptionMap["CriticalRateLimitDuration"] = strconv.FormatInt(common.CriticalRateLimitDuration, 10)
 	common.OptionMap["ModelRequestRateLimitCount"] = strconv.Itoa(setting.ModelRequestRateLimitCount)
 	common.OptionMap["ModelRequestRateLimitDurationMinutes"] = strconv.Itoa(setting.ModelRequestRateLimitDurationMinutes)
 	common.OptionMap["ModelRequestRateLimitSuccessCount"] = strconv.Itoa(setting.ModelRequestRateLimitSuccessCount)
@@ -321,6 +330,12 @@ func updateOptionMap(key string, value string) (err error) {
 			operation_setting.SelfUseModeEnabled = boolValue
 		case "CheckSensitiveOnPromptEnabled":
 			setting.CheckSensitiveOnPromptEnabled = boolValue
+		case "GlobalWebRateLimitEnabled":
+			common.GlobalWebRateLimitEnable = boolValue
+		case "GlobalApiRateLimitEnabled":
+			common.GlobalApiRateLimitEnable = boolValue
+		case "CriticalRateLimitEnabled":
+			common.CriticalRateLimitEnable = boolValue
 		case "ModelRequestRateLimitEnabled":
 			setting.ModelRequestRateLimitEnabled = boolValue
 		case "StopOnSensitiveEnabled":
@@ -491,6 +506,24 @@ func updateOptionMap(key string, value string) (err error) {
 		common.QuotaRemindThreshold, _ = strconv.Atoi(value)
 	case "PreConsumedQuota":
 		common.PreConsumedQuota, _ = strconv.Atoi(value)
+	case "GlobalWebRateLimitNum":
+		intValue, _ := strconv.Atoi(value)
+		common.GlobalWebRateLimitNum = intValue
+	case "GlobalWebRateLimitDuration":
+		intValue, _ := strconv.ParseInt(value, 10, 64)
+		common.GlobalWebRateLimitDuration = intValue
+	case "GlobalApiRateLimitNum":
+		intValue, _ := strconv.Atoi(value)
+		common.GlobalApiRateLimitNum = intValue
+	case "GlobalApiRateLimitDuration":
+		intValue, _ := strconv.ParseInt(value, 10, 64)
+		common.GlobalApiRateLimitDuration = intValue
+	case "CriticalRateLimitNum":
+		intValue, _ := strconv.Atoi(value)
+		common.CriticalRateLimitNum = intValue
+	case "CriticalRateLimitDuration":
+		intValue, _ := strconv.ParseInt(value, 10, 64)
+		common.CriticalRateLimitDuration = intValue
 	case "ModelRequestRateLimitCount":
 		setting.ModelRequestRateLimitCount, _ = strconv.Atoi(value)
 	case "ModelRequestRateLimitDurationMinutes":

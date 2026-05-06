@@ -34,6 +34,15 @@ export default function RequestRateLimit(props) {
 
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
+    GlobalWebRateLimitEnabled: false,
+    GlobalWebRateLimitNum: 60,
+    GlobalWebRateLimitDuration: 180,
+    GlobalApiRateLimitEnabled: false,
+    GlobalApiRateLimitNum: 180,
+    GlobalApiRateLimitDuration: 180,
+    CriticalRateLimitEnabled: false,
+    CriticalRateLimitNum: 20,
+    CriticalRateLimitDuration: 1200,
     ModelRequestRateLimitEnabled: false,
     ModelRequestRateLimitCount: -1,
     ModelRequestRateLimitSuccessCount: 1000,
@@ -105,6 +114,95 @@ export default function RequestRateLimit(props) {
           getFormApi={(formAPI) => (refForm.current = formAPI)}
           style={{ marginBottom: 15 }}
         >
+          <Form.Section text={t('全局速率限制')}>
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <Form.Switch
+                  field={'GlobalWebRateLimitEnabled'}
+                  label={t('启用全局 Web 速率限制')}
+                  checkedText='｜' uncheckedText='〇'
+                  onChange={(value) => setInputs({ ...inputs, GlobalWebRateLimitEnabled: value })}
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Switch
+                  field={'GlobalApiRateLimitEnabled'}
+                  label={t('启用全局 API 速率限制')}
+                  checkedText='｜' uncheckedText='〇'
+                  onChange={(value) => setInputs({ ...inputs, GlobalApiRateLimitEnabled: value })}
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Switch
+                  field={'CriticalRateLimitEnabled'}
+                  label={t('启用关键接口速率限制（登录/注册等）')}
+                  checkedText='｜' uncheckedText='〇'
+                  onChange={(value) => setInputs({ ...inputs, CriticalRateLimitEnabled: value })}
+                />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <Form.InputNumber
+                  field={'GlobalWebRateLimitNum'}
+                  label={t('Web 限制次数')}
+                  suffix={t('次')} step={1} min={1}
+                  extraText={t('每个 IP 在限制周期内最多请求次数')}
+                  onChange={(value) => setInputs({ ...inputs, GlobalWebRateLimitNum: String(value) })}
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.InputNumber
+                  field={'GlobalWebRateLimitDuration'}
+                  label={t('Web 限制周期')}
+                  suffix={t('秒')} step={1} min={1}
+                  onChange={(value) => setInputs({ ...inputs, GlobalWebRateLimitDuration: String(value) })}
+                />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <Form.InputNumber
+                  field={'GlobalApiRateLimitNum'}
+                  label={t('API 限制次数')}
+                  suffix={t('次')} step={1} min={1}
+                  extraText={t('每个 IP 在限制周期内最多请求次数')}
+                  onChange={(value) => setInputs({ ...inputs, GlobalApiRateLimitNum: String(value) })}
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.InputNumber
+                  field={'GlobalApiRateLimitDuration'}
+                  label={t('API 限制周期')}
+                  suffix={t('秒')} step={1} min={1}
+                  onChange={(value) => setInputs({ ...inputs, GlobalApiRateLimitDuration: String(value) })}
+                />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <Form.InputNumber
+                  field={'CriticalRateLimitNum'}
+                  label={t('关键接口限制次数')}
+                  suffix={t('次')} step={1} min={1}
+                  onChange={(value) => setInputs({ ...inputs, CriticalRateLimitNum: String(value) })}
+                />
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.InputNumber
+                  field={'CriticalRateLimitDuration'}
+                  label={t('关键接口限制周期')}
+                  suffix={t('秒')} step={1} min={1}
+                  onChange={(value) => setInputs({ ...inputs, CriticalRateLimitDuration: String(value) })}
+                />
+              </Col>
+            </Row>
+            <Row>
+              <Button size='default' onClick={onSubmit}>
+                {t('保存全局速率限制')}
+              </Button>
+            </Row>
+          </Form.Section>
           <Form.Section text={t('模型请求速率限制')}>
             <Row gutter={16}>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>

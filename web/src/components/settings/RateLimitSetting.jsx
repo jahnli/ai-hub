@@ -27,6 +27,15 @@ import RequestRateLimit from '../../pages/Setting/RateLimit/SettingsRequestRateL
 const RateLimitSetting = () => {
   const { t } = useTranslation();
   let [inputs, setInputs] = useState({
+    GlobalWebRateLimitEnabled: false,
+    GlobalWebRateLimitNum: 60,
+    GlobalWebRateLimitDuration: 180,
+    GlobalApiRateLimitEnabled: false,
+    GlobalApiRateLimitNum: 180,
+    GlobalApiRateLimitDuration: 180,
+    CriticalRateLimitEnabled: false,
+    CriticalRateLimitNum: 20,
+    CriticalRateLimitDuration: 1200,
     ModelRequestRateLimitEnabled: false,
     ModelRequestRateLimitCount: 0,
     ModelRequestRateLimitSuccessCount: 1000,
