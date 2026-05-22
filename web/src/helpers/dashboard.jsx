@@ -31,7 +31,6 @@ import {
   showSuccess,
 } from './utils';
 import {
-  STORAGE_KEYS,
   DEFAULT_TIME_INTERVALS,
   DEFAULTS,
   ILLUSTRATION_SIZE,
@@ -41,7 +40,7 @@ import {
 
 // ========== 时间相关工具函数 ==========
 export const getDefaultTime = () => {
-  return localStorage.getItem(STORAGE_KEYS.DATA_EXPORT_DEFAULT_TIME) || 'today';
+  return 'today';
 };
 
 export const getTimeInterval = (timeType, isSeconds = false) => {

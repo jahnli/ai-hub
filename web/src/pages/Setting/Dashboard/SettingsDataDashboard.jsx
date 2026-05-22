@@ -91,10 +91,6 @@ export default function DataDashboard(props) {
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
     refForm.current.setValues(currentInputs);
-    localStorage.setItem(
-      'data_export_default_time',
-      String(inputs.DataExportDefaultTime),
-    );
   }, [props.options]);
 
   return (

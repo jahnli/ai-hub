@@ -251,7 +251,6 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
     const range = getGranularityTimeRange('today');
     setDataExportDefaultTime('today');
     granularityRef.current = 'today';
-    localStorage.setItem('data_export_default_time', 'today');
     setInputs((prev) => ({
       ...prev,
       username: '',
@@ -290,7 +289,6 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
       if (success) {
         setQuotaData(data);
         setQueriedTimeLabel(t(TIME_LABEL_MAP[granularity] || ''));
-        localStorage.setItem('data_export_default_time', granularity);
         if (data.length === 0) {
           data.push({
             count: 0,
