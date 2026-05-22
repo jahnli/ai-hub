@@ -42,6 +42,7 @@ const routerMap = {
   setting: '/console/setting',
   about: '/about',
   detail: '/console',
+  dataOverview: '/console/data-overview',
   pricing: '/pricing',
   task: '/console/task',
   models: '/console/models',
@@ -78,6 +79,11 @@ const SiderBar = ({ onNavigate = () => {} }) => {
           localStorage.getItem('enable_data_export') === 'true'
             ? ''
             : 'tableHiddle',
+      },
+      {
+        text: t('数据总览'),
+        itemKey: 'dataOverview',
+        to: '/data-overview',
       },
       {
         text: t('令牌管理'),

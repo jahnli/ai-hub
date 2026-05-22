@@ -65,6 +65,7 @@ import {
 
 import {
   LayoutDashboard,
+  PieChart,
   TerminalSquare,
   MessageSquare,
   Key,
@@ -123,6 +124,8 @@ export function getLucideIcon(key, selected = false) {
   switch (key) {
     case 'detail':
       return <LayoutDashboard {...commonProps} color={iconColor} />;
+    case 'dataOverview':
+      return <PieChart {...commonProps} color={iconColor} />;
     case 'playground':
       return <TerminalSquare {...commonProps} color={iconColor} />;
     case 'chat':
