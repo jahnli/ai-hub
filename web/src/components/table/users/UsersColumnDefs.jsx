@@ -70,6 +70,8 @@ const renderRole = (role, t) => {
 const renderUsername = (text, record) => {
   const remark = record.remark;
   const cn = parseLdapCN(record.ldap_id);
+  const ous = parseLdapOUs(record.ldap_id).filter((o) => o);
+  const deptDisplay = ous.length > 0 ? ous.join(' / ') : '';
   const displayName = (cn && cn !== text) ? cn : text;
   const openId = record.open_id;
 
@@ -87,7 +89,7 @@ const renderUsername = (text, record) => {
     </Tooltip>
   ) : null;
 
-  const avatarNode = openId ? (
+  const rawAvatarNode = openId ? (
     <a
       href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
       target='_blank'
@@ -113,6 +115,12 @@ const renderUsername = (text, record) => {
       {displayName.slice(0, 1)}
     </Avatar>
   );
+
+  const avatarNode = deptDisplay ? (
+    <Tooltip content={deptDisplay} position='top'>
+      {rawAvatarNode}
+    </Tooltip>
+  ) : rawAvatarNode;
 
   if (cn && cn !== text) {
     return (

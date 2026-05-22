@@ -527,7 +527,7 @@ export const getLogsColumns = ({
         const displayName = (cn && cn !== text) ? cn : text;
         const openId = record.open_id;
 
-        const avatarNode = openId ? (
+        const rawAvatarNode = openId ? (
           <a
             href={`https://applink.feishu.cn/client/chat/open?openId=${openId}`}
             target='_blank'
@@ -554,6 +554,12 @@ export const getLogsColumns = ({
           </Avatar>
         );
 
+        const avatarNode = deptDisplay ? (
+          <Tooltip content={deptDisplay} position='top'>
+            {rawAvatarNode}
+          </Tooltip>
+        ) : rawAvatarNode;
+
         const nameContent = cn && cn !== text ? (
           <div className='flex flex-col'>
             <span>{cn}</span>
@@ -563,18 +569,11 @@ export const getLogsColumns = ({
           <span>{text}</span>
         );
 
-        const content = (
+        return (
           <Space align='center'>
             {avatarNode}
             {nameContent}
           </Space>
-        );
-
-        if (!deptDisplay) return content;
-        return (
-          <Tooltip content={deptDisplay} position='top'>
-            {content}
-          </Tooltip>
         );
       },
     },
