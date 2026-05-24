@@ -2,9 +2,11 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 
@@ -28,19 +30,16 @@ type deptPathEntry struct {
 }
 
 type departmentUserItem struct {
-	FeishuName   string `json:"feishu_name"`
-	FeishuEmail  string `json:"feishu_email"`
-	FeishuUserId string `json:"feishu_user_id"`
+	Name         string `json:"name"`
+	OpenId       string `json:"open_id"`
 	Registered   bool   `json:"registered"`
 	Id           int    `json:"id,omitempty"`
 	Username     string `json:"username,omitempty"`
 	DisplayName  string `json:"display_name,omitempty"`
-	Group        string `json:"group,omitempty"`
 	Quota        int    `json:"quota,omitempty"`
 	UsedQuota    int    `json:"used_quota,omitempty"`
 	RequestCount int    `json:"request_count,omitempty"`
 	Email        string `json:"email,omitempty"`
-	Role         int    `json:"role,omitempty"`
 	Status       int    `json:"status,omitempty"`
 }
 
@@ -140,12 +139,7 @@ func GetDepartmentTree(c *gin.Context) {
 		return
 	}
 
-	feishuId := user.UserIdStr
-	if feishuId == "" {
-		if v, ok := c.Get("feishu_user_id"); ok {
-			feishuId, _ = v.(string)
-		}
-	}
+	feishuId := user.OpenId
 
 	leaderDeptIds := make([]string, 0)
 	for _, dept := range departments {
@@ -253,12 +247,7 @@ func GetDepartmentUsers(c *gin.Context) {
 			return
 		}
 
-		feishuId := user.UserIdStr
-		if feishuId == "" {
-			if v, ok := c.Get("feishu_user_id"); ok {
-				feishuId, _ = v.(string)
-			}
-		}
+		feishuId := user.OpenId
 
 		leaderDeptIds := make([]string, 0)
 		for _, dept := range departments {
@@ -302,41 +291,52 @@ func GetDepartmentUsers(c *gin.Context) {
 		return
 	}
 
-	feishuUserIds := make([]string, 0, len(feishuUsers))
+	// 调试日志：打印飞书返回的成员列表
 	for _, fu := range feishuUsers {
-		feishuUserIds = append(feishuUserIds, fu.UserId)
+		common.SysLog(fmt.Sprintf("[DeptUsers Debug] Feishu user: name=%s, open_id=%s, user_id=%s, email=%s",
+			fu.Name, fu.OpenId, fu.UserId, fu.Email))
+	}
+
+	feishuOpenIds := make([]string, 0, len(feishuUsers))
+	for _, fu := range feishuUsers {
+		feishuOpenIds = append(feishuOpenIds, fu.OpenId)
 	}
 
 	localUserMap := make(map[string]*model.User)
-	if len(feishuUserIds) > 0 {
+	if len(feishuOpenIds) > 0 {
 		var localUsers []model.User
 		model.DB.Model(&model.User{}).
-			Where("user_id IN ?", feishuUserIds).
-			Select("id, username, display_name, `group`, quota, used_quota, request_count, email, role, status, user_id").
+			Where("open_id IN ?", feishuOpenIds).
 			Find(&localUsers)
+
+		// 调试日志：打印数据库中匹配到的用户
+		common.SysLog(fmt.Sprintf("[DeptUsers Debug] Query open_ids: %v", feishuOpenIds))
+		common.SysLog(fmt.Sprintf("[DeptUsers Debug] Found %d local users matching", len(localUsers)))
+		for _, lu := range localUsers {
+			common.SysLog(fmt.Sprintf("[DeptUsers Debug] Local user: id=%d, username=%s, open_id=%s",
+				lu.Id, lu.Username, lu.OpenId))
+		}
+
 		for i := range localUsers {
-			localUserMap[localUsers[i].UserIdStr] = &localUsers[i]
+			localUserMap[localUsers[i].OpenId] = &localUsers[i]
 		}
 	}
 
 	result := make([]departmentUserItem, 0, len(feishuUsers))
 	for _, fu := range feishuUsers {
 		item := departmentUserItem{
-			FeishuName:   fu.Name,
-			FeishuEmail:  fu.Email,
-			FeishuUserId: fu.UserId,
+			Name:   fu.Name,
+			OpenId: fu.OpenId,
 		}
-		if lu, ok := localUserMap[fu.UserId]; ok {
+		if lu, ok := localUserMap[fu.OpenId]; ok {
 			item.Registered = true
 			item.Id = lu.Id
 			item.Username = lu.Username
 			item.DisplayName = lu.DisplayName
-			item.Group = lu.Group
 			item.Quota = lu.Quota
 			item.UsedQuota = lu.UsedQuota
 			item.RequestCount = lu.RequestCount
 			item.Email = lu.Email
-			item.Role = lu.Role
 			item.Status = lu.Status
 		}
 		result = append(result, item)

@@ -96,11 +96,11 @@ func setupLogin(user *model.User, c *gin.Context) {
 	model.DB.Model(user).Update("last_login_at", now)
 	user.LastLoginAt = now
 
-	if user.UserIdStr != "" {
+	if user.OpenId != "" {
 		userId := user.Id
-		feishuUserId := user.UserIdStr
+		feishuOpenId := user.OpenId
 		go func() {
-			if err := service.CheckAndUpdateDeptLeader(userId, feishuUserId); err != nil {
+			if err := service.CheckAndUpdateDeptLeader(userId, feishuOpenId); err != nil {
 				common.SysError("login feishu dept leader check failed: " + err.Error())
 			}
 		}()
@@ -447,13 +447,13 @@ func GetSelf(c *gin.Context) {
 		return
 	}
 
-	// Check feishu dept leader status asynchronously if user has a feishu user_id
-	if user.UserIdStr != "" {
-		go func(userId int, feishuUserId string) {
-			if err := service.CheckAndUpdateDeptLeader(userId, feishuUserId); err != nil {
+	// Check feishu dept leader status asynchronously if user has a feishu open_id
+	if user.OpenId != "" {
+		go func(userId int, feishuOpenId string) {
+			if err := service.CheckAndUpdateDeptLeader(userId, feishuOpenId); err != nil {
 				common.SysError("feishu dept leader check failed: " + err.Error())
 			}
-		}(user.Id, user.UserIdStr)
+		}(user.Id, user.OpenId)
 	}
 
 	// Hide admin remarks: set to empty to trigger omitempty tag, ensuring the remark field is not included in JSON returned to regular users

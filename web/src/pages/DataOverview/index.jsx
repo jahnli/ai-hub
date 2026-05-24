@@ -22,14 +22,9 @@ const DataOverview = () => {
   const columns = useMemo(
     () => [
       {
-        title: t('飞书姓名'),
-        dataIndex: 'feishu_name',
+        title: t('姓名'),
+        dataIndex: 'name',
         width: 120,
-      },
-      {
-        title: t('飞书邮箱'),
-        dataIndex: 'feishu_email',
-        width: 200,
       },
       {
         title: t('注册状态'),
@@ -47,13 +42,6 @@ const DataOverview = () => {
         dataIndex: 'username',
         width: 140,
         render: (text) => text || '-',
-      },
-      {
-        title: t('分组'),
-        dataIndex: 'group',
-        width: 100,
-        render: (text, record) =>
-          record.registered ? <Tag>{text || 'default'}</Tag> : '-',
       },
       {
         title: t('额度'),
@@ -74,17 +62,6 @@ const DataOverview = () => {
         dataIndex: 'request_count',
         width: 100,
         render: (text, record) => (record.registered ? text : '-'),
-      },
-      {
-        title: t('角色'),
-        dataIndex: 'role',
-        width: 80,
-        render: (role, record) => {
-          if (!record.registered) return '-';
-          if (role >= 100) return <Tag color="red">{t('超级管理员')}</Tag>;
-          if (role >= 10) return <Tag color="orange">{t('管理员')}</Tag>;
-          return <Tag>{t('普通用户')}</Tag>;
-        },
       },
     ],
     [t],
@@ -118,7 +95,7 @@ const DataOverview = () => {
             <Table
               columns={columns}
               dataSource={users}
-              rowKey="feishu_user_id"
+              rowKey="open_id"
               pagination={{
                 pageSize: 20,
                 showSizeChanger: true,

@@ -70,8 +70,8 @@ var (
 	deptMu       sync.RWMutex
 )
 
-func CheckAndUpdateDeptLeader(userId int, feishuUserId string) error {
-	if feishuUserId == "" {
+func CheckAndUpdateDeptLeader(userId int, feishuOpenId string) error {
+	if feishuOpenId == "" {
 		return nil
 	}
 
@@ -94,7 +94,7 @@ func CheckAndUpdateDeptLeader(userId int, feishuUserId string) error {
 	minLevel := 0
 
 	for _, dept := range departments {
-		if dept.LeaderUserId == feishuUserId {
+		if dept.LeaderUserId == feishuOpenId {
 			isDeptLeader = true
 			level := CalcDeptLevel(dept.DepartmentId, deptMap)
 			if minLevel == 0 || level < minLevel {
@@ -111,8 +111,8 @@ func CheckAndUpdateDeptLeader(userId int, feishuUserId string) error {
 		return fmt.Errorf("update user dept leader status failed: %w", err)
 	}
 
-	common.SysLog(fmt.Sprintf("[Feishu] User %d dept leader check: is_leader=%v, level=%d (feishu_user_id=%s, total_depts=%d)",
-		userId, isDeptLeader, minLevel, feishuUserId, len(departments)))
+	common.SysLog(fmt.Sprintf("[Feishu] User %d dept leader check: is_leader=%v, level=%d (open_id=%s, total_depts=%d)",
+		userId, isDeptLeader, minLevel, feishuOpenId, len(departments)))
 
 	return nil
 }
@@ -192,7 +192,7 @@ func FetchAllDepartments(tenantToken string) ([]*FeishuDepartment, error) {
 	pageToken := ""
 
 	for {
-		url := "https://open.feishu.cn/open-apis/contact/v3/departments/0/children?department_id_type=open_department_id&fetch_child=true&page_size=50&user_id_type=user_id"
+		url := "https://open.feishu.cn/open-apis/contact/v3/departments/0/children?department_id_type=open_department_id&fetch_child=true&page_size=50&user_id_type=open_id"
 		if pageToken != "" {
 			url += "&page_token=" + pageToken
 		}
@@ -236,6 +236,7 @@ func FetchAllDepartments(tenantToken string) ([]*FeishuDepartment, error) {
 
 // FeishuUser represents a user returned by the Feishu find_by_department API.
 type FeishuUser struct {
+	OpenId string `json:"open_id"`
 	UserId string `json:"user_id"`
 	Name   string `json:"name"`
 	Email  string `json:"email"`
@@ -256,7 +257,7 @@ type feishuUserListResponse struct {
 }
 
 // FetchDepartmentUsers fetches all users from the given department IDs
-// using the Feishu find_by_department API. Results are deduplicated by user_id.
+// using the Feishu find_by_department API. Results are deduplicated by open_id.
 // Concurrency is limited to 5 goroutines.
 func FetchDepartmentUsers(tenantToken string, deptIds []string) ([]*FeishuUser, error) {
 	type result struct {
@@ -291,8 +292,8 @@ func FetchDepartmentUsers(tenantToken string, deptIds []string) ([]*FeishuUser, 
 			return nil, res.err
 		}
 		for _, u := range res.users {
-			if !seen[u.UserId] {
-				seen[u.UserId] = true
+			if !seen[u.OpenId] {
+				seen[u.OpenId] = true
 				allUsers = append(allUsers, u)
 			}
 		}
@@ -307,7 +308,7 @@ func fetchUsersByDepartment(tenantToken string, deptId string) ([]*FeishuUser, e
 
 	for {
 		url := fmt.Sprintf(
-			"https://open.feishu.cn/open-apis/contact/v3/users/find_by_department?department_id=%s&department_id_type=open_department_id&user_id_type=user_id&page_size=50",
+			"https://open.feishu.cn/open-apis/contact/v3/users/find_by_department?department_id=%s&department_id_type=open_department_id&user_id_type=open_id&page_size=50",
 			deptId,
 		)
 		if pageToken != "" {
