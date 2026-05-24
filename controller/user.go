@@ -97,15 +97,13 @@ func setupLogin(user *model.User, c *gin.Context) {
 	user.LastLoginAt = now
 
 	if user.UserIdStr != "" {
-		if err := service.CheckAndUpdateDeptLeader(user.Id, user.UserIdStr); err != nil {
-			common.SysError("login feishu dept leader check failed: " + err.Error())
-		} else {
-			refreshed, _ := model.GetUserById(user.Id, false)
-			if refreshed != nil {
-				user.IsDeptLeader = refreshed.IsDeptLeader
-				user.LeaderDeptLevel = refreshed.LeaderDeptLevel
+		userId := user.Id
+		feishuUserId := user.UserIdStr
+		go func() {
+			if err := service.CheckAndUpdateDeptLeader(userId, feishuUserId); err != nil {
+				common.SysError("login feishu dept leader check failed: " + err.Error())
 			}
-		}
+		}()
 	}
 
 	session := sessions.Default(c)
