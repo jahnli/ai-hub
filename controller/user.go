@@ -469,8 +469,16 @@ func GetSelf(c *gin.Context) {
 		"setting":           user.Setting,
 		"stripe_customer":   user.StripeCustomer,
 		"avatar_url":        user.AvatarUrl,
-		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
-		"permissions":       permissions,                // 新增权限字段
+		"open_id":           user.OpenId,
+		"en_name":           user.EnName,
+		"name":              user.Name,
+		"description":       user.Description,
+		"user_id":           user.UserIdStr,
+		"leader_user_id":    user.LeaderUserId,
+		"department_ids":    parseDepartmentJSON(user.DepartmentIds),
+		"department_path":   parseDepartmentJSON(user.DepartmentPath),
+		"sidebar_modules":   userSetting.SidebarModules,
+		"permissions":       permissions,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -479,6 +487,17 @@ func GetSelf(c *gin.Context) {
 		"data":    responseData,
 	})
 	return
+}
+
+func parseDepartmentJSON(raw string) interface{} {
+	if raw == "" {
+		return nil
+	}
+	var result interface{}
+	if err := common.Unmarshal([]byte(raw), &result); err != nil {
+		return raw
+	}
+	return result
 }
 
 // 计算用户权限的辅助函数

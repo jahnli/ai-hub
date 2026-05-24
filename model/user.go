@@ -56,6 +56,13 @@ type User struct {
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	AvatarUrl        string         `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url"`
 	OpenId           string         `json:"open_id" gorm:"type:varchar(64);column:open_id;index"`
+	EnName           string         `json:"en_name" gorm:"type:varchar(64);column:en_name"`
+	Name             string         `json:"name" gorm:"type:varchar(64);column:name"`
+	Description      string         `json:"description" gorm:"type:varchar(512);column:description"`
+	UserIdStr        string         `json:"user_id" gorm:"type:varchar(64);column:user_id;index"`
+	LeaderUserId     string         `json:"leader_user_id" gorm:"type:varchar(64);column:leader_user_id"`
+	DepartmentIds    string         `json:"department_ids" gorm:"type:text;column:department_ids"`
+	DepartmentPath   string         `json:"department_path" gorm:"type:text;column:department_path"`
 
 	SubscriptionQuotaTotal int64 `json:"subscription_quota_total" gorm:"-"`
 	SubscriptionQuotaUsed  int64 `json:"subscription_quota_used" gorm:"-"`
