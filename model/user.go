@@ -63,6 +63,8 @@ type User struct {
 	LeaderUserId     string         `json:"leader_user_id" gorm:"type:varchar(64);column:leader_user_id"`
 	DepartmentIds    string         `json:"department_ids" gorm:"type:text;column:department_ids"`
 	DepartmentPath   string         `json:"department_path" gorm:"type:text;column:department_path"`
+	IsDeptLeader     bool           `json:"is_dept_leader" gorm:"default:false;column:is_dept_leader"`
+	LeaderDeptLevel  int            `json:"leader_dept_level" gorm:"type:int;default:0;column:leader_dept_level"`
 
 	SubscriptionQuotaTotal int64 `json:"subscription_quota_total" gorm:"-"`
 	SubscriptionQuotaUsed  int64 `json:"subscription_quota_used" gorm:"-"`
@@ -910,6 +912,18 @@ func IsOidcIdAlreadyTaken(oidcId string) bool {
 
 func IsTelegramIdAlreadyTaken(telegramId string) bool {
 	return DB.Unscoped().Where("telegram_id = ?", telegramId).Find(&User{}).RowsAffected == 1
+}
+
+func IsOpenIdAlreadyTaken(openId string) bool {
+	return DB.Unscoped().Where("open_id = ?", openId).Find(&User{}).RowsAffected == 1
+}
+
+func (user *User) FillUserByOpenId() error {
+	if user.OpenId == "" {
+		return errors.New("open id is empty")
+	}
+	err := DB.Where("open_id = ?", user.OpenId).First(user).Error
+	return err
 }
 
 func ResetUserPasswordByEmail(email string, password string) error {

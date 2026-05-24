@@ -95,6 +95,19 @@ func setupLogin(user *model.User, c *gin.Context) {
 	now := time.Now().Unix()
 	model.DB.Model(user).Update("last_login_at", now)
 	user.LastLoginAt = now
+
+	if user.UserIdStr != "" {
+		if err := service.CheckAndUpdateDeptLeader(user.Id, user.UserIdStr); err != nil {
+			common.SysError("login feishu dept leader check failed: " + err.Error())
+		} else {
+			refreshed, _ := model.GetUserById(user.Id, false)
+			if refreshed != nil {
+				user.IsDeptLeader = refreshed.IsDeptLeader
+				user.LeaderDeptLevel = refreshed.LeaderDeptLevel
+			}
+		}
+	}
+
 	session := sessions.Default(c)
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)
@@ -110,13 +123,15 @@ func setupLogin(user *model.User, c *gin.Context) {
 		"message": "",
 		"success": true,
 		"data": map[string]any{
-			"id":           user.Id,
-			"username":     user.Username,
-			"display_name": user.DisplayName,
-			"role":         user.Role,
-			"status":       user.Status,
-			"group":        user.Group,
-			"avatar_url":   user.AvatarUrl,
+			"id":               user.Id,
+			"username":         user.Username,
+			"display_name":     user.DisplayName,
+			"role":             user.Role,
+			"status":           user.Status,
+			"group":            user.Group,
+			"avatar_url":       user.AvatarUrl,
+			"is_dept_leader":   user.IsDeptLeader,
+			"leader_dept_level": user.LeaderDeptLevel,
 		},
 	})
 }
@@ -433,6 +448,16 @@ func GetSelf(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+
+	// Check feishu dept leader status asynchronously if user has a feishu user_id
+	if user.UserIdStr != "" {
+		go func(userId int, feishuUserId string) {
+			if err := service.CheckAndUpdateDeptLeader(userId, feishuUserId); err != nil {
+				common.SysError("feishu dept leader check failed: " + err.Error())
+			}
+		}(user.Id, user.UserIdStr)
+	}
+
 	// Hide admin remarks: set to empty to trigger omitempty tag, ensuring the remark field is not included in JSON returned to regular users
 	user.Remark = ""
 
@@ -477,6 +502,8 @@ func GetSelf(c *gin.Context) {
 		"leader_user_id":    user.LeaderUserId,
 		"department_ids":    parseDepartmentJSON(user.DepartmentIds),
 		"department_path":   parseDepartmentJSON(user.DepartmentPath),
+		"is_dept_leader":    user.IsDeptLeader,
+		"leader_dept_level": user.LeaderDeptLevel,
 		"sidebar_modules":   userSetting.SidebarModules,
 		"permissions":       permissions,
 	}

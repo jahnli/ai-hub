@@ -84,6 +84,14 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('数据总览'),
         itemKey: 'dataOverview',
         to: '/data-overview',
+        className: (() => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            return (user.is_dept_leader || user.role >= 10) ? '' : 'tableHiddle';
+          } catch {
+            return 'tableHiddle';
+          }
+        })(),
       },
       {
         text: t('令牌管理'),

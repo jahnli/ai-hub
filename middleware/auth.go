@@ -185,6 +185,122 @@ func RootAuth() func(c *gin.Context) {
 	}
 }
 
+func DeptLeaderAuth() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		username := session.Get("username")
+		role := session.Get("role")
+		id := session.Get("id")
+		status := session.Get("status")
+		useAccessToken := false
+
+		if username == nil {
+			accessToken := c.Request.Header.Get("Authorization")
+			if accessToken == "" {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"success": false,
+					"message": "not logged in",
+				})
+				c.Abort()
+				return
+			}
+			user, authErr := model.ValidateAccessToken(accessToken)
+			if authErr != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "invalid access token",
+				})
+				c.Abort()
+				return
+			}
+			if user != nil && user.Username != "" {
+				username = user.Username
+				role = user.Role
+				id = user.Id
+				status = user.Status
+				useAccessToken = true
+			} else {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "invalid access token",
+				})
+				c.Abort()
+				return
+			}
+		}
+
+		apiUserIdStr := c.Request.Header.Get("New-Api-User")
+		if apiUserIdStr == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "user id not provided",
+			})
+			c.Abort()
+			return
+		}
+		apiUserId, err := strconv.Atoi(apiUserIdStr)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "user id format error",
+			})
+			c.Abort()
+			return
+		}
+		if id != apiUserId {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "user id mismatch",
+			})
+			c.Abort()
+			return
+		}
+
+		if status != nil {
+			if s, ok := status.(int); ok && s == common.UserStatusDisabled {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "user is banned",
+				})
+				c.Abort()
+				return
+			}
+		}
+
+		c.Set("username", username)
+		c.Set("role", role)
+		c.Set("id", id)
+		c.Set("use_access_token", useAccessToken)
+
+		userRole, _ := role.(int)
+		if userRole >= common.RoleAdminUser {
+			c.Next()
+			return
+		}
+
+		userId, _ := id.(int)
+		user, err := model.GetUserById(userId, false)
+		if err != nil || user == nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "user not found",
+			})
+			c.Abort()
+			return
+		}
+		if !user.IsDeptLeader {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "insufficient privilege: dept leader required",
+			})
+			c.Abort()
+			return
+		}
+		c.Set("feishu_user_id", user.UserIdStr)
+		c.Next()
+	}
+}
+
 func WssAuth(c *gin.Context) {
 
 }

@@ -340,6 +340,13 @@ func SetApiRouter(router *gin.Engine) {
 			prefillGroupRoute.DELETE("/:id", controller.DeletePrefillGroup)
 		}
 
+		deptRoute := apiRouter.Group("/department")
+		deptRoute.Use(middleware.DeptLeaderAuth())
+		{
+			deptRoute.GET("/tree", controller.GetDepartmentTree)
+			deptRoute.GET("/users", controller.GetDepartmentUsers)
+		}
+
 		mjRoute := apiRouter.Group("/mj")
 		mjRoute.GET("/self", middleware.UserAuth(), controller.GetUserMidjourney)
 		mjRoute.GET("/", middleware.AdminAuth(), controller.GetAllMidjourney)
