@@ -15,6 +15,7 @@ type cascaderNode struct {
 	Value    string          `json:"value"`
 	Label    string          `json:"label"`
 	Children []*cascaderNode `json:"children"`
+	Disabled bool            `json:"disabled,omitempty"`
 }
 
 type deptPathEntry struct {
@@ -26,8 +27,23 @@ type deptPathEntry struct {
 	} `json:"department_path"`
 }
 
-// buildFullTree constructs a nested tree from a flat department list,
-// mirroring the Node.js script's buildNestedTree logic exactly.
+type departmentUserItem struct {
+	FeishuName   string `json:"feishu_name"`
+	FeishuEmail  string `json:"feishu_email"`
+	FeishuUserId string `json:"feishu_user_id"`
+	Registered   bool   `json:"registered"`
+	Id           int    `json:"id,omitempty"`
+	Username     string `json:"username,omitempty"`
+	DisplayName  string `json:"display_name,omitempty"`
+	Group        string `json:"group,omitempty"`
+	Quota        int    `json:"quota,omitempty"`
+	UsedQuota    int    `json:"used_quota,omitempty"`
+	RequestCount int    `json:"request_count,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Role         int    `json:"role,omitempty"`
+	Status       int    `json:"status,omitempty"`
+}
+
 func buildFullTree(departments []*service.FeishuDepartment) []*cascaderNode {
 	nodeMap := make(map[string]*cascaderNode, len(departments))
 	for _, dept := range departments {
@@ -54,9 +70,6 @@ func buildFullTree(departments []*service.FeishuDepartment) []*cascaderNode {
 	return roots
 }
 
-// filterTreeForLeader prunes the full tree so that:
-//   - Ancestor levels (above the leader dept) show only the single-path chain
-//   - The leader dept and everything below it is kept in full
 func filterTreeForLeader(tree []*cascaderNode, ancestorSet map[string]bool, leaderDeptId string) []*cascaderNode {
 	var result []*cascaderNode
 	for _, node := range tree {
@@ -68,6 +81,7 @@ func filterTreeForLeader(tree []*cascaderNode, ancestorSet map[string]bool, lead
 			pruned := &cascaderNode{
 				Value:    node.Value,
 				Label:    node.Label,
+				Disabled: true,
 				Children: filterTreeForLeader(node.Children, ancestorSet, leaderDeptId),
 			}
 			result = append(result, pruned)
@@ -76,7 +90,6 @@ func filterTreeForLeader(tree []*cascaderNode, ancestorSet map[string]bool, lead
 	return result
 }
 
-// collectDescendantIds gathers all department IDs that are descendants of rootId.
 func collectDescendantIds(rootId string, departments []*service.FeishuDepartment, result map[string]bool) {
 	result[rootId] = true
 	for _, dept := range departments {
@@ -170,13 +183,13 @@ func GetDepartmentTree(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    filteredTree,
+		"success":         true,
+		"message":         "",
+		"data":            filteredTree,
+		"leader_dept_ids": leaderDeptIds,
 	})
 }
 
-// mergeTreeRoots merges two tree slices, combining children of nodes with the same value.
 func mergeTreeRoots(existing, incoming []*cascaderNode) []*cascaderNode {
 	if len(existing) == 0 {
 		return incoming
@@ -255,20 +268,15 @@ func GetDepartmentUsers(c *gin.Context) {
 		}
 
 		allowedIds := make(map[string]bool)
-
-		ancestorIds, _, _ := parseUserDeptPath(user.DepartmentPath)
-		for _, id := range ancestorIds {
-			allowedIds[id] = true
-		}
-
 		for _, rootId := range leaderDeptIds {
 			collectDescendantIds(rootId, departments, allowedIds)
 		}
 
 		if !allowedIds[deptId] {
 			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无权访问该部门",
+				"success": true,
+				"message": "",
+				"data":    []departmentUserItem{},
 			})
 			return
 		}
@@ -285,11 +293,59 @@ func GetDepartmentUsers(c *gin.Context) {
 		}
 	}
 
-	users := queryUsersByDeptIds(targetDeptIds)
+	feishuUsers, err := service.FetchDepartmentUsers(tenantToken, targetDeptIds)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取部门成员失败: " + err.Error(),
+		})
+		return
+	}
+
+	feishuUserIds := make([]string, 0, len(feishuUsers))
+	for _, fu := range feishuUsers {
+		feishuUserIds = append(feishuUserIds, fu.UserId)
+	}
+
+	localUserMap := make(map[string]*model.User)
+	if len(feishuUserIds) > 0 {
+		var localUsers []model.User
+		model.DB.Model(&model.User{}).
+			Where("user_id IN ?", feishuUserIds).
+			Select("id, username, display_name, `group`, quota, used_quota, request_count, email, role, status, user_id").
+			Find(&localUsers)
+		for i := range localUsers {
+			localUserMap[localUsers[i].UserIdStr] = &localUsers[i]
+		}
+	}
+
+	result := make([]departmentUserItem, 0, len(feishuUsers))
+	for _, fu := range feishuUsers {
+		item := departmentUserItem{
+			FeishuName:   fu.Name,
+			FeishuEmail:  fu.Email,
+			FeishuUserId: fu.UserId,
+		}
+		if lu, ok := localUserMap[fu.UserId]; ok {
+			item.Registered = true
+			item.Id = lu.Id
+			item.Username = lu.Username
+			item.DisplayName = lu.DisplayName
+			item.Group = lu.Group
+			item.Quota = lu.Quota
+			item.UsedQuota = lu.UsedQuota
+			item.RequestCount = lu.RequestCount
+			item.Email = lu.Email
+			item.Role = lu.Role
+			item.Status = lu.Status
+		}
+		result = append(result, item)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    users,
+		"data":    result,
 	})
 }
 
@@ -315,42 +371,4 @@ func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 	}
 
 	return ids, names, nil
-}
-
-func queryUsersByDeptIds(deptIds []string) []map[string]interface{} {
-	var users []model.User
-	query := model.DB.Model(&model.User{}).Where("status = ?", 1)
-
-	if len(deptIds) == 1 {
-		query = query.Where("department_ids LIKE ?", "%"+deptIds[0]+"%")
-	} else if len(deptIds) > 1 {
-		conditions := make([]string, 0, len(deptIds))
-		args := make([]interface{}, 0, len(deptIds))
-		for _, id := range deptIds {
-			conditions = append(conditions, "department_ids LIKE ?")
-			args = append(args, "%"+id+"%")
-		}
-		query = query.Where(strings.Join(conditions, " OR "), args...)
-	}
-
-	query.Select("id, username, display_name, `group`, quota, used_quota, request_count, email, role, status, department_ids").
-		Find(&users)
-
-	result := make([]map[string]interface{}, 0, len(users))
-	for _, u := range users {
-		result = append(result, map[string]interface{}{
-			"id":             u.Id,
-			"username":       u.Username,
-			"display_name":   u.DisplayName,
-			"group":          u.Group,
-			"quota":          u.Quota,
-			"used_quota":     u.UsedQuota,
-			"request_count":  u.RequestCount,
-			"email":          u.Email,
-			"role":           u.Role,
-			"status":         u.Status,
-			"department_ids": u.DepartmentIds,
-		})
-	}
-	return result
 }

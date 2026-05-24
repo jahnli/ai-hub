@@ -1,5 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { API, showError } from '../../helpers';
+
+function findPathToNode(tree, targetValue) {
+  for (const node of tree) {
+    if (node.value === targetValue) {
+      return [node.value];
+    }
+    if (node.children && node.children.length > 0) {
+      const childPath = findPathToNode(node.children, targetValue);
+      if (childPath) {
+        return [node.value, ...childPath];
+      }
+    }
+  }
+  return null;
+}
 
 export const useDataOverviewData = () => {
   const [treeData, setTreeData] = useState([]);
@@ -8,22 +23,7 @@ export const useDataOverviewData = () => {
   const [usersLoading, setUsersLoading] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [selectedDeptLabel, setSelectedDeptLabel] = useState('');
-
-  const fetchDepartmentTree = useCallback(async () => {
-    setTreeLoading(true);
-    try {
-      const res = await API.get('/api/department/tree');
-      if (res?.data?.success) {
-        setTreeData(res.data.data || []);
-      } else {
-        showError(res?.data?.message || '获取部门树失败');
-      }
-    } catch (error) {
-      showError(error.message);
-    } finally {
-      setTreeLoading(false);
-    }
-  }, []);
+  const [leaderDeptIds, setLeaderDeptIds] = useState([]);
 
   const fetchDepartmentUsers = useCallback(async (deptId) => {
     if (!deptId) {
@@ -46,6 +46,36 @@ export const useDataOverviewData = () => {
       setUsersLoading(false);
     }
   }, []);
+
+  const fetchDepartmentTree = useCallback(async () => {
+    setTreeLoading(true);
+    try {
+      const res = await API.get('/api/department/tree');
+      if (res?.data?.success) {
+        const tree = res.data.data || [];
+        const leaderIds = res.data.leader_dept_ids || [];
+        setTreeData(tree);
+        setLeaderDeptIds(leaderIds);
+
+        if (leaderIds.length > 0) {
+          const firstLeaderId = leaderIds[0];
+          setSelectedDeptId(firstLeaderId);
+          fetchDepartmentUsers(firstLeaderId);
+        }
+      } else {
+        showError(res?.data?.message || '获取部门树失败');
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setTreeLoading(false);
+    }
+  }, [fetchDepartmentUsers]);
+
+  const selectedPath = useMemo(() => {
+    if (!selectedDeptId || treeData.length === 0) return undefined;
+    return findPathToNode(treeData, selectedDeptId) || undefined;
+  }, [selectedDeptId, treeData]);
 
   const handleDeptChange = useCallback(
     (value) => {
@@ -72,8 +102,10 @@ export const useDataOverviewData = () => {
     users,
     usersLoading,
     selectedDeptId,
+    selectedPath,
     selectedDeptLabel,
     setSelectedDeptLabel,
+    leaderDeptIds,
     handleDeptChange,
     fetchDepartmentTree,
     fetchDepartmentUsers,

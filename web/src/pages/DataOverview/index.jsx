@@ -15,54 +15,72 @@ const DataOverview = () => {
     users,
     usersLoading,
     selectedDeptId,
+    selectedPath,
     handleDeptChange,
   } = useDataOverviewData();
 
   const columns = useMemo(
     () => [
       {
+        title: t('飞书姓名'),
+        dataIndex: 'feishu_name',
+        width: 120,
+      },
+      {
+        title: t('飞书邮箱'),
+        dataIndex: 'feishu_email',
+        width: 200,
+      },
+      {
+        title: t('注册状态'),
+        dataIndex: 'registered',
+        width: 100,
+        render: (registered) =>
+          registered ? (
+            <Tag color="green">{t('已注册')}</Tag>
+          ) : (
+            <Tag color="grey">{t('未注册')}</Tag>
+          ),
+      },
+      {
         title: t('用户名'),
         dataIndex: 'username',
         width: 140,
-      },
-      {
-        title: t('显示名称'),
-        dataIndex: 'display_name',
-        width: 140,
-      },
-      {
-        title: t('邮箱'),
-        dataIndex: 'email',
-        width: 200,
+        render: (text) => text || '-',
       },
       {
         title: t('分组'),
         dataIndex: 'group',
         width: 100,
-        render: (text) => <Tag>{text || 'default'}</Tag>,
+        render: (text, record) =>
+          record.registered ? <Tag>{text || 'default'}</Tag> : '-',
       },
       {
         title: t('额度'),
         dataIndex: 'quota',
         width: 100,
-        render: (text) => (text / 500000).toFixed(2),
+        render: (text, record) =>
+          record.registered ? (text / 500000).toFixed(2) : '-',
       },
       {
         title: t('已用额度'),
         dataIndex: 'used_quota',
         width: 100,
-        render: (text) => (text / 500000).toFixed(2),
+        render: (text, record) =>
+          record.registered ? (text / 500000).toFixed(2) : '-',
       },
       {
         title: t('请求次数'),
         dataIndex: 'request_count',
         width: 100,
+        render: (text, record) => (record.registered ? text : '-'),
       },
       {
         title: t('角色'),
         dataIndex: 'role',
         width: 80,
-        render: (role) => {
+        render: (role, record) => {
+          if (!record.registered) return '-';
           if (role >= 100) return <Tag color="red">{t('超级管理员')}</Tag>;
           if (role >= 10) return <Tag color="orange">{t('管理员')}</Tag>;
           return <Tag>{t('普通用户')}</Tag>;
@@ -80,6 +98,7 @@ const DataOverview = () => {
             <span>{t('数据总览')}</span>
             <Cascader
               treeData={treeData}
+              value={selectedPath}
               placeholder={t('选择部门')}
               changeOnSelect
               onChange={handleDeptChange}
@@ -99,7 +118,7 @@ const DataOverview = () => {
             <Table
               columns={columns}
               dataSource={users}
-              rowKey="id"
+              rowKey="feishu_user_id"
               pagination={{
                 pageSize: 20,
                 showSizeChanger: true,

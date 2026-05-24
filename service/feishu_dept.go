@@ -234,6 +234,120 @@ func FetchAllDepartments(tenantToken string) ([]*FeishuDepartment, error) {
 	return allDepts, nil
 }
 
+// FeishuUser represents a user returned by the Feishu find_by_department API.
+type FeishuUser struct {
+	UserId string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Avatar struct {
+		AvatarOrigin string `json:"avatar_origin"`
+	} `json:"avatar"`
+	DepartmentIds []string `json:"department_ids"`
+}
+
+type feishuUserListResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		HasMore   bool          `json:"has_more"`
+		PageToken string        `json:"page_token"`
+		Items     []*FeishuUser `json:"items"`
+	} `json:"data"`
+}
+
+// FetchDepartmentUsers fetches all users from the given department IDs
+// using the Feishu find_by_department API. Results are deduplicated by user_id.
+// Concurrency is limited to 5 goroutines.
+func FetchDepartmentUsers(tenantToken string, deptIds []string) ([]*FeishuUser, error) {
+	type result struct {
+		users []*FeishuUser
+		err   error
+	}
+
+	resultsCh := make(chan result, len(deptIds))
+	sem := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+
+	for _, deptId := range deptIds {
+		wg.Add(1)
+		go func(did string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			users, err := fetchUsersByDepartment(tenantToken, did)
+			resultsCh <- result{users: users, err: err}
+		}(deptId)
+	}
+
+	wg.Wait()
+	close(resultsCh)
+
+	seen := make(map[string]bool)
+	var allUsers []*FeishuUser
+
+	for res := range resultsCh {
+		if res.err != nil {
+			return nil, res.err
+		}
+		for _, u := range res.users {
+			if !seen[u.UserId] {
+				seen[u.UserId] = true
+				allUsers = append(allUsers, u)
+			}
+		}
+	}
+
+	return allUsers, nil
+}
+
+func fetchUsersByDepartment(tenantToken string, deptId string) ([]*FeishuUser, error) {
+	var users []*FeishuUser
+	pageToken := ""
+
+	for {
+		url := fmt.Sprintf(
+			"https://open.feishu.cn/open-apis/contact/v3/users/find_by_department?department_id=%s&department_id_type=open_department_id&user_id_type=user_id&page_size=50",
+			deptId,
+		)
+		if pageToken != "" {
+			url += "&page_token=" + pageToken
+		}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+tenantToken)
+
+		client := http.Client{Timeout: 20 * time.Second}
+		res, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("request department users failed (dept=%s): %w", deptId, err)
+		}
+
+		var resp feishuUserListResponse
+		if err = json.NewDecoder(res.Body).Decode(&resp); err != nil {
+			res.Body.Close()
+			return nil, fmt.Errorf("decode department users response failed (dept=%s): %w", deptId, err)
+		}
+		res.Body.Close()
+
+		if resp.Code != 0 {
+			return nil, fmt.Errorf("fetch department users error (dept=%s): code=%d, msg=%s", deptId, resp.Code, resp.Msg)
+		}
+
+		users = append(users, resp.Data.Items...)
+
+		if !resp.Data.HasMore {
+			break
+		}
+		pageToken = resp.Data.PageToken
+	}
+
+	return users, nil
+}
+
 // CalcDeptLevel calculates the depth of a department in the tree.
 // Root children (parent_department_id == "0") are level 1.
 func CalcDeptLevel(deptId string, deptMap map[string]*FeishuDepartment) int {
