@@ -81,6 +81,14 @@ export const useSidebar = () => {
   const [statusState] = useContext(StatusContext);
   const [userConfig, setUserConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDeptLeader, setIsDeptLeader] = useState(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return !!(user.is_dept_leader || (typeof user.role === 'number' && user.role >= 10));
+    } catch {
+      return false;
+    }
+  });
   const instanceIdRef = useRef(null);
   const hasLoadedOnceRef = useRef(false);
 
@@ -115,6 +123,20 @@ export const useSidebar = () => {
       }
 
       const res = await API.get('/api/user/self');
+      if (res.data.success) {
+        // 同步 is_dept_leader 到 localStorage，解决首次登录异步判断的竞态问题
+        const userData = res.data.data;
+        if ('is_dept_leader' in userData) {
+          try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            if (storedUser.is_dept_leader !== userData.is_dept_leader) {
+              storedUser.is_dept_leader = userData.is_dept_leader;
+              localStorage.setItem('user', JSON.stringify(storedUser));
+            }
+            setIsDeptLeader(!!(userData.is_dept_leader || (typeof storedUser.role === 'number' && storedUser.role >= 10)));
+          } catch (e) {}
+        }
+      }
       if (res.data.success && res.data.data.sidebar_modules) {
         let config;
         // 检查sidebar_modules是字符串还是对象
@@ -294,6 +316,7 @@ export const useSidebar = () => {
     adminConfig,
     userConfig,
     finalConfig,
+    isDeptLeader,
     isModuleVisible,
     hasSectionVisibleModules,
     getVisibleModules,

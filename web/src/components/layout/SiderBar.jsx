@@ -58,6 +58,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
   const {
     isModuleVisible,
     hasSectionVisibleModules,
+    isDeptLeader,
     loading: sidebarLoading,
   } = useSidebar();
 
@@ -84,14 +85,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
         text: t('数据总览'),
         itemKey: 'dataOverview',
         to: '/data-overview',
-        className: (() => {
-          try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            return (user.is_dept_leader || user.role >= 10) ? '' : 'tableHiddle';
-          } catch {
-            return 'tableHiddle';
-          }
-        })(),
+        className: isDeptLeader ? '' : 'tableHiddle',
       },
       {
         text: t('令牌管理'),
@@ -132,6 +126,7 @@ const SiderBar = ({ onNavigate = () => {} }) => {
     localStorage.getItem('enable_data_export'),
     localStorage.getItem('enable_drawing'),
     localStorage.getItem('enable_task'),
+    isDeptLeader,
     t,
     isModuleVisible,
   ]);

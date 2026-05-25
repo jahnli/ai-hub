@@ -791,37 +791,35 @@ const DataOverview = () => {
           dropdownClassName='[&_.semi-cascader-option-lists]:!min-h-[560px]'
           onChange={handleDeptChange}
           loading={treeLoading}
-          style={{ width: 480 }}
+          style={{ flex: 1, minWidth: 280 }}
           showClear={isAdmin()}
         />
         {selectedDeptId && (
-          <RadioGroup
-            type='button'
-            size='small'
-            value={granularity}
-            onChange={handleGranularityChange}
-          >
-            {TIME_RANGE_OPTIONS.map((opt) => (
-              <Radio key={opt.value} value={opt.value}>
-                {t(opt.label)}
-              </Radio>
-            ))}
-          </RadioGroup>
-        )}
-        {selectedDeptId && (
-          <Text type='tertiary' size='small'>
-            {formatTimeRangeDisplay(granularity)}
-          </Text>
-        )}
-        {selectedDeptId && (
-          <Button
-            type='primary'
-            icon={<IconSearch />}
-            onClick={handleQuery}
-            loading={statsLoading || usersLoading || childrenStatsLoading}
-          >
-            {t('查询')}
-          </Button>
+          <div className='flex items-center gap-3 ml-auto'>
+            <RadioGroup
+              type='button'
+              size='small'
+              value={granularity}
+              onChange={handleGranularityChange}
+            >
+              {TIME_RANGE_OPTIONS.map((opt) => (
+                <Radio key={opt.value} value={opt.value}>
+                  {t(opt.label)}
+                </Radio>
+              ))}
+            </RadioGroup>
+            <Text type='tertiary' size='small'>
+              {formatTimeRangeDisplay(granularity)}
+            </Text>
+            <Button
+              type='primary'
+              icon={<IconSearch />}
+              onClick={handleQuery}
+              loading={statsLoading || usersLoading || childrenStatsLoading}
+            >
+              {t('查询')}
+            </Button>
+          </div>
         )}
       </div>
 
