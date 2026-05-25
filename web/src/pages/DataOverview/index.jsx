@@ -45,6 +45,12 @@ import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
 
 const { Text } = Typography;
 
+function renderRequestCount(num) {
+  if (!num || num <= 0) return '-';
+  if (num < 10000) return num.toLocaleString();
+  return (num / 10000).toFixed(1) + ' 万次';
+}
+
 const ChildrenRankChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {
     return [...data]
@@ -362,7 +368,7 @@ const DataOverview = () => {
         dataIndex: 'total_requests',
         width: 100,
         sorter: (a, b) => (a.total_requests || 0) - (b.total_requests || 0),
-        render: (text) => text > 0 ? renderNumber(text) : '-',
+        render: (text) => renderRequestCount(text),
       },
       {
         title: t('操作'),
@@ -433,12 +439,12 @@ const DataOverview = () => {
       {
         title: t('姓名'),
         dataIndex: 'name',
-        width: 80,
+        width: 120,
       },
       {
         title: t('已用额度/总额度'),
         dataIndex: 'sub_quota_total',
-        width: 160,
+        width: 130,
         sorter: (a, b) => (parseInt(a.sub_quota_used) || 0) - (parseInt(b.sub_quota_used) || 0),
         render: (text, record) => {
           if (!record.registered) return '-';
@@ -512,13 +518,13 @@ const DataOverview = () => {
         sorter: (a, b) => (parseInt(a.request_count) || 0) - (parseInt(b.request_count) || 0),
         render: (text, record) => {
           if (!record.registered) return '-';
-          return renderNumber(parseInt(record.request_count) || 0);
+          return renderRequestCount(parseInt(record.request_count) || 0);
         },
       },
       {
         title: t('常用模型'),
         dataIndex: 'top_model',
-        width: 140,
+        width: 180,
         render: (text, record) => {
           if (!record.registered || !text) return '-';
           return (
@@ -566,7 +572,7 @@ const DataOverview = () => {
       {
         title: t('注册状态'),
         dataIndex: 'registered',
-        width: 100,
+        width: 80,
         render: (registered) =>
           registered ? (
             <Tag color="green">{t('已注册')}</Tag>
@@ -749,7 +755,7 @@ const DataOverview = () => {
                           : 0
                       )}/M Tokens</span>
                       <span>{t('已用/总额度')}: {renderQuota(usersSummary.usedQuota)} / {renderQuota(usersSummary.totalQuota)}</span>
-                      <span>{t('请求次数')}: {renderNumber(usersSummary.totalRequests)}</span>
+                      <span>{t('请求次数')}: {renderRequestCount(usersSummary.totalRequests)}</span>
                     </div>
                   ) : null}
                 />
