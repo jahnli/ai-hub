@@ -39,10 +39,154 @@ import {
   formatTimeRangeDisplay,
 } from '../../components/stats/StatsCharts';
 import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
+import { VChart } from '@visactor/react-vchart';
 import CardTable from '../../components/common/ui/CardTable';
 import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
 
 const { Text } = Typography;
+
+const ChildrenRankChart = ({ data, t }) => {
+  const chartData = useMemo(() => {
+    return [...data]
+      .sort((a, b) => (b.total_quota || 0) - (a.total_quota || 0))
+      .slice(0, 15)
+      .map(d => ({ dept: d.dept_name, quota: d.total_quota || 0 }));
+  }, [data]);
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <VChart
+      spec={{
+        type: 'bar',
+        data: [{ id: 'data', values: chartData }],
+        xField: 'quota',
+        yField: 'dept',
+        direction: 'horizontal',
+        seriesField: 'dept',
+        title: { visible: true, text: t('子部门消耗排行') },
+        bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+        tooltip: {
+          mark: {
+            content: [{ key: (datum) => datum['dept'], value: (datum) => renderQuota(datum['quota']) }],
+          },
+        },
+        legends: { visible: false },
+      }}
+      style={{ height: '100%', minHeight: 300 }}
+    />
+  );
+};
+
+const ChildrenPieChart = ({ data, t }) => {
+  const chartData = useMemo(() => {
+    return data
+      .filter(d => (d.total_quota || 0) > 0)
+      .map(d => ({ type: d.dept_name, value: d.total_quota || 0 }));
+  }, [data]);
+
+  if (chartData.length === 0) return null;
+
+  const total = chartData.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <VChart
+      spec={{
+        type: 'pie',
+        data: [{ id: 'data', values: chartData }],
+        outerRadius: 0.8,
+        innerRadius: 0.5,
+        padAngle: 0.6,
+        valueField: 'value',
+        categoryField: 'type',
+        pie: { style: { cornerRadius: 10 }, state: { hover: { outerRadius: 0.85 } } },
+        title: { visible: true, text: t('子部门消耗占比'), subtext: `${t('总计')}: ${renderQuota(total)}` },
+        legends: { visible: true, orient: 'left' },
+        label: { visible: true },
+        tooltip: {
+          mark: {
+            content: [{ key: (datum) => datum['type'], value: (datum) => renderQuota(datum['value']) }],
+          },
+        },
+      }}
+      style={{ height: '100%', minHeight: 300 }}
+    />
+  );
+};
+
+const UsersRankChart = ({ data, t }) => {
+  const chartData = useMemo(() => {
+    return [...data]
+      .filter(u => u.registered && (parseInt(u.total_consumed_quota) || 0) > 0)
+      .sort((a, b) => (parseInt(b.total_consumed_quota) || 0) - (parseInt(a.total_consumed_quota) || 0))
+      .slice(0, 10)
+      .map(d => ({ user: d.name, quota: parseInt(d.total_consumed_quota) || 0 }));
+  }, [data]);
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <VChart
+      spec={{
+        type: 'bar',
+        data: [{ id: 'data', values: chartData }],
+        xField: 'quota',
+        yField: 'user',
+        direction: 'horizontal',
+        seriesField: 'user',
+        title: { visible: true, text: t('用户消耗排行 Top 10') },
+        bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+        tooltip: {
+          mark: {
+            content: [{ key: (datum) => datum['user'], value: (datum) => renderQuota(datum['quota']) }],
+          },
+        },
+        legends: { visible: false },
+      }}
+      style={{ height: '100%', minHeight: 300 }}
+    />
+  );
+};
+
+const UsersPieChart = ({ data, t }) => {
+  const chartData = useMemo(() => {
+    const sorted = [...data]
+      .filter(u => u.registered && (parseInt(u.total_consumed_quota) || 0) > 0)
+      .sort((a, b) => (parseInt(b.total_consumed_quota) || 0) - (parseInt(a.total_consumed_quota) || 0));
+    const top10 = sorted.slice(0, 10).map(d => ({ type: d.name, value: parseInt(d.total_consumed_quota) || 0 }));
+    const rest = sorted.slice(10).reduce((sum, d) => sum + (parseInt(d.total_consumed_quota) || 0), 0);
+    if (rest > 0) top10.push({ type: t('其他'), value: rest });
+    return top10;
+  }, [data, t]);
+
+  if (chartData.length === 0) return null;
+
+  const total = chartData.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <VChart
+      spec={{
+        type: 'pie',
+        data: [{ id: 'data', values: chartData }],
+        outerRadius: 0.8,
+        innerRadius: 0.5,
+        padAngle: 0.6,
+        valueField: 'value',
+        categoryField: 'type',
+        pie: { style: { cornerRadius: 10 }, state: { hover: { outerRadius: 0.85 } } },
+        title: { visible: true, text: t('用户消耗占比 Top 10'), subtext: `${t('总计')}: ${renderQuota(total)}` },
+        legends: { visible: true, orient: 'left' },
+        label: { visible: true },
+        tooltip: {
+          mark: {
+            content: [{ key: (datum) => datum['type'], value: (datum) => renderQuota(datum['value']) }],
+          },
+        },
+      }}
+      style={{ height: '100%', minHeight: 300 }}
+    />
+  );
+};
 
 const COLUMN_KEYS = {
   TIME: 'time',
@@ -525,14 +669,22 @@ const DataOverview = () => {
                   <Spin size="large" />
                 </div>
               ) : (
-                <Table
-                  columns={childrenColumns}
-                  dataSource={childrenStats}
-                  rowKey="dept_id"
-                  pagination={false}
-                  size="small"
-                  style={{ width: '100%' }}
-                />
+                <>
+                  <Table
+                    columns={childrenColumns}
+                    dataSource={childrenStats}
+                    rowKey="dept_id"
+                    pagination={false}
+                    size="small"
+                    style={{ width: '100%' }}
+                  />
+                  {childrenStats.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                      <ChildrenRankChart data={childrenStats} t={t} />
+                      <ChildrenPieChart data={childrenStats} t={t} />
+                    </div>
+                  )}
+                </>
               )}
             </Card>
           )}
@@ -567,33 +719,41 @@ const DataOverview = () => {
                 <Spin size="large" />
               </div>
             ) : users.length > 0 ? (
-              <Table
-                columns={columns}
-                dataSource={users}
-                rowKey="open_id"
-                pagination={{
-                  pageSize: 20,
-                  showSizeChanger: true,
-                  pageSizeOpts: [10, 20, 50, 100],
-                }}
-                size="small"
-                style={{ width: '100%' }}
-                footer={usersSummary ? (
-                  <div className="flex items-center gap-6 px-3 py-2 text-sm font-medium" style={{ background: 'var(--semi-color-fill-0)' }}>
-                    <span>{t('合计')}: {usersSummary.total} {t('人')}</span>
-                    <span>{t('已注册')}: {usersSummary.registered}</span>
-                    <span>Token: {((usersSummary.totalPrompt + usersSummary.totalCompletion) / 1e8).toFixed(2)} {t('亿')}</span>
-                    <span>{t('总消耗')}: {renderQuota(usersSummary.totalConsumed)}</span>
-                    <span>{t('均价')}: {renderQuota(
-                      (usersSummary.totalPrompt + usersSummary.totalCompletion) > 0
-                        ? Math.round(usersSummary.totalConsumed / ((usersSummary.totalPrompt + usersSummary.totalCompletion) / 1e6))
-                        : 0
-                    )}/M Tokens</span>
-                    <span>{t('已用/总额度')}: {renderQuota(usersSummary.usedQuota)} / {renderQuota(usersSummary.totalQuota)}</span>
-                    <span>{t('请求次数')}: {renderNumber(usersSummary.totalRequests)}</span>
+              <>
+                <Table
+                  columns={columns}
+                  dataSource={users}
+                  rowKey="open_id"
+                  pagination={{
+                    pageSize: 20,
+                    showSizeChanger: true,
+                    pageSizeOpts: [10, 20, 50, 100],
+                  }}
+                  size="small"
+                  style={{ width: '100%' }}
+                  footer={usersSummary ? (
+                    <div className="flex items-center gap-6 px-3 py-2 text-sm font-medium" style={{ background: 'var(--semi-color-fill-0)' }}>
+                      <span>{t('合计')}: {usersSummary.total} {t('人')}</span>
+                      <span>{t('已注册')}: {usersSummary.registered}</span>
+                      <span>Token: {((usersSummary.totalPrompt + usersSummary.totalCompletion) / 1e8).toFixed(2)} {t('亿')}</span>
+                      <span>{t('总消耗')}: {renderQuota(usersSummary.totalConsumed)}</span>
+                      <span>{t('均价')}: {renderQuota(
+                        (usersSummary.totalPrompt + usersSummary.totalCompletion) > 0
+                          ? Math.round(usersSummary.totalConsumed / ((usersSummary.totalPrompt + usersSummary.totalCompletion) / 1e6))
+                          : 0
+                      )}/M Tokens</span>
+                      <span>{t('已用/总额度')}: {renderQuota(usersSummary.usedQuota)} / {renderQuota(usersSummary.totalQuota)}</span>
+                      <span>{t('请求次数')}: {renderNumber(usersSummary.totalRequests)}</span>
+                    </div>
+                  ) : null}
+                />
+                {users.filter(u => u.registered).length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                    <UsersRankChart data={users} t={t} />
+                    <UsersPieChart data={users} t={t} />
                   </div>
-                ) : null}
-              />
+                )}
+              </>
             ) : (
               <Empty
                 image={<IllustrationNoResult />}
@@ -604,30 +764,19 @@ const DataOverview = () => {
           </Card>
 
           {statsData && (
-            <div className="flex flex-col gap-4">
+            <Card
+              title={<Text strong>{t('使用分析')}</Text>}
+              bodyStyle={{ padding: 12 }}
+            >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card bodyStyle={{ padding: 12 }}>
-                  <QuotaTrendChart data={statsData.trendAggregated} granularity={granularity} t={t} />
-                </Card>
-                <Card bodyStyle={{ padding: 12 }}>
-                  <RequestTrendChart data={statsData.trendAggregated} granularity={granularity} t={t} />
-                </Card>
-                <Card bodyStyle={{ padding: 12 }}>
-                  <TokenTrendChart data={statsData.trendAggregated} granularity={granularity} t={t} />
-                </Card>
-                <Card bodyStyle={{ padding: 12 }}>
-                  <ModelTrendChart data={statsData.trendByModel} granularity={granularity} t={t} />
-                </Card>
+                <QuotaTrendChart data={statsData.trendAggregated} granularity={granularity} t={t} />
+                <RequestTrendChart data={statsData.trendAggregated} granularity={granularity} t={t} />
+                <TokenTrendChart data={statsData.trendAggregated} granularity={granularity} t={t} />
+                <ModelTrendChart data={statsData.trendByModel} granularity={granularity} t={t} />
+                <ModelPieChart data={statsData.modelDistribution} t={t} />
+                <ModelRankChart data={statsData.modelDistribution} t={t} />
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card bodyStyle={{ padding: 12, height: '100%' }} style={{ height: '100%' }}>
-                  <ModelPieChart data={statsData.modelDistribution} t={t} />
-                </Card>
-                <Card bodyStyle={{ padding: 12 }}>
-                  <ModelRankChart data={statsData.modelDistribution} t={t} />
-                </Card>
-              </div>
-            </div>
+            </Card>
           )}
         </div>
       ) : (
