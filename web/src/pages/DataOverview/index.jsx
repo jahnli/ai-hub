@@ -786,6 +786,9 @@ const DataOverview = () => {
           value={selectedPath}
           placeholder={t('选择部门')}
           changeOnSelect
+          filterTreeNode
+          showNext='hover'
+          dropdownClassName='[&_.semi-cascader-option-lists]:!min-h-[560px]'
           onChange={handleDeptChange}
           loading={treeLoading}
           style={{ width: 480 }}

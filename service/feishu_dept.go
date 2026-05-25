@@ -71,7 +71,7 @@ var (
 
 	deptUsersCache    map[string][]*FeishuUser
 	deptUsersCacheAt  time.Time
-	deptUsersCacheTTL = 5 * time.Minute
+	deptUsersCacheTTL = 30 * time.Minute
 	deptUsersMu       sync.RWMutex
 )
 
@@ -263,7 +263,7 @@ type feishuUserListResponse struct {
 
 // FetchDepartmentUsers fetches all users from the given department IDs
 // using the Feishu find_by_department API. Results are deduplicated by open_id.
-// Concurrency is limited to 5 goroutines. Results are cached per-department for 5 minutes.
+// Concurrency is limited to 3 goroutines. Results are cached per-department for 30 minutes.
 func FetchDepartmentUsers(tenantToken string, deptIds []string) ([]*FeishuUser, error) {
 	deptUsersMu.RLock()
 	cacheValid := deptUsersCache != nil && time.Now().Before(deptUsersCacheAt.Add(deptUsersCacheTTL))
@@ -320,7 +320,7 @@ func fetchDepartmentUsersBatch(tenantToken string, deptIds []string) (map[string
 	}
 
 	resultsCh := make(chan result, len(deptIds))
-	sem := make(chan struct{}, 5)
+	sem := make(chan struct{}, 3)
 	var wg sync.WaitGroup
 
 	for _, deptId := range deptIds {
