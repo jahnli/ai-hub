@@ -834,6 +834,8 @@ const DataOverview = () => {
         onCancel={() => setShowUserStats(false)}
         user={statsUser}
         t={t}
+        apiPrefix="/api/department/user-stats"
+        mode="modal"
       />
 
       <Modal

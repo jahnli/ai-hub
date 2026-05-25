@@ -733,6 +733,23 @@ func GetUserRecentLogs(userId int, limit int) ([]*Log, error) {
 	return logs, err
 }
 
+func GetUserRecentLogsPaged(userId int, page int, pageSize int) ([]*Log, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+	var total int64
+	tx := LOG_DB.Where("user_id = ?", userId)
+	if err := tx.Model(&Log{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var logs []*Log
+	err := tx.Order("id desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&logs).Error
+	return logs, total, err
+}
+
 func GetUsersStatsOverview(userIds []int) (*UserStatsOverview, error) {
 	return GetUsersStatsOverviewWithTimeRange(userIds, 0, 0)
 }

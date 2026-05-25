@@ -162,20 +162,30 @@ function aggregateTrendByModel(data, granularity) {
   return Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
 }
 
-export const useUserStats = () => {
+export const useUserStats = (apiPrefix) => {
+  const baseUrl = apiPrefix || '/api/user';
   const [loading, setLoading] = useState(false);
   const [statsData, setStatsData] = useState(null);
   const [granularity, setGranularity] = useState('this_month');
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPageSize, setLogsPageSize] = useState(10);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logsLoading, setLogsLoading] = useState(false);
 
-  const fetchStats = useCallback(async (userId, gran) => {
+  const fetchStats = useCallback(async (userId, gran, logPage, logPageSize) => {
     if (!userId) return;
     setLoading(true);
     try {
       const g = gran || granularity;
       const { start_time: startTime, end_time: endTime } = getTimeRange(g);
+      const page = logPage || 1;
+      const size = logPageSize || logsPageSize;
 
-      const res = await API.get(`/api/user/${userId}/stats`, {
-        params: { start_time: startTime, end_time: endTime },
+      const url = apiPrefix
+        ? `${baseUrl}/${userId}`
+        : `${baseUrl}/${userId}/stats`;
+      const res = await API.get(url, {
+        params: { start_time: startTime, end_time: endTime, log_page: page, log_page_size: size },
       });
       if (res.data.success) {
         const raw = res.data.data;
@@ -191,6 +201,9 @@ export const useUserStats = () => {
           trendByModel: byModel,
           recentLogs: raw.recent_logs || [],
         });
+        setLogsTotal(raw.logs_total || 0);
+        setLogsPage(page);
+        setLogsPageSize(size);
       } else {
         showError(res.data.message);
       }
@@ -201,12 +214,36 @@ export const useUserStats = () => {
     }
   }, [granularity]);
 
+  const fetchLogs = useCallback(async (userId, page, pageSize) => {
+    if (!userId || !apiPrefix) return;
+    setLogsLoading(true);
+    try {
+      const g = granularity;
+      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
+      const res = await API.get(`${baseUrl}/${userId}`, {
+        params: { start_time: startTime, end_time: endTime, log_page: page, log_page_size: pageSize },
+      });
+      if (res.data.success) {
+        const raw = res.data.data;
+        setStatsData(prev => prev ? { ...prev, recentLogs: raw.recent_logs || [] } : prev);
+        setLogsTotal(raw.logs_total || 0);
+        setLogsPage(page);
+        setLogsPageSize(pageSize);
+      }
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [granularity, baseUrl, apiPrefix]);
+
   const changeGranularity = useCallback((g, userId) => {
     setGranularity(g);
+    setLogsPage(1);
     if (userId) {
       fetchStats(userId, g);
     }
   }, [fetchStats]);
 
-  return { loading, statsData, granularity, fetchStats, changeGranularity };
+  return { loading, statsData, granularity, fetchStats, changeGranularity, logsPage, logsPageSize, logsTotal, logsLoading, fetchLogs };
 };

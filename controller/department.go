@@ -774,3 +774,65 @@ func GetDepartmentLogs(c *gin.Context) {
 		"total": total,
 	})
 }
+
+func GetDepartmentUserStats(c *gin.Context) {
+	userId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		common.ApiError(c, fmt.Errorf("invalid user id"))
+		return
+	}
+
+	startTimeStr := c.DefaultQuery("start_time", "0")
+	endTimeStr := c.DefaultQuery("end_time", "0")
+	startTime, _ := strconv.ParseInt(startTimeStr, 10, 64)
+	endTime, _ := strconv.ParseInt(endTimeStr, 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("log_page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("log_page_size", "10"))
+
+	overview, err := model.GetUserStatsOverview(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	modelDist, err := model.GetUserModelDistribution(userId)
+	if err != nil {
+		modelDist = []model.UserModelDistribution{}
+	}
+
+	tokenDist, err := model.GetUserTokenDistribution(userId)
+	if err != nil {
+		tokenDist = []model.UserTokenDistribution{}
+	}
+
+	var trendData []*model.QuotaData
+	if startTime > 0 && endTime > 0 {
+		trendData, err = model.GetQuotaDataByUserId(userId, startTime, endTime)
+		if err != nil {
+			trendData = []*model.QuotaData{}
+		}
+	}
+
+	recentLogs, logsTotal, err := model.GetUserRecentLogsPaged(userId, page, pageSize)
+	if err != nil {
+		recentLogs = []*model.Log{}
+		logsTotal = 0
+	}
+
+	common.ApiSuccess(c, gin.H{
+		"overview": gin.H{
+			"total_quota":       overview.TotalQuota,
+			"total_prompt":      overview.TotalPrompt,
+			"total_completion":  overview.TotalCompletion,
+			"total_requests":    overview.TotalRequests,
+			"avg_response_time": overview.AvgResponseTime,
+			"error_count":       overview.ErrorCount,
+			"consume_count":     overview.ConsumeCount,
+		},
+		"model_distribution": modelDist,
+		"token_distribution": tokenDist,
+		"trend_data":         trendData,
+		"recent_logs":        recentLogs,
+		"logs_total":         logsTotal,
+	})
+}
