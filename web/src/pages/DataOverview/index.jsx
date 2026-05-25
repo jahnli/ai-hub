@@ -222,6 +222,9 @@ const VISIBLE_COLUMNS = {
   [COLUMN_KEYS.RETRY]: false,
 };
 
+const cardShadowStyle = { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' };
+const cardTitleStyle = { fontSize: 16, color: 'var(--semi-color-primary)', fontWeight: 600 };
+
 const DataOverview = () => {
   const { t } = useTranslation();
   const {
@@ -623,11 +626,12 @@ const DataOverview = () => {
       </div>
 
       {selectedDeptId ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col" style={{ gap: 14 }}>
           <Card
+            style={cardShadowStyle}
             title={
               <div className="flex items-center justify-between w-full">
-                <Text strong>{t('数据统计')}</Text>
+                <Text strong style={cardTitleStyle}>{t('数据统计')}</Text>
                 <Button
                   icon={<IconRefresh />}
                   theme="borderless"
@@ -650,9 +654,10 @@ const DataOverview = () => {
 
           {(childrenStats.length > 0 || childrenStatsLoading) && (
             <Card
+              style={cardShadowStyle}
               title={
                 <div className="flex items-center justify-between w-full">
-                  <Text strong>{t('子部门统计')} <Tag color="blue" size="small">{childrenStats.length}</Tag></Text>
+                  <Text strong style={cardTitleStyle}>{t('子部门统计')} <Tag color="blue" size="small">{childrenStats.length}</Tag></Text>
                   <Button
                     icon={<IconRefresh />}
                     theme="borderless"
@@ -690,9 +695,10 @@ const DataOverview = () => {
           )}
 
           <Card
+            style={cardShadowStyle}
             title={
               <div className="flex items-center justify-between w-full">
-                <Text strong>{t('部门用户列表')} <Tag color="blue" size="small">{users.length}</Tag></Text>
+                <Text strong style={cardTitleStyle}>{t('部门用户列表')} <Tag color="blue" size="small">{users.length}</Tag></Text>
                 <div className="flex items-center gap-1">
                   <Button
                     icon={<IconHistory />}
@@ -765,7 +771,8 @@ const DataOverview = () => {
 
           {statsData && (
             <Card
-              title={<Text strong>{t('使用分析')}</Text>}
+              style={cardShadowStyle}
+              title={<Text strong style={cardTitleStyle}>{t('使用分析')}</Text>}
               bodyStyle={{ padding: 12 }}
             >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
