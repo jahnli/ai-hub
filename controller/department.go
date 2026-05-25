@@ -225,6 +225,8 @@ func GetDepartmentUsers(c *gin.Context) {
 	}
 
 	includeChildren := c.DefaultQuery("include_children", "true") == "true"
+	startTime, _ := strconv.ParseInt(c.DefaultQuery("start_time", "0"), 10, 64)
+	endTime, _ := strconv.ParseInt(c.DefaultQuery("end_time", "0"), 10, 64)
 	role := c.GetInt("role")
 
 	tenantToken, err := service.GetTenantAccessToken()
@@ -340,8 +342,8 @@ func GetDepartmentUsers(c *gin.Context) {
 	var topModels map[int]string
 	if len(registeredUserIds) > 0 {
 		subscriptionSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(registeredUserIds)
-		consumptionSummaries, _ = model.GetUserConsumptionSummaryByIds(registeredUserIds)
-		topModels, _ = model.GetTopModelByUserIds(registeredUserIds)
+		consumptionSummaries, _ = model.GetUserConsumptionSummaryByIdsWithTimeRange(registeredUserIds, startTime, endTime)
+		topModels, _ = model.GetTopModelByUserIdsWithTimeRange(registeredUserIds, startTime, endTime)
 	}
 
 	result := make([]departmentUserItem, 0, len(feishuUsers))
@@ -578,6 +580,9 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		return
 	}
 
+	startTime, _ := strconv.ParseInt(c.DefaultQuery("start_time", "0"), 10, 64)
+	endTime, _ := strconv.ParseInt(c.DefaultQuery("end_time", "0"), 10, 64)
+
 	role := c.GetInt("role")
 	tenantToken, err := service.GetTenantAccessToken()
 	if err != nil {
@@ -699,7 +704,7 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		stat.RegisteredCount = len(userIds)
 
 		if len(userIds) > 0 {
-			overview, err := model.GetUsersStatsOverview(userIds)
+			overview, err := model.GetUsersStatsOverviewWithTimeRange(userIds, startTime, endTime)
 			if err == nil {
 				stat.TotalQuota = overview.TotalQuota
 				stat.TotalPrompt = overview.TotalPrompt

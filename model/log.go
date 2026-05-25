@@ -445,6 +445,31 @@ func GetUserConsumptionSummaryByIds(userIds []int) (map[int]UserConsumptionSumma
 	return result, nil
 }
 
+func GetUserConsumptionSummaryByIdsWithTimeRange(userIds []int, startTime, endTime int64) (map[int]UserConsumptionSummary, error) {
+	result := make(map[int]UserConsumptionSummary, len(userIds))
+	if len(userIds) == 0 {
+		return result, nil
+	}
+	var rows []UserConsumptionSummary
+	tx := LOG_DB.Model(&Log{}).
+		Select("user_id, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens), 0) as total_prompt, COALESCE(SUM(completion_tokens), 0) as total_completion, COUNT(*) as total_request_count").
+		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume)
+	if startTime > 0 {
+		tx = tx.Where("created_at >= ?", startTime)
+	}
+	if endTime > 0 {
+		tx = tx.Where("created_at <= ?", endTime)
+	}
+	err := tx.Group("user_id").Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		result[row.UserId] = row
+	}
+	return result, nil
+}
+
 func GetUserConsumedQuota(userId int) (int64, error) {
 	var total int64
 	err := LOG_DB.Model(&Log{}).
@@ -470,6 +495,54 @@ func GetTopModelByUserIds(userIds []int) (map[int]string, error) {
 		Select("user_id, model_name, COUNT(*) as cnt").
 		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume).
 		Group("user_id, model_name")
+
+	if common.UsingPostgreSQL {
+		err := LOG_DB.Raw("SELECT DISTINCT ON (user_id) user_id, model_name FROM (?) AS t ORDER BY user_id, cnt DESC", subQuery).
+			Scan(&rows).Error
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var allRows []struct {
+			UserId    int    `gorm:"column:user_id"`
+			ModelName string `gorm:"column:model_name"`
+			Cnt       int64  `gorm:"column:cnt"`
+		}
+		err := subQuery.Order("cnt DESC").Find(&allRows).Error
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range allRows {
+			if _, exists := result[row.UserId]; !exists {
+				result[row.UserId] = row.ModelName
+			}
+		}
+		return result, nil
+	}
+
+	for _, row := range rows {
+		result[row.UserId] = row.ModelName
+	}
+	return result, nil
+}
+
+func GetTopModelByUserIdsWithTimeRange(userIds []int, startTime, endTime int64) (map[int]string, error) {
+	result := make(map[int]string, len(userIds))
+	if len(userIds) == 0 {
+		return result, nil
+	}
+
+	var rows []userTopModel
+	tx := LOG_DB.Model(&Log{}).
+		Select("user_id, model_name, COUNT(*) as cnt").
+		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume)
+	if startTime > 0 {
+		tx = tx.Where("created_at >= ?", startTime)
+	}
+	if endTime > 0 {
+		tx = tx.Where("created_at <= ?", endTime)
+	}
+	subQuery := tx.Group("user_id, model_name")
 
 	if common.UsingPostgreSQL {
 		err := LOG_DB.Raw("SELECT DISTINCT ON (user_id) user_id, model_name FROM (?) AS t ORDER BY user_id, cnt DESC", subQuery).
@@ -661,11 +734,15 @@ func GetUserRecentLogs(userId int, limit int) ([]*Log, error) {
 }
 
 func GetUsersStatsOverview(userIds []int) (*UserStatsOverview, error) {
+	return GetUsersStatsOverviewWithTimeRange(userIds, 0, 0)
+}
+
+func GetUsersStatsOverviewWithTimeRange(userIds []int, startTime, endTime int64) (*UserStatsOverview, error) {
 	if len(userIds) == 0 {
 		return &UserStatsOverview{}, nil
 	}
 	var overview UserStatsOverview
-	err := LOG_DB.Model(&Log{}).
+	tx := LOG_DB.Model(&Log{}).
 		Select("COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota, "+
 			"COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) as total_prompt, "+
 			"COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_completion, "+
@@ -674,8 +751,14 @@ func GetUsersStatsOverview(userIds []int) (*UserStatsOverview, error) {
 			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as error_count, "+
 			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as consume_count",
 			LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError, LogTypeConsume).
-		Where("user_id IN ?", userIds).
-		Scan(&overview).Error
+		Where("user_id IN ?", userIds)
+	if startTime > 0 {
+		tx = tx.Where("created_at >= ?", startTime)
+	}
+	if endTime > 0 {
+		tx = tx.Where("created_at <= ?", endTime)
+	}
+	err := tx.Scan(&overview).Error
 	return &overview, err
 }
 

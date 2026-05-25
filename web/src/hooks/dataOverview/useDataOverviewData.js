@@ -213,15 +213,17 @@ export const useDataOverviewData = () => {
     }
   }, [selectedDeptId, fetchDepartmentLogs]);
 
-  const fetchChildrenStats = useCallback(async (deptId) => {
+  const fetchChildrenStats = useCallback(async (deptId, gran) => {
     if (!deptId) {
       setChildrenStats([]);
       return;
     }
     setChildrenStatsLoading(true);
     try {
+      const g = gran || granularity;
+      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
       const res = await API.get('/api/department/children-stats', {
-        params: { dept_id: deptId },
+        params: { dept_id: deptId, start_time: startTime, end_time: endTime },
       });
       if (res?.data?.success) {
         setChildrenStats(res.data.data?.children || []);
@@ -233,7 +235,7 @@ export const useDataOverviewData = () => {
     } finally {
       setChildrenStatsLoading(false);
     }
-  }, []);
+  }, [granularity]);
 
   const fetchDepartmentStats = useCallback(async (deptId, gran) => {
     if (!deptId) {
@@ -270,22 +272,17 @@ export const useDataOverviewData = () => {
     }
   }, [granularity]);
 
-  const changeGranularity = useCallback((g, deptId) => {
-    setGranularity(g);
-    if (deptId) {
-      fetchDepartmentStats(deptId, g);
-    }
-  }, [fetchDepartmentStats]);
-
-  const fetchDepartmentUsers = useCallback(async (deptId) => {
+  const fetchDepartmentUsers = useCallback(async (deptId, gran) => {
     if (!deptId) {
       setUsers([]);
       return;
     }
     setUsersLoading(true);
     try {
+      const g = gran || granularity;
+      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
       const res = await API.get('/api/department/users', {
-        params: { dept_id: deptId, include_children: 'true' },
+        params: { dept_id: deptId, include_children: 'true', start_time: startTime, end_time: endTime },
       });
       if (res?.data?.success) {
         setUsers(res.data.data || []);
@@ -297,7 +294,16 @@ export const useDataOverviewData = () => {
     } finally {
       setUsersLoading(false);
     }
-  }, []);
+  }, [granularity]);
+
+  const changeGranularity = useCallback((g, deptId) => {
+    setGranularity(g);
+    if (deptId) {
+      fetchDepartmentStats(deptId, g);
+      fetchChildrenStats(deptId, g);
+      fetchDepartmentUsers(deptId, g);
+    }
+  }, [fetchDepartmentStats, fetchChildrenStats, fetchDepartmentUsers]);
 
   const fetchDepartmentTree = useCallback(async () => {
     setTreeLoading(true);

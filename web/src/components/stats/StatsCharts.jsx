@@ -128,6 +128,18 @@ export function getTimeRange(rangeKey) {
   };
 }
 
+export function formatTimeRangeDisplay(rangeKey) {
+  const { start_time, end_time } = getTimeRange(rangeKey);
+  const fmt = (ts) => {
+    const d = new Date(ts * 1000);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  return `${fmt(start_time)} ~ ${fmt(end_time)}`;
+}
+
 export function getAggregationBucketSize(rangeKey) {
   switch (rangeKey) {
     case 'today':

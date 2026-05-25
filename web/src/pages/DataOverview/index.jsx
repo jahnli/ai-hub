@@ -36,6 +36,7 @@ import {
   TIME_RANGE_OPTIONS,
   getTimeRange,
   getAggregationBucketSize,
+  formatTimeRangeDisplay,
 } from '../../components/stats/StatsCharts';
 import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
 import CardTable from '../../components/common/ui/CardTable';
@@ -469,6 +470,11 @@ const DataOverview = () => {
               </Radio>
             ))}
           </RadioGroup>
+        )}
+        {selectedDeptId && (
+          <Text type="tertiary" size="small">
+            {formatTimeRangeDisplay(granularity)}
+          </Text>
         )}
       </div>
 
