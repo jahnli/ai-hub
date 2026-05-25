@@ -345,6 +345,8 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			deptRoute.GET("/tree", controller.GetDepartmentTree)
 			deptRoute.GET("/users", controller.GetDepartmentUsers)
+			deptRoute.GET("/stats", controller.GetDepartmentStats)
+			deptRoute.GET("/logs", controller.GetDepartmentLogs)
 		}
 
 		mjRoute := apiRouter.Group("/mj")

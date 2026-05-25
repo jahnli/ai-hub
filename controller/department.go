@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -30,17 +31,19 @@ type deptPathEntry struct {
 }
 
 type departmentUserItem struct {
-	Name         string `json:"name"`
-	OpenId       string `json:"open_id"`
-	Registered   bool   `json:"registered"`
-	Id           int    `json:"id,omitempty"`
-	Username     string `json:"username,omitempty"`
-	DisplayName  string `json:"display_name,omitempty"`
-	Quota        int    `json:"quota,omitempty"`
-	UsedQuota    int    `json:"used_quota,omitempty"`
-	RequestCount int    `json:"request_count,omitempty"`
-	Email        string `json:"email,omitempty"`
-	Status       int    `json:"status,omitempty"`
+	Name          string `json:"name"`
+	OpenId        string `json:"open_id"`
+	Registered    bool   `json:"registered"`
+	Id            int    `json:"id,omitempty"`
+	Username      string `json:"username,omitempty"`
+	DisplayName   string `json:"display_name,omitempty"`
+	Quota         int    `json:"quota,omitempty"`
+	UsedQuota     int    `json:"used_quota,omitempty"`
+	RequestCount  int    `json:"request_count,omitempty"`
+	Email         string `json:"email,omitempty"`
+	Status        int    `json:"status,omitempty"`
+	SubQuotaTotal int64  `json:"sub_quota_total,omitempty"`
+	SubQuotaUsed  int64  `json:"sub_quota_used,omitempty"`
 }
 
 func buildFullTree(departments []*service.FeishuDepartment) []*cascaderNode {
@@ -338,6 +341,16 @@ func GetDepartmentUsers(c *gin.Context) {
 			item.RequestCount = lu.RequestCount
 			item.Email = lu.Email
 			item.Status = lu.Status
+
+			subs, err := model.GetAllActiveUserSubscriptions(lu.Id)
+			if err == nil {
+				for _, s := range subs {
+					if s.Subscription != nil {
+						item.SubQuotaTotal += s.Subscription.AmountTotal
+						item.SubQuotaUsed += s.Subscription.AmountUsed
+					}
+				}
+			}
 		}
 		result = append(result, item)
 	}
@@ -371,4 +384,210 @@ func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 	}
 
 	return ids, names, nil
+}
+
+func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
+	role := c.GetInt("role")
+
+	tenantToken, err := service.GetTenantAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("获取飞书凭证失败: %s", err.Error())
+	}
+
+	departments, err := service.FetchAllDepartments(tenantToken)
+	if err != nil {
+		return nil, fmt.Errorf("获取部门列表失败: %s", err.Error())
+	}
+
+	if role < 10 {
+		user, err := model.GetUserById(c.GetInt("id"), false)
+		if err != nil || user == nil {
+			return nil, fmt.Errorf("用户信息不可用")
+		}
+
+		feishuId := user.OpenId
+		leaderDeptIds := make([]string, 0)
+		for _, dept := range departments {
+			if dept.LeaderUserId == feishuId {
+				leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
+			}
+		}
+
+		allowedIds := make(map[string]bool)
+		for _, rootId := range leaderDeptIds {
+			collectDescendantIds(rootId, departments, allowedIds)
+		}
+		if !allowedIds[deptId] {
+			return nil, fmt.Errorf("权限不足")
+		}
+	}
+
+	descendantIds := make(map[string]bool)
+	collectDescendantIds(deptId, departments, descendantIds)
+	targetDeptIds := make([]string, 0, len(descendantIds))
+	for id := range descendantIds {
+		targetDeptIds = append(targetDeptIds, id)
+	}
+
+	feishuUsers, err := service.FetchDepartmentUsers(tenantToken, targetDeptIds)
+	if err != nil {
+		return nil, fmt.Errorf("获取部门成员失败: %s", err.Error())
+	}
+
+	feishuOpenIds := make([]string, 0, len(feishuUsers))
+	for _, fu := range feishuUsers {
+		feishuOpenIds = append(feishuOpenIds, fu.OpenId)
+	}
+
+	if len(feishuOpenIds) == 0 {
+		return []int{}, nil
+	}
+
+	var localUsers []model.User
+	model.DB.Model(&model.User{}).
+		Select("id").
+		Where("open_id IN ?", feishuOpenIds).
+		Find(&localUsers)
+
+	userIds := make([]int, 0, len(localUsers))
+	for _, lu := range localUsers {
+		userIds = append(userIds, lu.Id)
+	}
+	return userIds, nil
+}
+
+func GetDepartmentStats(c *gin.Context) {
+	deptId := c.Query("dept_id")
+	if deptId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "dept_id is required",
+		})
+		return
+	}
+
+	startTimeStr := c.DefaultQuery("start_time", "0")
+	endTimeStr := c.DefaultQuery("end_time", "0")
+	startTime, _ := strconv.ParseInt(startTimeStr, 10, 64)
+	endTime, _ := strconv.ParseInt(endTimeStr, 10, 64)
+
+	userIds, err := getDeptRegisteredUserIds(c, deptId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if len(userIds) == 0 {
+		common.ApiSuccess(c, gin.H{
+			"overview":           gin.H{},
+			"model_distribution": []model.UserModelDistribution{},
+			"trend_data":         []*model.QuotaData{},
+			"recent_logs":        []*model.Log{},
+		})
+		return
+	}
+
+	overview, err := model.GetUsersStatsOverview(userIds)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	var tokenCount int64
+	for _, uid := range userIds {
+		cnt, e := model.CountUserTokens(uid)
+		if e == nil {
+			tokenCount += cnt
+		}
+	}
+
+	var subTotal, subUsed int64
+	for _, uid := range userIds {
+		subs, e := model.GetAllActiveUserSubscriptions(uid)
+		if e == nil {
+			for _, s := range subs {
+				if s.Subscription != nil {
+					subTotal += s.Subscription.AmountTotal
+					subUsed += s.Subscription.AmountUsed
+				}
+			}
+		}
+	}
+
+	modelDist, err := model.GetUsersModelDistribution(userIds)
+	if err != nil {
+		modelDist = []model.UserModelDistribution{}
+	}
+
+	var trendData []*model.QuotaData
+	if startTime > 0 && endTime > 0 {
+		trendData, err = model.GetQuotaDataByUserIds(userIds, startTime, endTime)
+		if err != nil {
+			trendData = []*model.QuotaData{}
+		}
+	}
+
+	common.ApiSuccess(c, gin.H{
+		"overview": gin.H{
+			"total_quota":       overview.TotalQuota,
+			"total_prompt":      overview.TotalPrompt,
+			"total_completion":  overview.TotalCompletion,
+			"total_requests":    overview.TotalRequests,
+			"avg_response_time": overview.AvgResponseTime,
+			"error_count":       overview.ErrorCount,
+			"consume_count":     overview.ConsumeCount,
+			"token_count":       tokenCount,
+			"sub_quota_total":   subTotal,
+			"sub_quota_used":    subUsed,
+		},
+		"model_distribution": modelDist,
+		"trend_data":         trendData,
+	})
+}
+
+func GetDepartmentLogs(c *gin.Context) {
+	deptId := c.Query("dept_id")
+	if deptId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "dept_id is required",
+		})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	userIds, err := getDeptRegisteredUserIds(c, deptId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if len(userIds) == 0 {
+		common.ApiSuccess(c, gin.H{
+			"logs":  []*model.Log{},
+			"total": 0,
+		})
+		return
+	}
+
+	logs, total, err := model.GetUsersRecentLogsPaged(userIds, page, pageSize)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	enrichLogsWithLdapId(logs)
+
+	common.ApiSuccess(c, gin.H{
+		"logs":  logs,
+		"total": total,
+	})
 }

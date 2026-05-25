@@ -116,6 +116,15 @@ func GetQuotaDataByUserId(userId int, startTime int64, endTime int64) (quotaData
 	return quotaDatas, err
 }
 
+func GetQuotaDataByUserIds(userIds []int, startTime int64, endTime int64) ([]*QuotaData, error) {
+	if len(userIds) == 0 {
+		return []*QuotaData{}, nil
+	}
+	var quotaDatas []*QuotaData
+	err := DB.Table("quota_data").Where("user_id IN ? AND created_at >= ? AND created_at <= ?", userIds, startTime, endTime).Find(&quotaDatas).Error
+	return quotaDatas, err
+}
+
 func GetQuotaDataGroupByUser(startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
 	err = DB.Table("quota_data").
@@ -123,12 +132,6 @@ func GetQuotaDataGroupByUser(startTime int64, endTime int64) (quotaData []*Quota
 		Where("created_at >= ? and created_at <= ?", startTime, endTime).
 		Group("username, created_at").
 		Find(&quotaDatas).Error
-	return quotaDatas, err
-}
-
-func GetQuotaDataByUserIds(userIds []int, startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
-	var quotaDatas []*QuotaData
-	err = DB.Table("quota_data").Where("user_id IN ? and created_at >= ? and created_at <= ?", userIds, startTime, endTime).Find(&quotaDatas).Error
 	return quotaDatas, err
 }
 

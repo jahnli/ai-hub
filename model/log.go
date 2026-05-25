@@ -660,6 +660,72 @@ func GetUserRecentLogs(userId int, limit int) ([]*Log, error) {
 	return logs, err
 }
 
+func GetUsersStatsOverview(userIds []int) (*UserStatsOverview, error) {
+	if len(userIds) == 0 {
+		return &UserStatsOverview{}, nil
+	}
+	var overview UserStatsOverview
+	err := LOG_DB.Model(&Log{}).
+		Select("COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) as total_prompt, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_completion, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as total_requests, "+
+			"COALESCE(AVG(CASE WHEN type = ? AND use_time > 0 THEN use_time END), 0) as avg_response_time, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as error_count, "+
+			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as consume_count",
+			LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError, LogTypeConsume).
+		Where("user_id IN ?", userIds).
+		Scan(&overview).Error
+	return &overview, err
+}
+
+func GetUsersModelDistribution(userIds []int) ([]UserModelDistribution, error) {
+	if len(userIds) == 0 {
+		return []UserModelDistribution{}, nil
+	}
+	var rows []UserModelDistribution
+	err := LOG_DB.Model(&Log{}).
+		Select("model_name, COUNT(*) as request_count, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens + completion_tokens), 0) as total_tokens").
+		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume).
+		Group("model_name").
+		Order("total_quota DESC").
+		Limit(50).
+		Find(&rows).Error
+	return rows, err
+}
+
+func GetUsersRecentLogs(userIds []int, limit int) ([]*Log, error) {
+	if len(userIds) == 0 {
+		return []*Log{}, nil
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	var logs []*Log
+	err := LOG_DB.Where("user_id IN ?", userIds).Order("id desc").Limit(limit).Find(&logs).Error
+	return logs, err
+}
+
+func GetUsersRecentLogsPaged(userIds []int, page int, pageSize int) ([]*Log, int64, error) {
+	if len(userIds) == 0 {
+		return []*Log{}, 0, nil
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+	var total int64
+	tx := LOG_DB.Where("user_id IN ?", userIds)
+	if err := tx.Model(&Log{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var logs []*Log
+	err := tx.Order("id desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&logs).Error
+	return logs, total, err
+}
+
 func CountUserRequests(userId int, startTimestamp int64, endTimestamp int64) (int64, error) {
 	var count int64
 	err := LOG_DB.Model(&Log{}).
