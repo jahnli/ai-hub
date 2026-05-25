@@ -763,14 +763,24 @@ func GetUsersStatsOverviewWithTimeRange(userIds []int, startTime, endTime int64)
 }
 
 func GetUsersModelDistribution(userIds []int) ([]UserModelDistribution, error) {
+	return GetUsersModelDistributionWithTimeRange(userIds, 0, 0)
+}
+
+func GetUsersModelDistributionWithTimeRange(userIds []int, startTime, endTime int64) ([]UserModelDistribution, error) {
 	if len(userIds) == 0 {
 		return []UserModelDistribution{}, nil
 	}
 	var rows []UserModelDistribution
-	err := LOG_DB.Model(&Log{}).
+	tx := LOG_DB.Model(&Log{}).
 		Select("model_name, COUNT(*) as request_count, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens + completion_tokens), 0) as total_tokens").
-		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume).
-		Group("model_name").
+		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume)
+	if startTime > 0 {
+		tx = tx.Where("created_at >= ?", startTime)
+	}
+	if endTime > 0 {
+		tx = tx.Where("created_at <= ?", endTime)
+	}
+	err := tx.Group("model_name").
 		Order("total_quota DESC").
 		Limit(50).
 		Find(&rows).Error

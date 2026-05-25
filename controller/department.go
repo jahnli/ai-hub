@@ -515,7 +515,7 @@ func GetDepartmentStats(c *gin.Context) {
 		return
 	}
 
-	overview, err := model.GetUsersStatsOverview(userIds)
+	overview, err := model.GetUsersStatsOverviewWithTimeRange(userIds, startTime, endTime)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -542,7 +542,7 @@ func GetDepartmentStats(c *gin.Context) {
 		}
 	}
 
-	modelDist, err := model.GetUsersModelDistribution(userIds)
+	modelDist, err := model.GetUsersModelDistributionWithTimeRange(userIds, startTime, endTime)
 	if err != nil {
 		modelDist = []model.UserModelDistribution{}
 	}

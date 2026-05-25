@@ -4,39 +4,42 @@ import { API, showError } from '../../helpers';
 function getTimeRange(rangeKey) {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
   let start, end;
 
   switch (rangeKey) {
     case 'today':
       start = startOfDay;
-      end = now;
+      end = endOfToday;
       break;
     case 'yesterday': {
       const d = new Date(startOfDay);
       d.setDate(d.getDate() - 1);
       start = d;
-      end = new Date(startOfDay.getTime() - 1);
+      end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
       break;
     }
     case 'this_week': {
       const day = now.getDay() || 7;
       start = new Date(startOfDay);
       start.setDate(start.getDate() - (day - 1));
-      end = now;
+      end = endOfToday;
       break;
     }
     case 'last_week': {
       const day = now.getDay() || 7;
       const thisMonday = new Date(startOfDay);
       thisMonday.setDate(thisMonday.getDate() - (day - 1));
-      end = new Date(thisMonday.getTime() - 1);
+      const lastSunday = new Date(thisMonday);
+      lastSunday.setDate(lastSunday.getDate() - 1);
       start = new Date(thisMonday);
       start.setDate(start.getDate() - 7);
+      end = new Date(lastSunday.getFullYear(), lastSunday.getMonth(), lastSunday.getDate(), 23, 59, 59);
       break;
     }
     case 'this_month':
       start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = now;
+      end = endOfToday;
       break;
     case 'last_month':
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -45,7 +48,7 @@ function getTimeRange(rangeKey) {
     case 'this_quarter': {
       const q = Math.floor(now.getMonth() / 3);
       start = new Date(now.getFullYear(), q * 3, 1);
-      end = now;
+      end = endOfToday;
       break;
     }
     case 'last_quarter': {
@@ -56,7 +59,7 @@ function getTimeRange(rangeKey) {
     }
     case 'this_year':
       start = new Date(now.getFullYear(), 0, 1);
-      end = now;
+      end = endOfToday;
       break;
     case 'last_year':
       start = new Date(now.getFullYear() - 1, 0, 1);
@@ -72,7 +75,7 @@ function getTimeRange(rangeKey) {
       break;
     default:
       start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = now;
+      end = endOfToday;
   }
 
   return {
