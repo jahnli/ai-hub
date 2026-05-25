@@ -780,7 +780,7 @@ const DataOverview = () => {
 
   return (
     <div className='mt-[60px] px-4'>
-      <div className='flex items-center gap-3 flex-wrap mb-4'>
+      <div className='mb-2'>
         <Cascader
           treeData={treeData}
           value={selectedPath}
@@ -791,37 +791,38 @@ const DataOverview = () => {
           dropdownClassName='[&_.semi-cascader-option-lists]:!min-h-[560px]'
           onChange={handleDeptChange}
           loading={treeLoading}
-          style={{ flex: 1, minWidth: 280 }}
+          style={{ width: 'fit-content', minWidth: 280 }}
           showClear={isAdmin()}
         />
-        {selectedDeptId && (
-          <div className='flex items-center gap-3 ml-auto'>
-            <RadioGroup
-              type='button'
-              size='small'
-              value={granularity}
-              onChange={handleGranularityChange}
-            >
-              {TIME_RANGE_OPTIONS.map((opt) => (
-                <Radio key={opt.value} value={opt.value}>
-                  {t(opt.label)}
-                </Radio>
-              ))}
-            </RadioGroup>
-            <Text type='tertiary' size='small'>
-              {formatTimeRangeDisplay(granularity)}
-            </Text>
-            <Button
-              type='primary'
-              icon={<IconSearch />}
-              onClick={handleQuery}
-              loading={statsLoading || usersLoading || childrenStatsLoading}
-            >
-              {t('查询')}
-            </Button>
-          </div>
-        )}
       </div>
+      {selectedDeptId && (
+        <div className='flex items-center gap-3 flex-wrap mb-4'>
+          <RadioGroup
+            type='button'
+            size='small'
+            value={granularity}
+            onChange={handleGranularityChange}
+          >
+            {TIME_RANGE_OPTIONS.map((opt) => (
+              <Radio key={opt.value} value={opt.value}>
+                {t(opt.label)}
+              </Radio>
+            ))}
+          </RadioGroup>
+          <Text type='tertiary' size='small'>
+            {formatTimeRangeDisplay(granularity)}
+          </Text>
+          <Button
+            type='primary'
+            icon={<IconSearch />}
+            onClick={handleQuery}
+            loading={statsLoading || usersLoading || childrenStatsLoading}
+            className='ml-auto'
+          >
+            {t('查询')}
+          </Button>
+        </div>
+      )}
 
       {selectedDeptId ? (
         <div className='flex flex-col' style={{ gap: 14 }}>
