@@ -45,7 +45,7 @@ import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
 
 const { Text } = Typography;
 
-const ChildrenRankChart = ({ data, t }) => {
+const ChildrenRankChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {
     return [...data]
       .sort((a, b) => (b.total_quota || 0) - (a.total_quota || 0))
@@ -76,9 +76,9 @@ const ChildrenRankChart = ({ data, t }) => {
       style={{ height: '100%', minHeight: 300 }}
     />
   );
-};
+});
 
-const ChildrenPieChart = ({ data, t }) => {
+const ChildrenPieChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {
     return data
       .filter(d => (d.total_quota || 0) > 0)
@@ -112,9 +112,9 @@ const ChildrenPieChart = ({ data, t }) => {
       style={{ height: '100%', minHeight: 300 }}
     />
   );
-};
+});
 
-const UsersRankChart = ({ data, t }) => {
+const UsersRankChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {
     return [...data]
       .filter(u => u.registered && (parseInt(u.total_consumed_quota) || 0) > 0)
@@ -146,9 +146,9 @@ const UsersRankChart = ({ data, t }) => {
       style={{ height: '100%', minHeight: 300 }}
     />
   );
-};
+});
 
-const UsersPieChart = ({ data, t }) => {
+const UsersPieChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {
     const sorted = [...data]
       .filter(u => u.registered && (parseInt(u.total_consumed_quota) || 0) > 0)
@@ -186,7 +186,7 @@ const UsersPieChart = ({ data, t }) => {
       style={{ height: '100%', minHeight: 300 }}
     />
   );
-};
+});
 
 const COLUMN_KEYS = {
   TIME: 'time',
@@ -706,7 +706,7 @@ const DataOverview = () => {
                     size="small"
                     onClick={() => { setShowLogs(true); if (selectedDeptId) fetchDepartmentLogs(selectedDeptId, 1, logsPageSize); }}
                   >
-                    {t('调用记录')}
+                    {t('最近调用记录')}
                   </Button>
                   <Button
                     icon={<IconRefresh />}
