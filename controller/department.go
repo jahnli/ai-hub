@@ -31,19 +31,24 @@ type deptPathEntry struct {
 }
 
 type departmentUserItem struct {
-	Name          string `json:"name"`
-	OpenId        string `json:"open_id"`
-	Registered    bool   `json:"registered"`
-	Id            int    `json:"id,omitempty"`
-	Username      string `json:"username,omitempty"`
-	DisplayName   string `json:"display_name,omitempty"`
-	Quota         int    `json:"quota,omitempty"`
-	UsedQuota     int    `json:"used_quota,omitempty"`
-	RequestCount  int    `json:"request_count,omitempty"`
-	Email         string `json:"email,omitempty"`
-	Status        int    `json:"status,omitempty"`
-	SubQuotaTotal int64  `json:"sub_quota_total,omitempty"`
-	SubQuotaUsed  int64  `json:"sub_quota_used,omitempty"`
+	Name                   string `json:"name"`
+	Registered             bool   `json:"registered"`
+	Id                     int    `json:"id,omitempty"`
+	Username               string `json:"username,omitempty"`
+	DisplayName            string `json:"display_name,omitempty"`
+	Quota                  int    `json:"quota,omitempty"`
+	UsedQuota              int    `json:"used_quota,omitempty"`
+	RequestCount           int    `json:"request_count,omitempty"`
+	Email                  string `json:"email,omitempty"`
+	SubQuotaTotal          int64  `json:"sub_quota_total,omitempty"`
+	SubQuotaUsed           int64  `json:"sub_quota_used,omitempty"`
+	TotalConsumedQuota     int64  `json:"total_consumed_quota,omitempty"`
+	TotalPromptTokens      int64  `json:"total_prompt_tokens,omitempty"`
+	TotalCompletionTokens  int64  `json:"total_completion_tokens,omitempty"`
+	TopModel               string `json:"top_model,omitempty"`
+	SubscriptionResetCount int    `json:"subscription_reset_count,omitempty"`
+	LastLoginAt            int64  `json:"last_login_at,omitempty"`
+	CreatedAt              string `json:"created_at,omitempty"`
 }
 
 func buildFullTree(departments []*service.FeishuDepartment) []*cascaderNode {
@@ -325,11 +330,24 @@ func GetDepartmentUsers(c *gin.Context) {
 		}
 	}
 
+	registeredUserIds := make([]int, 0)
+	for _, lu := range localUserMap {
+		registeredUserIds = append(registeredUserIds, lu.Id)
+	}
+
+	var subscriptionSummaries map[int]model.SubscriptionQuotaSummary
+	var consumptionSummaries map[int]model.UserConsumptionSummary
+	var topModels map[int]string
+	if len(registeredUserIds) > 0 {
+		subscriptionSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(registeredUserIds)
+		consumptionSummaries, _ = model.GetUserConsumptionSummaryByIds(registeredUserIds)
+		topModels, _ = model.GetTopModelByUserIds(registeredUserIds)
+	}
+
 	result := make([]departmentUserItem, 0, len(feishuUsers))
 	for _, fu := range feishuUsers {
 		item := departmentUserItem{
-			Name:   fu.Name,
-			OpenId: fu.OpenId,
+			Name: fu.Name,
 		}
 		if lu, ok := localUserMap[fu.OpenId]; ok {
 			item.Registered = true
@@ -340,16 +358,21 @@ func GetDepartmentUsers(c *gin.Context) {
 			item.UsedQuota = lu.UsedQuota
 			item.RequestCount = lu.RequestCount
 			item.Email = lu.Email
-			item.Status = lu.Status
+			item.LastLoginAt = lu.LastLoginAt
+			item.CreatedAt = lu.CreatedAt.Format("2006-01-02 15:04:05")
 
-			subs, err := model.GetAllActiveUserSubscriptions(lu.Id)
-			if err == nil {
-				for _, s := range subs {
-					if s.Subscription != nil {
-						item.SubQuotaTotal += s.Subscription.AmountTotal
-						item.SubQuotaUsed += s.Subscription.AmountUsed
-					}
-				}
+			if s, ok := subscriptionSummaries[lu.Id]; ok {
+				item.SubQuotaTotal = s.AmountTotal
+				item.SubQuotaUsed = s.AmountUsed
+				item.SubscriptionResetCount = s.ResetCount
+			}
+			if c, ok := consumptionSummaries[lu.Id]; ok {
+				item.TotalConsumedQuota = c.TotalQuota
+				item.TotalPromptTokens = c.TotalPrompt
+				item.TotalCompletionTokens = c.TotalCompletion
+			}
+			if m, ok := topModels[lu.Id]; ok {
+				item.TopModel = m
 			}
 		}
 		result = append(result, item)

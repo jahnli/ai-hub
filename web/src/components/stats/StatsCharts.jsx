@@ -42,10 +42,15 @@ export const OverviewCards = ({ overview, t }) => {
     ? ((overview.error_count / (overview.consume_count + overview.error_count)) * 100).toFixed(1)
     : '0.0';
 
+  const totalTokens = (overview.total_prompt || 0) + (overview.total_completion || 0);
+  const costPerMToken = totalTokens > 0
+    ? Math.round(overview.total_quota / (totalTokens / 1e6))
+    : 0;
+
   const items = [
+    { key: t('总 Token'), value: `${(totalTokens / 1e8).toFixed(2)} ${t('亿')}` },
     { key: t('累计消耗'), value: renderQuota(overview.total_quota) },
-    { key: t('提示 Token'), value: renderNumber(overview.total_prompt) },
-    { key: t('完成 Token'), value: renderNumber(overview.total_completion) },
+    { key: t('均价'), value: `${renderQuota(costPerMToken)}/M Tokens` },
     { key: t('总请求次数'), value: renderNumber(overview.total_requests) },
     { key: t('平均响应时间'), value: `${(overview.avg_response_time || 0).toFixed(1)}s` },
     { key: t('错误率'), value: `${errorRate}%` },
