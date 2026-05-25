@@ -94,6 +94,9 @@ export const useDataOverviewData = () => {
   const [logsPage, setLogsPage] = useState(1);
   const [logsPageSize, setLogsPageSize] = useState(10);
 
+  const [childrenStats, setChildrenStats] = useState([]);
+  const [childrenStatsLoading, setChildrenStatsLoading] = useState(false);
+
   const fetchDepartmentLogs = useCallback(async (deptId, page, pageSize) => {
     if (!deptId) {
       setLogs([]);
@@ -125,6 +128,28 @@ export const useDataOverviewData = () => {
       fetchDepartmentLogs(selectedDeptId, page, pageSize);
     }
   }, [selectedDeptId, fetchDepartmentLogs]);
+
+  const fetchChildrenStats = useCallback(async (deptId) => {
+    if (!deptId) {
+      setChildrenStats([]);
+      return;
+    }
+    setChildrenStatsLoading(true);
+    try {
+      const res = await API.get('/api/department/children-stats', {
+        params: { dept_id: deptId },
+      });
+      if (res?.data?.success) {
+        setChildrenStats(res.data.data?.children || []);
+      } else {
+        setChildrenStats([]);
+      }
+    } catch (error) {
+      setChildrenStats([]);
+    } finally {
+      setChildrenStatsLoading(false);
+    }
+  }, []);
 
   const fetchDepartmentStats = useCallback(async (deptId, gran) => {
     if (!deptId) {
@@ -207,6 +232,7 @@ export const useDataOverviewData = () => {
           setSelectedDeptId(firstLeaderId);
           fetchDepartmentUsers(firstLeaderId);
           fetchDepartmentStats(firstLeaderId);
+          fetchChildrenStats(firstLeaderId);
           fetchDepartmentLogs(firstLeaderId, 1, 10);
         }
       } else {
@@ -217,7 +243,7 @@ export const useDataOverviewData = () => {
     } finally {
       setTreeLoading(false);
     }
-  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchDepartmentLogs]);
+  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats, fetchDepartmentLogs]);
 
   const selectedPath = useMemo(() => {
     if (!selectedDeptId || treeData.length === 0) return undefined;
@@ -232,17 +258,19 @@ export const useDataOverviewData = () => {
         setLogsPage(1);
         fetchDepartmentUsers(deptId);
         fetchDepartmentStats(deptId);
+        fetchChildrenStats(deptId);
         fetchDepartmentLogs(deptId, 1, logsPageSize);
       } else {
         setSelectedDeptId(null);
         setSelectedDeptLabel('');
         setUsers([]);
         setStatsData(null);
+        setChildrenStats([]);
         setLogs([]);
         setLogsTotal(0);
       }
     },
-    [fetchDepartmentUsers, fetchDepartmentStats, fetchDepartmentLogs, logsPageSize],
+    [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats, fetchDepartmentLogs, logsPageSize],
   );
 
   useEffect(() => {
@@ -266,6 +294,9 @@ export const useDataOverviewData = () => {
     statsLoading,
     granularity,
     changeGranularity,
+    childrenStats,
+    childrenStatsLoading,
+    fetchChildrenStats,
     logs,
     logsTotal,
     logsLoading,

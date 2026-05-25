@@ -131,7 +131,7 @@ export const TokenTrendChart = ({ data, granularity, t }) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
-      [t('Token')]: d.token_used || 0,
+      [t('Token（亿）')]: Number(((d.token_used || 0) / 1e8).toFixed(4)),
     }));
   }, [data, granularity, t]);
 
@@ -143,12 +143,12 @@ export const TokenTrendChart = ({ data, granularity, t }) => {
         type: 'line',
         data: [{ id: 'data', values: chartData }],
         xField: 'Time',
-        yField: t('Token'),
+        yField: t('Token（亿）'),
         point: { visible: false },
         title: { visible: true, text: t('Token 用量趋势') },
         tooltip: {
           mark: {
-            content: [{ key: () => 'Token', value: (datum) => renderNumber(datum[t('Token')] || 0) }],
+            content: [{ key: () => `Token（${t('亿')}）`, value: (datum) => `${(datum[t('Token（亿）')] || 0).toFixed(2)} ${t('亿')}` }],
           },
         },
       }}
@@ -226,7 +226,7 @@ export const ModelPieChart = ({ data, t }) => {
         },
         color: { specified: modelColorMap },
       }}
-      style={{ height: 300 }}
+      style={{ height: '100%', minHeight: 300 }}
     />
   );
 };

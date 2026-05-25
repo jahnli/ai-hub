@@ -15,15 +15,15 @@ import {
   Tooltip,
   Popover,
   Progress,
-  SideSheet,
   Modal,
+  Space,
 } from '@douyinfe/semi-ui';
 import { IconRefresh, IconHistory } from '@douyinfe/semi-icons';
 import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
-import { renderQuota, renderNumber, timestamp2string, copy } from '../../helpers';
+import { renderQuota, renderNumber, timestamp2string, copy, API, showError } from '../../helpers';
 import { useDataOverviewData } from '../../hooks/dataOverview/useDataOverviewData';
 import {
   OverviewCards,
@@ -37,6 +37,7 @@ import {
 } from '../../components/stats/StatsCharts';
 import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
 import CardTable from '../../components/common/ui/CardTable';
+import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
 
 const { Text } = Typography;
 
@@ -88,6 +89,9 @@ const DataOverview = () => {
     statsLoading,
     granularity,
     changeGranularity,
+    childrenStats,
+    childrenStatsLoading,
+    fetchChildrenStats,
     logs,
     logsTotal,
     logsLoading,
@@ -100,6 +104,13 @@ const DataOverview = () => {
   } = useDataOverviewData();
 
   const [showLogs, setShowLogs] = useState(false);
+  const [statsUser, setStatsUser] = useState(null);
+  const [showUserStats, setShowUserStats] = useState(false);
+
+  const [deptStatsVisible, setDeptStatsVisible] = useState(false);
+  const [selectedChildDept, setSelectedChildDept] = useState(null);
+  const [deptStatsData, setDeptStatsData] = useState(null);
+  const [deptStatsLoading, setDeptStatsLoading] = useState(false);
 
   const handleGranularityChange = (e) => {
     changeGranularity(e.target.value, selectedDeptId);
@@ -116,6 +127,109 @@ const DataOverview = () => {
   const refreshLogs = useCallback(() => {
     if (selectedDeptId) fetchDepartmentLogs(selectedDeptId, logsPage, logsPageSize);
   }, [selectedDeptId, logsPage, logsPageSize, fetchDepartmentLogs]);
+
+  const refreshChildrenStats = useCallback(() => {
+    if (selectedDeptId) fetchChildrenStats(selectedDeptId);
+  }, [selectedDeptId, fetchChildrenStats]);
+
+  const GRANULARITY_RANGES = { day: 30 * 86400, week: 12 * 7 * 86400, month: 365 * 86400, quarter: 2 * 365 * 86400, year: 5 * 365 * 86400 };
+
+  const fetchDeptStatsForChild = useCallback(async (dept) => {
+    if (!dept) return;
+    setDeptStatsLoading(true);
+    try {
+      const g = granularity;
+      const now = Math.floor(Date.now() / 1000);
+      const range = GRANULARITY_RANGES[g] || GRANULARITY_RANGES.day;
+      const res = await API.get('/api/department/stats', {
+        params: { dept_id: dept.dept_id, start_time: now - range, end_time: now },
+      });
+      if (res?.data?.success) {
+        const raw = res.data.data;
+        const trendRaw = raw.trend_data || [];
+        const bucketSize = { day: 86400, week: 7 * 86400, month: 30 * 86400, quarter: 91 * 86400, year: 365 * 86400 }[g] || 86400;
+        const buckets = new Map();
+        for (const item of trendRaw) {
+          const bk = Math.floor(item.created_at / bucketSize) * bucketSize;
+          if (!buckets.has(bk)) buckets.set(bk, { created_at: bk, quota: 0, count: 0, token_used: 0 });
+          const b = buckets.get(bk);
+          b.quota += item.quota || 0;
+          b.count += item.count || 0;
+          b.token_used += item.token_used || 0;
+        }
+        const trendAggregated = Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
+        const modelBuckets = new Map();
+        for (const item of trendRaw) {
+          const bk = Math.floor(item.created_at / bucketSize) * bucketSize;
+          const key = `${bk}_${item.model_name}`;
+          if (!modelBuckets.has(key)) modelBuckets.set(key, { created_at: bk, model_name: item.model_name, quota: 0, count: 0, token_used: 0 });
+          const b = modelBuckets.get(key);
+          b.quota += item.quota || 0;
+          b.count += item.count || 0;
+          b.token_used += item.token_used || 0;
+        }
+        const trendByModel = Array.from(modelBuckets.values()).sort((a, b) => a.created_at - b.created_at);
+        setDeptStatsData({ overview: raw.overview, modelDistribution: raw.model_distribution || [], trendAggregated, trendByModel });
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setDeptStatsLoading(false);
+    }
+  }, [granularity]);
+
+  const openChildDeptStats = useCallback((record) => {
+    setSelectedChildDept(record);
+    setDeptStatsVisible(true);
+    fetchDeptStatsForChild(record);
+  }, [fetchDeptStatsForChild]);
+
+  const childrenColumns = useMemo(
+    () => [
+      { title: t('部门名称'), dataIndex: 'dept_name', width: 140 },
+      {
+        title: t('人数'),
+        dataIndex: 'member_count',
+        width: 100,
+        render: (text, record) => `${record.registered_count} / ${record.member_count}`,
+      },
+      {
+        title: t('总消耗'),
+        dataIndex: 'total_quota',
+        width: 120,
+        sorter: (a, b) => (a.total_quota || 0) - (b.total_quota || 0),
+        render: (text) => renderQuota(text || 0),
+      },
+      {
+        title: 'Token',
+        dataIndex: 'total_prompt',
+        width: 120,
+        sorter: (a, b) => ((a.total_prompt || 0) + (a.total_completion || 0)) - ((b.total_prompt || 0) + (b.total_completion || 0)),
+        render: (text, record) => {
+          const total = (record.total_prompt || 0) + (record.total_completion || 0);
+          return total > 0 ? `${(total / 1e8).toFixed(2)} ${t('亿')}` : '-';
+        },
+      },
+      {
+        title: t('请求次数'),
+        dataIndex: 'total_requests',
+        width: 100,
+        sorter: (a, b) => (a.total_requests || 0) - (b.total_requests || 0),
+        render: (text) => text > 0 ? renderNumber(text) : '-',
+      },
+      {
+        title: t('操作'),
+        dataIndex: 'action',
+        width: 60,
+        render: (_, record) => (
+          <Button type="primary" size="small" onClick={() => openChildDeptStats(record)}>
+            {t('统计')}
+          </Button>
+        ),
+      },
+    ],
+    [t, openChildDeptStats],
+  );
 
   const copyText = useCallback((event, text) => {
     event.stopPropagation();
@@ -241,7 +355,7 @@ const DataOverview = () => {
           const completion = parseInt(record.total_completion_tokens) || 0;
           const total = prompt + completion;
           if (total === 0) return '-';
-          return renderNumber(total);
+          return `${(total / 1e8).toFixed(2)} ${t('亿')}`;
         },
       },
       {
@@ -313,6 +427,19 @@ const DataOverview = () => {
             <Tag color="grey">{t('未注册')}</Tag>
           ),
       },
+      {
+        title: t('操作'),
+        dataIndex: 'action',
+        width: 80,
+        render: (_, record) => {
+          if (!record.registered) return null;
+          return (
+            <Button type="primary" size="small" onClick={() => { setStatsUser(record); setShowUserStats(true); }}>
+              {t('统计')}
+            </Button>
+          );
+        },
+      },
     ],
     [t],
   );
@@ -371,6 +498,39 @@ const DataOverview = () => {
               statsData && <OverviewCards overview={statsData.overview} t={t} />
             )}
           </Card>
+
+          {(childrenStats.length > 0 || childrenStatsLoading) && (
+            <Card
+              title={
+                <div className="flex items-center justify-between w-full">
+                  <Text strong>{t('子部门统计')} <Tag color="blue" size="small">{childrenStats.length}</Tag></Text>
+                  <Button
+                    icon={<IconRefresh />}
+                    theme="borderless"
+                    size="small"
+                    onClick={refreshChildrenStats}
+                    loading={childrenStatsLoading}
+                  />
+                </div>
+              }
+              bodyStyle={{ padding: 0 }}
+            >
+              {childrenStatsLoading ? (
+                <div className="flex justify-center py-6">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                <Table
+                  columns={childrenColumns}
+                  dataSource={childrenStats}
+                  rowKey="dept_id"
+                  pagination={false}
+                  size="small"
+                  style={{ width: '100%' }}
+                />
+              )}
+            </Card>
+          )}
 
           <Card
             title={
@@ -455,7 +615,7 @@ const DataOverview = () => {
                 </Card>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card bodyStyle={{ padding: 12 }}>
+                <Card bodyStyle={{ padding: 12, height: '100%' }} style={{ height: '100%' }}>
                   <ModelPieChart data={statsData.modelDistribution} t={t} />
                 </Card>
                 <Card bodyStyle={{ padding: 12 }}>
@@ -506,6 +666,59 @@ const DataOverview = () => {
             onPageSizeChange: (size) => handleLogsPageChange(1, size),
           }}
         />
+      </Modal>
+
+      <UserStatsModal
+        visible={showUserStats}
+        onCancel={() => setShowUserStats(false)}
+        user={statsUser}
+        t={t}
+      />
+
+      <Modal
+        visible={deptStatsVisible}
+        onCancel={() => { setDeptStatsVisible(false); setDeptStatsData(null); setSelectedChildDept(null); }}
+        footer={null}
+        width={1400}
+        bodyStyle={{ padding: 16, maxHeight: '80vh', overflowY: 'auto' }}
+        title={
+          <Space>
+            <Tag color="cyan" shape="circle">{t('统计')}</Tag>
+            <Text>{selectedChildDept?.dept_name}</Text>
+          </Space>
+        }
+      >
+        <Spin spinning={deptStatsLoading}>
+          {deptStatsData && (
+            <div className="flex flex-col gap-4">
+              <OverviewCards overview={deptStatsData.overview} t={t} />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card bodyStyle={{ padding: 12 }}>
+                  <QuotaTrendChart data={deptStatsData.trendAggregated} granularity={granularity} t={t} />
+                </Card>
+                <Card bodyStyle={{ padding: 12 }}>
+                  <RequestTrendChart data={deptStatsData.trendAggregated} granularity={granularity} t={t} />
+                </Card>
+                <Card bodyStyle={{ padding: 12 }}>
+                  <TokenTrendChart data={deptStatsData.trendAggregated} granularity={granularity} t={t} />
+                </Card>
+                <Card bodyStyle={{ padding: 12 }}>
+                  <ModelTrendChart data={deptStatsData.trendByModel} granularity={granularity} t={t} />
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card bodyStyle={{ padding: 12, height: '100%' }} style={{ height: '100%' }}>
+                  <ModelPieChart data={deptStatsData.modelDistribution} t={t} />
+                </Card>
+                <Card bodyStyle={{ padding: 12 }}>
+                  <ModelRankChart data={deptStatsData.modelDistribution} t={t} />
+                </Card>
+              </div>
+            </div>
+          )}
+        </Spin>
       </Modal>
     </div>
   );

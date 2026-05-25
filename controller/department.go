@@ -571,6 +571,161 @@ func GetDepartmentStats(c *gin.Context) {
 	})
 }
 
+func GetDepartmentChildrenStats(c *gin.Context) {
+	deptId := c.Query("dept_id")
+	if deptId == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "dept_id is required"})
+		return
+	}
+
+	role := c.GetInt("role")
+	tenantToken, err := service.GetTenantAccessToken()
+	if err != nil {
+		common.ApiError(c, fmt.Errorf("获取飞书凭证失败: %s", err.Error()))
+		return
+	}
+
+	departments, err := service.FetchAllDepartments(tenantToken)
+	if err != nil {
+		common.ApiError(c, fmt.Errorf("获取部门列表失败: %s", err.Error()))
+		return
+	}
+
+	if role < 10 {
+		user, err := model.GetUserById(c.GetInt("id"), false)
+		if err != nil || user == nil {
+			common.ApiError(c, fmt.Errorf("用户信息不可用"))
+			return
+		}
+		feishuId := user.OpenId
+		leaderDeptIds := make([]string, 0)
+		for _, dept := range departments {
+			if dept.LeaderUserId == feishuId {
+				leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
+			}
+		}
+		allowedIds := make(map[string]bool)
+		for _, rootId := range leaderDeptIds {
+			collectDescendantIds(rootId, departments, allowedIds)
+		}
+		if !allowedIds[deptId] {
+			common.ApiError(c, fmt.Errorf("权限不足"))
+			return
+		}
+	}
+
+	directChildren := make([]*service.FeishuDepartment, 0)
+	for _, dept := range departments {
+		if dept.ParentDepartmentId == deptId {
+			directChildren = append(directChildren, dept)
+		}
+	}
+
+	if len(directChildren) == 0 {
+		common.ApiSuccess(c, gin.H{"children": []gin.H{}})
+		return
+	}
+
+	allDescendantIds := make(map[string]bool)
+	collectDescendantIds(deptId, departments, allDescendantIds)
+	allDeptIds := make([]string, 0, len(allDescendantIds))
+	for id := range allDescendantIds {
+		allDeptIds = append(allDeptIds, id)
+	}
+
+	allFeishuUsers, err := service.FetchDepartmentUsers(tenantToken, allDeptIds)
+	if err != nil {
+		common.ApiError(c, fmt.Errorf("获取部门成员失败: %s", err.Error()))
+		return
+	}
+
+	childDescendants := make(map[string]map[string]bool, len(directChildren))
+	for _, child := range directChildren {
+		desc := make(map[string]bool)
+		collectDescendantIds(child.DepartmentId, departments, desc)
+		childDescendants[child.DepartmentId] = desc
+	}
+
+	childFeishuUsers := make(map[string][]string, len(directChildren))
+	for _, fu := range allFeishuUsers {
+		for _, child := range directChildren {
+			matched := false
+			for _, dId := range fu.DepartmentIds {
+				if childDescendants[child.DepartmentId][dId] {
+					matched = true
+					break
+				}
+			}
+			if matched {
+				childFeishuUsers[child.DepartmentId] = append(childFeishuUsers[child.DepartmentId], fu.OpenId)
+				break
+			}
+		}
+	}
+
+	type childStat struct {
+		DeptId          string `json:"dept_id"`
+		DeptName        string `json:"dept_name"`
+		MemberCount     int    `json:"member_count"`
+		RegisteredCount int    `json:"registered_count"`
+		TotalQuota      int64  `json:"total_quota"`
+		TotalPrompt     int64  `json:"total_prompt"`
+		TotalCompletion int64  `json:"total_completion"`
+		TotalRequests   int64  `json:"total_requests"`
+		SubQuotaTotal   int64  `json:"sub_quota_total"`
+		SubQuotaUsed    int64  `json:"sub_quota_used"`
+	}
+
+	results := make([]childStat, 0, len(directChildren))
+	for _, child := range directChildren {
+		openIds := childFeishuUsers[child.DepartmentId]
+		stat := childStat{
+			DeptId:      child.DepartmentId,
+			DeptName:    child.GetName(),
+			MemberCount: len(openIds),
+		}
+
+		if len(openIds) == 0 {
+			results = append(results, stat)
+			continue
+		}
+
+		var localUsers []model.User
+		model.DB.Model(&model.User{}).Select("id").Where("open_id IN ?", openIds).Find(&localUsers)
+		userIds := make([]int, 0, len(localUsers))
+		for _, lu := range localUsers {
+			userIds = append(userIds, lu.Id)
+		}
+		stat.RegisteredCount = len(userIds)
+
+		if len(userIds) > 0 {
+			overview, err := model.GetUsersStatsOverview(userIds)
+			if err == nil {
+				stat.TotalQuota = overview.TotalQuota
+				stat.TotalPrompt = overview.TotalPrompt
+				stat.TotalCompletion = overview.TotalCompletion
+				stat.TotalRequests = overview.TotalRequests
+			}
+
+			for _, uid := range userIds {
+				subs, e := model.GetAllActiveUserSubscriptions(uid)
+				if e == nil {
+					for _, s := range subs {
+						if s.Subscription != nil {
+							stat.SubQuotaTotal += s.Subscription.AmountTotal
+							stat.SubQuotaUsed += s.Subscription.AmountUsed
+						}
+					}
+				}
+			}
+		}
+
+		results = append(results, stat)
+	}
+
+	common.ApiSuccess(c, gin.H{"children": results})
+}
+
 func GetDepartmentLogs(c *gin.Context) {
 	deptId := c.Query("dept_id")
 	if deptId == "" {
