@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
@@ -301,12 +302,6 @@ func GetDepartmentUsers(c *gin.Context) {
 		return
 	}
 
-	// 调试日志：打印飞书返回的成员列表
-	for _, fu := range feishuUsers {
-		common.SysLog(fmt.Sprintf("[DeptUsers Debug] Feishu user: name=%s, open_id=%s, user_id=%s, email=%s",
-			fu.Name, fu.OpenId, fu.UserId, fu.Email))
-	}
-
 	feishuOpenIds := make([]string, 0, len(feishuUsers))
 	for _, fu := range feishuUsers {
 		feishuOpenIds = append(feishuOpenIds, fu.OpenId)
@@ -318,14 +313,6 @@ func GetDepartmentUsers(c *gin.Context) {
 		model.DB.Model(&model.User{}).
 			Where("open_id IN ?", feishuOpenIds).
 			Find(&localUsers)
-
-		// 调试日志：打印数据库中匹配到的用户
-		common.SysLog(fmt.Sprintf("[DeptUsers Debug] Query open_ids: %v", feishuOpenIds))
-		common.SysLog(fmt.Sprintf("[DeptUsers Debug] Found %d local users matching", len(localUsers)))
-		for _, lu := range localUsers {
-			common.SysLog(fmt.Sprintf("[DeptUsers Debug] Local user: id=%d, username=%s, open_id=%s",
-				lu.Id, lu.Username, lu.OpenId))
-		}
 
 		for i := range localUsers {
 			localUserMap[localUsers[i].OpenId] = &localUsers[i]
@@ -341,9 +328,21 @@ func GetDepartmentUsers(c *gin.Context) {
 	var consumptionSummaries map[int]model.UserConsumptionSummary
 	var topModels map[int]string
 	if len(registeredUserIds) > 0 {
-		subscriptionSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(registeredUserIds)
-		consumptionSummaries, _ = model.GetUserConsumptionSummaryByIdsWithTimeRange(registeredUserIds, startTime, endTime)
-		topModels, _ = model.GetTopModelByUserIdsWithTimeRange(registeredUserIds, startTime, endTime)
+		var wg sync.WaitGroup
+		wg.Add(3)
+		go func() {
+			defer wg.Done()
+			subscriptionSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(registeredUserIds)
+		}()
+		go func() {
+			defer wg.Done()
+			consumptionSummaries, _ = model.GetUserConsumptionSummaryByIdsWithTimeRange(registeredUserIds, startTime, endTime)
+		}()
+		go func() {
+			defer wg.Done()
+			topModels, _ = model.GetTopModelByUserIdsWithTimeRange(registeredUserIds, startTime, endTime)
+		}()
+		wg.Wait()
 	}
 
 	result := make([]departmentUserItem, 0, len(feishuUsers))
@@ -515,44 +514,70 @@ func GetDepartmentStats(c *gin.Context) {
 		return
 	}
 
-	overview, err := model.GetUsersStatsOverviewWithTimeRange(userIds, startTime, endTime)
-	if err != nil {
-		common.ApiError(c, err)
+	var (
+		overview      *model.UserStatsOverview
+		overviewErr   error
+		tokenCounts   map[int]int64
+		tokenCountErr error
+		subSummaries  map[int]model.SubscriptionQuotaSummary
+		subErr        error
+		modelDist     []model.UserModelDistribution
+		modelDistErr  error
+		trendData     []*model.QuotaData
+		trendErr      error
+		wg            sync.WaitGroup
+	)
+
+	wg.Add(5)
+	go func() {
+		defer wg.Done()
+		overview, overviewErr = model.GetUsersStatsOverviewWithTimeRange(userIds, startTime, endTime)
+	}()
+	go func() {
+		defer wg.Done()
+		tokenCounts, tokenCountErr = model.CountTokensByUserIds(userIds)
+	}()
+	go func() {
+		defer wg.Done()
+		subSummaries, subErr = model.GetActiveSubscriptionQuotaSummaryByUserIds(userIds)
+	}()
+	go func() {
+		defer wg.Done()
+		modelDist, modelDistErr = model.GetUsersModelDistributionWithTimeRange(userIds, startTime, endTime)
+	}()
+	go func() {
+		defer wg.Done()
+		if startTime > 0 && endTime > 0 {
+			trendData, trendErr = model.GetQuotaDataByUserIds(userIds, startTime, endTime)
+		}
+	}()
+	wg.Wait()
+
+	if overviewErr != nil {
+		common.ApiError(c, overviewErr)
 		return
 	}
 
 	var tokenCount int64
-	for _, uid := range userIds {
-		cnt, e := model.CountUserTokens(uid)
-		if e == nil {
+	if tokenCountErr == nil {
+		for _, cnt := range tokenCounts {
 			tokenCount += cnt
 		}
 	}
 
 	var subTotal, subUsed int64
-	for _, uid := range userIds {
-		subs, e := model.GetAllActiveUserSubscriptions(uid)
-		if e == nil {
-			for _, s := range subs {
-				if s.Subscription != nil {
-					subTotal += s.Subscription.AmountTotal
-					subUsed += s.Subscription.AmountUsed
-				}
-			}
+	if subErr == nil {
+		for _, s := range subSummaries {
+			subTotal += s.AmountTotal
+			subUsed += s.AmountUsed
 		}
 	}
 
-	modelDist, err := model.GetUsersModelDistributionWithTimeRange(userIds, startTime, endTime)
-	if err != nil {
+	if modelDistErr != nil {
 		modelDist = []model.UserModelDistribution{}
 	}
-
-	var trendData []*model.QuotaData
-	if startTime > 0 && endTime > 0 {
-		trendData, err = model.GetQuotaDataByUserIds(userIds, startTime, endTime)
-		if err != nil {
-			trendData = []*model.QuotaData{}
-		}
+	if trendErr != nil {
+		trendData = []*model.QuotaData{}
 	}
 
 	common.ApiSuccess(c, gin.H{
@@ -682,7 +707,40 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 	}
 
 	results := make([]childStat, 0, len(directChildren))
+
+	allOpenIds := make([]string, 0)
 	for _, child := range directChildren {
+		allOpenIds = append(allOpenIds, childFeishuUsers[child.DepartmentId]...)
+	}
+
+	allLocalUserMap := make(map[string]int)
+	if len(allOpenIds) > 0 {
+		var localUsers []model.User
+		model.DB.Model(&model.User{}).Select("id, open_id").Where("open_id IN ?", allOpenIds).Find(&localUsers)
+		for _, lu := range localUsers {
+			allLocalUserMap[lu.OpenId] = lu.Id
+		}
+	}
+
+	allUserIds := make([]int, 0, len(allLocalUserMap))
+	for _, uid := range allLocalUserMap {
+		allUserIds = append(allUserIds, uid)
+	}
+
+	var allSubSummaries map[int]model.SubscriptionQuotaSummary
+	if len(allUserIds) > 0 {
+		allSubSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(allUserIds)
+	}
+
+	type childStatResult struct {
+		index int
+		stat  childStat
+	}
+
+	resultsCh := make(chan childStatResult, len(directChildren))
+	var statsWg sync.WaitGroup
+
+	for i, child := range directChildren {
 		openIds := childFeishuUsers[child.DepartmentId]
 		stat := childStat{
 			DeptId:      child.DepartmentId,
@@ -691,41 +749,49 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		}
 
 		if len(openIds) == 0 {
-			results = append(results, stat)
+			resultsCh <- childStatResult{index: i, stat: stat}
 			continue
 		}
 
-		var localUsers []model.User
-		model.DB.Model(&model.User{}).Select("id").Where("open_id IN ?", openIds).Find(&localUsers)
-		userIds := make([]int, 0, len(localUsers))
-		for _, lu := range localUsers {
-			userIds = append(userIds, lu.Id)
+		userIds := make([]int, 0)
+		for _, oid := range openIds {
+			if uid, ok := allLocalUserMap[oid]; ok {
+				userIds = append(userIds, uid)
+			}
 		}
 		stat.RegisteredCount = len(userIds)
 
-		if len(userIds) > 0 {
-			overview, err := model.GetUsersStatsOverviewWithTimeRange(userIds, startTime, endTime)
-			if err == nil {
-				stat.TotalQuota = overview.TotalQuota
-				stat.TotalPrompt = overview.TotalPrompt
-				stat.TotalCompletion = overview.TotalCompletion
-				stat.TotalRequests = overview.TotalRequests
-			}
-
-			for _, uid := range userIds {
-				subs, e := model.GetAllActiveUserSubscriptions(uid)
-				if e == nil {
-					for _, s := range subs {
-						if s.Subscription != nil {
-							stat.SubQuotaTotal += s.Subscription.AmountTotal
-							stat.SubQuotaUsed += s.Subscription.AmountUsed
-						}
-					}
-				}
-			}
+		if len(userIds) == 0 {
+			resultsCh <- childStatResult{index: i, stat: stat}
+			continue
 		}
 
-		results = append(results, stat)
+		statsWg.Add(1)
+		go func(idx int, s childStat, uids []int) {
+			defer statsWg.Done()
+			overview, err := model.GetUsersStatsOverviewWithTimeRange(uids, startTime, endTime)
+			if err == nil {
+				s.TotalQuota = overview.TotalQuota
+				s.TotalPrompt = overview.TotalPrompt
+				s.TotalCompletion = overview.TotalCompletion
+				s.TotalRequests = overview.TotalRequests
+			}
+			for _, uid := range uids {
+				if sub, ok := allSubSummaries[uid]; ok {
+					s.SubQuotaTotal += sub.AmountTotal
+					s.SubQuotaUsed += sub.AmountUsed
+				}
+			}
+			resultsCh <- childStatResult{index: idx, stat: s}
+		}(i, stat, userIds)
+	}
+
+	statsWg.Wait()
+	close(resultsCh)
+
+	results = make([]childStat, len(directChildren))
+	for r := range resultsCh {
+		results[r.index] = r.stat
 	}
 
 	common.ApiSuccess(c, gin.H{"children": results})

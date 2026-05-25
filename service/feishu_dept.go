@@ -68,6 +68,11 @@ var (
 	deptCacheAt  time.Time
 	deptCacheTTL = 5 * time.Minute
 	deptMu       sync.RWMutex
+
+	deptUsersCache    map[string][]*FeishuUser
+	deptUsersCacheAt  time.Time
+	deptUsersCacheTTL = 5 * time.Minute
+	deptUsersMu       sync.RWMutex
 )
 
 func CheckAndUpdateDeptLeader(userId int, feishuOpenId string) error {
@@ -258,11 +263,60 @@ type feishuUserListResponse struct {
 
 // FetchDepartmentUsers fetches all users from the given department IDs
 // using the Feishu find_by_department API. Results are deduplicated by open_id.
-// Concurrency is limited to 5 goroutines.
+// Concurrency is limited to 5 goroutines. Results are cached per-department for 5 minutes.
 func FetchDepartmentUsers(tenantToken string, deptIds []string) ([]*FeishuUser, error) {
+	deptUsersMu.RLock()
+	cacheValid := deptUsersCache != nil && time.Now().Before(deptUsersCacheAt.Add(deptUsersCacheTTL))
+	var missingIds []string
+	if cacheValid {
+		for _, id := range deptIds {
+			if _, ok := deptUsersCache[id]; !ok {
+				missingIds = append(missingIds, id)
+			}
+		}
+	} else {
+		missingIds = deptIds
+	}
+	deptUsersMu.RUnlock()
+
+	if len(missingIds) > 0 {
+		fetched, err := fetchDepartmentUsersBatch(tenantToken, missingIds)
+		if err != nil {
+			return nil, err
+		}
+
+		deptUsersMu.Lock()
+		if deptUsersCache == nil || !time.Now().Before(deptUsersCacheAt.Add(deptUsersCacheTTL)) {
+			deptUsersCache = make(map[string][]*FeishuUser)
+			deptUsersCacheAt = time.Now()
+		}
+		for id, users := range fetched {
+			deptUsersCache[id] = users
+		}
+		deptUsersMu.Unlock()
+	}
+
+	deptUsersMu.RLock()
+	defer deptUsersMu.RUnlock()
+
+	seen := make(map[string]bool)
+	var allUsers []*FeishuUser
+	for _, id := range deptIds {
+		for _, u := range deptUsersCache[id] {
+			if !seen[u.OpenId] {
+				seen[u.OpenId] = true
+				allUsers = append(allUsers, u)
+			}
+		}
+	}
+	return allUsers, nil
+}
+
+func fetchDepartmentUsersBatch(tenantToken string, deptIds []string) (map[string][]*FeishuUser, error) {
 	type result struct {
-		users []*FeishuUser
-		err   error
+		deptId string
+		users  []*FeishuUser
+		err    error
 	}
 
 	resultsCh := make(chan result, len(deptIds))
@@ -277,29 +331,21 @@ func FetchDepartmentUsers(tenantToken string, deptIds []string) ([]*FeishuUser, 
 			defer func() { <-sem }()
 
 			users, err := fetchUsersByDepartment(tenantToken, did)
-			resultsCh <- result{users: users, err: err}
+			resultsCh <- result{deptId: did, users: users, err: err}
 		}(deptId)
 	}
 
 	wg.Wait()
 	close(resultsCh)
 
-	seen := make(map[string]bool)
-	var allUsers []*FeishuUser
-
+	fetched := make(map[string][]*FeishuUser, len(deptIds))
 	for res := range resultsCh {
 		if res.err != nil {
 			return nil, res.err
 		}
-		for _, u := range res.users {
-			if !seen[u.OpenId] {
-				seen[u.OpenId] = true
-				allUsers = append(allUsers, u)
-			}
-		}
+		fetched[res.deptId] = res.users
 	}
-
-	return allUsers, nil
+	return fetched, nil
 }
 
 func fetchUsersByDepartment(tenantToken string, deptId string) ([]*FeishuUser, error) {
