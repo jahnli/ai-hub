@@ -18,23 +18,138 @@ export function formatBucketTime(ts, granularity) {
   if (!ts) return '';
   const d = new Date(ts * 1000);
   switch (granularity) {
-    case 'year':
-      return `${d.getFullYear()}`;
-    case 'quarter':
-    case 'month':
+    case 'this_year':
+    case 'last_year':
+    case 'first_half':
+    case 'second_half':
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    case 'today':
+    case 'yesterday':
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     default:
       return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 }
 
-export const GRANULARITY_OPTIONS = [
-  { value: 'day', label: '按天' },
-  { value: 'week', label: '按周' },
-  { value: 'month', label: '按月' },
-  { value: 'quarter', label: '按季度' },
-  { value: 'year', label: '按年' },
+export const TIME_RANGE_OPTIONS = [
+  { value: 'today', label: '今天' },
+  { value: 'yesterday', label: '昨天' },
+  { value: 'this_week', label: '本周' },
+  { value: 'last_week', label: '上周' },
+  { value: 'this_month', label: '本月' },
+  { value: 'last_month', label: '上月' },
+  { value: 'this_quarter', label: '本季度' },
+  { value: 'last_quarter', label: '上季度' },
+  { value: 'first_half', label: '上半年' },
+  { value: 'second_half', label: '下半年' },
+  { value: 'this_year', label: '本年' },
+  { value: 'last_year', label: '去年' },
 ];
+
+export const GRANULARITY_OPTIONS = TIME_RANGE_OPTIONS;
+
+export function getTimeRange(rangeKey) {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let start, end;
+
+  switch (rangeKey) {
+    case 'today':
+      start = startOfDay;
+      end = now;
+      break;
+    case 'yesterday': {
+      const d = new Date(startOfDay);
+      d.setDate(d.getDate() - 1);
+      start = d;
+      end = new Date(startOfDay.getTime() - 1);
+      break;
+    }
+    case 'this_week': {
+      const day = now.getDay() || 7;
+      start = new Date(startOfDay);
+      start.setDate(start.getDate() - (day - 1));
+      end = now;
+      break;
+    }
+    case 'last_week': {
+      const day = now.getDay() || 7;
+      const thisMonday = new Date(startOfDay);
+      thisMonday.setDate(thisMonday.getDate() - (day - 1));
+      end = new Date(thisMonday.getTime() - 1);
+      start = new Date(thisMonday);
+      start.setDate(start.getDate() - 7);
+      break;
+    }
+    case 'this_month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = now;
+      break;
+    case 'last_month':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      break;
+    case 'this_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      start = new Date(now.getFullYear(), q * 3, 1);
+      end = now;
+      break;
+    }
+    case 'last_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      start = new Date(now.getFullYear(), (q - 1) * 3, 1);
+      end = new Date(now.getFullYear(), q * 3, 0, 23, 59, 59);
+      break;
+    }
+    case 'this_year':
+      start = new Date(now.getFullYear(), 0, 1);
+      end = now;
+      break;
+    case 'last_year':
+      start = new Date(now.getFullYear() - 1, 0, 1);
+      end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+      break;
+    case 'first_half':
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 5, 30, 23, 59, 59);
+      break;
+    case 'second_half':
+      start = new Date(now.getFullYear(), 6, 1);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      break;
+    default:
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = now;
+  }
+
+  return {
+    start_time: Math.floor(start.getTime() / 1000),
+    end_time: Math.floor(end.getTime() / 1000),
+  };
+}
+
+export function getAggregationBucketSize(rangeKey) {
+  switch (rangeKey) {
+    case 'today':
+    case 'yesterday':
+      return 3600;
+    case 'this_week':
+    case 'last_week':
+    case 'this_month':
+    case 'last_month':
+      return 86400;
+    case 'this_quarter':
+    case 'last_quarter':
+      return 7 * 86400;
+    case 'this_year':
+    case 'last_year':
+    case 'first_half':
+    case 'second_half':
+      return 30 * 86400;
+    default:
+      return 86400;
+  }
+}
 
 export const OverviewCards = ({ overview, t }) => {
   if (!overview) return null;

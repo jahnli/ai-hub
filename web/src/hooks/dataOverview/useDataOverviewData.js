@@ -1,13 +1,85 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { API, showError } from '../../helpers';
 
-const GRANULARITY_RANGES = {
-  day: 30 * 86400,
-  week: 12 * 7 * 86400,
-  month: 365 * 86400,
-  quarter: 2 * 365 * 86400,
-  year: 5 * 365 * 86400,
-};
+function getTimeRange(rangeKey) {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let start, end;
+
+  switch (rangeKey) {
+    case 'today':
+      start = startOfDay;
+      end = now;
+      break;
+    case 'yesterday': {
+      const d = new Date(startOfDay);
+      d.setDate(d.getDate() - 1);
+      start = d;
+      end = new Date(startOfDay.getTime() - 1);
+      break;
+    }
+    case 'this_week': {
+      const day = now.getDay() || 7;
+      start = new Date(startOfDay);
+      start.setDate(start.getDate() - (day - 1));
+      end = now;
+      break;
+    }
+    case 'last_week': {
+      const day = now.getDay() || 7;
+      const thisMonday = new Date(startOfDay);
+      thisMonday.setDate(thisMonday.getDate() - (day - 1));
+      end = new Date(thisMonday.getTime() - 1);
+      start = new Date(thisMonday);
+      start.setDate(start.getDate() - 7);
+      break;
+    }
+    case 'this_month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = now;
+      break;
+    case 'last_month':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      break;
+    case 'this_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      start = new Date(now.getFullYear(), q * 3, 1);
+      end = now;
+      break;
+    }
+    case 'last_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      start = new Date(now.getFullYear(), (q - 1) * 3, 1);
+      end = new Date(now.getFullYear(), q * 3, 0, 23, 59, 59);
+      break;
+    }
+    case 'this_year':
+      start = new Date(now.getFullYear(), 0, 1);
+      end = now;
+      break;
+    case 'last_year':
+      start = new Date(now.getFullYear() - 1, 0, 1);
+      end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+      break;
+    case 'first_half':
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 5, 30, 23, 59, 59);
+      break;
+    case 'second_half':
+      start = new Date(now.getFullYear(), 6, 1);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      break;
+    default:
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = now;
+  }
+
+  return {
+    start_time: Math.floor(start.getTime() / 1000),
+    end_time: Math.floor(end.getTime() / 1000),
+  };
+}
 
 function findPathToNode(tree, targetValue) {
   for (const node of tree) {
@@ -24,16 +96,34 @@ function findPathToNode(tree, targetValue) {
   return null;
 }
 
+function getAggregationBucketSize(rangeKey) {
+  switch (rangeKey) {
+    case 'today':
+    case 'yesterday':
+      return 3600; // 1 hour
+    case 'this_week':
+    case 'last_week':
+      return 86400; // 1 day
+    case 'this_month':
+    case 'last_month':
+      return 86400; // 1 day
+    case 'this_quarter':
+    case 'last_quarter':
+      return 7 * 86400; // 1 week
+    case 'this_year':
+    case 'last_year':
+    case 'first_half':
+    case 'second_half':
+      return 30 * 86400; // ~1 month
+    default:
+      return 86400;
+  }
+}
+
 function aggregateByGranularity(data, granularity) {
   if (!data || data.length === 0) return [];
 
-  const bucketSize = {
-    day: 86400,
-    week: 7 * 86400,
-    month: 30 * 86400,
-    quarter: 91 * 86400,
-    year: 365 * 86400,
-  }[granularity] || 86400;
+  const bucketSize = getAggregationBucketSize(granularity);
 
   const buckets = new Map();
   for (const item of data) {
@@ -52,13 +142,7 @@ function aggregateByGranularity(data, granularity) {
 function aggregateTrendByModel(data, granularity) {
   if (!data || data.length === 0) return [];
 
-  const bucketSize = {
-    day: 86400,
-    week: 7 * 86400,
-    month: 30 * 86400,
-    quarter: 91 * 86400,
-    year: 365 * 86400,
-  }[granularity] || 86400;
+  const bucketSize = getAggregationBucketSize(granularity);
 
   const buckets = new Map();
   for (const item of data) {
@@ -86,7 +170,7 @@ export const useDataOverviewData = () => {
 
   const [statsData, setStatsData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [granularity, setGranularity] = useState('day');
+  const [granularity, setGranularity] = useState('this_month');
 
   const [logs, setLogs] = useState([]);
   const [logsTotal, setLogsTotal] = useState(0);
@@ -159,12 +243,10 @@ export const useDataOverviewData = () => {
     setStatsLoading(true);
     try {
       const g = gran || granularity;
-      const now = Math.floor(Date.now() / 1000);
-      const range = GRANULARITY_RANGES[g] || GRANULARITY_RANGES.day;
-      const startTime = now - range;
+      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
 
       const res = await API.get('/api/department/stats', {
-        params: { dept_id: deptId, start_time: startTime, end_time: now },
+        params: { dept_id: deptId, start_time: startTime, end_time: endTime },
       });
       if (res?.data?.success) {
         const raw = res.data.data;

@@ -39,6 +39,7 @@ import {
   TokenDistChart,
   RecentLogsTable,
   GRANULARITY_OPTIONS,
+  TIME_RANGE_OPTIONS,
 } from '../../../stats/StatsCharts';
 import { useUserStats } from '../../../../hooks/users/useUserStats';
 import { useIsMobile } from '../../../../hooks/common/useIsMobile';
@@ -79,14 +80,14 @@ const UserStatsModal = ({ visible, onCancel, user, t }) => {
             <OverviewCards overview={statsData.overview} t={t} />
 
             <div className='flex items-center gap-2'>
-              <Text strong>{t('时间粒度')}:</Text>
+              <Text strong>{t('时间范围')}:</Text>
               <RadioGroup
                 type='button'
                 size='small'
                 value={granularity}
                 onChange={handleGranularityChange}
               >
-                {GRANULARITY_OPTIONS.map(opt => (
+                {TIME_RANGE_OPTIONS.map(opt => (
                   <Radio key={opt.value} value={opt.value}>{t(opt.label)}</Radio>
                 ))}
               </RadioGroup>

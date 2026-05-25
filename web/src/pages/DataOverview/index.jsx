@@ -33,7 +33,9 @@ import {
   ModelTrendChart,
   ModelPieChart,
   ModelRankChart,
-  GRANULARITY_OPTIONS,
+  TIME_RANGE_OPTIONS,
+  getTimeRange,
+  getAggregationBucketSize,
 } from '../../components/stats/StatsCharts';
 import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
 import CardTable from '../../components/common/ui/CardTable';
@@ -132,22 +134,19 @@ const DataOverview = () => {
     if (selectedDeptId) fetchChildrenStats(selectedDeptId);
   }, [selectedDeptId, fetchChildrenStats]);
 
-  const GRANULARITY_RANGES = { day: 30 * 86400, week: 12 * 7 * 86400, month: 365 * 86400, quarter: 2 * 365 * 86400, year: 5 * 365 * 86400 };
-
   const fetchDeptStatsForChild = useCallback(async (dept) => {
     if (!dept) return;
     setDeptStatsLoading(true);
     try {
       const g = granularity;
-      const now = Math.floor(Date.now() / 1000);
-      const range = GRANULARITY_RANGES[g] || GRANULARITY_RANGES.day;
+      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
       const res = await API.get('/api/department/stats', {
-        params: { dept_id: dept.dept_id, start_time: now - range, end_time: now },
+        params: { dept_id: dept.dept_id, start_time: startTime, end_time: endTime },
       });
       if (res?.data?.success) {
         const raw = res.data.data;
         const trendRaw = raw.trend_data || [];
-        const bucketSize = { day: 86400, week: 7 * 86400, month: 30 * 86400, quarter: 91 * 86400, year: 365 * 86400 }[g] || 86400;
+        const bucketSize = getAggregationBucketSize(g);
         const buckets = new Map();
         for (const item of trendRaw) {
           const bk = Math.floor(item.created_at / bucketSize) * bucketSize;
@@ -464,7 +463,7 @@ const DataOverview = () => {
             value={granularity}
             onChange={handleGranularityChange}
           >
-            {GRANULARITY_OPTIONS.map((opt) => (
+            {TIME_RANGE_OPTIONS.map((opt) => (
               <Radio key={opt.value} value={opt.value}>
                 {t(opt.label)}
               </Radio>
