@@ -300,15 +300,10 @@ export const useDataOverviewData = () => {
     }
   }, []);
 
-  const changeGranularity = useCallback((g, deptId) => {
+  const changeGranularity = useCallback((g) => {
     granularityRef.current = g;
     setGranularity(g);
-    if (deptId) {
-      fetchDepartmentStats(deptId, g);
-      fetchChildrenStats(deptId, g);
-      fetchDepartmentUsers(deptId, g);
-    }
-  }, [fetchDepartmentStats, fetchChildrenStats, fetchDepartmentUsers]);
+  }, []);
 
   const fetchDepartmentTree = useCallback(async () => {
     setTreeLoading(true);
@@ -348,9 +343,11 @@ export const useDataOverviewData = () => {
         const deptId = Array.isArray(value) ? value[value.length - 1] : value;
         setSelectedDeptId(deptId);
         setLogsPage(1);
-        fetchDepartmentUsers(deptId);
-        fetchDepartmentStats(deptId);
-        fetchChildrenStats(deptId);
+        setUsers([]);
+        setStatsData(null);
+        setChildrenStats([]);
+        setLogs([]);
+        setLogsTotal(0);
       } else {
         setSelectedDeptId(null);
         setSelectedDeptLabel('');
@@ -361,8 +358,15 @@ export const useDataOverviewData = () => {
         setLogsTotal(0);
       }
     },
-    [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats],
+    [],
   );
+
+  const queryData = useCallback((deptId, g) => {
+    if (!deptId) return;
+    fetchDepartmentUsers(deptId, g);
+    fetchDepartmentStats(deptId, g);
+    fetchChildrenStats(deptId, g);
+  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats]);
 
   useEffect(() => {
     fetchDepartmentTree();
@@ -379,6 +383,7 @@ export const useDataOverviewData = () => {
     setSelectedDeptLabel,
     leaderDeptIds,
     handleDeptChange,
+    queryData,
     fetchDepartmentTree,
     fetchDepartmentUsers,
     statsData,
