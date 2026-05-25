@@ -769,7 +769,7 @@ const DataOverview = () => {
             )}
           </Card>
 
-          {statsData && (
+          {statsData && !statsLoading && (
             <Card
               style={cardShadowStyle}
               title={<Text strong style={cardTitleStyle}>{t('使用分析')}</Text>}

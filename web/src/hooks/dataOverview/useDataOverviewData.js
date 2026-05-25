@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { API, showError } from '../../helpers';
 
 function getTimeRange(rangeKey) {
@@ -174,6 +174,7 @@ export const useDataOverviewData = () => {
   const [statsData, setStatsData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [granularity, setGranularity] = useState('this_month');
+  const granularityRef = useRef(granularity);
 
   const [logs, setLogs] = useState([]);
   const [logsTotal, setLogsTotal] = useState(0);
@@ -223,7 +224,7 @@ export const useDataOverviewData = () => {
     }
     setChildrenStatsLoading(true);
     try {
-      const g = gran || granularity;
+      const g = gran || granularityRef.current;
       const { start_time: startTime, end_time: endTime } = getTimeRange(g);
       const res = await API.get('/api/department/children-stats', {
         params: { dept_id: deptId, start_time: startTime, end_time: endTime },
@@ -238,7 +239,7 @@ export const useDataOverviewData = () => {
     } finally {
       setChildrenStatsLoading(false);
     }
-  }, [granularity]);
+  }, []);
 
   const fetchDepartmentStats = useCallback(async (deptId, gran) => {
     if (!deptId) {
@@ -247,7 +248,7 @@ export const useDataOverviewData = () => {
     }
     setStatsLoading(true);
     try {
-      const g = gran || granularity;
+      const g = gran || granularityRef.current;
       const { start_time: startTime, end_time: endTime } = getTimeRange(g);
 
       const res = await API.get('/api/department/stats', {
@@ -273,7 +274,7 @@ export const useDataOverviewData = () => {
     } finally {
       setStatsLoading(false);
     }
-  }, [granularity]);
+  }, []);
 
   const fetchDepartmentUsers = useCallback(async (deptId, gran) => {
     if (!deptId) {
@@ -282,7 +283,7 @@ export const useDataOverviewData = () => {
     }
     setUsersLoading(true);
     try {
-      const g = gran || granularity;
+      const g = gran || granularityRef.current;
       const { start_time: startTime, end_time: endTime } = getTimeRange(g);
       const res = await API.get('/api/department/users', {
         params: { dept_id: deptId, include_children: 'true', start_time: startTime, end_time: endTime },
@@ -297,9 +298,10 @@ export const useDataOverviewData = () => {
     } finally {
       setUsersLoading(false);
     }
-  }, [granularity]);
+  }, []);
 
   const changeGranularity = useCallback((g, deptId) => {
+    granularityRef.current = g;
     setGranularity(g);
     if (deptId) {
       fetchDepartmentStats(deptId, g);
