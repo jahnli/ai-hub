@@ -159,10 +159,7 @@ const UsersPieChart = React.memo(({ data, t }) => {
     const sorted = [...data]
       .filter(u => u.registered && (parseInt(u.total_consumed_quota) || 0) > 0)
       .sort((a, b) => (parseInt(b.total_consumed_quota) || 0) - (parseInt(a.total_consumed_quota) || 0));
-    const top10 = sorted.slice(0, 10).map(d => ({ type: d.name, value: parseInt(d.total_consumed_quota) || 0 }));
-    const rest = sorted.slice(10).reduce((sum, d) => sum + (parseInt(d.total_consumed_quota) || 0), 0);
-    if (rest > 0) top10.push({ type: t('其他'), value: rest });
-    return top10;
+    return sorted.slice(0, 10).map(d => ({ type: d.name, value: parseInt(d.total_consumed_quota) || 0 }));
   }, [data, t]);
 
   if (chartData.length === 0) return null;
