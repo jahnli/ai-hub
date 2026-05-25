@@ -902,12 +902,18 @@ const DataOverview = () => {
             style={cardShadowStyle}
             title={
               <div className='flex items-center justify-between w-full'>
-                <Text strong style={cardTitleStyle}>
-                  {t('部门用户列表')}{' '}
-                  <Tag color='blue' size='small'>
-                    {users.length}
-                  </Tag>
-                </Text>
+                <div className='flex items-center gap-3'>
+                  <Text strong style={cardTitleStyle}>
+                    {t('部门用户列表')}
+                  </Text>
+                  {usersSummary && (
+                    <span className='flex items-center gap-1.5' style={{ fontSize: 13 }}>
+                      <Tag size='small' color='blue'>{usersSummary.total} {t('人')}</Tag>
+                      <Tag size='small' color='green'>{t('已注册')} {usersSummary.registered}</Tag>
+                      <Tag size='small' color='orange'>{t('未注册')} {usersSummary.total - usersSummary.registered}</Tag>
+                    </span>
+                  )}
+                </div>
                 <div className='flex items-center gap-1'>
                   <Button
                     icon={<IconHistory />}
@@ -947,62 +953,11 @@ const DataOverview = () => {
                     pageSize: 20,
                     showSizeChanger: true,
                     pageSizeOpts: [10, 20, 50, 100],
+                    formatPageText: ({ currentStart, currentEnd, total }) =>
+                      `${t('显示第')} ${currentStart} ${t('条')}-${t('第')} ${currentEnd} ${t('条')}，${t('共')} ${total} ${t('条')}`,
                   }}
                   size='small'
                   style={{ width: '100%' }}
-                  footer={
-                    usersSummary ? (
-                      <div
-                        className='flex items-center gap-6 px-3 py-2 text-sm font-medium'
-                        style={{ background: 'var(--semi-color-fill-0)' }}
-                      >
-                        <span>
-                          {t('合计')}: {usersSummary.total} {t('人')}
-                        </span>
-                        <span>
-                          {t('已注册')}: {usersSummary.registered}
-                        </span>
-                        <span>
-                          Token:{' '}
-                          {(
-                            (usersSummary.totalPrompt +
-                              usersSummary.totalCompletion) /
-                            1e8
-                          ).toFixed(2)}{' '}
-                          {t('亿')}
-                        </span>
-                        <span>
-                          {t('总消耗')}:{' '}
-                          {renderQuota(usersSummary.totalConsumed)}
-                        </span>
-                        <span>
-                          {t('均价')}:{' '}
-                          {renderQuota(
-                            usersSummary.totalPrompt +
-                              usersSummary.totalCompletion >
-                              0
-                              ? Math.round(
-                                  usersSummary.totalConsumed /
-                                    ((usersSummary.totalPrompt +
-                                      usersSummary.totalCompletion) /
-                                      1e6),
-                                )
-                              : 0,
-                          )}
-                          /M Tokens
-                        </span>
-                        <span>
-                          {t('已用/总额度')}:{' '}
-                          {renderQuota(usersSummary.usedQuota)} /{' '}
-                          {renderQuota(usersSummary.totalQuota)}
-                        </span>
-                        <span>
-                          {t('请求次数')}:{' '}
-                          {renderRequestCount(usersSummary.totalRequests)}
-                        </span>
-                      </div>
-                    ) : null
-                  }
                 />
                 {users.filter((u) => u.registered).length > 0 && (
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-4 p-4'>
