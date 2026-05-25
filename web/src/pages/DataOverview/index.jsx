@@ -23,7 +23,7 @@ import {
   IllustrationNoResult,
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
-import { renderQuota, renderNumber, timestamp2string, copy, API, showError } from '../../helpers';
+import { renderQuota, renderNumber, timestamp2string, copy, API, showError, isAdmin } from '../../helpers';
 import { useDataOverviewData } from '../../hooks/dataOverview/useDataOverviewData';
 import {
   OverviewCards,
@@ -605,7 +605,7 @@ const DataOverview = () => {
           onChange={handleDeptChange}
           loading={treeLoading}
           style={{ width: 480 }}
-          showClear
+          showClear={isAdmin()}
         />
         {selectedDeptId && (
           <RadioGroup
