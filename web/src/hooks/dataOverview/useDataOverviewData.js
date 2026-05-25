@@ -324,7 +324,6 @@ export const useDataOverviewData = () => {
           fetchDepartmentUsers(firstLeaderId);
           fetchDepartmentStats(firstLeaderId);
           fetchChildrenStats(firstLeaderId);
-          fetchDepartmentLogs(firstLeaderId, 1, 10);
         }
       } else {
         showError(res?.data?.message || '获取部门树失败');
@@ -334,7 +333,7 @@ export const useDataOverviewData = () => {
     } finally {
       setTreeLoading(false);
     }
-  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats, fetchDepartmentLogs]);
+  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats]);
 
   const selectedPath = useMemo(() => {
     if (!selectedDeptId || treeData.length === 0) return undefined;
@@ -350,7 +349,6 @@ export const useDataOverviewData = () => {
         fetchDepartmentUsers(deptId);
         fetchDepartmentStats(deptId);
         fetchChildrenStats(deptId);
-        fetchDepartmentLogs(deptId, 1, logsPageSize);
       } else {
         setSelectedDeptId(null);
         setSelectedDeptLabel('');
@@ -361,7 +359,7 @@ export const useDataOverviewData = () => {
         setLogsTotal(0);
       }
     },
-    [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats, fetchDepartmentLogs, logsPageSize],
+    [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats],
   );
 
   useEffect(() => {
