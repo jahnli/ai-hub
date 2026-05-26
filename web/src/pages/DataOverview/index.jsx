@@ -809,7 +809,7 @@ const DataOverview = () => {
               </Radio>
             ))}
           </RadioGroup>
-          <Text type='tertiary' size='small'>
+          <Text type='tertiary' size='normal'>
             {formatTimeRangeDisplay(granularity)}
           </Text>
           <Button

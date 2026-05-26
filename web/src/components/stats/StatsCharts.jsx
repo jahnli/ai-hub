@@ -183,7 +183,7 @@ export const OverviewCards = ({ overview, t }) => {
   const items = [
     { key: t('总 Token'), value: `${(totalTokens / 1e8).toFixed(2)} ${t('亿')}` },
     { key: t('累计消耗'), value: renderQuota(overview.total_quota) },
-    { key: t('均价'), value: `${renderQuota(costPerMToken)}/M Tokens` },
+    { key: t('均价'), value: `${renderQuota(costPerMToken)} / M Tokens` },
     { key: t('总请求次数'), value: overview.total_requests >= 10000 ? `${(overview.total_requests / 10000).toFixed(1)} 万次` : (overview.total_requests || 0).toLocaleString() },
     { key: t('平均响应时间'), value: `${(overview.avg_response_time || 0).toFixed(1)}s` },
     { key: t('错误率'), value: `${errorRate}%` },
@@ -193,8 +193,8 @@ export const OverviewCards = ({ overview, t }) => {
     <Descriptions
       data={items}
       row
-      size='small'
-      className='mb-4'
+      size='large'
+      className='mb-4 [&_.semi-descriptions-key]:!text-[16px] [&_.semi-descriptions-value]:!text-[22px] [&_.semi-descriptions-value]:!font-semibold'
     />
   );
 };
