@@ -462,7 +462,7 @@ const DataOverview = () => {
     () => [
       { title: t('部门名称'), dataIndex: 'dept_name', width: 140 },
       {
-        title: t('人数'),
+        title: t('已注册/总人数'),
         dataIndex: 'member_count',
         width: 100,
         render: (text, record) =>
