@@ -35,6 +35,7 @@ import {
   Progress,
   Modal,
   Space,
+  Checkbox,
 } from '@douyinfe/semi-ui';
 import { IconRefresh, IconHistory, IconSearch, IconDownload } from '@douyinfe/semi-icons';
 import {
@@ -364,6 +365,8 @@ const DataOverview = () => {
   const modelRankRef = useRef(null);
 
   const [exportLoading, setExportLoading] = useState(false);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportIncludeChildren, setExportIncludeChildren] = useState(true);
 
   const childrenRankRef = useRef(null);
   const childrenPieRef = useRef(null);
@@ -381,11 +384,16 @@ const DataOverview = () => {
     return findNode(treeData, selectedPath) || '部门';
   }, [treeData, selectedPath]);
 
-  const handleExport = useCallback(async () => {
+  const handleExportClick = useCallback(() => {
     if (!statsData && childrenStats.length === 0) {
       Toast.warning(t('暂无数据可导出'));
       return;
     }
+    setExportModalVisible(true);
+  }, [statsData, childrenStats, t]);
+
+  const handleExportConfirm = useCallback(async () => {
+    setExportModalVisible(false);
     setExportLoading(true);
     try {
       const deptName = getDeptName();
@@ -409,6 +417,7 @@ const DataOverview = () => {
         timeRangeLabel: timeLabel,
         granularity,
         getTimeRange,
+        includeChildrenSheets: exportIncludeChildren,
       });
       Toast.success(t('导出成功'));
     } catch (e) {
@@ -417,7 +426,7 @@ const DataOverview = () => {
     } finally {
       setExportLoading(false);
     }
-  }, [getDeptName, granularity, statsData, childrenStats, t]);
+  }, [getDeptName, granularity, statsData, childrenStats, exportIncludeChildren, t]);
 
   const handleGranularityChange = (e) => {
     changeGranularity(e.target.value);
@@ -892,7 +901,7 @@ const DataOverview = () => {
           </Button>
           <Button
             icon={<IconDownload />}
-            onClick={handleExport}
+            onClick={handleExportClick}
             loading={exportLoading}
             disabled={!statsData && childrenStats.length === 0}
           >
@@ -1237,6 +1246,26 @@ const DataOverview = () => {
             </div>
           )}
         </Spin>
+      </Modal>
+
+      <Modal
+        visible={exportModalVisible}
+        onCancel={() => setExportModalVisible(false)}
+        onOk={handleExportConfirm}
+        title={t('导出设置')}
+        okText={t('导出')}
+        cancelText={t('取消')}
+        width={420}
+      >
+        <Checkbox
+          checked={exportIncludeChildren}
+          onChange={(e) => setExportIncludeChildren(e.target.checked)}
+        >
+          {t('为子部门单独创建 Sheet')}
+        </Checkbox>
+        <div style={{ marginTop: 8, color: 'var(--semi-color-text-2)', fontSize: 12 }}>
+          {t('勾选后将为每个子部门单独生成一个 Sheet 页，包含详细的统计数据和图表')}
+        </div>
       </Modal>
     </div>
   );

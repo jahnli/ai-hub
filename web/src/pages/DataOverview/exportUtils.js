@@ -499,7 +499,7 @@ async function addDeptSheet(wb, { deptName, statsData, quotaFmt, timeRangeLabel,
 
 export async function exportDataOverview({
   statsData, childrenStats, chartRefs, childrenChartRefs, deptName, timeRangeLabel,
-  granularity, getTimeRange,
+  granularity, getTimeRange, includeChildrenSheets = true,
 }) {
   const wb = new ExcelJS.Workbook();
   const quotaFmt = getQuotaFmt();
@@ -596,7 +596,7 @@ export async function exportDataOverview({
   }
 
   // --- 子部门独立 Sheet ---
-  if (childrenStats?.length > 0 && granularity && getTimeRange) {
+  if (includeChildrenSheets && childrenStats?.length > 0 && granularity && getTimeRange) {
     const { start_time, end_time } = getTimeRange(granularity);
     const childStatsResults = await batchFetchDeptStats(
       childrenStats.map(c => c.dept_id),
