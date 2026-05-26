@@ -108,14 +108,13 @@ async function getChartImage(ref, title) {
     if (!chartCanvas) return null;
 
     const scale = 2;
-    const targetWidth = 1200 * scale;
-    const ratio = targetWidth / chartCanvas.width;
-    const scaledChartHeight = Math.round(chartCanvas.height * ratio);
+    const srcW = chartCanvas.width;
+    const srcH = chartCanvas.height;
     const titleHeight = title ? 48 * scale : 0;
 
     const compositeCanvas = document.createElement('canvas');
-    compositeCanvas.width = targetWidth;
-    compositeCanvas.height = scaledChartHeight + titleHeight;
+    compositeCanvas.width = srcW * scale;
+    compositeCanvas.height = srcH * scale + titleHeight;
     const ctx = compositeCanvas.getContext('2d');
 
     ctx.fillStyle = '#ffffff';
@@ -128,8 +127,10 @@ async function getChartImage(ref, title) {
       ctx.fillText(title, 20 * scale, titleHeight / 2);
     }
 
-    ctx.drawImage(chartCanvas, 0, titleHeight, targetWidth, scaledChartHeight);
-    return compositeCanvas.toDataURL('image/png').split(',')[1];
+    ctx.drawImage(chartCanvas, 0, titleHeight, srcW * scale, srcH * scale);
+    const base64 = compositeCanvas.toDataURL('image/png').split(',')[1];
+    const aspect = compositeCanvas.width / compositeCanvas.height;
+    return { base64, aspect };
   } catch (e) {
     console.warn('Failed to get chart image', e);
     return null;
@@ -151,14 +152,17 @@ async function addChartImages(wb, ws, chartRefs, startRow, startCol, sectionTitl
     currentRow += 2;
   }
   for (const { name, ref } of chartRefs) {
-    const base64 = await getChartImage(ref, name);
-    if (!base64) continue;
+    const result = await getChartImage(ref, name);
+    if (!result) continue;
+    const { base64, aspect } = result;
+    const imgWidth = 680;
+    const imgHeight = Math.round(imgWidth / aspect);
     const imageId = wb.addImage({ base64, extension: 'png' });
     ws.addImage(imageId, {
       tl: { col: startCol, row: currentRow - 1 },
-      ext: { width: 680, height: 360 },
+      ext: { width: imgWidth, height: imgHeight },
     });
-    currentRow += 20;
+    currentRow += Math.ceil(imgHeight / 18) + 2;
   }
   return currentRow;
 }
@@ -271,14 +275,17 @@ export async function exportDataOverview({
       styleSectionHeader(ws, row, 1, '子部门图表', 5);
       row += 2;
       for (const { name, ref } of childrenChartRefs) {
-        const base64 = await getChartImage(ref, name);
-        if (!base64) continue;
+        const result = await getChartImage(ref, name);
+        if (!result) continue;
+        const { base64, aspect } = result;
+        const imgWidth = 680;
+        const imgHeight = Math.round(imgWidth / aspect);
         const imageId = wb.addImage({ base64, extension: 'png' });
         ws.addImage(imageId, {
           tl: { col: 0, row: row - 1 },
-          ext: { width: 680, height: 360 },
+          ext: { width: imgWidth, height: imgHeight },
         });
-        row += 20;
+        row += Math.ceil(imgHeight / 18) + 2;
       }
     }
   }
