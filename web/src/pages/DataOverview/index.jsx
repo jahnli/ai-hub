@@ -407,6 +407,8 @@ const DataOverview = () => {
         ],
         deptName,
         timeRangeLabel: timeLabel,
+        granularity,
+        getTimeRange,
       });
       Toast.success(t('导出成功'));
     } catch (e) {

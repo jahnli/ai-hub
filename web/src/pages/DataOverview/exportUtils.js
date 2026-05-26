@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs';
-import { renderQuota } from '../../helpers';
+import { VChart } from '@visactor/vchart';
+import { renderQuota, modelColorMap, API } from '../../helpers';
+import { formatBucketTime } from '../../components/stats/StatsCharts';
 
 function quotaNum(quota) {
   if (!quota || quota <= 0) return 0;
@@ -218,8 +220,286 @@ function styleTableHeader(ws, row, startCol, cols) {
   }
 }
 
+function sanitizeSheetName(name, existingNames = []) {
+  let sanitized = name.replace(/[/\\?*[\]]/g, '').trim();
+  if (!sanitized) sanitized = 'Sheet';
+  sanitized = sanitized.slice(0, 31);
+  let finalName = sanitized;
+  let counter = 1;
+  while (existingNames.includes(finalName)) {
+    const suffix = `(${counter})`;
+    finalName = sanitized.slice(0, 31 - suffix.length) + suffix;
+    counter++;
+  }
+  return finalName;
+}
+
+async function fetchDeptStats(deptId, startTime, endTime) {
+  try {
+    const res = await API.get('/api/department/stats', {
+      params: { dept_id: deptId, start_time: startTime, end_time: endTime },
+    });
+    if (res.data.success) return res.data.data;
+  } catch (e) {
+    console.warn(`Failed to fetch stats for dept ${deptId}`, e);
+  }
+  return null;
+}
+
+async function batchFetchDeptStats(deptIds, startTime, endTime, concurrency = 3) {
+  const results = [];
+  for (let i = 0; i < deptIds.length; i += concurrency) {
+    const batch = deptIds.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map(id => fetchDeptStats(id, startTime, endTime))
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+async function renderOffscreenChart(spec, width = 680, height = 400) {
+  return new Promise((resolve) => {
+    const container = document.createElement('div');
+    container.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${width}px;height:${height}px;`;
+    document.body.appendChild(container);
+
+    const chart = new VChart(spec, { dom: container, animation: false });
+    chart.renderSync();
+
+    setTimeout(() => {
+      try {
+        const canvas = container.querySelector('canvas');
+        if (!canvas) {
+          chart.release();
+          document.body.removeChild(container);
+          resolve(null);
+          return;
+        }
+        const base64 = canvas.toDataURL('image/png').split(',')[1];
+        const aspect = canvas.width / canvas.height;
+        chart.release();
+        document.body.removeChild(container);
+        resolve({ base64, aspect });
+      } catch (e) {
+        console.warn('Offscreen chart render failed', e);
+        try { chart.release(); } catch (_) {}
+        try { document.body.removeChild(container); } catch (_) {}
+        resolve(null);
+      }
+    }, 300);
+  });
+}
+
+function buildChartSpecs(statsData, granularity) {
+  const specs = [];
+  const trendData = statsData.trend_data || [];
+  const modelDist = statsData.model_distribution || [];
+
+  if (trendData.length > 0) {
+    const quotaData = trendData.map(d => ({
+      Time: formatBucketTime(d.created_at, granularity),
+      额度: d.quota || 0,
+    }));
+    specs.push({
+      name: '额度消耗趋势',
+      spec: {
+        type: 'area',
+        data: [{ id: 'data', values: quotaData }],
+        xField: 'Time', yField: '额度',
+        area: { style: { fillOpacity: 0.3 } },
+        point: { visible: false },
+        width: 680, height: 400,
+      },
+    });
+
+    const requestData = trendData.map(d => ({
+      Time: formatBucketTime(d.created_at, granularity),
+      请求次数: d.count || 0,
+    }));
+    specs.push({
+      name: '请求次数趋势',
+      spec: {
+        type: 'area',
+        data: [{ id: 'data', values: requestData }],
+        xField: 'Time', yField: '请求次数',
+        area: { style: { fillOpacity: 0.3 } },
+        point: { visible: false },
+        width: 680, height: 400,
+      },
+    });
+
+    const tokenData = trendData.map(d => ({
+      Time: formatBucketTime(d.created_at, granularity),
+      'Token（亿）': Number(((d.token_used || 0) / 1e8).toFixed(4)),
+    }));
+    specs.push({
+      name: 'Token用量趋势',
+      spec: {
+        type: 'area',
+        data: [{ id: 'data', values: tokenData }],
+        xField: 'Time', yField: 'Token（亿）',
+        area: { style: { fillOpacity: 0.3 } },
+        point: { visible: false },
+        width: 680, height: 400,
+      },
+    });
+
+    const modelTrendData = trendData.map(d => ({
+      Time: formatBucketTime(d.created_at, granularity),
+      Model: d.model_name || 'unknown',
+      Quota: d.quota || 0,
+    }));
+    specs.push({
+      name: '模型使用趋势',
+      spec: {
+        type: 'area',
+        data: [{ id: 'data', values: modelTrendData }],
+        xField: 'Time', yField: 'Quota', seriesField: 'Model',
+        stack: true,
+        area: { style: { fillOpacity: 0.6 } },
+        point: { visible: false },
+        legends: { visible: true, selectMode: 'single' },
+        color: { specified: modelColorMap },
+        width: 680, height: 400,
+      },
+    });
+  }
+
+  if (modelDist.length > 0) {
+    const pieData = modelDist.map(d => ({
+      type: d.model_name,
+      value: d.request_count,
+    }));
+    specs.push({
+      name: '模型调用分布',
+      spec: {
+        type: 'pie',
+        data: [{ id: 'data', values: pieData }],
+        outerRadius: 0.55, innerRadius: 0.3, padAngle: 0.6,
+        valueField: 'value', categoryField: 'type',
+        pie: { style: { cornerRadius: 10 } },
+        legends: { visible: true, orient: 'left' },
+        label: { visible: true },
+        color: { specified: modelColorMap },
+        width: 680, height: 400,
+      },
+    });
+
+    const rankData = modelDist.slice(0, 15).map(d => ({
+      Model: d.model_name,
+      Quota: d.total_quota || d.quota || 0,
+    }));
+    specs.push({
+      name: '模型消耗排行',
+      spec: {
+        type: 'bar',
+        data: [{ id: 'data', values: rankData }],
+        xField: 'Quota', yField: 'Model',
+        direction: 'horizontal', seriesField: 'Model',
+        bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+        color: { specified: modelColorMap },
+        legends: { visible: false },
+        width: 680, height: Math.max(200, rankData.length * 30 + 60),
+      },
+    });
+  }
+
+  return specs;
+}
+
+async function addDeptSheet(wb, { deptName, statsData, quotaFmt, timeRangeLabel, granularity, existingNames }) {
+  const sheetName = sanitizeSheetName(deptName, existingNames);
+  existingNames.push(sheetName);
+  const ws = wb.addWorksheet(sheetName);
+  ws.getColumn(1).width = 28;
+  ws.getColumn(2).width = 16;
+  ws.getColumn(3).width = 14;
+  ws.getColumn(4).width = 14;
+  ws.getColumn(5).width = 12;
+  ws.getColumn(6).width = 4;
+
+  let row = 1;
+  styleTitle(ws, row, 1, `数据总览 — ${deptName}（${timeRangeLabel}）`, 16);
+  row += 2;
+
+  if (statsData?.overview) {
+    const ov = statsData.overview;
+    const totalTokens = (ov.total_prompt || 0) + (ov.total_completion || 0);
+    const costPerMToken = totalTokens > 0 ? Math.round(ov.total_quota / (totalTokens / 1e6)) : 0;
+    const errorRate = ov.consume_count > 0
+      ? ((ov.error_count / (ov.consume_count + ov.error_count)) * 100).toFixed(1) : '0.0';
+
+    styleSectionHeader(ws, row, 1, '数据分析', 5);
+    row++;
+    styleTableHeader(ws, row, 1, ['指标', '值']);
+    row++;
+    const items = [
+      ['总 Token', fmtToken(totalTokens), null],
+      ['累计消耗', quotaNum(ov.total_quota), quotaFmt],
+      ['均价', `${renderQuota(costPerMToken)} / M Tokens`, null],
+      ['总请求次数', fmtRequest(ov.total_requests), null],
+      ['平均响应时间', `${(ov.avg_response_time || 0).toFixed(1)}s`, null],
+      ['错误率', Number(errorRate) / 100, '0.0%'],
+    ];
+    for (const [label, val, fmt] of items) {
+      const r = ws.getRow(row);
+      r.getCell(1).value = label;
+      r.getCell(1).alignment = { horizontal: 'left' };
+      const cell = r.getCell(2);
+      cell.value = val;
+      cell.numFmt = fmt || '@';
+      cell.alignment = { horizontal: 'left' };
+      row++;
+    }
+    row += 2;
+  }
+
+  const chartSpecs = buildChartSpecs(statsData, granularity);
+  if (chartSpecs.length > 0) {
+    styleSectionHeader(ws, row, 1, '使用分析', 5);
+    row += 2;
+    for (const { name, spec } of chartSpecs) {
+      const result = await renderOffscreenChart(spec);
+      if (!result) continue;
+      const { base64, aspect } = result;
+      const imgWidth = 680;
+      const imgHeight = Math.round(imgWidth / aspect);
+
+      const titleCanvas = document.createElement('canvas');
+      titleCanvas.width = imgWidth * 2;
+      const titleHeight = 48;
+      titleCanvas.height = (imgHeight + titleHeight) * 2;
+      const ctx = titleCanvas.getContext('2d');
+      ctx.scale(2, 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, imgWidth, imgHeight + titleHeight);
+      ctx.fillStyle = '#1f2329';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(name, 16, titleHeight / 2);
+
+      const chartImg = new Image();
+      await new Promise((resolve) => { chartImg.onload = resolve; chartImg.src = `data:image/png;base64,${base64}`; });
+      ctx.drawImage(chartImg, 0, titleHeight, imgWidth, imgHeight);
+
+      const compositeBase64 = titleCanvas.toDataURL('image/png').split(',')[1];
+      const compositeAspect = titleCanvas.width / titleCanvas.height;
+      const finalHeight = Math.round(imgWidth / compositeAspect);
+
+      const imageId = wb.addImage({ base64: compositeBase64, extension: 'png' });
+      ws.addImage(imageId, {
+        tl: { col: 0, row: row - 1 },
+        ext: { width: imgWidth, height: finalHeight },
+      });
+      row += Math.ceil(finalHeight / 18) + 2;
+    }
+  }
+}
+
 export async function exportDataOverview({
   statsData, childrenStats, chartRefs, childrenChartRefs, deptName, timeRangeLabel,
+  granularity, getTimeRange,
 }) {
   const wb = new ExcelJS.Workbook();
   const quotaFmt = getQuotaFmt();
@@ -313,6 +593,28 @@ export async function exportDataOverview({
   // --- 右侧图表区域 ---
   if (chartRefs?.length > 0) {
     await addChartImages(wb, ws, chartRefs, 3, 6, '使用分析');
+  }
+
+  // --- 子部门独立 Sheet ---
+  if (childrenStats?.length > 0 && granularity && getTimeRange) {
+    const { start_time, end_time } = getTimeRange(granularity);
+    const childStatsResults = await batchFetchDeptStats(
+      childrenStats.map(c => c.dept_id),
+      start_time,
+      end_time,
+    );
+    const existingNames = ['数据总览'];
+    for (let i = 0; i < childrenStats.length; i++) {
+      if (!childStatsResults[i]) continue;
+      await addDeptSheet(wb, {
+        deptName: childrenStats[i].dept_name,
+        statsData: childStatsResults[i],
+        quotaFmt,
+        timeRangeLabel,
+        granularity,
+        existingNames,
+      });
+    }
   }
 
   const buffer = await wb.xlsx.writeBuffer();
