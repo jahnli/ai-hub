@@ -842,7 +842,7 @@ const DataOverview = () => {
                 />
               </div>
             }
-            bodyStyle={{ padding: 12 }}
+            bodyStyle={{ padding: 12, display: 'flex', alignItems: 'center' }}
           >
             {statsLoading ? (
               <div className='flex justify-center py-10'>

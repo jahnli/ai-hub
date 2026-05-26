@@ -194,7 +194,8 @@ export const OverviewCards = ({ overview, t }) => {
       data={items}
       row
       size='large'
-      className='mb-4 [&_.semi-descriptions-key]:!text-[16px] [&_.semi-descriptions-value]:!text-[22px] [&_.semi-descriptions-value]:!font-semibold'
+      style={{ padding: '8px 0' }}
+      className='[&_.semi-descriptions-key]:!text-[16px] [&_.semi-descriptions-value]:!text-[22px] [&_.semi-descriptions-value]:!font-semibold'
     />
   );
 };
