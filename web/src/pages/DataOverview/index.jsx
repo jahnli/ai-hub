@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Cascader,
@@ -36,7 +36,7 @@ import {
   Modal,
   Space,
 } from '@douyinfe/semi-ui';
-import { IconRefresh, IconHistory, IconSearch } from '@douyinfe/semi-icons';
+import { IconRefresh, IconHistory, IconSearch, IconDownload } from '@douyinfe/semi-icons';
 import {
   IllustrationNoResult,
   IllustrationNoResultDark,
@@ -68,6 +68,9 @@ import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColum
 import { VChart } from '@visactor/react-vchart';
 import CardTable from '../../components/common/ui/CardTable';
 import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
+import {
+  exportDataOverview,
+} from './exportUtils';
 
 const { Text } = Typography;
 
@@ -77,7 +80,7 @@ function renderRequestCount(num) {
   return (num / 10000).toFixed(1) + ' 万次';
 }
 
-const ChildrenRankChart = React.memo(({ data, t }) => {
+const ChildrenRankChart = React.forwardRef(({ data }, ref) => {
   const chartData = useMemo(() => {
     return [...data]
       .sort((a, b) => (b.total_quota || 0) - (a.total_quota || 0))
@@ -89,6 +92,7 @@ const ChildrenRankChart = React.memo(({ data, t }) => {
 
   return (
     <VChart
+      ref={ref}
       spec={{
         type: 'bar',
         data: [{ id: 'data', values: chartData }],
@@ -96,7 +100,7 @@ const ChildrenRankChart = React.memo(({ data, t }) => {
         yField: 'dept',
         direction: 'horizontal',
         seriesField: 'dept',
-        title: { visible: true, text: t('子部门消耗排行') },
+        title: { visible: false },
         bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
         tooltip: {
           mark: {
@@ -110,12 +114,12 @@ const ChildrenRankChart = React.memo(({ data, t }) => {
         },
         legends: { visible: false },
       }}
-      style={{ height: '100%', minHeight: 300 }}
+      style={{ height: Math.max(200, chartData.length * 30 + 60) }}
     />
   );
 });
 
-const ChildrenPieChart = React.memo(({ data, t }) => {
+const ChildrenPieChart = React.forwardRef(({ data, t }, ref) => {
   const chartData = useMemo(() => {
     return data
       .filter((d) => (d.total_quota || 0) > 0)
@@ -127,39 +131,41 @@ const ChildrenPieChart = React.memo(({ data, t }) => {
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <VChart
-      spec={{
-        type: 'pie',
-        data: [{ id: 'data', values: chartData }],
-        outerRadius: 0.8,
-        innerRadius: 0.5,
-        padAngle: 0.6,
-        valueField: 'value',
-        categoryField: 'type',
-        pie: {
-          style: { cornerRadius: 10 },
-          state: { hover: { outerRadius: 0.85 } },
-        },
-        title: {
-          visible: true,
-          text: t('子部门消耗占比'),
-          subtext: `${t('总计')}: ${renderQuota(total)}`,
-        },
-        legends: { visible: true, orient: 'left' },
-        label: { visible: true },
-        tooltip: {
-          mark: {
-            content: [
-              {
-                key: (datum) => datum['type'],
-                value: (datum) => renderQuota(datum['value']),
-              },
-            ],
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>
+        {t('子部门消耗占比')} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--semi-color-text-2)' }}>{t('总计')}: {renderQuota(total)}</span>
+      </div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'pie',
+          data: [{ id: 'data', values: chartData }],
+          outerRadius: 0.8,
+          innerRadius: 0.5,
+          padAngle: 0.6,
+          valueField: 'value',
+          categoryField: 'type',
+          pie: {
+            style: { cornerRadius: 10 },
+            state: { hover: { outerRadius: 0.85 } },
           },
-        },
-      }}
-      style={{ height: '100%', minHeight: 300 }}
-    />
+          title: { visible: false },
+          legends: { visible: true, orient: 'left' },
+          label: { visible: true },
+          tooltip: {
+            mark: {
+              content: [
+                {
+                  key: (datum) => datum['type'],
+                  value: (datum) => renderQuota(datum['value']),
+                },
+              ],
+            },
+          },
+        }}
+        style={{ flex: 1, minHeight: 300 }}
+      />
+    </div>
   );
 });
 
@@ -307,7 +313,7 @@ const VISIBLE_COLUMNS = {
 
 const cardShadowStyle = { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' };
 const cardTitleStyle = {
-  fontSize: 16,
+  fontSize: 18,
   color: 'var(--semi-color-primary)',
   fontWeight: 600,
 };
@@ -349,6 +355,67 @@ const DataOverview = () => {
   const [selectedChildDept, setSelectedChildDept] = useState(null);
   const [deptStatsData, setDeptStatsData] = useState(null);
   const [deptStatsLoading, setDeptStatsLoading] = useState(false);
+
+  const quotaTrendRef = useRef(null);
+  const requestTrendRef = useRef(null);
+  const tokenTrendRef = useRef(null);
+  const modelTrendRef = useRef(null);
+  const modelPieRef = useRef(null);
+  const modelRankRef = useRef(null);
+
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const childrenRankRef = useRef(null);
+  const childrenPieRef = useRef(null);
+
+  const getDeptName = useCallback(() => {
+    if (!selectedPath || selectedPath.length === 0) return '部门';
+    const findNode = (nodes, path) => {
+      for (const node of nodes || []) {
+        if (node.value === path[path.length - 1]) return node.label;
+        const found = findNode(node.children, path);
+        if (found) return found;
+      }
+      return null;
+    };
+    return findNode(treeData, selectedPath) || '部门';
+  }, [treeData, selectedPath]);
+
+  const handleExport = useCallback(async () => {
+    if (!statsData && childrenStats.length === 0) {
+      Toast.warning(t('暂无数据可导出'));
+      return;
+    }
+    setExportLoading(true);
+    try {
+      const deptName = getDeptName();
+      const timeLabel = TIME_RANGE_OPTIONS.find(o => o.value === granularity)?.label || granularity;
+      await exportDataOverview({
+        statsData,
+        childrenStats,
+        chartRefs: [
+          { name: '额度消耗趋势', ref: quotaTrendRef },
+          { name: '请求次数趋势', ref: requestTrendRef },
+          { name: 'Token用量趋势', ref: tokenTrendRef },
+          { name: '模型使用趋势', ref: modelTrendRef },
+          { name: '模型调用分布', ref: modelPieRef },
+          { name: '模型消耗排行', ref: modelRankRef },
+        ],
+        childrenChartRefs: [
+          { name: '子部门消耗排行', ref: childrenRankRef },
+          { name: '子部门消耗占比', ref: childrenPieRef },
+        ],
+        deptName,
+        timeRangeLabel: timeLabel,
+      });
+      Toast.success(t('导出成功'));
+    } catch (e) {
+      console.error('Export failed', e);
+      Toast.error(t('导出失败'));
+    } finally {
+      setExportLoading(false);
+    }
+  }, [getDeptName, granularity, statsData, childrenStats, t]);
 
   const handleGranularityChange = (e) => {
     changeGranularity(e.target.value);
@@ -821,6 +888,14 @@ const DataOverview = () => {
           >
             {t('查询')}
           </Button>
+          <Button
+            icon={<IconDownload />}
+            onClick={handleExport}
+            loading={exportLoading}
+            disabled={!statsData && childrenStats.length === 0}
+          >
+            {t('导出')}
+          </Button>
         </div>
       )}
 
@@ -891,8 +966,11 @@ const DataOverview = () => {
                   />
                   {childrenStats.length > 0 && (
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4 p-4'>
-                      <ChildrenRankChart data={childrenStats} t={t} />
-                      <ChildrenPieChart data={childrenStats} t={t} />
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('子部门消耗排行')}</div>
+                        <ChildrenRankChart ref={childrenRankRef} data={childrenStats} />
+                      </div>
+                      <ChildrenPieChart ref={childrenPieRef} data={childrenStats} t={t} />
                     </div>
                   )}
                 </>
@@ -952,7 +1030,7 @@ const DataOverview = () => {
                   dataSource={users}
                   rowKey='open_id'
                   pagination={{
-                    pageSize: 20,
+                    pageSize: 10,
                     showSizeChanger: true,
                     pageSizeOpts: [10, 20, 50, 100],
                     formatPageText: ({ currentStart, currentEnd, total }) =>
@@ -989,27 +1067,31 @@ const DataOverview = () => {
             >
               <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                 <QuotaTrendChart
+                  ref={quotaTrendRef}
                   data={statsData.trendAggregated}
                   granularity={granularity}
                   t={t}
                 />
                 <RequestTrendChart
+                  ref={requestTrendRef}
                   data={statsData.trendAggregated}
                   granularity={granularity}
                   t={t}
                 />
                 <TokenTrendChart
+                  ref={tokenTrendRef}
                   data={statsData.trendAggregated}
                   granularity={granularity}
                   t={t}
                 />
                 <ModelTrendChart
+                  ref={modelTrendRef}
                   data={statsData.trendByModel}
                   granularity={granularity}
                   t={t}
                 />
-                <ModelPieChart data={statsData.modelDistribution} t={t} />
-                <ModelRankChart data={statsData.modelDistribution} t={t} />
+                <ModelPieChart ref={modelPieRef} data={statsData.modelDistribution} t={t} />
+                <ModelRankChart ref={modelRankRef} data={statsData.modelDistribution} t={t} />
               </div>
             </Card>
           )}

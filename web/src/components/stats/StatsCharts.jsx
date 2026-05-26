@@ -8,6 +8,14 @@ initVChartSemiTheme();
 
 const { Title } = Typography;
 
+const chartFontStyle = {
+  axes: [
+    { orient: 'bottom', label: { style: { fontSize: 13 } } },
+    { orient: 'left', label: { style: { fontSize: 13 } } },
+  ],
+  legends: { item: { label: { style: { fontSize: 13 } } } },
+};
+
 export function formatTimestamp(ts) {
   if (!ts || ts === 0) return '-';
   const d = new Date(ts * 1000);
@@ -200,7 +208,7 @@ export const OverviewCards = ({ overview, t }) => {
   );
 };
 
-export const QuotaTrendChart = ({ data, granularity, t }) => {
+export const QuotaTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -211,27 +219,31 @@ export const QuotaTrendChart = ({ data, granularity, t }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      spec={{
-        type: 'area',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'Time',
-        yField: t('额度'),
-        area: { style: { fillOpacity: 0.3 } },
-        point: { visible: false },
-        title: { visible: true, text: t('额度消耗趋势') },
-        tooltip: {
-          mark: {
-            content: [{ key: () => t('额度'), value: (datum) => renderQuota(datum[t('额度')] || 0) }],
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('额度消耗趋势')}</div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'area',
+          data: [{ id: 'data', values: chartData }],
+          xField: 'Time',
+          yField: t('额度'),
+          area: { style: { fillOpacity: 0.3 } },
+          point: { visible: false },
+          ...chartFontStyle,
+          tooltip: {
+            mark: {
+              content: [{ key: () => t('额度'), value: (datum) => renderQuota(datum[t('额度')] || 0) }],
+            },
           },
-        },
-      }}
-      style={{ height: 260 }}
-    />
+        }}
+        style={{ height: 260 }}
+      />
+    </div>
   );
-};
+});
 
-export const RequestTrendChart = ({ data, granularity, t }) => {
+export const RequestTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -242,26 +254,31 @@ export const RequestTrendChart = ({ data, granularity, t }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      spec={{
-        type: 'line',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'Time',
-        yField: t('请求次数'),
-        point: { visible: false },
-        title: { visible: true, text: t('请求次数趋势') },
-        tooltip: {
-          mark: {
-            content: [{ key: () => t('请求次数'), value: (datum) => renderNumber(datum[t('请求次数')] || 0) }],
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('请求次数趋势')}</div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'area',
+          data: [{ id: 'data', values: chartData }],
+          xField: 'Time',
+          yField: t('请求次数'),
+          area: { style: { fillOpacity: 0.3 } },
+          point: { visible: false },
+          ...chartFontStyle,
+          tooltip: {
+            mark: {
+              content: [{ key: () => t('请求次数'), value: (datum) => renderNumber(datum[t('请求次数')] || 0) }],
+            },
           },
-        },
-      }}
-      style={{ height: 260 }}
-    />
+        }}
+        style={{ height: 260 }}
+      />
+    </div>
   );
-};
+});
 
-export const TokenTrendChart = ({ data, granularity, t }) => {
+export const TokenTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -272,26 +289,31 @@ export const TokenTrendChart = ({ data, granularity, t }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      spec={{
-        type: 'line',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'Time',
-        yField: t('Token（亿）'),
-        point: { visible: false },
-        title: { visible: true, text: t('Token 用量趋势') },
-        tooltip: {
-          mark: {
-            content: [{ key: () => `Token（${t('亿')}）`, value: (datum) => `${(datum[t('Token（亿）')] || 0).toFixed(2)} ${t('亿')}` }],
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('Token 用量趋势')}</div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'area',
+          data: [{ id: 'data', values: chartData }],
+          xField: 'Time',
+          yField: t('Token（亿）'),
+          area: { style: { fillOpacity: 0.3 } },
+          point: { visible: false },
+          ...chartFontStyle,
+          tooltip: {
+            mark: {
+              content: [{ key: () => `Token（${t('亿')}）`, value: (datum) => `${(datum[t('Token（亿）')] || 0).toFixed(2)} ${t('亿')}` }],
+            },
           },
-        },
-      }}
-      style={{ height: 260 }}
-    />
+        }}
+        style={{ height: 260 }}
+      />
+    </div>
   );
-};
+});
 
-export const ModelTrendChart = ({ data, granularity, t }) => {
+export const ModelTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -303,31 +325,35 @@ export const ModelTrendChart = ({ data, granularity, t }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      spec={{
-        type: 'area',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'Time',
-        yField: 'Quota',
-        seriesField: 'Model',
-        stack: true,
-        area: { style: { fillOpacity: 0.6 } },
-        point: { visible: false },
-        legends: { visible: true, selectMode: 'single' },
-        title: { visible: true, text: t('模型使用趋势') },
-        tooltip: {
-          mark: {
-            content: [{ key: (datum) => datum['Model'], value: (datum) => renderQuota(datum['Quota'] || 0) }],
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('模型使用趋势')}</div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'area',
+          data: [{ id: 'data', values: chartData }],
+          xField: 'Time',
+          yField: 'Quota',
+          seriesField: 'Model',
+          stack: true,
+          area: { style: { fillOpacity: 0.6 } },
+          point: { visible: false },
+          legends: { visible: true, selectMode: 'single', item: { label: { style: { fontSize: 13 } } } },
+          ...chartFontStyle,
+          tooltip: {
+            mark: {
+              content: [{ key: (datum) => datum['Model'], value: (datum) => renderQuota(datum['Quota'] || 0) }],
+            },
           },
-        },
-        color: { specified: modelColorMap },
-      }}
-      style={{ height: 280 }}
-    />
+          color: { specified: modelColorMap },
+        }}
+        style={{ height: 280 }}
+      />
+    </div>
   );
-};
+});
 
-export const ModelPieChart = ({ data, t }) => {
+export const ModelPieChart = React.forwardRef(({ data, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       type: d.model_name,
@@ -340,32 +366,35 @@ export const ModelPieChart = ({ data, t }) => {
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <VChart
-      spec={{
-        type: 'pie',
-        data: [{ id: 'data', values: chartData }],
-        outerRadius: 0.8,
-        innerRadius: 0.5,
-        padAngle: 0.6,
-        valueField: 'value',
-        categoryField: 'type',
-        pie: { style: { cornerRadius: 10 }, state: { hover: { outerRadius: 0.85 } } },
-        title: { visible: true, text: t('模型调用分布'), subtext: `${t('总计')}: ${renderNumber(total)}` },
-        legends: { visible: true, orient: 'left' },
-        label: { visible: true },
-        tooltip: {
-          mark: {
-            content: [{ key: (datum) => datum['type'], value: (datum) => renderNumber(datum['value']) }],
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('模型调用分布')} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--semi-color-text-2)' }}>{t('总计')}: {renderNumber(total)}</span></div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'pie',
+          data: [{ id: 'data', values: chartData }],
+          outerRadius: 0.55,
+          innerRadius: 0.3,
+          padAngle: 0.6,
+          valueField: 'value',
+          categoryField: 'type',
+          pie: { style: { cornerRadius: 10 }, state: { hover: { outerRadius: 0.85 } } },
+          legends: { visible: true, orient: 'left', item: { label: { style: { fontSize: 13 } } } },
+          label: { visible: true, style: { fontSize: 13 } },
+          tooltip: {
+            mark: {
+              content: [{ key: (datum) => datum['type'], value: (datum) => renderNumber(datum['value']) }],
+            },
           },
-        },
-        color: { specified: modelColorMap },
-      }}
-      style={{ height: '100%', minHeight: 300 }}
-    />
+          color: { specified: modelColorMap },
+        }}
+        style={{ flex: 1, minHeight: 300 }}
+      />
+    </div>
   );
-};
+});
 
-export const ModelRankChart = ({ data, t }) => {
+export const ModelRankChart = React.forwardRef(({ data, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).slice(0, 15).map(d => ({
       Model: d.model_name,
@@ -376,28 +405,32 @@ export const ModelRankChart = ({ data, t }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      spec={{
-        type: 'bar',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'Quota',
-        yField: 'Model',
-        direction: 'horizontal',
-        seriesField: 'Model',
-        title: { visible: true, text: t('模型消耗排行') },
-        bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
-        tooltip: {
-          mark: {
-            content: [{ key: (datum) => datum['Model'], value: (datum) => renderQuota(datum['Quota'] || 0) }],
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('模型消耗排行')}</div>
+      <VChart
+        ref={ref}
+        spec={{
+          type: 'bar',
+          data: [{ id: 'data', values: chartData }],
+          xField: 'Quota',
+          yField: 'Model',
+          direction: 'horizontal',
+          seriesField: 'Model',
+          ...chartFontStyle,
+          bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+          tooltip: {
+            mark: {
+              content: [{ key: (datum) => datum['Model'], value: (datum) => renderQuota(datum['Quota'] || 0) }],
+            },
           },
-        },
-        color: { specified: modelColorMap },
-        legends: { visible: false },
-      }}
-      style={{ height: Math.max(200, chartData.length * 30 + 60) }}
-    />
+          color: { specified: modelColorMap },
+          legends: { visible: false },
+        }}
+        style={{ height: Math.max(200, chartData.length * 30 + 60) }}
+      />
+    </div>
   );
-};
+});
 
 export const TokenDistChart = ({ data, t }) => {
   const chartData = useMemo(() => {
@@ -411,27 +444,30 @@ export const TokenDistChart = ({ data, t }) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      spec={{
-        type: 'bar',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'Token',
-        yField: t('额度'),
-        seriesField: 'Token',
-        title: { visible: true, text: t('令牌使用分布') },
-        bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
-        tooltip: {
-          mark: {
-            content: [
-              { key: () => t('额度'), value: (datum) => renderQuota(datum[t('额度')] || 0) },
-              { key: () => t('请求次数'), value: (datum) => renderNumber(datum[t('请求次数')] || 0) },
-            ],
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('令牌使用分布')}</div>
+      <VChart
+        spec={{
+          type: 'bar',
+          data: [{ id: 'data', values: chartData }],
+          xField: 'Token',
+          yField: t('额度'),
+          seriesField: 'Token',
+          ...chartFontStyle,
+          bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+          tooltip: {
+            mark: {
+              content: [
+                { key: () => t('额度'), value: (datum) => renderQuota(datum[t('额度')] || 0) },
+                { key: () => t('请求次数'), value: (datum) => renderNumber(datum[t('请求次数')] || 0) },
+              ],
+            },
           },
-        },
-        legends: { visible: false },
-      }}
-      style={{ height: 260 }}
-    />
+          legends: { visible: false },
+        }}
+        style={{ height: 260 }}
+      />
+    </div>
   );
 };
 
