@@ -86,8 +86,26 @@ async function getChartImage(ref, title) {
   if (!ref?.current) return null;
   try {
     const chart = ref.current;
-    let chartCanvas = getChartCanvas(ref);
+    let chartCanvas = null;
 
+    // Priority 1: get canvas from DOM (already rendered at devicePixelRatio)
+    const container = chart._container || chart._option?.dom || chart.getContainer?.();
+    if (container && container.querySelector) {
+      chartCanvas = container.querySelector('canvas');
+    }
+
+    // Priority 2: stage.toCanvas()
+    if (!chartCanvas && typeof chart.getStage === 'function') {
+      const stage = chart.getStage();
+      if (stage && typeof stage.toCanvas === 'function') {
+        chartCanvas = stage.toCanvas();
+      }
+    }
+
+    // Priority 3: other methods
+    if (!chartCanvas) chartCanvas = getChartCanvas(ref);
+
+    // Priority 4: exportImg fallback
     if (!chartCanvas && typeof chart.exportImg === 'function') {
       const dataUrl = await chart.exportImg();
       if (dataUrl) {
@@ -102,19 +120,21 @@ async function getChartImage(ref, title) {
 
     if (!chartCanvas && typeof chart.getDataURL === 'function') {
       const dataUrl = await chart.getDataURL();
-      if (dataUrl) return dataUrl.split(',')[1];
+      if (dataUrl) {
+        return { base64: dataUrl.split(',')[1], aspect: 16 / 9 };
+      }
     }
 
     if (!chartCanvas) return null;
 
-    const scale = 2;
     const srcW = chartCanvas.width;
     const srcH = chartCanvas.height;
-    const titleHeight = title ? 48 * scale : 0;
+    const titleScale = srcW / 600;
+    const titleHeight = title ? Math.round(48 * titleScale) : 0;
 
     const compositeCanvas = document.createElement('canvas');
-    compositeCanvas.width = srcW * scale;
-    compositeCanvas.height = srcH * scale + titleHeight;
+    compositeCanvas.width = srcW;
+    compositeCanvas.height = srcH + titleHeight;
     const ctx = compositeCanvas.getContext('2d');
 
     ctx.fillStyle = '#ffffff';
@@ -122,12 +142,12 @@ async function getChartImage(ref, title) {
 
     if (title) {
       ctx.fillStyle = '#1f2329';
-      ctx.font = `bold ${22 * scale}px sans-serif`;
+      ctx.font = `bold ${Math.round(22 * titleScale)}px sans-serif`;
       ctx.textBaseline = 'middle';
-      ctx.fillText(title, 20 * scale, titleHeight / 2);
+      ctx.fillText(title, Math.round(20 * titleScale), titleHeight / 2);
     }
 
-    ctx.drawImage(chartCanvas, 0, titleHeight, srcW * scale, srcH * scale);
+    ctx.drawImage(chartCanvas, 0, titleHeight);
     const base64 = compositeCanvas.toDataURL('image/png').split(',')[1];
     const aspect = compositeCanvas.width / compositeCanvas.height;
     return { base64, aspect };
