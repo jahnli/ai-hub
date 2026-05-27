@@ -384,16 +384,9 @@ const DataOverview = () => {
     return findNode(treeData, selectedPath) || '部门';
   }, [treeData, selectedPath]);
 
-  const handleExportClick = useCallback(() => {
-    if (!statsData && childrenStats.length === 0) {
-      Toast.warning(t('暂无数据可导出'));
-      return;
-    }
-    setExportModalVisible(true);
-  }, [statsData, childrenStats, t]);
-
   const handleExportConfirm = useCallback(async () => {
     setExportModalVisible(false);
+    setExportIncludeChildren(false);
     setExportLoading(true);
     try {
       const deptName = getDeptName();
@@ -427,6 +420,18 @@ const DataOverview = () => {
       setExportLoading(false);
     }
   }, [getDeptName, granularity, statsData, childrenStats, exportIncludeChildren, t]);
+
+  const handleExportClick = useCallback(() => {
+    if (!statsData && childrenStats.length === 0) {
+      Toast.warning(t('暂无数据可导出'));
+      return;
+    }
+    if (childrenStats.length === 0) {
+      handleExportConfirm();
+    } else {
+      setExportModalVisible(true);
+    }
+  }, [statsData, childrenStats, t, handleExportConfirm]);
 
   const handleGranularityChange = (e) => {
     changeGranularity(e.target.value);
@@ -1250,7 +1255,7 @@ const DataOverview = () => {
 
       <Modal
         visible={exportModalVisible}
-        onCancel={() => setExportModalVisible(false)}
+        onCancel={() => { setExportModalVisible(false); setExportIncludeChildren(false); }}
         onOk={handleExportConfirm}
         title={t('导出设置')}
         okText={t('导出')}

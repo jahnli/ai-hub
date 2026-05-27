@@ -297,9 +297,69 @@ async function renderOffscreenChart(spec, width = 680, height = 400) {
   });
 }
 
+function getAggregationBucketSize(rangeKey) {
+  switch (rangeKey) {
+    case 'today':
+    case 'yesterday':
+      return 3600;
+    case 'this_week':
+    case 'last_week':
+    case 'this_month':
+    case 'last_month':
+      return 86400;
+    case 'this_quarter':
+    case 'last_quarter':
+      return 7 * 86400;
+    case 'this_year':
+    case 'last_year':
+    case 'first_half':
+    case 'second_half':
+      return 30 * 86400;
+    default:
+      return 86400;
+  }
+}
+
+function aggregateByGranularity(data, granularity) {
+  if (!data || data.length === 0) return [];
+  const bucketSize = getAggregationBucketSize(granularity);
+  const buckets = new Map();
+  for (const item of data) {
+    const bucketKey = Math.floor(item.created_at / bucketSize) * bucketSize;
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, { created_at: bucketKey, quota: 0, count: 0, token_used: 0 });
+    }
+    const b = buckets.get(bucketKey);
+    b.quota += item.quota || 0;
+    b.count += item.count || 0;
+    b.token_used += item.token_used || 0;
+  }
+  return Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
+}
+
+function aggregateTrendByModel(data, granularity) {
+  if (!data || data.length === 0) return [];
+  const bucketSize = getAggregationBucketSize(granularity);
+  const buckets = new Map();
+  for (const item of data) {
+    const bucketKey = Math.floor(item.created_at / bucketSize) * bucketSize;
+    const key = `${bucketKey}_${item.model_name}`;
+    if (!buckets.has(key)) {
+      buckets.set(key, { created_at: bucketKey, model_name: item.model_name, quota: 0, count: 0, token_used: 0 });
+    }
+    const b = buckets.get(key);
+    b.quota += item.quota || 0;
+    b.count += item.count || 0;
+    b.token_used += item.token_used || 0;
+  }
+  return Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
+}
+
 function buildChartSpecs(statsData, granularity) {
   const specs = [];
-  const trendData = statsData.trend_data || [];
+  const rawTrendData = statsData.trend_data || [];
+  const trendData = aggregateByGranularity(rawTrendData, granularity);
+  const modelTrendAggregated = aggregateTrendByModel(rawTrendData, granularity);
   const modelDist = statsData.model_distribution || [];
 
   if (trendData.length > 0) {
@@ -351,7 +411,7 @@ function buildChartSpecs(statsData, granularity) {
       },
     });
 
-    const modelTrendData = trendData.map(d => ({
+    const modelTrendData = modelTrendAggregated.map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
       Model: d.model_name || 'unknown',
       Quota: d.quota || 0,
