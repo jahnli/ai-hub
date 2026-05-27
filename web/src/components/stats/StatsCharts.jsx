@@ -208,7 +208,7 @@ export const OverviewCards = ({ overview, t }) => {
   );
 };
 
-export const QuotaTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
+export const QuotaTrendChart = React.memo(React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -219,10 +219,9 @@ export const QuotaTrendChart = React.forwardRef(({ data, granularity, t }, ref) 
   if (chartData.length === 0) return null;
 
   return (
-    <div>
+    <div ref={ref}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('额度消耗趋势')}</div>
       <VChart
-        ref={ref}
         spec={{
           type: 'area',
           data: [{ id: 'data', values: chartData }],
@@ -241,9 +240,9 @@ export const QuotaTrendChart = React.forwardRef(({ data, granularity, t }, ref) 
       />
     </div>
   );
-});
+}));
 
-export const RequestTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
+export const RequestTrendChart = React.memo(React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -254,10 +253,9 @@ export const RequestTrendChart = React.forwardRef(({ data, granularity, t }, ref
   if (chartData.length === 0) return null;
 
   return (
-    <div>
+    <div ref={ref}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('请求次数趋势')}</div>
       <VChart
-        ref={ref}
         spec={{
           type: 'area',
           data: [{ id: 'data', values: chartData }],
@@ -276,9 +274,9 @@ export const RequestTrendChart = React.forwardRef(({ data, granularity, t }, ref
       />
     </div>
   );
-});
+}));
 
-export const TokenTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
+export const TokenTrendChart = React.memo(React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -289,10 +287,9 @@ export const TokenTrendChart = React.forwardRef(({ data, granularity, t }, ref) 
   if (chartData.length === 0) return null;
 
   return (
-    <div>
+    <div ref={ref}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('Token 用量趋势')}</div>
       <VChart
-        ref={ref}
         spec={{
           type: 'area',
           data: [{ id: 'data', values: chartData }],
@@ -311,9 +308,9 @@ export const TokenTrendChart = React.forwardRef(({ data, granularity, t }, ref) 
       />
     </div>
   );
-});
+}));
 
-export const ModelTrendChart = React.forwardRef(({ data, granularity, t }, ref) => {
+export const ModelTrendChart = React.memo(React.forwardRef(({ data, granularity, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       Time: formatBucketTime(d.created_at, granularity),
@@ -325,10 +322,9 @@ export const ModelTrendChart = React.forwardRef(({ data, granularity, t }, ref) 
   if (chartData.length === 0) return null;
 
   return (
-    <div>
+    <div ref={ref}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('模型使用趋势')}</div>
       <VChart
-        ref={ref}
         spec={{
           type: 'area',
           data: [{ id: 'data', values: chartData }],
@@ -351,9 +347,9 @@ export const ModelTrendChart = React.forwardRef(({ data, granularity, t }, ref) 
       />
     </div>
   );
-});
+}));
 
-export const ModelPieChart = React.forwardRef(({ data, t }, ref) => {
+export const ModelPieChart = React.memo(React.forwardRef(({ data, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).map(d => ({
       type: d.model_name,
@@ -366,10 +362,9 @@ export const ModelPieChart = React.forwardRef(({ data, t }, ref) => {
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div ref={ref} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('模型调用分布')} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--semi-color-text-2)' }}>{t('总计')}: {renderNumber(total)}</span></div>
       <VChart
-        ref={ref}
         spec={{
           type: 'pie',
           data: [{ id: 'data', values: chartData }],
@@ -392,9 +387,9 @@ export const ModelPieChart = React.forwardRef(({ data, t }, ref) => {
       />
     </div>
   );
-});
+}));
 
-export const ModelRankChart = React.forwardRef(({ data, t }, ref) => {
+export const ModelRankChart = React.memo(React.forwardRef(({ data, t }, ref) => {
   const chartData = useMemo(() => {
     return (data || []).slice(0, 15).map(d => ({
       Model: d.model_name,
@@ -405,10 +400,9 @@ export const ModelRankChart = React.forwardRef(({ data, t }, ref) => {
   if (chartData.length === 0) return null;
 
   return (
-    <div>
+    <div ref={ref}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('模型消耗排行')}</div>
       <VChart
-        ref={ref}
         spec={{
           type: 'bar',
           data: [{ id: 'data', values: chartData }],
@@ -430,7 +424,7 @@ export const ModelRankChart = React.forwardRef(({ data, t }, ref) => {
       />
     </div>
   );
-});
+}));
 
 export const TokenDistChart = ({ data, t }) => {
   const chartData = useMemo(() => {

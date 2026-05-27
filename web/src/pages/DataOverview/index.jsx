@@ -81,7 +81,7 @@ function renderRequestCount(num) {
   return (num / 10000).toFixed(1) + ' 万次';
 }
 
-const ChildrenRankChart = React.forwardRef(({ data }, ref) => {
+const ChildrenRankChart = React.memo(React.forwardRef(({ data }, ref) => {
   const chartData = useMemo(() => {
     return [...data]
       .sort((a, b) => (b.total_quota || 0) - (a.total_quota || 0))
@@ -92,9 +92,9 @@ const ChildrenRankChart = React.forwardRef(({ data }, ref) => {
   if (chartData.length === 0) return null;
 
   return (
-    <VChart
-      ref={ref}
-      spec={{
+    <div ref={ref}>
+      <VChart
+        spec={{
         type: 'bar',
         data: [{ id: 'data', values: chartData }],
         xField: 'quota',
@@ -117,10 +117,11 @@ const ChildrenRankChart = React.forwardRef(({ data }, ref) => {
       }}
       style={{ height: Math.max(200, chartData.length * 30 + 60) }}
     />
+    </div>
   );
-});
+}));
 
-const ChildrenPieChart = React.forwardRef(({ data, t }, ref) => {
+const ChildrenPieChart = React.memo(React.forwardRef(({ data, t }, ref) => {
   const chartData = useMemo(() => {
     return data
       .filter((d) => (d.total_quota || 0) > 0)
@@ -132,12 +133,11 @@ const ChildrenPieChart = React.forwardRef(({ data, t }, ref) => {
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div ref={ref} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>
         {t('子部门消耗占比')} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--semi-color-text-2)' }}>{t('总计')}: {renderQuota(total)}</span>
       </div>
       <VChart
-        ref={ref}
         spec={{
           type: 'pie',
           data: [{ id: 'data', values: chartData }],
@@ -168,7 +168,7 @@ const ChildrenPieChart = React.forwardRef(({ data, t }, ref) => {
       />
     </div>
   );
-});
+}));
 
 const UsersRankChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {

@@ -90,40 +90,46 @@ async function getChartImage(ref, title) {
     const chart = ref.current;
     let chartCanvas = null;
 
-    // Priority 1: get canvas from DOM (already rendered at devicePixelRatio)
-    const container = chart._container || chart._option?.dom || chart.getContainer?.();
-    if (container && container.querySelector) {
-      chartCanvas = container.querySelector('canvas');
-    }
-
-    // Priority 2: stage.toCanvas()
-    if (!chartCanvas && typeof chart.getStage === 'function') {
-      const stage = chart.getStage();
-      if (stage && typeof stage.toCanvas === 'function') {
-        chartCanvas = stage.toCanvas();
+    // If ref points to a DOM element directly, find canvas within it
+    if (chart instanceof HTMLElement) {
+      chartCanvas = chart.querySelector('canvas');
+      if (!chartCanvas) return null;
+    } else {
+      // Priority 1: get canvas from DOM (already rendered at devicePixelRatio)
+      const container = chart._container || chart._option?.dom || chart.getContainer?.();
+      if (container && container.querySelector) {
+        chartCanvas = container.querySelector('canvas');
       }
-    }
 
-    // Priority 3: other methods
-    if (!chartCanvas) chartCanvas = getChartCanvas(ref);
-
-    // Priority 4: exportImg fallback
-    if (!chartCanvas && typeof chart.exportImg === 'function') {
-      const dataUrl = await chart.exportImg();
-      if (dataUrl) {
-        const img = new Image();
-        await new Promise((resolve) => { img.onload = resolve; img.src = dataUrl; });
-        chartCanvas = document.createElement('canvas');
-        chartCanvas.width = img.width;
-        chartCanvas.height = img.height;
-        chartCanvas.getContext('2d').drawImage(img, 0, 0);
+      // Priority 2: stage.toCanvas()
+      if (!chartCanvas && typeof chart.getStage === 'function') {
+        const stage = chart.getStage();
+        if (stage && typeof stage.toCanvas === 'function') {
+          chartCanvas = stage.toCanvas();
+        }
       }
-    }
 
-    if (!chartCanvas && typeof chart.getDataURL === 'function') {
-      const dataUrl = await chart.getDataURL();
-      if (dataUrl) {
-        return { base64: dataUrl.split(',')[1], aspect: 16 / 9 };
+      // Priority 3: other methods
+      if (!chartCanvas) chartCanvas = getChartCanvas(ref);
+
+      // Priority 4: exportImg fallback
+      if (!chartCanvas && typeof chart.exportImg === 'function') {
+        const dataUrl = await chart.exportImg();
+        if (dataUrl) {
+          const img = new Image();
+          await new Promise((resolve) => { img.onload = resolve; img.src = dataUrl; });
+          chartCanvas = document.createElement('canvas');
+          chartCanvas.width = img.width;
+          chartCanvas.height = img.height;
+          chartCanvas.getContext('2d').drawImage(img, 0, 0);
+        }
+      }
+
+      if (!chartCanvas && typeof chart.getDataURL === 'function') {
+        const dataUrl = await chart.getDataURL();
+        if (dataUrl) {
+          return { base64: dataUrl.split(',')[1], aspect: 16 / 9 };
+        }
       }
     }
 
