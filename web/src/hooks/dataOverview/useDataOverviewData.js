@@ -276,7 +276,7 @@ export const useDataOverviewData = () => {
     }
   }, []);
 
-  const fetchDepartmentUsers = useCallback(async (deptId, gran) => {
+  const fetchDepartmentUsers = useCallback(async (deptId, gran, options = {}) => {
     if (!deptId) {
       setUsers([]);
       return;
@@ -285,9 +285,11 @@ export const useDataOverviewData = () => {
     try {
       const g = gran || granularityRef.current;
       const { start_time: startTime, end_time: endTime } = getTimeRange(g);
-      const res = await API.get('/api/department/users', {
-        params: { dept_id: deptId, include_children: 'true', start_time: startTime, end_time: endTime },
-      });
+      const params = { dept_id: deptId, include_children: 'true', start_time: startTime, end_time: endTime };
+      if (options.registered !== undefined && options.registered !== '') {
+        params.registered = options.registered;
+      }
+      const res = await API.get('/api/department/users', { params });
       if (res?.data?.success) {
         setUsers(res.data.data || []);
       } else {

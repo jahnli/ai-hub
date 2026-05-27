@@ -563,9 +563,128 @@ async function addDeptSheet(wb, { deptName, statsData, quotaFmt, timeRangeLabel,
   }
 }
 
+async function addUsersSheet(wb, { users, deptName, timeRangeLabel }) {
+  const quotaFmt = getQuotaFmt();
+  const ws = wb.addWorksheet('部门用户列表');
+  ws.getColumn(1).width = 12;
+  ws.getColumn(2).width = 22;
+  ws.getColumn(3).width = 14;
+  ws.getColumn(4).width = 14;
+  ws.getColumn(5).width = 12;
+  ws.getColumn(6).width = 20;
+  ws.getColumn(7).width = 10;
+  ws.getColumn(8).width = 18;
+  ws.getColumn(9).width = 18;
+  ws.getColumn(10).width = 10;
+
+  let row = 1;
+  styleTitle(ws, row, 1, `部门用户列表 — ${deptName}（${timeRangeLabel}）`, 10);
+  row += 2;
+
+  const headers = ['姓名', '已用额度/总额度', '总消耗', 'Token', '请求次数', '常用模型', '重置次数', '最后登录', '创建时间', '注册状态'];
+  styleSectionHeader(ws, row, 1, '用户列表', 10);
+  row++;
+  styleTableHeader(ws, row, 1, headers);
+  row++;
+
+  for (const u of users) {
+    const r = ws.getRow(row);
+    r.getCell(1).value = u.name || '-';
+    if (!u.registered) {
+      for (let c = 2; c <= 9; c++) r.getCell(c).value = '-';
+      r.getCell(10).value = '未注册';
+      for (let c = 1; c <= 10; c++) {
+        r.getCell(c).font = { color: { argb: 'FF8C8C8C' } };
+        r.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+      }
+    } else {
+      const total = parseInt(u.sub_quota_total) || 0;
+      const used = parseInt(u.sub_quota_used) || 0;
+      r.getCell(2).value = total > 0 || used > 0 ? `${renderQuota(used)} / ${renderQuota(total, 0)}` : '-';
+      const consumed = parseInt(u.total_consumed_quota) || 0;
+      r.getCell(3).value = consumed > 0 ? quotaNum(consumed) : 0;
+      r.getCell(3).numFmt = consumed > 0 ? quotaFmt : '@';
+      const prompt = parseInt(u.total_prompt_tokens) || 0;
+      const completion = parseInt(u.total_completion_tokens) || 0;
+      const tokenTotal = prompt + completion;
+      r.getCell(4).value = tokenTotal > 0 ? `${(tokenTotal / 1e8).toFixed(2)} 亿` : '-';
+      const reqCount = parseInt(u.request_count) || 0;
+      r.getCell(5).value = reqCount > 0 ? fmtRequest(reqCount) : '-';
+      r.getCell(6).value = u.top_model || '-';
+      r.getCell(7).value = parseInt(u.subscription_reset_count) || 0;
+      if (u.last_login_at && u.last_login_at !== 0) {
+        const d = new Date(u.last_login_at * 1000);
+        r.getCell(8).value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      } else {
+        r.getCell(8).value = '-';
+      }
+      if (u.created_at && !u.created_at.startsWith?.('0001')) {
+        const d = new Date(u.created_at);
+        r.getCell(9).value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      } else {
+        r.getCell(9).value = '-';
+      }
+      r.getCell(10).value = '已注册';
+    }
+    for (let c = 1; c <= 10; c++) {
+      r.getCell(c).alignment = { horizontal: 'left' };
+    }
+    row++;
+  }
+  row += 2;
+
+  const registeredUsers = users.filter(u => u.registered && (parseInt(u.total_consumed_quota) || 0) > 0);
+  if (registeredUsers.length > 0) {
+    const sorted = [...registeredUsers].sort((a, b) => (parseInt(b.total_consumed_quota) || 0) - (parseInt(a.total_consumed_quota) || 0));
+    const top10 = sorted.slice(0, 10);
+
+    const rankData = top10.map(u => ({ user: u.name, quota: parseInt(u.total_consumed_quota) || 0 }));
+    const rankSpec = {
+      type: 'bar',
+      data: [{ id: 'data', values: rankData }],
+      xField: 'quota', yField: 'user',
+      direction: 'horizontal', seriesField: 'user',
+      title: { visible: true, text: '用户消耗排行 Top 10' },
+      bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+      legends: { visible: false },
+      width: 680, height: Math.max(200, rankData.length * 30 + 60),
+    };
+    const rankResult = await renderOffscreenChart(rankSpec, 680, Math.max(200, rankData.length * 30 + 60));
+    if (rankResult) {
+      const imgWidth = 680;
+      const imgHeight = Math.round(imgWidth / rankResult.aspect);
+      const imageId = wb.addImage({ base64: rankResult.base64, extension: 'png' });
+      ws.addImage(imageId, { tl: { col: 0, row: row - 1 }, ext: { width: imgWidth, height: imgHeight } });
+      row += Math.ceil(imgHeight / 18) + 2;
+    }
+
+    const totalQuota = top10.reduce((sum, u) => sum + (parseInt(u.total_consumed_quota) || 0), 0);
+    const pieData = top10.map(u => ({ type: u.name, value: parseInt(u.total_consumed_quota) || 0 }));
+    const pieSpec = {
+      type: 'pie',
+      data: [{ id: 'data', values: pieData }],
+      outerRadius: 0.8, innerRadius: 0.5, padAngle: 0.6,
+      valueField: 'value', categoryField: 'type',
+      pie: { style: { cornerRadius: 10 }, state: { hover: { outerRadius: 0.85 } } },
+      title: { visible: true, text: '用户消耗占比 Top 10', subtext: `总计: ${renderQuota(totalQuota)}` },
+      legends: { visible: true, orient: 'left' },
+      label: { visible: true },
+      width: 680, height: 400,
+    };
+    const pieResult = await renderOffscreenChart(pieSpec, 680, 400);
+    if (pieResult) {
+      const imgWidth = 680;
+      const imgHeight = Math.round(imgWidth / pieResult.aspect);
+      const imageId = wb.addImage({ base64: pieResult.base64, extension: 'png' });
+      ws.addImage(imageId, { tl: { col: 0, row: row - 1 }, ext: { width: imgWidth, height: imgHeight } });
+      row += Math.ceil(imgHeight / 18) + 2;
+    }
+  }
+}
+
 export async function exportDataOverview({
   statsData, childrenStats, chartRefs, childrenChartRefs, deptName, timeRangeLabel,
-  granularity, getTimeRange, includeChildrenSheets = true,
+  granularity, getTimeRange, includeChildrenSheets = true, includeUsersSheet = false, users = [],
 }) {
   const wb = new ExcelJS.Workbook();
   const quotaFmt = getQuotaFmt();
@@ -659,6 +778,11 @@ export async function exportDataOverview({
   // --- 右侧图表区域 ---
   if (chartRefs?.length > 0) {
     await addChartImages(wb, ws, chartRefs, 3, 6, '使用分析');
+  }
+
+  // --- 部门用户列表 Sheet ---
+  if (includeUsersSheet && users?.length > 0) {
+    await addUsersSheet(wb, { users, deptName, timeRangeLabel });
   }
 
   // --- 子部门独立 Sheet ---

@@ -33,6 +33,7 @@ type deptPathEntry struct {
 
 type departmentUserItem struct {
 	Name                   string `json:"name"`
+	OpenId                 string `json:"open_id"`
 	Registered             bool   `json:"registered"`
 	Id                     int    `json:"id,omitempty"`
 	Username               string `json:"username,omitempty"`
@@ -228,6 +229,7 @@ func GetDepartmentUsers(c *gin.Context) {
 	includeChildren := c.DefaultQuery("include_children", "true") == "true"
 	startTime, _ := strconv.ParseInt(c.DefaultQuery("start_time", "0"), 10, 64)
 	endTime, _ := strconv.ParseInt(c.DefaultQuery("end_time", "0"), 10, 64)
+	registeredFilter := c.Query("registered") // "true", "false", or "" (no filter)
 	role := c.GetInt("role")
 
 	tenantToken, err := service.GetTenantAccessToken()
@@ -347,10 +349,24 @@ func GetDepartmentUsers(c *gin.Context) {
 
 	result := make([]departmentUserItem, 0, len(feishuUsers))
 	for _, fu := range feishuUsers {
-		item := departmentUserItem{
-			Name: fu.Name,
+		isRegistered := false
+		if _, ok := localUserMap[fu.OpenId]; ok {
+			isRegistered = true
 		}
-		if lu, ok := localUserMap[fu.OpenId]; ok {
+
+		if registeredFilter == "true" && !isRegistered {
+			continue
+		}
+		if registeredFilter == "false" && isRegistered {
+			continue
+		}
+
+		item := departmentUserItem{
+			Name:   fu.Name,
+			OpenId: fu.OpenId,
+		}
+		if isRegistered {
+			lu := localUserMap[fu.OpenId]
 			item.Registered = true
 			item.Id = lu.Id
 			item.Username = lu.Username

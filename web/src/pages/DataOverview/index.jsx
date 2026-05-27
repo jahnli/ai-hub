@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Cascader,
@@ -349,6 +349,7 @@ const DataOverview = () => {
   } = useDataOverviewData();
 
   const [showLogs, setShowLogs] = useState(false);
+  const [registeredFilter, setRegisteredFilter] = useState(['true', 'false']);
   const [statsUser, setStatsUser] = useState(null);
   const [showUserStats, setShowUserStats] = useState(false);
 
@@ -367,6 +368,7 @@ const DataOverview = () => {
   const [exportLoading, setExportLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [exportIncludeChildren, setExportIncludeChildren] = useState(false);
+  const [exportIncludeUsers, setExportIncludeUsers] = useState(true);
 
   const childrenRankRef = useRef(null);
   const childrenPieRef = useRef(null);
@@ -387,6 +389,7 @@ const DataOverview = () => {
   const handleExportConfirm = useCallback(async () => {
     setExportModalVisible(false);
     setExportIncludeChildren(false);
+    setExportIncludeUsers(true);
     setExportLoading(true);
     try {
       const deptName = getDeptName();
@@ -411,6 +414,8 @@ const DataOverview = () => {
         granularity,
         getTimeRange,
         includeChildrenSheets: exportIncludeChildren,
+        includeUsersSheet: exportIncludeUsers,
+        users,
       });
       Toast.success(t('导出成功'));
     } catch (e) {
@@ -419,19 +424,19 @@ const DataOverview = () => {
     } finally {
       setExportLoading(false);
     }
-  }, [getDeptName, granularity, statsData, childrenStats, exportIncludeChildren, t]);
+  }, [getDeptName, granularity, statsData, childrenStats, exportIncludeChildren, exportIncludeUsers, users, t]);
 
   const handleExportClick = useCallback(() => {
     if (!statsData && childrenStats.length === 0) {
       Toast.warning(t('暂无数据可导出'));
       return;
     }
-    if (childrenStats.length === 0) {
+    if (childrenStats.length === 0 && users.length === 0) {
       handleExportConfirm();
     } else {
       setExportModalVisible(true);
     }
-  }, [statsData, childrenStats, t, handleExportConfirm]);
+  }, [statsData, childrenStats, users, t, handleExportConfirm]);
 
   const handleGranularityChange = (e) => {
     changeGranularity(e.target.value);
@@ -447,9 +452,41 @@ const DataOverview = () => {
     if (selectedDeptId) fetchDepartmentStats(selectedDeptId);
   }, [selectedDeptId, fetchDepartmentStats]);
 
-  const refreshUsers = useCallback(() => {
-    if (selectedDeptId) fetchDepartmentUsers(selectedDeptId);
+  const [fullUserCounts, setFullUserCounts] = useState(null);
+
+  useEffect(() => {
+    if (registeredFilter.length === 2 && users && users.length > 0) {
+      const registered = users.filter((u) => u.registered).length;
+      setFullUserCounts({ total: users.length, registered });
+    }
+  }, [users, registeredFilter]);
+
+  const handleTableChange = useCallback((...args) => {
+    const tableFilters = args[0]?.filters ?? args[1];
+    let values = ['true', 'false'];
+    if (Array.isArray(tableFilters)) {
+      const regFilter = tableFilters.find((f) => f.dataIndex === 'registered');
+      if (regFilter?.filteredValue && regFilter.filteredValue.length > 0) {
+        values = regFilter.filteredValue;
+      }
+    } else if (tableFilters && typeof tableFilters === 'object') {
+      const arr = tableFilters.registered || tableFilters['registered'];
+      if (arr && arr.length > 0) {
+        values = arr;
+      }
+    }
+    const isBothSelected = values.length === 2 || values.length === 0;
+    const apiParam = isBothSelected ? '' : values[0];
+    setRegisteredFilter(values.length === 0 ? ['true', 'false'] : values);
+    if (selectedDeptId) fetchDepartmentUsers(selectedDeptId, undefined, { registered: apiParam });
   }, [selectedDeptId, fetchDepartmentUsers]);
+
+  const refreshUsers = useCallback(() => {
+    if (selectedDeptId) {
+      const apiParam = registeredFilter.length === 2 ? '' : registeredFilter[0] || '';
+      fetchDepartmentUsers(selectedDeptId, undefined, { registered: apiParam });
+    }
+  }, [selectedDeptId, fetchDepartmentUsers, registeredFilter]);
 
   const refreshLogs = useCallback(() => {
     if (selectedDeptId)
@@ -688,14 +725,14 @@ const DataOverview = () => {
                 {t('剩余额度')}: {renderQuota(remain)}
               </div>
               <div>
-                {t('总额度')}: {renderQuota(total)}
+                {t('总额度')}: {renderQuota(total, 0)}
               </div>
             </div>
           );
           return (
             <Popover content={popoverContent} position='top'>
               <div className='flex flex-col items-end'>
-                <span className='text-xs leading-none'>{`${renderQuota(used)} / ${renderQuota(total)}`}</span>
+                <span className='text-xs leading-none'>{`${renderQuota(used)} / ${renderQuota(total, 0)}`}</span>
                 <Progress
                   percent={percent}
                   stroke={
@@ -830,6 +867,16 @@ const DataOverview = () => {
         title: t('注册状态'),
         dataIndex: 'registered',
         width: 80,
+        filters: [
+          { text: t('已注册'), value: 'true' },
+          { text: t('未注册'), value: 'false' },
+        ],
+        filteredValue: registeredFilter,
+        onFilter: (value, record) => {
+          if (value === 'true') return record.registered === true;
+          if (value === 'false') return record.registered === false;
+          return true;
+        },
         render: (registered) =>
           registered ? (
             <Tag color='green'>{t('已注册')}</Tag>
@@ -858,7 +905,7 @@ const DataOverview = () => {
         },
       },
     ],
-    [t],
+    [t, registeredFilter],
   );
 
   return (
@@ -1002,11 +1049,11 @@ const DataOverview = () => {
                   <Text strong style={cardTitleStyle}>
                     {t('部门用户列表')}
                   </Text>
-                  {usersSummary && (
+                  {fullUserCounts && (
                     <span className='flex items-center gap-1.5' style={{ fontSize: 13 }}>
-                      <Tag size='small' color='blue'>{usersSummary.total} {t('人')}</Tag>
-                      <Tag size='small' color='green'>{t('已注册')} {usersSummary.registered}</Tag>
-                      <Tag size='small' color='orange'>{t('未注册')} {usersSummary.total - usersSummary.registered}</Tag>
+                      <Tag size='small' color='blue'>{fullUserCounts.total} {t('人')}</Tag>
+                      <Tag size='small' color='green'>{t('已注册')} {fullUserCounts.registered}</Tag>
+                      <Tag size='small' color='orange'>{t('未注册')} {fullUserCounts.total - fullUserCounts.registered}</Tag>
                     </span>
                   )}
                 </div>
@@ -1045,6 +1092,7 @@ const DataOverview = () => {
                   columns={columns}
                   dataSource={users}
                   rowKey='open_id'
+                  onChange={handleTableChange}
                   pagination={{
                     pageSize: 10,
                     showSizeChanger: true,
@@ -1255,22 +1303,39 @@ const DataOverview = () => {
 
       <Modal
         visible={exportModalVisible}
-        onCancel={() => { setExportModalVisible(false); setExportIncludeChildren(false); }}
+        onCancel={() => { setExportModalVisible(false); setExportIncludeChildren(false); setExportIncludeUsers(false); }}
         onOk={handleExportConfirm}
         title={t('导出设置')}
         okText={t('导出')}
         cancelText={t('取消')}
         width={420}
       >
-        <Checkbox
-          checked={exportIncludeChildren}
-          onChange={(e) => setExportIncludeChildren(e.target.checked)}
-        >
-          {t('为子部门单独创建 Sheet')}
-        </Checkbox>
-        <div style={{ marginTop: 8, color: 'var(--semi-color-text-2)', fontSize: 12 }}>
-          {t('勾选后将为每个子部门单独生成一个 Sheet 页，包含详细的统计数据和图表')}
-        </div>
+        {childrenStats.length > 0 && (
+          <>
+            <Checkbox
+              checked={exportIncludeChildren}
+              onChange={(e) => setExportIncludeChildren(e.target.checked)}
+            >
+              {t('为子部门单独创建 Sheet')}
+            </Checkbox>
+            <div style={{ marginTop: 8, marginBottom: 16, color: 'var(--semi-color-text-2)', fontSize: 12 }}>
+              {t('勾选后将为每个子部门单独生成一个 Sheet 页，包含详细的统计数据和图表')}
+            </div>
+          </>
+        )}
+        {users.length > 0 && (
+          <>
+            <Checkbox
+              checked={exportIncludeUsers}
+              onChange={(e) => setExportIncludeUsers(e.target.checked)}
+            >
+              {t('导出部门用户列表')}
+            </Checkbox>
+            <div style={{ marginTop: 8, color: 'var(--semi-color-text-2)', fontSize: 12 }}>
+              {t('勾选后将生成用户列表 Sheet 页，包含用户数据、消耗排行 Top 10 和消耗占比 Top 10')}
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );
