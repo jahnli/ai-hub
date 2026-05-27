@@ -366,7 +366,7 @@ const DataOverview = () => {
 
   const [exportLoading, setExportLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
-  const [exportIncludeChildren, setExportIncludeChildren] = useState(true);
+  const [exportIncludeChildren, setExportIncludeChildren] = useState(false);
 
   const childrenRankRef = useRef(null);
   const childrenPieRef = useRef(null);
