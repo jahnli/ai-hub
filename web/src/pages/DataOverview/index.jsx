@@ -373,15 +373,15 @@ const DataOverview = () => {
 
   const getDeptName = useCallback(() => {
     if (!selectedPath || selectedPath.length === 0) return '部门';
-    const findNode = (nodes, path) => {
-      for (const node of nodes || []) {
-        if (node.value === path[path.length - 1]) return node.label;
-        const found = findNode(node.children, path);
-        if (found) return found;
-      }
-      return null;
-    };
-    return findNode(treeData, selectedPath) || '部门';
+    let nodes = treeData;
+    let label = '部门';
+    for (const seg of selectedPath) {
+      const node = (nodes || []).find(n => n.value === seg);
+      if (!node) break;
+      label = node.label;
+      nodes = node.children;
+    }
+    return label;
   }, [treeData, selectedPath]);
 
   const handleExportConfirm = useCallback(async () => {
