@@ -1268,16 +1268,19 @@ type SubscriptionQuotaSummary struct {
 }
 
 func GetActiveSubscriptionQuotaSummaryByUserIds(userIds []int) (map[int]SubscriptionQuotaSummary, error) {
-	result := make(map[int]SubscriptionQuotaSummary, len(userIds))
-	if len(userIds) == 0 {
+	result := make(map[int]SubscriptionQuotaSummary)
+	if userIds != nil && len(userIds) == 0 {
 		return result, nil
 	}
 	now := common.GetTimestamp()
 	var rows []SubscriptionQuotaSummary
-	err := DB.Model(&UserSubscription{}).
+	tx := DB.Model(&UserSubscription{}).
 		Select("user_id, SUM(amount_total) as amount_total, SUM(amount_used) as amount_used, SUM(reset_count) as reset_count, MAX(last_reset_time) as last_reset_time").
-		Where("user_id IN ? AND status = ? AND end_time > ?", userIds, "active", now).
-		Group("user_id").
+		Where("status = ? AND end_time > ?", "active", now)
+	if userIds != nil {
+		tx = tx.Where("user_id IN ?", userIds)
+	}
+	err := tx.Group("user_id").
 		Find(&rows).Error
 	if err != nil {
 		return nil, err

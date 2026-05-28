@@ -59,10 +59,22 @@ type feishuTenantTokenResponse struct {
 	Expire            int    `json:"expire"`
 }
 
+type FeishuTenantInfo struct {
+	Name   string `json:"name"`
+	Avatar struct {
+		Avatar240 string `json:"avatar_240"`
+	} `json:"avatar"`
+}
+
 var (
 	tokenCache    string
 	tokenExpireAt time.Time
 	tokenMu       sync.RWMutex
+
+	tenantInfoCache    *FeishuTenantInfo
+	tenantInfoCacheAt  time.Time
+	tenantInfoCacheTTL = 30 * time.Minute
+	tenantInfoMu       sync.RWMutex
 
 	deptCache    []*FeishuDepartment
 	deptCacheAt  time.Time
@@ -393,6 +405,54 @@ func fetchUsersByDepartment(tenantToken string, deptId string) ([]*FeishuUser, e
 	}
 
 	return users, nil
+}
+
+func FetchTenantInfo(tenantToken string) (*FeishuTenantInfo, error) {
+	tenantInfoMu.RLock()
+	if tenantInfoCache != nil && time.Now().Before(tenantInfoCacheAt.Add(tenantInfoCacheTTL)) {
+		cached := tenantInfoCache
+		tenantInfoMu.RUnlock()
+		return cached, nil
+	}
+	tenantInfoMu.RUnlock()
+
+	tenantInfoMu.Lock()
+	defer tenantInfoMu.Unlock()
+
+	if tenantInfoCache != nil && time.Now().Before(tenantInfoCacheAt.Add(tenantInfoCacheTTL)) {
+		return tenantInfoCache, nil
+	}
+
+	req, err := http.NewRequest("GET", "https://open.feishu.cn/open-apis/tenant/v2/tenant/query", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+tenantToken)
+
+	client := http.Client{Timeout: 10 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request tenant info failed: %w", err)
+	}
+	defer res.Body.Close()
+
+	var resp struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			Tenant FeishuTenantInfo `json:"tenant"`
+		} `json:"data"`
+	}
+	if err = json.NewDecoder(res.Body).Decode(&resp); err != nil {
+		return nil, fmt.Errorf("decode tenant info response failed: %w", err)
+	}
+	if resp.Code != 0 {
+		return nil, fmt.Errorf("fetch tenant info error: code=%d, msg=%s", resp.Code, resp.Msg)
+	}
+
+	tenantInfoCache = &resp.Data.Tenant
+	tenantInfoCacheAt = time.Now()
+	return tenantInfoCache, nil
 }
 
 // CalcDeptLevel calculates the depth of a department in the tree.

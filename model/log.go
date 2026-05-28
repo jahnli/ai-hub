@@ -755,7 +755,7 @@ func GetUsersStatsOverview(userIds []int) (*UserStatsOverview, error) {
 }
 
 func GetUsersStatsOverviewWithTimeRange(userIds []int, startTime, endTime int64) (*UserStatsOverview, error) {
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		return &UserStatsOverview{}, nil
 	}
 	var overview UserStatsOverview
@@ -767,8 +767,10 @@ func GetUsersStatsOverviewWithTimeRange(userIds []int, startTime, endTime int64)
 			"COALESCE(AVG(CASE WHEN type = ? AND use_time > 0 THEN use_time END), 0) as avg_response_time, "+
 			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as error_count, "+
 			"COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as consume_count",
-			LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError, LogTypeConsume).
-		Where("user_id IN ?", userIds)
+			LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError, LogTypeConsume)
+	if userIds != nil {
+		tx = tx.Where("user_id IN ?", userIds)
+	}
 	if startTime > 0 {
 		tx = tx.Where("created_at >= ?", startTime)
 	}
@@ -784,13 +786,16 @@ func GetUsersModelDistribution(userIds []int) ([]UserModelDistribution, error) {
 }
 
 func GetUsersModelDistributionWithTimeRange(userIds []int, startTime, endTime int64) ([]UserModelDistribution, error) {
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		return []UserModelDistribution{}, nil
 	}
 	var rows []UserModelDistribution
 	tx := LOG_DB.Model(&Log{}).
 		Select("model_name, COUNT(*) as request_count, COALESCE(SUM(quota), 0) as total_quota, COALESCE(SUM(prompt_tokens + completion_tokens), 0) as total_tokens").
-		Where("user_id IN ? AND type = ?", userIds, LogTypeConsume)
+		Where("type = ?", LogTypeConsume)
+	if userIds != nil {
+		tx = tx.Where("user_id IN ?", userIds)
+	}
 	if startTime > 0 {
 		tx = tx.Where("created_at >= ?", startTime)
 	}
@@ -817,7 +822,7 @@ func GetUsersRecentLogs(userIds []int, limit int) ([]*Log, error) {
 }
 
 func GetUsersRecentLogsPaged(userIds []int, page int, pageSize int) ([]*Log, int64, error) {
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		return []*Log{}, 0, nil
 	}
 	if page < 1 {
@@ -827,8 +832,11 @@ func GetUsersRecentLogsPaged(userIds []int, page int, pageSize int) ([]*Log, int
 		pageSize = 10
 	}
 	var total int64
-	tx := LOG_DB.Where("user_id IN ?", userIds)
-	if err := tx.Model(&Log{}).Count(&total).Error; err != nil {
+	tx := LOG_DB.Model(&Log{})
+	if userIds != nil {
+		tx = tx.Where("user_id IN ?", userIds)
+	}
+	if err := tx.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var logs []*Log

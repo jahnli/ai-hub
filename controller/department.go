@@ -131,11 +131,14 @@ func GetDepartmentTree(c *gin.Context) {
 
 	fullTree := buildFullTree(departments)
 
+	tenantInfo, _ := service.FetchTenantInfo(tenantToken)
+
 	if role >= 10 {
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-			"data":    fullTree,
+			"success":     true,
+			"message":     "",
+			"data":        fullTree,
+			"tenant_info": tenantInfo,
 		})
 		return
 	}
@@ -191,6 +194,7 @@ func GetDepartmentTree(c *gin.Context) {
 		"message":         "",
 		"data":            filteredTree,
 		"leader_dept_ids": leaderDeptIds,
+		"tenant_info":     tenantInfo,
 	})
 }
 
@@ -429,6 +433,11 @@ func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
 	role := c.GetInt("role")
 
+	// 企业根节点且为管理员时，返回 nil 表示查询全部数据
+	if deptId == "0" && role >= 10 {
+		return nil, nil
+	}
+
 	tenantToken, err := service.GetTenantAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("获取飞书凭证失败: %s", err.Error())
@@ -520,7 +529,9 @@ func GetDepartmentStats(c *gin.Context) {
 		return
 	}
 
-	if len(userIds) == 0 {
+	// userIds == nil 表示查询全部数据（企业根节点）
+	// userIds 为空切片表示确实没有匹配用户
+	if userIds != nil && len(userIds) == 0 {
 		common.ApiSuccess(c, gin.H{
 			"overview":           gin.H{},
 			"model_distribution": []model.UserModelDistribution{},
@@ -835,7 +846,7 @@ func GetDepartmentLogs(c *gin.Context) {
 		return
 	}
 
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		common.ApiSuccess(c, gin.H{
 			"logs":  []*model.Log{},
 			"total": 0,

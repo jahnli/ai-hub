@@ -165,6 +165,7 @@ function aggregateTrendByModel(data, granularity) {
 export const useDataOverviewData = () => {
   const [treeData, setTreeData] = useState([]);
   const [treeLoading, setTreeLoading] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState(null);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [selectedDeptId, setSelectedDeptId] = useState(null);
@@ -314,7 +315,13 @@ export const useDataOverviewData = () => {
       if (res?.data?.success) {
         const tree = res.data.data || [];
         const leaderIds = res.data.leader_dept_ids || [];
-        setTreeData(tree);
+        const tenant = res.data.tenant_info || null;
+        setTenantInfo(tenant);
+
+        const finalTree = tenant
+          ? [{ value: '__tenant_root__', label: tenant.name, children: tree, isLeaf: false }]
+          : tree;
+        setTreeData(finalTree);
         setLeaderDeptIds(leaderIds);
 
         if (leaderIds.length > 0) {
@@ -336,13 +343,15 @@ export const useDataOverviewData = () => {
 
   const selectedPath = useMemo(() => {
     if (!selectedDeptId || treeData.length === 0) return undefined;
-    return findPathToNode(treeData, selectedDeptId) || undefined;
+    const searchId = selectedDeptId === '0' ? '__tenant_root__' : selectedDeptId;
+    return findPathToNode(treeData, searchId) || undefined;
   }, [selectedDeptId, treeData]);
 
   const handleDeptChange = useCallback(
     (value) => {
       if (value) {
-        const deptId = Array.isArray(value) ? value[value.length - 1] : value;
+        let deptId = Array.isArray(value) ? value[value.length - 1] : value;
+        if (deptId === '__tenant_root__') deptId = '0';
         setSelectedDeptId(deptId);
         setLogsPage(1);
         setLogs([]);
@@ -374,6 +383,7 @@ export const useDataOverviewData = () => {
   return {
     treeData,
     treeLoading,
+    tenantInfo,
     users,
     usersLoading,
     selectedDeptId,

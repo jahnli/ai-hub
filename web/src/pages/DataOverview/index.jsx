@@ -324,6 +324,7 @@ const DataOverview = () => {
   const {
     treeData,
     treeLoading,
+    tenantInfo,
     users,
     usersLoading,
     selectedDeptId,
@@ -367,6 +368,29 @@ const DataOverview = () => {
 
   const [exportLoading, setExportLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
+
+  const displayTreeData = useMemo(() => {
+    if (!tenantInfo || treeData.length === 0) return treeData;
+    return treeData.map((node) => {
+      if (node.value === '__tenant_root__') {
+        return {
+          ...node,
+          label: (
+            <span className='inline-flex items-center gap-1.5'>
+              <img
+                src={tenantInfo.avatar?.avatar_240}
+                alt=''
+                className='w-5 h-5 rounded-full object-cover'
+              />
+              <span>{tenantInfo.name}</span>
+            </span>
+          ),
+          searchText: tenantInfo.name,
+        };
+      }
+      return node;
+    });
+  }, [treeData, tenantInfo]);
   const [exportIncludeChildren, setExportIncludeChildren] = useState(false);
   const [exportIncludeUsers, setExportIncludeUsers] = useState(true);
 
@@ -917,7 +941,7 @@ const DataOverview = () => {
     <div className='mt-[60px] px-4'>
       <div className='mb-2'>
         <Cascader
-          treeData={treeData}
+          treeData={displayTreeData}
           value={selectedPath}
           placeholder={t('选择部门')}
           changeOnSelect

@@ -117,11 +117,15 @@ func GetQuotaDataByUserId(userId int, startTime int64, endTime int64) (quotaData
 }
 
 func GetQuotaDataByUserIds(userIds []int, startTime int64, endTime int64) ([]*QuotaData, error) {
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		return []*QuotaData{}, nil
 	}
 	var quotaDatas []*QuotaData
-	err := DB.Table("quota_data").Where("user_id IN ? AND created_at >= ? AND created_at <= ?", userIds, startTime, endTime).Find(&quotaDatas).Error
+	tx := DB.Table("quota_data").Where("created_at >= ? AND created_at <= ?", startTime, endTime)
+	if userIds != nil {
+		tx = tx.Where("user_id IN ?", userIds)
+	}
+	err := tx.Find(&quotaDatas).Error
 	return quotaDatas, err
 }
 
