@@ -376,13 +376,13 @@ const DataOverview = () => {
         return {
           ...node,
           label: (
-            <span className='inline-flex items-center gap-1.5'>
+            <span style={{ whiteSpace: 'nowrap' }}>
               <img
                 src={tenantInfo.avatar?.avatar_240}
                 alt=''
-                className='w-5 h-5 rounded-full object-cover'
+                style={{ display: 'inline', width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle', marginRight: 6 }}
               />
-              <span>{tenantInfo.name}</span>
+              {tenantInfo.name}
             </span>
           ),
           searchText: tenantInfo.name,
