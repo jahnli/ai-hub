@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
@@ -65,7 +66,12 @@ func LDAPLogin(c *gin.Context) {
 func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*model.User, error) {
 	user := &model.User{}
 
-	ldapId := ldapUser.DN
+	ldapId := strings.TrimSpace(ldapUser.DN)
+	if ldapId == "" {
+		return nil, fmt.Errorf("LDAP DN is empty")
+	}
+	ldapUsername := strings.TrimSpace(ldapUser.Username)
+
 	if model.IsLdapIdAlreadyTaken(ldapId) {
 		user.LdapId = ldapId
 		if err := user.FillUserByLdapId(); err != nil {
@@ -77,19 +83,35 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		return user, nil
 	}
 
+	if ldapUsername != "" {
+		if err := model.DB.Unscoped().Where("username = ?", ldapUsername).First(user).Error; err == nil {
+			if user.DeletedAt.Valid {
+				return nil, fmt.Errorf("user has been deleted")
+			}
+			if user.LdapId != ldapId {
+				if err := model.DB.Model(user).Update("ldap_id", ldapId).Error; err != nil {
+					return nil, err
+				}
+				user.LdapId = ldapId
+			}
+			return user, nil
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+	}
+
 	if !common.RegisterEnabled {
 		return nil, &LDAPRegistrationDisabledError{}
 	}
 
-	user.Username = "ldap_" + strconv.Itoa(model.GetMaxUserId()+1)
-
-	if ldapUser.Username != "" {
-		if exists, err := model.CheckUserExistOrDeleted(ldapUser.Username, ""); err == nil && !exists {
-			if len(ldapUser.Username) <= model.UserNameMaxLength {
-				user.Username = ldapUser.Username
-			}
-		}
+	if ldapUsername == "" {
+		return nil, fmt.Errorf("LDAP username is empty")
 	}
+	if len(ldapUsername) > model.UserNameMaxLength {
+		return nil, fmt.Errorf("LDAP username exceeds max length %d", model.UserNameMaxLength)
+	}
+	user.Username = ldapUsername
+	user.LdapId = ldapId
 
 	if ldapUser.DisplayName != "" {
 		user.DisplayName = ldapUser.DisplayName
@@ -113,10 +135,6 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 
 	err := model.DB.Transaction(func(tx *gorm.DB) error {
 		if err := user.InsertWithTx(tx, inviterId); err != nil {
-			return err
-		}
-		user.LdapId = ldapId
-		if err := tx.Model(user).Update("ldap_id", ldapId).Error; err != nil {
 			return err
 		}
 		return nil
@@ -173,7 +191,14 @@ func LDAPBind(c *gin.Context) {
 		return
 	}
 
-	if model.IsLdapIdAlreadyTaken(ldapUser.DN) {
+	ldapId := strings.TrimSpace(ldapUser.DN)
+	if ldapId == "" {
+		common.ApiError(c, fmt.Errorf("LDAP DN is empty"))
+		return
+	}
+	ldapUsername := strings.TrimSpace(ldapUser.Username)
+
+	if model.IsLdapIdAlreadyTaken(ldapId) {
 		common.ApiErrorI18n(c, i18n.MsgLDAPAlreadyBound)
 		return
 	}
@@ -191,7 +216,18 @@ func LDAPBind(c *gin.Context) {
 		return
 	}
 
-	user.LdapId = ldapUser.DN
+	var usernameOwner model.User
+	if ldapUsername != "" {
+		if err := model.DB.Unscoped().Where("username = ?", ldapUsername).First(&usernameOwner).Error; err == nil && usernameOwner.Id != user.Id {
+			common.ApiErrorI18n(c, i18n.MsgLDAPAlreadyBound)
+			return
+		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			common.ApiError(c, err)
+			return
+		}
+	}
+
+	user.LdapId = ldapId
 	if err := user.Update(false); err != nil {
 		common.ApiError(c, err)
 		return
