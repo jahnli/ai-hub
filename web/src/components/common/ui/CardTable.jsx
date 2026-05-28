@@ -58,18 +58,31 @@ const CardTable = ({
   };
 
   if (!isMobile) {
-    const finalTableProps = hidePagination
-      ? { ...tableProps, pagination: false }
-      : tableProps;
+    const { pagination: paginationProp, ...restTableProps } = tableProps;
+
+    // 判断是否为服务端分页（外部传入了 onPageChange 回调）
+    const isServerPagination =
+      paginationProp && typeof paginationProp.onPageChange === 'function';
+
+    const finalTableProps = hidePagination || isServerPagination
+      ? { ...restTableProps, pagination: false }
+      : { ...restTableProps, pagination: paginationProp };
 
     return (
-      <Table
-        columns={columns}
-        dataSource={dataSource}
-        loading={loading}
-        rowKey={rowKey}
-        {...finalTableProps}
-      />
+      <div>
+        <Table
+          columns={columns}
+          dataSource={dataSource}
+          loading={loading}
+          rowKey={rowKey}
+          {...finalTableProps}
+        />
+        {!hidePagination && isServerPagination && dataSource.length > 0 && (
+          <div className='flex justify-end mt-3'>
+            <Pagination {...paginationProp} />
+          </div>
+        )}
+      </div>
     );
   }
 

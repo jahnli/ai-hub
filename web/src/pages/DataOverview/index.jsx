@@ -461,19 +461,14 @@ const DataOverview = () => {
     }
   }, [users, registeredFilter]);
 
-  const handleTableChange = useCallback((...args) => {
-    const tableFilters = args[0]?.filters ?? args[1];
+  const handleTableChange = useCallback(({ filters, extra }) => {
+    // 只在筛选条件变化时重新获取数据，分页和排序由 Table 内部处理
+    if (extra?.changeType !== 'filter') return;
+    if (!filters) return;
+    const regFilter = filters.find((f) => f.dataIndex === 'registered');
     let values = ['true', 'false'];
-    if (Array.isArray(tableFilters)) {
-      const regFilter = tableFilters.find((f) => f.dataIndex === 'registered');
-      if (regFilter?.filteredValue && regFilter.filteredValue.length > 0) {
-        values = regFilter.filteredValue;
-      }
-    } else if (tableFilters && typeof tableFilters === 'object') {
-      const arr = tableFilters.registered || tableFilters['registered'];
-      if (arr && arr.length > 0) {
-        values = arr;
-      }
+    if (regFilter?.filteredValue && regFilter.filteredValue.length > 0) {
+      values = regFilter.filteredValue;
     }
     const isBothSelected = values.length === 2 || values.length === 0;
     const apiParam = isBothSelected ? '' : values[0];
@@ -707,8 +702,13 @@ const DataOverview = () => {
         title: t('已用额度/总额度'),
         dataIndex: 'sub_quota_total',
         width: 130,
-        sorter: (a, b) =>
-          (parseInt(a.sub_quota_used) || 0) - (parseInt(b.sub_quota_used) || 0),
+        sorter: (a, b) => {
+          const aVal = a.registered ? (parseInt(a.sub_quota_used) || 0) : -1;
+          const bVal = b.registered ? (parseInt(b.sub_quota_used) || 0) : -1;
+          return aVal - bVal;
+        },
+        defaultSortOrder: 'descend',
+        defaultSortOrder: 'descend',
         render: (text, record) => {
           if (!record.registered) return '-';
           const total = parseInt(record.sub_quota_total) || 0;
@@ -761,9 +761,11 @@ const DataOverview = () => {
         title: t('总消耗'),
         dataIndex: 'total_consumed_quota',
         width: 100,
-        sorter: (a, b) =>
-          (parseInt(a.total_consumed_quota) || 0) -
-          (parseInt(b.total_consumed_quota) || 0),
+        sorter: (a, b) => {
+          const aVal = a.registered ? (parseInt(a.total_consumed_quota) || 0) : -1;
+          const bVal = b.registered ? (parseInt(b.total_consumed_quota) || 0) : -1;
+          return aVal - bVal;
+        },
         render: (text, record) => {
           if (!record.registered) return '-';
           const quota = parseInt(record.total_consumed_quota) || 0;
@@ -775,12 +777,12 @@ const DataOverview = () => {
         dataIndex: 'total_prompt_tokens',
         width: 100,
         sorter: (a, b) => {
-          const aTotal =
-            (parseInt(a.total_prompt_tokens) || 0) +
-            (parseInt(a.total_completion_tokens) || 0);
-          const bTotal =
-            (parseInt(b.total_prompt_tokens) || 0) +
-            (parseInt(b.total_completion_tokens) || 0);
+          const aTotal = a.registered
+            ? (parseInt(a.total_prompt_tokens) || 0) + (parseInt(a.total_completion_tokens) || 0)
+            : -1;
+          const bTotal = b.registered
+            ? (parseInt(b.total_prompt_tokens) || 0) + (parseInt(b.total_completion_tokens) || 0)
+            : -1;
           return aTotal - bTotal;
         },
         render: (text, record) => {
@@ -796,8 +798,11 @@ const DataOverview = () => {
         title: t('请求次数'),
         dataIndex: 'request_count',
         width: 90,
-        sorter: (a, b) =>
-          (parseInt(a.request_count) || 0) - (parseInt(b.request_count) || 0),
+        sorter: (a, b) => {
+          const aVal = a.registered ? (parseInt(a.request_count) || 0) : -1;
+          const bVal = b.registered ? (parseInt(b.request_count) || 0) : -1;
+          return aVal - bVal;
+        },
         render: (text, record) => {
           if (!record.registered) return '-';
           return renderRequestCount(parseInt(record.request_count) || 0);
@@ -982,13 +987,9 @@ const DataOverview = () => {
             }
             bodyStyle={{ padding: 12, display: 'flex', alignItems: 'center' }}
           >
-            {statsLoading ? (
-              <div className='flex justify-center py-10'>
-                <Spin size='large' />
-              </div>
-            ) : (
-              statsData && <OverviewCards overview={statsData.overview} t={t} />
-            )}
+            <Spin spinning={statsLoading} size='large'>
+              {statsData && <OverviewCards overview={statsData.overview} t={t} />}
+            </Spin>
           </Card>
 
           {(childrenStats.length > 0 || childrenStatsLoading) && (
@@ -1013,12 +1014,12 @@ const DataOverview = () => {
               }
               bodyStyle={{ padding: 0 }}
             >
-              {childrenStatsLoading ? (
+              {childrenStatsLoading && childrenStats.length === 0 ? (
                 <div className='flex justify-center py-6'>
                   <Spin size='large' />
                 </div>
               ) : (
-                <>
+                <Spin spinning={childrenStatsLoading}>
                   <Table
                     columns={childrenColumns}
                     dataSource={childrenStats}
@@ -1036,7 +1037,7 @@ const DataOverview = () => {
                       <ChildrenPieChart ref={childrenPieRef} data={childrenStats} t={t} />
                     </div>
                   )}
-                </>
+                </Spin>
               )}
             </Card>
           )}
@@ -1082,12 +1083,12 @@ const DataOverview = () => {
             }
             bodyStyle={{ padding: 0 }}
           >
-            {usersLoading ? (
+            {usersLoading && users.length === 0 ? (
               <div className='flex justify-center py-6'>
                 <Spin size='large' />
               </div>
             ) : users.length > 0 ? (
-              <>
+              <Spin spinning={usersLoading}>
                 <Table
                   columns={columns}
                   dataSource={users}
@@ -1109,7 +1110,7 @@ const DataOverview = () => {
                     <UsersPieChart data={users} t={t} />
                   </div>
                 )}
-              </>
+              </Spin>
             ) : (
               <Empty
                 image={<IllustrationNoResult />}

@@ -345,9 +345,6 @@ export const useDataOverviewData = () => {
         const deptId = Array.isArray(value) ? value[value.length - 1] : value;
         setSelectedDeptId(deptId);
         setLogsPage(1);
-        setUsers([]);
-        setStatsData(null);
-        setChildrenStats([]);
         setLogs([]);
         setLogsTotal(0);
       } else {
