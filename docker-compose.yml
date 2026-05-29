@@ -17,6 +17,8 @@ services:
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - BATCH_UPDATE_ENABLED=true
+      - FEISHU_APP_ID=${FEISHU_APP_ID}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
     #      - STREAMING_TIMEOUT=300
     #      - SESSION_SECRET=random_string
     #      - SYNC_FREQUENCY=60
