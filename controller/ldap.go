@@ -67,46 +67,30 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	user := &model.User{}
 
 	ldapId := strings.TrimSpace(ldapUser.DN)
-	if ldapId == "" {
-		return nil, fmt.Errorf("LDAP DN is empty")
-	}
 	ldapUsername := strings.TrimSpace(ldapUser.Username)
+	if ldapUsername == "" {
+		return nil, fmt.Errorf("LDAP username is empty")
+	}
 
-	if model.IsLdapIdAlreadyTaken(ldapId) {
-		user.LdapId = ldapId
-		if err := user.FillUserByLdapId(); err != nil {
-			return nil, err
-		}
-		if user.Id == 0 {
+	if err := model.DB.Unscoped().Where("username = ?", ldapUsername).First(user).Error; err == nil {
+		if user.DeletedAt.Valid {
 			return nil, fmt.Errorf("user has been deleted")
 		}
-		return user, nil
-	}
-
-	if ldapUsername != "" {
-		if err := model.DB.Unscoped().Where("username = ?", ldapUsername).First(user).Error; err == nil {
-			if user.DeletedAt.Valid {
-				return nil, fmt.Errorf("user has been deleted")
+		if ldapId != "" && user.LdapId != ldapId {
+			if err := model.DB.Model(user).Update("ldap_id", ldapId).Error; err != nil {
+				return nil, err
 			}
-			if user.LdapId != ldapId {
-				if err := model.DB.Model(user).Update("ldap_id", ldapId).Error; err != nil {
-					return nil, err
-				}
-				user.LdapId = ldapId
-			}
-			return user, nil
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, err
+			user.LdapId = ldapId
 		}
+		return user, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
 	}
 
 	if !common.RegisterEnabled {
 		return nil, &LDAPRegistrationDisabledError{}
 	}
 
-	if ldapUsername == "" {
-		return nil, fmt.Errorf("LDAP username is empty")
-	}
 	if len(ldapUsername) > model.UserNameMaxLength {
 		return nil, fmt.Errorf("LDAP username exceeds max length %d", model.UserNameMaxLength)
 	}

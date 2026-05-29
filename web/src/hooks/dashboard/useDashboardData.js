@@ -193,20 +193,13 @@ export const useDashboardData = (userState, userDispatch, statusState) => {
   }, [t, userState?.user?.username, userState?.user?.display_name, userState?.user?.ldap_id]);
 
   const getDepartment = useMemo(() => {
-    const dn = userState?.user?.ldap_id;
-    if (!dn) return '';
-    const ous = [];
-    const parts = dn.split(',');
-    for (const part of parts) {
-      const trimmed = part.trim();
-      if (trimmed.toUpperCase().startsWith('OU=')) {
-        ous.push(trimmed.substring(3));
-      }
-    }
-    const len = ous.length;
-    const levels = [ous[len - 4] || '', ous[len - 5] || '', ous[len - 6] || ''];
-    return levels.filter(Boolean).join(' / ');
-  }, [userState?.user?.ldap_id]);
+    const deptPath = userState?.user?.department_path;
+    const first = Array.isArray(deptPath) ? deptPath[0] : null;
+    const pathName = first?.department_path?.department_path_name?.name;
+    if (!pathName) return '';
+    const segments = pathName.split('-').map((s) => s.trim()).filter(Boolean);
+    return segments.join(' / ');
+  }, [userState?.user?.department_path]);
 
   // ========== 回调函数 ==========
   const handleDateRangeChange = useCallback((dateRange) => {

@@ -203,6 +203,16 @@ func Register(c *gin.Context) {
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
 	}
+
+	// 注册前先从飞书同步用户信息；失败不阻断注册
+	if synced, syncErr := service.SyncFeishuUserByUsername(cleanUser.Username); syncErr != nil {
+		common.SysLog(fmt.Sprintf("[Register] Feishu sync failed for %s: %v", cleanUser.Username, syncErr))
+	} else if synced != nil {
+		service.ApplyFeishuSyncToUser(&cleanUser, synced)
+	} else {
+		common.SysLog(fmt.Sprintf("[Register] Feishu user not found for %s, register without sync", cleanUser.Username))
+	}
+
 	if err := cleanUser.Insert(inviterId); err != nil {
 		common.ApiError(c, err)
 		return
