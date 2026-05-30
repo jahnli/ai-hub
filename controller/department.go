@@ -33,14 +33,11 @@ type deptPathEntry struct {
 
 type departmentUserItem struct {
 	Name                   string `json:"name"`
-	OpenId                 string `json:"open_id"`
 	Registered             bool   `json:"registered"`
 	Id                     int    `json:"id,omitempty"`
 	Username               string `json:"username,omitempty"`
 	DisplayName            string `json:"display_name,omitempty"`
-	Quota                  int    `json:"quota,omitempty"`
-	UsedQuota              int    `json:"used_quota,omitempty"`
-	RequestCount           int    `json:"request_count,omitempty"`
+	RequestCount           int64  `json:"request_count,omitempty"`
 	Email                  string `json:"email,omitempty"`
 	SubQuotaTotal          int64  `json:"sub_quota_total,omitempty"`
 	SubQuotaUsed           int64  `json:"sub_quota_used,omitempty"`
@@ -131,14 +128,11 @@ func GetDepartmentTree(c *gin.Context) {
 
 	fullTree := buildFullTree(departments)
 
-	tenantInfo, _ := service.FetchTenantInfo(tenantToken)
-
 	if role >= 10 {
 		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"message":     "",
-			"data":        fullTree,
-			"tenant_info": tenantInfo,
+			"success": true,
+			"message": "",
+			"data":    fullTree,
 		})
 		return
 	}
@@ -194,7 +188,6 @@ func GetDepartmentTree(c *gin.Context) {
 		"message":         "",
 		"data":            filteredTree,
 		"leader_dept_ids": leaderDeptIds,
-		"tenant_info":     tenantInfo,
 	})
 }
 
@@ -233,7 +226,6 @@ func GetDepartmentUsers(c *gin.Context) {
 	includeChildren := c.DefaultQuery("include_children", "true") == "true"
 	startTime, _ := strconv.ParseInt(c.DefaultQuery("start_time", "0"), 10, 64)
 	endTime, _ := strconv.ParseInt(c.DefaultQuery("end_time", "0"), 10, 64)
-	registeredFilter := c.Query("registered") // "true", "false", or "" (no filter)
 	role := c.GetInt("role")
 
 	tenantToken, err := service.GetTenantAccessToken()
@@ -353,31 +345,14 @@ func GetDepartmentUsers(c *gin.Context) {
 
 	result := make([]departmentUserItem, 0, len(feishuUsers))
 	for _, fu := range feishuUsers {
-		isRegistered := false
-		if _, ok := localUserMap[fu.OpenId]; ok {
-			isRegistered = true
-		}
-
-		if registeredFilter == "true" && !isRegistered {
-			continue
-		}
-		if registeredFilter == "false" && isRegistered {
-			continue
-		}
-
 		item := departmentUserItem{
-			Name:   fu.Name,
-			OpenId: fu.OpenId,
+			Name: fu.Name,
 		}
-		if isRegistered {
-			lu := localUserMap[fu.OpenId]
+		if lu, ok := localUserMap[fu.OpenId]; ok {
 			item.Registered = true
 			item.Id = lu.Id
 			item.Username = lu.Username
 			item.DisplayName = lu.DisplayName
-			item.Quota = lu.Quota
-			item.UsedQuota = lu.UsedQuota
-			item.RequestCount = lu.RequestCount
 			item.Email = lu.Email
 			item.LastLoginAt = lu.LastLoginAt
 			item.CreatedAt = lu.CreatedAt.Format("2006-01-02 15:04:05")
@@ -391,6 +366,7 @@ func GetDepartmentUsers(c *gin.Context) {
 				item.TotalConsumedQuota = c.TotalQuota
 				item.TotalPromptTokens = c.TotalPrompt
 				item.TotalCompletionTokens = c.TotalCompletion
+				item.RequestCount = c.TotalRequestCount
 			}
 			if m, ok := topModels[lu.Id]; ok {
 				item.TopModel = m
@@ -432,11 +408,6 @@ func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 
 func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
 	role := c.GetInt("role")
-
-	// 企业根节点且为管理员时，返回 nil 表示查询全部数据
-	if deptId == "0" && role >= 10 {
-		return nil, nil
-	}
 
 	tenantToken, err := service.GetTenantAccessToken()
 	if err != nil {
@@ -529,9 +500,7 @@ func GetDepartmentStats(c *gin.Context) {
 		return
 	}
 
-	// userIds == nil 表示查询全部数据（企业根节点）
-	// userIds 为空切片表示确实没有匹配用户
-	if userIds != nil && len(userIds) == 0 {
+	if len(userIds) == 0 {
 		common.ApiSuccess(c, gin.H{
 			"overview":           gin.H{},
 			"model_distribution": []model.UserModelDistribution{},
@@ -729,8 +698,6 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		TotalPrompt     int64  `json:"total_prompt"`
 		TotalCompletion int64  `json:"total_completion"`
 		TotalRequests   int64  `json:"total_requests"`
-		SubQuotaTotal   int64  `json:"sub_quota_total"`
-		SubQuotaUsed    int64  `json:"sub_quota_used"`
 	}
 
 	results := make([]childStat, 0, len(directChildren))
@@ -747,16 +714,6 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		for _, lu := range localUsers {
 			allLocalUserMap[lu.OpenId] = lu.Id
 		}
-	}
-
-	allUserIds := make([]int, 0, len(allLocalUserMap))
-	for _, uid := range allLocalUserMap {
-		allUserIds = append(allUserIds, uid)
-	}
-
-	var allSubSummaries map[int]model.SubscriptionQuotaSummary
-	if len(allUserIds) > 0 {
-		allSubSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(allUserIds)
 	}
 
 	type childStatResult struct {
@@ -803,12 +760,6 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 				s.TotalCompletion = overview.TotalCompletion
 				s.TotalRequests = overview.TotalRequests
 			}
-			for _, uid := range uids {
-				if sub, ok := allSubSummaries[uid]; ok {
-					s.SubQuotaTotal += sub.AmountTotal
-					s.SubQuotaUsed += sub.AmountUsed
-				}
-			}
 			resultsCh <- childStatResult{index: idx, stat: s}
 		}(i, stat, userIds)
 	}
@@ -846,7 +797,7 @@ func GetDepartmentLogs(c *gin.Context) {
 		return
 	}
 
-	if userIds != nil && len(userIds) == 0 {
+	if len(userIds) == 0 {
 		common.ApiSuccess(c, gin.H{
 			"logs":  []*model.Log{},
 			"total": 0,
