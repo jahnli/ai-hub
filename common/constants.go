@@ -145,14 +145,41 @@ const (
 )
 
 const (
-	RoleGuestUser  = 0
-	RoleCommonUser = 1
-	RoleAdminUser  = 10
-	RoleRootUser   = 100
+	RoleGuestUser      = 0
+	RoleCommonUser     = 1
+	RoleBusinessBPUser = 2
+	RoleCenterBPUser   = 3
+	RoleAdminUser      = 10
+	RoleRootUser       = 100
 )
 
 func IsValidateRole(role int) bool {
-	return role == RoleGuestUser || role == RoleCommonUser || role == RoleAdminUser || role == RoleRootUser
+	return role == RoleGuestUser || role == RoleCommonUser || role == RoleBusinessBPUser || role == RoleCenterBPUser || role == RoleAdminUser || role == RoleRootUser
+}
+
+var userRoleSequence = []int{
+	RoleCommonUser,
+	RoleBusinessBPUser,
+	RoleCenterBPUser,
+	RoleAdminUser,
+}
+
+func NextUserRole(role int) (int, bool) {
+	for i, currentRole := range userRoleSequence {
+		if role == currentRole && i < len(userRoleSequence)-1 {
+			return userRoleSequence[i+1], true
+		}
+	}
+	return role, false
+}
+
+func PreviousUserRole(role int) (int, bool) {
+	for i, currentRole := range userRoleSequence {
+		if role == currentRole && i > 0 {
+			return userRoleSequence[i-1], true
+		}
+	}
+	return role, false
 }
 
 var (
