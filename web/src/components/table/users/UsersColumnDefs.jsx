@@ -43,6 +43,18 @@ const renderRole = (role, t) => {
           {t('普通用户')}
         </Tag>
       );
+    case 2:
+      return (
+        <Tag color='green' shape='circle'>
+          {t('事业部 BP')}
+        </Tag>
+      );
+    case 3:
+      return (
+        <Tag color='cyan' shape='circle'>
+          {t('中心 BP')}
+        </Tag>
+      );
     case 10:
       return (
         <Tag color='yellow' shape='circle'>
