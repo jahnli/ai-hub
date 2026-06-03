@@ -16,7 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Cascader,
@@ -37,7 +43,12 @@ import {
   Space,
   Checkbox,
 } from '@douyinfe/semi-ui';
-import { IconRefresh, IconHistory, IconSearch, IconDownload } from '@douyinfe/semi-icons';
+import {
+  IconRefresh,
+  IconHistory,
+  IconSearch,
+  IconDownload,
+} from '@douyinfe/semi-icons';
 import {
   IllustrationNoResult,
   IllustrationNoResultDark,
@@ -69,9 +80,7 @@ import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColum
 import { VChart } from '@visactor/react-vchart';
 import CardTable from '../../components/common/ui/CardTable';
 import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
-import {
-  exportDataOverview,
-} from './exportUtils';
+import { exportDataOverview } from './exportUtils';
 
 const { Text } = Typography;
 
@@ -81,94 +90,118 @@ function renderRequestCount(num) {
   return (num / 10000).toFixed(1) + ' 万次';
 }
 
-const ChildrenRankChart = React.memo(React.forwardRef(({ data }, ref) => {
-  const chartData = useMemo(() => {
-    return [...data]
-      .sort((a, b) => (b.total_quota || 0) - (a.total_quota || 0))
-      .slice(0, 15)
-      .map((d) => ({ dept: d.dept_name, quota: d.total_quota || 0 }));
-  }, [data]);
+const ChildrenRankChart = React.memo(
+  React.forwardRef(({ data }, ref) => {
+    const chartData = useMemo(() => {
+      return [...data]
+        .sort((a, b) => (b.total_quota || 0) - (a.total_quota || 0))
+        .slice(0, 15)
+        .map((d) => ({ dept: d.dept_name, quota: d.total_quota || 0 }));
+    }, [data]);
 
-  if (chartData.length === 0) return null;
+    if (chartData.length === 0) return null;
 
-  return (
-    <div ref={ref}>
-      <VChart
-        spec={{
-        type: 'bar',
-        data: [{ id: 'data', values: chartData }],
-        xField: 'quota',
-        yField: 'dept',
-        direction: 'horizontal',
-        seriesField: 'dept',
-        title: { visible: false },
-        bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
-        tooltip: {
-          mark: {
-            content: [
-              {
-                key: (datum) => datum['dept'],
-                value: (datum) => renderQuota(datum['quota']),
+    return (
+      <div ref={ref}>
+        <VChart
+          spec={{
+            type: 'bar',
+            data: [{ id: 'data', values: chartData }],
+            xField: 'quota',
+            yField: 'dept',
+            direction: 'horizontal',
+            seriesField: 'dept',
+            title: { visible: false },
+            bar: { state: { hover: { stroke: '#000', lineWidth: 1 } } },
+            tooltip: {
+              mark: {
+                content: [
+                  {
+                    key: (datum) => datum['dept'],
+                    value: (datum) => renderQuota(datum['quota']),
+                  },
+                ],
               },
-            ],
-          },
-        },
-        legends: { visible: false },
-      }}
-      style={{ height: Math.max(200, chartData.length * 30 + 60) }}
-    />
-    </div>
-  );
-}));
-
-const ChildrenPieChart = React.memo(React.forwardRef(({ data, t }, ref) => {
-  const chartData = useMemo(() => {
-    return data
-      .filter((d) => (d.total_quota || 0) > 0)
-      .map((d) => ({ type: d.dept_name, value: d.total_quota || 0 }));
-  }, [data]);
-
-  if (chartData.length === 0) return null;
-
-  const total = chartData.reduce((sum, d) => sum + d.value, 0);
-
-  return (
-    <div ref={ref} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>
-        {t('子部门消耗占比')} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--semi-color-text-2)' }}>{t('总计')}: {renderQuota(total)}</span>
-      </div>
-      <VChart
-        spec={{
-          type: 'pie',
-          data: [{ id: 'data', values: chartData }],
-          outerRadius: 0.8,
-          innerRadius: 0.5,
-          padAngle: 0.6,
-          valueField: 'value',
-          categoryField: 'type',
-          pie: {
-            style: { cornerRadius: 10 },
-            state: { hover: { outerRadius: 0.85 } },
-          },
-          title: { visible: false },
-          legends: { visible: true, orient: 'left' },
-          label: { visible: true },
-          tooltip: {
-            mark: {
-              content: [
-                {
-                  key: (datum) => datum['type'],
-                  value: (datum) => renderQuota(datum['value']),
-                },
-              ],
             },
-          },
-        }}
-        style={{ flex: 1, minHeight: 300 }}
-      />
-    </div>
-  );
-}));
+            legends: { visible: false },
+          }}
+          style={{ height: Math.max(200, chartData.length * 30 + 60) }}
+        />
+      </div>
+    );
+  }),
+);
+
+const ChildrenPieChart = React.memo(
+  React.forwardRef(({ data, t }, ref) => {
+    const chartData = useMemo(() => {
+      return data
+        .filter((d) => (d.total_quota || 0) > 0)
+        .map((d) => ({ type: d.dept_name, value: d.total_quota || 0 }));
+    }, [data]);
+
+    if (chartData.length === 0) return null;
+
+    const total = chartData.reduce((sum, d) => sum + d.value, 0);
+
+    return (
+      <div
+        ref={ref}
+        style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+      >
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            marginBottom: 6,
+            marginLeft: 16,
+            color: 'var(--semi-color-text-0)',
+          }}
+        >
+          {t('子部门消耗占比')}{' '}
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 400,
+              color: 'var(--semi-color-text-2)',
+            }}
+          >
+            {t('总计')}: {renderQuota(total)}
+          </span>
+        </div>
+        <VChart
+          spec={{
+            type: 'pie',
+            data: [{ id: 'data', values: chartData }],
+            outerRadius: 0.8,
+            innerRadius: 0.5,
+            padAngle: 0.6,
+            valueField: 'value',
+            categoryField: 'type',
+            pie: {
+              style: { cornerRadius: 10 },
+              state: { hover: { outerRadius: 0.85 } },
+            },
+            title: { visible: false },
+            legends: { visible: true, orient: 'left' },
+            label: { visible: true },
+            tooltip: {
+              mark: {
+                content: [
+                  {
+                    key: (datum) => datum['type'],
+                    value: (datum) => renderQuota(datum['value']),
+                  },
+                ],
+              },
+            },
+          }}
+          style={{ flex: 1, minHeight: 300 }}
+        />
+      </div>
+    );
+  }),
+);
 
 const UsersRankChart = React.memo(({ data, t }) => {
   const chartData = useMemo(() => {
@@ -229,12 +262,10 @@ const UsersPieChart = React.memo(({ data, t }) => {
           (parseInt(b.total_consumed_quota) || 0) -
           (parseInt(a.total_consumed_quota) || 0),
       );
-    return sorted
-      .slice(0, 10)
-      .map((d) => ({
-        type: d.name,
-        value: parseInt(d.total_consumed_quota) || 0,
-      }));
+    return sorted.slice(0, 10).map((d) => ({
+      type: d.name,
+      value: parseInt(d.total_consumed_quota) || 0,
+    }));
   }, [data, t]);
 
   if (chartData.length === 0) return null;
@@ -380,7 +411,15 @@ const DataOverview = () => {
               <img
                 src={tenantInfo.avatar?.avatar_240}
                 alt=''
-                style={{ display: 'inline', width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle', marginRight: 6 }}
+                style={{
+                  display: 'inline',
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  verticalAlign: 'middle',
+                  marginRight: 6,
+                }}
               />
               {tenantInfo.name}
             </span>
@@ -402,7 +441,7 @@ const DataOverview = () => {
     let nodes = treeData;
     let label = '部门';
     for (const seg of selectedPath) {
-      const node = (nodes || []).find(n => n.value === seg);
+      const node = (nodes || []).find((n) => n.value === seg);
       if (!node) break;
       label = node.label;
       nodes = node.children;
@@ -417,7 +456,9 @@ const DataOverview = () => {
     setExportLoading(true);
     try {
       const deptName = getDeptName();
-      const timeLabel = TIME_RANGE_OPTIONS.find(o => o.value === granularity)?.label || granularity;
+      const timeLabel =
+        TIME_RANGE_OPTIONS.find((o) => o.value === granularity)?.label ||
+        granularity;
       await exportDataOverview({
         statsData,
         childrenStats,
@@ -448,7 +489,16 @@ const DataOverview = () => {
     } finally {
       setExportLoading(false);
     }
-  }, [getDeptName, granularity, statsData, childrenStats, exportIncludeChildren, exportIncludeUsers, users, t]);
+  }, [
+    getDeptName,
+    granularity,
+    statsData,
+    childrenStats,
+    exportIncludeChildren,
+    exportIncludeUsers,
+    users,
+    t,
+  ]);
 
   const handleExportClick = useCallback(() => {
     if (!statsData && childrenStats.length === 0) {
@@ -485,24 +535,31 @@ const DataOverview = () => {
     }
   }, [users, registeredFilter]);
 
-  const handleTableChange = useCallback(({ filters, extra }) => {
-    // 只在筛选条件变化时重新获取数据，分页和排序由 Table 内部处理
-    if (extra?.changeType !== 'filter') return;
-    if (!filters) return;
-    const regFilter = filters.find((f) => f.dataIndex === 'registered');
-    let values = ['true', 'false'];
-    if (regFilter?.filteredValue && regFilter.filteredValue.length > 0) {
-      values = regFilter.filteredValue;
-    }
-    const isBothSelected = values.length === 2 || values.length === 0;
-    const apiParam = isBothSelected ? '' : values[0];
-    setRegisteredFilter(values.length === 0 ? ['true', 'false'] : values);
-    if (selectedDeptId) fetchDepartmentUsers(selectedDeptId, undefined, { registered: apiParam });
-  }, [selectedDeptId, fetchDepartmentUsers]);
+  const handleTableChange = useCallback(
+    ({ filters, extra }) => {
+      // 只在筛选条件变化时重新获取数据，分页和排序由 Table 内部处理
+      if (extra?.changeType !== 'filter') return;
+      if (!filters) return;
+      const regFilter = filters.find((f) => f.dataIndex === 'registered');
+      let values = ['true', 'false'];
+      if (regFilter?.filteredValue && regFilter.filteredValue.length > 0) {
+        values = regFilter.filteredValue;
+      }
+      const isBothSelected = values.length === 2 || values.length === 0;
+      const apiParam = isBothSelected ? '' : values[0];
+      setRegisteredFilter(values.length === 0 ? ['true', 'false'] : values);
+      if (selectedDeptId)
+        fetchDepartmentUsers(selectedDeptId, undefined, {
+          registered: apiParam,
+        });
+    },
+    [selectedDeptId, fetchDepartmentUsers],
+  );
 
   const refreshUsers = useCallback(() => {
     if (selectedDeptId) {
-      const apiParam = registeredFilter.length === 2 ? '' : registeredFilter[0] || '';
+      const apiParam =
+        registeredFilter.length === 2 ? '' : registeredFilter[0] || '';
       fetchDepartmentUsers(selectedDeptId, undefined, { registered: apiParam });
     }
   }, [selectedDeptId, fetchDepartmentUsers, registeredFilter]);
@@ -727,11 +784,10 @@ const DataOverview = () => {
         dataIndex: 'sub_quota_total',
         width: 130,
         sorter: (a, b) => {
-          const aVal = a.registered ? (parseInt(a.sub_quota_used) || 0) : -1;
-          const bVal = b.registered ? (parseInt(b.sub_quota_used) || 0) : -1;
+          const aVal = a.registered ? parseInt(a.sub_quota_used) || 0 : -1;
+          const bVal = b.registered ? parseInt(b.sub_quota_used) || 0 : -1;
           return aVal - bVal;
         },
-        defaultSortOrder: 'descend',
         defaultSortOrder: 'descend',
         render: (text, record) => {
           if (!record.registered) return '-';
@@ -786,8 +842,12 @@ const DataOverview = () => {
         dataIndex: 'total_consumed_quota',
         width: 100,
         sorter: (a, b) => {
-          const aVal = a.registered ? (parseInt(a.total_consumed_quota) || 0) : -1;
-          const bVal = b.registered ? (parseInt(b.total_consumed_quota) || 0) : -1;
+          const aVal = a.registered
+            ? parseInt(a.total_consumed_quota) || 0
+            : -1;
+          const bVal = b.registered
+            ? parseInt(b.total_consumed_quota) || 0
+            : -1;
           return aVal - bVal;
         },
         render: (text, record) => {
@@ -802,10 +862,12 @@ const DataOverview = () => {
         width: 100,
         sorter: (a, b) => {
           const aTotal = a.registered
-            ? (parseInt(a.total_prompt_tokens) || 0) + (parseInt(a.total_completion_tokens) || 0)
+            ? (parseInt(a.total_prompt_tokens) || 0) +
+              (parseInt(a.total_completion_tokens) || 0)
             : -1;
           const bTotal = b.registered
-            ? (parseInt(b.total_prompt_tokens) || 0) + (parseInt(b.total_completion_tokens) || 0)
+            ? (parseInt(b.total_prompt_tokens) || 0) +
+              (parseInt(b.total_completion_tokens) || 0)
             : -1;
           return aTotal - bTotal;
         },
@@ -823,8 +885,8 @@ const DataOverview = () => {
         dataIndex: 'request_count',
         width: 90,
         sorter: (a, b) => {
-          const aVal = a.registered ? (parseInt(a.request_count) || 0) : -1;
-          const bVal = b.registered ? (parseInt(b.request_count) || 0) : -1;
+          const aVal = a.registered ? parseInt(a.request_count) || 0 : -1;
+          const bVal = b.registered ? parseInt(b.request_count) || 0 : -1;
           return aVal - bVal;
         },
         render: (text, record) => {
@@ -1012,7 +1074,9 @@ const DataOverview = () => {
             bodyStyle={{ padding: 12, display: 'flex', alignItems: 'center' }}
           >
             <Spin spinning={statsLoading} size='large'>
-              {statsData && <OverviewCards overview={statsData.overview} t={t} />}
+              {statsData && (
+                <OverviewCards overview={statsData.overview} t={t} />
+              )}
             </Spin>
           </Card>
 
@@ -1055,10 +1119,27 @@ const DataOverview = () => {
                   {childrenStats.length > 0 && (
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4 p-4'>
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, marginLeft: 16, color: 'var(--semi-color-text-0)' }}>{t('子部门消耗排行')}</div>
-                        <ChildrenRankChart ref={childrenRankRef} data={childrenStats} />
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 600,
+                            marginBottom: 6,
+                            marginLeft: 16,
+                            color: 'var(--semi-color-text-0)',
+                          }}
+                        >
+                          {t('子部门消耗排行')}
+                        </div>
+                        <ChildrenRankChart
+                          ref={childrenRankRef}
+                          data={childrenStats}
+                        />
                       </div>
-                      <ChildrenPieChart ref={childrenPieRef} data={childrenStats} t={t} />
+                      <ChildrenPieChart
+                        ref={childrenPieRef}
+                        data={childrenStats}
+                        t={t}
+                      />
                     </div>
                   )}
                 </Spin>
@@ -1075,10 +1156,20 @@ const DataOverview = () => {
                     {t('部门用户列表')}
                   </Text>
                   {fullUserCounts && (
-                    <span className='flex items-center gap-1.5' style={{ fontSize: 13 }}>
-                      <Tag size='small' color='blue'>{fullUserCounts.total} {t('人')}</Tag>
-                      <Tag size='small' color='green'>{t('已注册')} {fullUserCounts.registered}</Tag>
-                      <Tag size='small' color='orange'>{t('未注册')} {fullUserCounts.total - fullUserCounts.registered}</Tag>
+                    <span
+                      className='flex items-center gap-1.5'
+                      style={{ fontSize: 13 }}
+                    >
+                      <Tag size='small' color='blue'>
+                        {fullUserCounts.total} {t('人')}
+                      </Tag>
+                      <Tag size='small' color='green'>
+                        {t('已注册')} {fullUserCounts.registered}
+                      </Tag>
+                      <Tag size='small' color='orange'>
+                        {t('未注册')}{' '}
+                        {fullUserCounts.total - fullUserCounts.registered}
+                      </Tag>
                     </span>
                   )}
                 </div>
@@ -1179,8 +1270,16 @@ const DataOverview = () => {
                   granularity={granularity}
                   t={t}
                 />
-                <ModelPieChart ref={modelPieRef} data={statsData.modelDistribution} t={t} />
-                <ModelRankChart ref={modelRankRef} data={statsData.modelDistribution} t={t} />
+                <ModelPieChart
+                  ref={modelPieRef}
+                  data={statsData.modelDistribution}
+                  t={t}
+                />
+                <ModelRankChart
+                  ref={modelRankRef}
+                  data={statsData.modelDistribution}
+                  t={t}
+                />
               </div>
             </Card>
           )}
@@ -1328,7 +1427,11 @@ const DataOverview = () => {
 
       <Modal
         visible={exportModalVisible}
-        onCancel={() => { setExportModalVisible(false); setExportIncludeChildren(false); setExportIncludeUsers(false); }}
+        onCancel={() => {
+          setExportModalVisible(false);
+          setExportIncludeChildren(false);
+          setExportIncludeUsers(false);
+        }}
         onOk={handleExportConfirm}
         title={t('导出设置')}
         okText={t('导出')}
@@ -1343,8 +1446,17 @@ const DataOverview = () => {
             >
               {t('为子部门单独创建 Sheet')}
             </Checkbox>
-            <div style={{ marginTop: 8, marginBottom: 16, color: 'var(--semi-color-text-2)', fontSize: 12 }}>
-              {t('勾选后将为每个子部门单独生成一个 Sheet 页，包含详细的统计数据和图表')}
+            <div
+              style={{
+                marginTop: 8,
+                marginBottom: 16,
+                color: 'var(--semi-color-text-2)',
+                fontSize: 12,
+              }}
+            >
+              {t(
+                '勾选后将为每个子部门单独生成一个 Sheet 页，包含详细的统计数据和图表',
+              )}
             </div>
           </>
         )}
@@ -1356,8 +1468,16 @@ const DataOverview = () => {
             >
               {t('导出部门用户列表')}
             </Checkbox>
-            <div style={{ marginTop: 8, color: 'var(--semi-color-text-2)', fontSize: 12 }}>
-              {t('勾选后将生成用户列表 Sheet 页，包含用户数据、消耗排行 Top 10 和消耗占比 Top 10')}
+            <div
+              style={{
+                marginTop: 8,
+                color: 'var(--semi-color-text-2)',
+                fontSize: 12,
+              }}
+            >
+              {t(
+                '勾选后将生成用户列表 Sheet 页，包含用户数据、消耗排行 Top 10 和消耗占比 Top 10',
+              )}
             </div>
           </>
         )}

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,6 +22,7 @@ type cascaderNode struct {
 }
 
 type deptPathEntry struct {
+	DepartmentId   string `json:"department_id"`
 	DepartmentPath struct {
 		DepartmentIds      []string `json:"department_ids"`
 		DepartmentPathName struct {
@@ -49,6 +49,14 @@ type departmentUserItem struct {
 	SubscriptionResetCount int    `json:"subscription_reset_count,omitempty"`
 	LastLoginAt            int64  `json:"last_login_at,omitempty"`
 	CreatedAt              string `json:"created_at,omitempty"`
+}
+
+type departmentAccessScope struct {
+	isAdmin        bool
+	rootDeptIds    []string
+	ancestorSet    map[string]bool
+	showAncestors  bool
+	allowedDeptIds map[string]bool
 }
 
 func buildFullTree(departments []*service.FeishuDepartment) []*cascaderNode {
@@ -81,7 +89,7 @@ func filterTreeForLeader(tree []*cascaderNode, ancestorSet map[string]bool, lead
 	var result []*cascaderNode
 	for _, node := range tree {
 		if node.Value == leaderDeptId {
-			result = append(result, node)
+			result = append(result, cloneCascaderNode(node))
 			continue
 		}
 		if ancestorSet[node.Value] {
@@ -97,6 +105,34 @@ func filterTreeForLeader(tree []*cascaderNode, ancestorSet map[string]bool, lead
 	return result
 }
 
+func cloneCascaderNode(node *cascaderNode) *cascaderNode {
+	if node == nil {
+		return nil
+	}
+	cloned := &cascaderNode{
+		Value:    node.Value,
+		Label:    node.Label,
+		Disabled: node.Disabled,
+		Children: make([]*cascaderNode, 0, len(node.Children)),
+	}
+	for _, child := range node.Children {
+		cloned.Children = append(cloned.Children, cloneCascaderNode(child))
+	}
+	return cloned
+}
+
+func findAndCloneSubtree(tree []*cascaderNode, rootDeptId string) *cascaderNode {
+	for _, node := range tree {
+		if node.Value == rootDeptId {
+			return cloneCascaderNode(node)
+		}
+		if found := findAndCloneSubtree(node.Children, rootDeptId); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
 func collectDescendantIds(rootId string, departments []*service.FeishuDepartment, result map[string]bool) {
 	result[rootId] = true
 	for _, dept := range departments {
@@ -106,9 +142,131 @@ func collectDescendantIds(rootId string, departments []*service.FeishuDepartment
 	}
 }
 
-func GetDepartmentTree(c *gin.Context) {
-	role := c.GetInt("role")
+func bpDeptPathIndex(role int) (int, bool) {
+	switch role {
+	case common.RoleCenterBPUser:
+		return 0, true
+	case common.RoleBusinessBPUser:
+		return 1, true
+	default:
+		return 0, false
+	}
+}
 
+func uniqueAppendDeptId(ids []string, seen map[string]bool, id string) []string {
+	if id == "" || seen[id] {
+		return ids
+	}
+	seen[id] = true
+	return append(ids, id)
+}
+
+func getBPDeptRootIds(rawDeptPath string, role int) ([]string, error) {
+	index, ok := bpDeptPathIndex(role)
+	if !ok {
+		return nil, nil
+	}
+
+	entries, err := parseUserDeptPathEntries(rawDeptPath)
+	if err != nil {
+		return nil, err
+	}
+
+	rootIds := make([]string, 0, len(entries))
+	seen := make(map[string]bool)
+	for _, entry := range entries {
+		ids := entry.DepartmentPath.DepartmentIds
+		if len(ids) > index {
+			rootIds = uniqueAppendDeptId(rootIds, seen, ids[index])
+		}
+	}
+	return rootIds, nil
+}
+
+func getLeaderDeptIds(feishuOpenId string, departments []*service.FeishuDepartment) []string {
+	leaderDeptIds := make([]string, 0)
+	for _, dept := range departments {
+		if dept.LeaderUserId == feishuOpenId {
+			leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
+		}
+	}
+	return leaderDeptIds
+}
+
+func buildDepartmentAccessScope(c *gin.Context, departments []*service.FeishuDepartment) (*departmentAccessScope, error) {
+	role := c.GetInt("role")
+	if role >= common.RoleAdminUser {
+		return &departmentAccessScope{isAdmin: true}, nil
+	}
+
+	user, err := model.GetUserById(c.GetInt("id"), false)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("用户信息不可用")
+	}
+
+	scope := &departmentAccessScope{
+		allowedDeptIds: make(map[string]bool),
+	}
+
+	if _, ok := bpDeptPathIndex(role); ok {
+		scope.rootDeptIds, err = getBPDeptRootIds(user.DepartmentPath, role)
+		if err != nil {
+			return nil, fmt.Errorf("解析用户部门路径失败: %s", err.Error())
+		}
+	} else {
+		scope.rootDeptIds = getLeaderDeptIds(user.OpenId, departments)
+		ancestorIds, _, err := parseUserDeptPath(user.DepartmentPath)
+		if err != nil {
+			return nil, fmt.Errorf("解析用户部门路径失败: %s", err.Error())
+		}
+		scope.ancestorSet = make(map[string]bool, len(ancestorIds))
+		for _, id := range ancestorIds {
+			scope.ancestorSet[id] = true
+		}
+		scope.showAncestors = true
+	}
+
+	for _, rootId := range scope.rootDeptIds {
+		collectDescendantIds(rootId, departments, scope.allowedDeptIds)
+	}
+
+	return scope, nil
+}
+
+func (scope *departmentAccessScope) canAccessDept(deptId string) bool {
+	if scope == nil {
+		return false
+	}
+	if scope.isAdmin {
+		return true
+	}
+	return scope.allowedDeptIds[deptId]
+}
+
+func (scope *departmentAccessScope) filterTree(fullTree []*cascaderNode) []*cascaderNode {
+	if scope == nil {
+		return []*cascaderNode{}
+	}
+	if scope.isAdmin {
+		return fullTree
+	}
+
+	filteredTree := make([]*cascaderNode, 0)
+	for _, rootDeptId := range scope.rootDeptIds {
+		var pruned []*cascaderNode
+		if scope.showAncestors {
+			pruned = filterTreeForLeader(fullTree, scope.ancestorSet, rootDeptId)
+		} else if subtree := findAndCloneSubtree(fullTree, rootDeptId); subtree != nil {
+			pruned = []*cascaderNode{subtree}
+		}
+		if len(pruned) > 0 {
+			filteredTree = mergeTreeRoots(filteredTree, pruned)
+		}
+	}
+	return filteredTree
+}
+
+func GetDepartmentTree(c *gin.Context) {
 	tenantToken, err := service.GetTenantAccessToken()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -130,58 +288,16 @@ func GetDepartmentTree(c *gin.Context) {
 	fullTree := buildFullTree(departments)
 	tenantInfo, _ := service.FetchTenantInfo(tenantToken)
 
-	if role >= 10 {
-		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"message":     "",
-			"data":        fullTree,
-			"tenant_info": tenantInfo,
-		})
-		return
-	}
-
-	user, err := model.GetUserById(c.GetInt("id"), false)
-	if err != nil || user == nil {
+	scope, err := buildDepartmentAccessScope(c, departments)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "用户信息不可用",
+			"message": err.Error(),
 		})
 		return
 	}
 
-	feishuId := user.OpenId
-
-	leaderDeptIds := make([]string, 0)
-	for _, dept := range departments {
-		if dept.LeaderUserId == feishuId {
-			leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
-		}
-	}
-
-	if len(leaderDeptIds) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"message":     "",
-			"data":        []*cascaderNode{},
-			"tenant_info": tenantInfo,
-		})
-		return
-	}
-
-	ancestorIds, _, _ := parseUserDeptPath(user.DepartmentPath)
-
-	ancestorSet := make(map[string]bool, len(ancestorIds))
-	for _, id := range ancestorIds {
-		ancestorSet[id] = true
-	}
-
-	var filteredTree []*cascaderNode
-	for _, leaderDeptId := range leaderDeptIds {
-		pruned := filterTreeForLeader(fullTree, ancestorSet, leaderDeptId)
-		if len(pruned) > 0 {
-			filteredTree = mergeTreeRoots(filteredTree, pruned)
-		}
-	}
+	filteredTree := scope.filterTree(fullTree)
 
 	if filteredTree == nil {
 		filteredTree = make([]*cascaderNode, 0)
@@ -191,7 +307,7 @@ func GetDepartmentTree(c *gin.Context) {
 		"success":         true,
 		"message":         "",
 		"data":            filteredTree,
-		"leader_dept_ids": leaderDeptIds,
+		"leader_dept_ids": scope.rootDeptIds,
 		"tenant_info":     tenantInfo,
 	})
 }
@@ -252,31 +368,16 @@ func GetDepartmentUsers(c *gin.Context) {
 		return
 	}
 
-	if role < 10 {
-		user, err := model.GetUserById(c.GetInt("id"), false)
-		if err != nil || user == nil {
+	if role < common.RoleAdminUser {
+		scope, err := buildDepartmentAccessScope(c, departments)
+		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "用户信息不可用",
+				"message": err.Error(),
 			})
 			return
 		}
-
-		feishuId := user.OpenId
-
-		leaderDeptIds := make([]string, 0)
-		for _, dept := range departments {
-			if dept.LeaderUserId == feishuId {
-				leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
-			}
-		}
-
-		allowedIds := make(map[string]bool)
-		for _, rootId := range leaderDeptIds {
-			collectDescendantIds(rootId, departments, allowedIds)
-		}
-
-		if !allowedIds[deptId] {
+		if !scope.canAccessDept(deptId) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": true,
 				"message": "",
@@ -403,17 +504,9 @@ func GetDepartmentUsers(c *gin.Context) {
 }
 
 func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
-	if raw == "" {
-		return nil, nil, nil
-	}
-
-	var entries []deptPathEntry
-	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
+	entries, err := parseUserDeptPathEntries(raw)
+	if err != nil || len(entries) == 0 {
 		return nil, nil, err
-	}
-
-	if len(entries) == 0 {
-		return nil, nil, nil
 	}
 
 	entry := entries[0]
@@ -424,6 +517,104 @@ func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 	}
 
 	return ids, names, nil
+}
+
+func parseUserDeptPathEntries(raw string) ([]deptPathEntry, error) {
+	if raw == "" {
+		return nil, nil
+	}
+
+	var entries []deptPathEntry
+	if err := common.Unmarshal([]byte(raw), &entries); err != nil {
+		return nil, err
+	}
+
+	return entries, nil
+}
+
+func parseUserDepartmentIds(raw string) ([]string, error) {
+	if raw == "" {
+		return nil, nil
+	}
+
+	var ids []string
+	if err := common.Unmarshal([]byte(raw), &ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+func userInDepartmentAccessScope(user *model.User, scope *departmentAccessScope) (bool, error) {
+	if user == nil || scope == nil {
+		return false, nil
+	}
+	if scope.isAdmin {
+		return true, nil
+	}
+
+	deptIds, err := parseUserDepartmentIds(user.DepartmentIds)
+	if err != nil {
+		return false, fmt.Errorf("解析用户部门失败: %s", err.Error())
+	}
+	for _, deptId := range deptIds {
+		if scope.canAccessDept(deptId) {
+			return true, nil
+		}
+	}
+
+	pathEntries, err := parseUserDeptPathEntries(user.DepartmentPath)
+	if err != nil {
+		return false, fmt.Errorf("解析用户部门路径失败: %s", err.Error())
+	}
+	for _, entry := range pathEntries {
+		if scope.canAccessDept(entry.DepartmentId) {
+			return true, nil
+		}
+		for _, deptId := range entry.DepartmentPath.DepartmentIds {
+			if scope.canAccessDept(deptId) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func ensureDepartmentUserStatsAccess(c *gin.Context, targetUserId int) error {
+	role := c.GetInt("role")
+	if role >= common.RoleAdminUser {
+		return nil
+	}
+
+	tenantToken, err := service.GetTenantAccessToken()
+	if err != nil {
+		return fmt.Errorf("获取飞书凭证失败: %s", err.Error())
+	}
+
+	departments, err := service.FetchAllDepartments(tenantToken)
+	if err != nil {
+		return fmt.Errorf("获取部门列表失败: %s", err.Error())
+	}
+
+	scope, err := buildDepartmentAccessScope(c, departments)
+	if err != nil {
+		return err
+	}
+
+	targetUser, err := model.GetUserById(targetUserId, false)
+	if err != nil || targetUser == nil {
+		return fmt.Errorf("用户信息不可用")
+	}
+
+	allowed, err := userInDepartmentAccessScope(targetUser, scope)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return fmt.Errorf("权限不足")
+	}
+
+	return nil
 }
 
 func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
@@ -443,25 +634,12 @@ func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
 		return nil, fmt.Errorf("获取部门列表失败: %s", err.Error())
 	}
 
-	if role < 10 {
-		user, err := model.GetUserById(c.GetInt("id"), false)
-		if err != nil || user == nil {
-			return nil, fmt.Errorf("用户信息不可用")
+	if role < common.RoleAdminUser {
+		scope, err := buildDepartmentAccessScope(c, departments)
+		if err != nil {
+			return nil, err
 		}
-
-		feishuId := user.OpenId
-		leaderDeptIds := make([]string, 0)
-		for _, dept := range departments {
-			if dept.LeaderUserId == feishuId {
-				leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
-			}
-		}
-
-		allowedIds := make(map[string]bool)
-		for _, rootId := range leaderDeptIds {
-			collectDescendantIds(rootId, departments, allowedIds)
-		}
-		if !allowedIds[deptId] {
+		if !scope.canAccessDept(deptId) {
 			return nil, fmt.Errorf("权限不足")
 		}
 	}
@@ -641,24 +819,13 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		return
 	}
 
-	if role < 10 {
-		user, err := model.GetUserById(c.GetInt("id"), false)
-		if err != nil || user == nil {
-			common.ApiError(c, fmt.Errorf("用户信息不可用"))
+	if role < common.RoleAdminUser {
+		scope, err := buildDepartmentAccessScope(c, departments)
+		if err != nil {
+			common.ApiError(c, err)
 			return
 		}
-		feishuId := user.OpenId
-		leaderDeptIds := make([]string, 0)
-		for _, dept := range departments {
-			if dept.LeaderUserId == feishuId {
-				leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
-			}
-		}
-		allowedIds := make(map[string]bool)
-		for _, rootId := range leaderDeptIds {
-			collectDescendantIds(rootId, departments, allowedIds)
-		}
-		if !allowedIds[deptId] {
+		if !scope.canAccessDept(deptId) {
 			common.ApiError(c, fmt.Errorf("权限不足"))
 			return
 		}
@@ -847,6 +1014,11 @@ func GetDepartmentUserStats(c *gin.Context) {
 	userId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		common.ApiError(c, fmt.Errorf("invalid user id"))
+		return
+	}
+
+	if err := ensureDepartmentUserStatsAccess(c, userId); err != nil {
+		common.ApiError(c, err)
 		return
 	}
 

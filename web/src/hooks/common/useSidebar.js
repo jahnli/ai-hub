@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { StatusContext } from '../../context/Status';
-import { API } from '../../helpers';
+import { API, hasDepartmentDataAccess } from '../../helpers';
 
 // 创建一个全局事件系统来同步所有useSidebar实例
 const sidebarEventTarget = new EventTarget();
@@ -84,7 +84,7 @@ export const useSidebar = () => {
   const [isDeptLeader, setIsDeptLeader] = useState(() => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      return !!(user.is_dept_leader || (typeof user.role === 'number' && user.role >= 10));
+      return hasDepartmentDataAccess(user);
     } catch {
       return false;
     }
@@ -131,9 +131,12 @@ export const useSidebar = () => {
             const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
             if (storedUser.is_dept_leader !== userData.is_dept_leader) {
               storedUser.is_dept_leader = userData.is_dept_leader;
-              localStorage.setItem('user', JSON.stringify(storedUser));
             }
-            setIsDeptLeader(!!(userData.is_dept_leader || (typeof storedUser.role === 'number' && storedUser.role >= 10)));
+            if (typeof userData.role === 'number') {
+              storedUser.role = userData.role;
+            }
+            localStorage.setItem('user', JSON.stringify(storedUser));
+            setIsDeptLeader(hasDepartmentDataAccess(storedUser));
           } catch (e) {}
         }
       }
