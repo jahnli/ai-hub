@@ -33,6 +33,7 @@ type deptPathEntry struct {
 
 type departmentUserItem struct {
 	Name                   string `json:"name"`
+	OpenId                 string `json:"open_id"`
 	Registered             bool   `json:"registered"`
 	Id                     int    `json:"id,omitempty"`
 	Username               string `json:"username,omitempty"`
@@ -127,12 +128,14 @@ func GetDepartmentTree(c *gin.Context) {
 	}
 
 	fullTree := buildFullTree(departments)
+	tenantInfo, _ := service.FetchTenantInfo(tenantToken)
 
 	if role >= 10 {
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-			"data":    fullTree,
+			"success":     true,
+			"message":     "",
+			"data":        fullTree,
+			"tenant_info": tenantInfo,
 		})
 		return
 	}
@@ -157,9 +160,10 @@ func GetDepartmentTree(c *gin.Context) {
 
 	if len(leaderDeptIds) == 0 {
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-			"data":    []*cascaderNode{},
+			"success":     true,
+			"message":     "",
+			"data":        []*cascaderNode{},
+			"tenant_info": tenantInfo,
 		})
 		return
 	}
@@ -188,6 +192,7 @@ func GetDepartmentTree(c *gin.Context) {
 		"message":         "",
 		"data":            filteredTree,
 		"leader_dept_ids": leaderDeptIds,
+		"tenant_info":     tenantInfo,
 	})
 }
 
@@ -226,6 +231,7 @@ func GetDepartmentUsers(c *gin.Context) {
 	includeChildren := c.DefaultQuery("include_children", "true") == "true"
 	startTime, _ := strconv.ParseInt(c.DefaultQuery("start_time", "0"), 10, 64)
 	endTime, _ := strconv.ParseInt(c.DefaultQuery("end_time", "0"), 10, 64)
+	registeredFilter := c.Query("registered")
 	role := c.GetInt("role")
 
 	tenantToken, err := service.GetTenantAccessToken()
@@ -345,10 +351,24 @@ func GetDepartmentUsers(c *gin.Context) {
 
 	result := make([]departmentUserItem, 0, len(feishuUsers))
 	for _, fu := range feishuUsers {
-		item := departmentUserItem{
-			Name: fu.Name,
+		isRegistered := false
+		if _, ok := localUserMap[fu.OpenId]; ok {
+			isRegistered = true
 		}
-		if lu, ok := localUserMap[fu.OpenId]; ok {
+
+		if registeredFilter == "true" && !isRegistered {
+			continue
+		}
+		if registeredFilter == "false" && isRegistered {
+			continue
+		}
+
+		item := departmentUserItem{
+			Name:   fu.Name,
+			OpenId: fu.OpenId,
+		}
+		if isRegistered {
+			lu := localUserMap[fu.OpenId]
 			item.Registered = true
 			item.Id = lu.Id
 			item.Username = lu.Username
@@ -408,6 +428,10 @@ func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 
 func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
 	role := c.GetInt("role")
+
+	if deptId == "0" && role >= 10 {
+		return nil, nil
+	}
 
 	tenantToken, err := service.GetTenantAccessToken()
 	if err != nil {
@@ -500,7 +524,7 @@ func GetDepartmentStats(c *gin.Context) {
 		return
 	}
 
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		common.ApiSuccess(c, gin.H{
 			"overview":           gin.H{},
 			"model_distribution": []model.UserModelDistribution{},
@@ -797,7 +821,7 @@ func GetDepartmentLogs(c *gin.Context) {
 		return
 	}
 
-	if len(userIds) == 0 {
+	if userIds != nil && len(userIds) == 0 {
 		common.ApiSuccess(c, gin.H{
 			"logs":  []*model.Log{},
 			"total": 0,
