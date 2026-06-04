@@ -24,6 +24,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
 import {
   Cascader,
   Table,
@@ -32,8 +33,7 @@ import {
   Empty,
   Tag,
   Typography,
-  RadioGroup,
-  Radio,
+  DatePicker,
   Toast,
   Button,
   Tooltip,
@@ -72,9 +72,7 @@ import {
   ModelPieChart,
   ModelRankChart,
   TIME_RANGE_OPTIONS,
-  getTimeRange,
   getAggregationBucketSize,
-  formatTimeRangeDisplay,
 } from '../../components/stats/StatsCharts';
 import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
 import { VChart } from '@visactor/react-vchart';
@@ -350,6 +348,19 @@ const cardTitleStyle = {
   fontWeight: 600,
 };
 
+const DATA_OVERVIEW_DATE_PRESETS = [
+  { text: '今天', start: () => dayjs().startOf('day').toDate(), end: () => dayjs().endOf('day').toDate() },
+  { text: '昨天', start: () => dayjs().subtract(1, 'day').startOf('day').toDate(), end: () => dayjs().subtract(1, 'day').endOf('day').toDate() },
+  { text: '本周', start: () => dayjs().startOf('isoWeek').toDate(), end: () => dayjs().toDate() },
+  { text: '上周', start: () => dayjs().subtract(1, 'week').startOf('isoWeek').toDate(), end: () => dayjs().subtract(1, 'week').endOf('isoWeek').toDate() },
+  { text: '本月', start: () => dayjs().startOf('month').toDate(), end: () => dayjs().toDate() },
+  { text: '上月', start: () => dayjs().subtract(1, 'month').startOf('month').toDate(), end: () => dayjs().subtract(1, 'month').endOf('month').toDate() },
+  { text: '本季度', start: () => dayjs().startOf('quarter').toDate(), end: () => dayjs().toDate() },
+  { text: '上季度', start: () => dayjs().subtract(1, 'quarter').startOf('quarter').toDate(), end: () => dayjs().subtract(1, 'quarter').endOf('quarter').toDate() },
+  { text: '本年', start: () => dayjs().startOf('year').toDate(), end: () => dayjs().toDate() },
+  { text: '去年', start: () => dayjs().subtract(1, 'year').startOf('year').toDate(), end: () => dayjs().subtract(1, 'year').endOf('year').toDate() },
+];
+
 const DataOverview = () => {
   const { t } = useTranslation();
   const {
@@ -364,7 +375,9 @@ const DataOverview = () => {
     statsData,
     statsLoading,
     granularity,
-    changeGranularity,
+    dateRange,
+    changeDateRange,
+    queryByDateRange,
     childrenStats,
     childrenStatsLoading,
     fetchChildrenStats,
@@ -377,7 +390,6 @@ const DataOverview = () => {
     fetchDepartmentLogs,
     fetchDepartmentStats,
     fetchDepartmentUsers,
-    queryData,
   } = useDataOverviewData();
 
   const [showLogs, setShowLogs] = useState(false);
@@ -450,15 +462,25 @@ const DataOverview = () => {
   }, [treeData, selectedPath]);
 
   const handleExportConfirm = useCallback(async () => {
+    const includeChildren = exportIncludeChildren;
+    const includeUsers = exportIncludeUsers;
     setExportModalVisible(false);
     setExportIncludeChildren(false);
     setExportIncludeUsers(true);
     setExportLoading(true);
     try {
       const deptName = getDeptName();
-      const timeLabel =
-        TIME_RANGE_OPTIONS.find((o) => o.value === granularity)?.label ||
-        granularity;
+      const fmt = (d) => dayjs(d).format('YYYY-MM-DD');
+      const hasDateRange = dateRange && dateRange[0] && dateRange[1];
+      const timeLabel = hasDateRange
+        ? `${fmt(dateRange[0])} ~ ${fmt(dateRange[1])}`
+        : (TIME_RANGE_OPTIONS.find((o) => o.value === granularity)?.label || granularity);
+      const startTime = hasDateRange
+        ? Math.floor(new Date(dateRange[0]).getTime() / 1000)
+        : null;
+      const endTime = hasDateRange
+        ? Math.floor(new Date(dateRange[1]).getTime() / 1000)
+        : null;
       await exportDataOverview({
         statsData,
         childrenStats,
@@ -477,9 +499,10 @@ const DataOverview = () => {
         deptName,
         timeRangeLabel: timeLabel,
         granularity,
-        getTimeRange,
-        includeChildrenSheets: exportIncludeChildren,
-        includeUsersSheet: exportIncludeUsers,
+        startTime,
+        endTime,
+        includeChildrenSheets: includeChildren,
+        includeUsersSheet: includeUsers,
         users,
       });
       Toast.success(t('导出成功'));
@@ -492,6 +515,7 @@ const DataOverview = () => {
   }, [
     getDeptName,
     granularity,
+    dateRange,
     statsData,
     childrenStats,
     exportIncludeChildren,
@@ -512,15 +536,17 @@ const DataOverview = () => {
     }
   }, [statsData, childrenStats, users, t, handleExportConfirm]);
 
-  const handleGranularityChange = (e) => {
-    changeGranularity(e.target.value);
-  };
+  const handleDateRangeChange = useCallback((value) => {
+    if (value && value[0] && value[1]) {
+      changeDateRange(value);
+    }
+  }, [changeDateRange]);
 
   const handleQuery = useCallback(() => {
-    if (selectedDeptId) {
-      queryData(selectedDeptId, granularity);
+    if (selectedDeptId && dateRange && dateRange[0] && dateRange[1]) {
+      queryByDateRange(selectedDeptId, dateRange[0], dateRange[1]);
     }
-  }, [selectedDeptId, granularity, queryData]);
+  }, [selectedDeptId, dateRange, queryByDateRange]);
 
   const refreshStats = useCallback(() => {
     if (selectedDeptId) fetchDepartmentStats(selectedDeptId);
@@ -575,11 +601,12 @@ const DataOverview = () => {
 
   const fetchDeptStatsForChild = useCallback(
     async (dept) => {
-      if (!dept) return;
+      if (!dept || !dateRange || !dateRange[0] || !dateRange[1]) return;
       setDeptStatsLoading(true);
       try {
-        const g = granularity;
-        const { start_time: startTime, end_time: endTime } = getTimeRange(g);
+        const startTime = Math.floor(new Date(dateRange[0]).getTime() / 1000);
+        const endTime = Math.floor(new Date(dateRange[1]).getTime() / 1000);
+        const bucketSize = getAggregationBucketSize(granularity);
         const res = await API.get('/api/department/stats', {
           params: {
             dept_id: dept.dept_id,
@@ -590,7 +617,6 @@ const DataOverview = () => {
         if (res?.data?.success) {
           const raw = res.data.data;
           const trendRaw = raw.trend_data || [];
-          const bucketSize = getAggregationBucketSize(g);
           const buckets = new Map();
           for (const item of trendRaw) {
             const bk = Math.floor(item.created_at / bucketSize) * bucketSize;
@@ -642,7 +668,7 @@ const DataOverview = () => {
         setDeptStatsLoading(false);
       }
     },
-    [granularity],
+    [granularity, dateRange],
   );
 
   const openChildDeptStats = useCallback(
@@ -1001,55 +1027,64 @@ const DataOverview = () => {
 
   return (
     <div className='mt-[60px] px-4'>
-      <div className='mb-2'>
-        <Cascader
-          treeData={displayTreeData}
-          value={selectedPath}
-          placeholder={t('选择部门')}
-          changeOnSelect
-          filterTreeNode
-          showNext='hover'
-          dropdownClassName='[&_.semi-cascader-option-lists]:!min-h-[560px]'
-          onChange={handleDeptChange}
-          loading={treeLoading}
-          style={{ width: 'fit-content', minWidth: 280 }}
-          showClear={isAdmin()}
-        />
-      </div>
-      {selectedDeptId && (
+      {selectedDeptId ? (
         <div className='flex items-center gap-3 flex-wrap mb-4'>
-          <RadioGroup
-            type='button'
-            size='small'
-            value={granularity}
-            onChange={handleGranularityChange}
-          >
-            {TIME_RANGE_OPTIONS.map((opt) => (
-              <Radio key={opt.value} value={opt.value}>
-                {t(opt.label)}
-              </Radio>
-            ))}
-          </RadioGroup>
-          <Text type='tertiary' size='normal'>
-            {formatTimeRangeDisplay(granularity)}
-          </Text>
-          <Button
-            type='primary'
-            icon={<IconSearch />}
-            onClick={handleQuery}
-            loading={statsLoading || usersLoading || childrenStatsLoading}
-            className='ml-auto'
-          >
-            {t('查询')}
-          </Button>
-          <Button
-            icon={<IconDownload />}
-            onClick={handleExportClick}
-            loading={exportLoading}
-            disabled={!statsData && childrenStats.length === 0}
-          >
-            {t('导出')}
-          </Button>
+          <Cascader
+            treeData={displayTreeData}
+            value={selectedPath}
+            placeholder={t('选择部门')}
+            changeOnSelect
+            filterTreeNode
+            showNext='hover'
+            dropdownClassName='[&_.semi-cascader-option-lists]:!min-h-[560px]'
+            onChange={handleDeptChange}
+            loading={treeLoading}
+            style={{ width: 'fit-content', minWidth: 280 }}
+            showClear={isAdmin()}
+          />
+          <DatePicker
+            type='dateTimeRange'
+            value={dateRange}
+            presets={DATA_OVERVIEW_DATE_PRESETS}
+            presetPosition='left'
+            onChange={handleDateRangeChange}
+            density='compact'
+            style={{ width: 430 }}
+          />
+          <div className='ml-auto flex items-center gap-3'>
+            <Button
+              type='primary'
+              icon={<IconSearch />}
+              onClick={handleQuery}
+              loading={statsLoading || usersLoading || childrenStatsLoading}
+            >
+              {t('查询')}
+            </Button>
+            <Button
+              icon={<IconDownload />}
+              onClick={handleExportClick}
+              loading={exportLoading}
+              disabled={!statsData && childrenStats.length === 0}
+            >
+              {t('导出')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className='mb-4'>
+          <Cascader
+            treeData={displayTreeData}
+            value={selectedPath}
+            placeholder={t('选择部门')}
+            changeOnSelect
+            filterTreeNode
+            showNext='hover'
+            dropdownClassName='[&_.semi-cascader-option-lists]:!min-h-[560px]'
+            onChange={handleDeptChange}
+            loading={treeLoading}
+            style={{ width: 'fit-content', minWidth: 280 }}
+            showClear={isAdmin()}
+          />
         </div>
       )}
 

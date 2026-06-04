@@ -161,26 +161,30 @@ func uniqueAppendDeptId(ids []string, seen map[string]bool, id string) []string 
 	return append(ids, id)
 }
 
-func getBPDeptRootIds(rawDeptPath string, role int) ([]string, error) {
+func getBPDeptRootIds(rawDeptPath string, role int) ([]string, map[string]bool, error) {
 	index, ok := bpDeptPathIndex(role)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	entries, err := parseUserDeptPathEntries(rawDeptPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	rootIds := make([]string, 0, len(entries))
 	seen := make(map[string]bool)
+	ancestorSet := make(map[string]bool)
 	for _, entry := range entries {
 		ids := entry.DepartmentPath.DepartmentIds
 		if len(ids) > index {
 			rootIds = uniqueAppendDeptId(rootIds, seen, ids[index])
+			for i := 0; i < index; i++ {
+				ancestorSet[ids[i]] = true
+			}
 		}
 	}
-	return rootIds, nil
+	return rootIds, ancestorSet, nil
 }
 
 func getLeaderDeptIds(feishuOpenId string, departments []*service.FeishuDepartment) []string {
@@ -209,9 +213,14 @@ func buildDepartmentAccessScope(c *gin.Context, departments []*service.FeishuDep
 	}
 
 	if _, ok := bpDeptPathIndex(role); ok {
-		scope.rootDeptIds, err = getBPDeptRootIds(user.DepartmentPath, role)
+		var bpAncestorSet map[string]bool
+		scope.rootDeptIds, bpAncestorSet, err = getBPDeptRootIds(user.DepartmentPath, role)
 		if err != nil {
 			return nil, fmt.Errorf("解析用户部门路径失败: %s", err.Error())
+		}
+		if len(bpAncestorSet) > 0 {
+			scope.ancestorSet = bpAncestorSet
+			scope.showAncestors = true
 		}
 	} else {
 		scope.rootDeptIds = getLeaderDeptIds(user.OpenId, departments)
