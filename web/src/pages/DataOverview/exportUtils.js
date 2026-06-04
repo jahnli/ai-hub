@@ -684,7 +684,7 @@ async function addUsersSheet(wb, { users, deptName, timeRangeLabel }) {
 
 export async function exportDataOverview({
   statsData, childrenStats, chartRefs, childrenChartRefs, deptName, timeRangeLabel,
-  granularity, getTimeRange, includeChildrenSheets = true, includeUsersSheet = false, users = [],
+  granularity, startTime, endTime, includeChildrenSheets = true, includeUsersSheet = false, users = [],
 }) {
   const wb = new ExcelJS.Workbook();
   const quotaFmt = getQuotaFmt();
@@ -786,12 +786,11 @@ export async function exportDataOverview({
   }
 
   // --- 子部门独立 Sheet ---
-  if (includeChildrenSheets && childrenStats?.length > 0 && granularity && getTimeRange) {
-    const { start_time, end_time } = getTimeRange(granularity);
+  if (includeChildrenSheets && childrenStats?.length > 0 && startTime && endTime) {
     const childStatsResults = await batchFetchDeptStats(
       childrenStats.map(c => c.dept_id),
-      start_time,
-      end_time,
+      startTime,
+      endTime,
     );
     const existingNames = ['数据总览'];
     for (let i = 0; i < childrenStats.length; i++) {

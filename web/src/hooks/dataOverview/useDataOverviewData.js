@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import dayjs from 'dayjs';
 import { API, showError } from '../../helpers';
 
 function getTimeRange(rangeKey) {
@@ -123,10 +124,27 @@ function getAggregationBucketSize(rangeKey) {
   }
 }
 
-function aggregateByGranularity(data, granularity) {
+function inferBucketSize(startTime, endTime) {
+  const spanDays = (endTime - startTime) / 86400;
+  if (spanDays <= 2) return 3600;        // ≤ 2天 → 1小时
+  if (spanDays <= 35) return 86400;      // ≤ 35天 → 1天
+  if (spanDays <= 100) return 7 * 86400; // ≤ 100天 → 1周
+  return 30 * 86400;                     // > 100天 → ~1月
+}
+
+function inferGranularity(startDate, endDate) {
+  const spanDays = dayjs(endDate).diff(dayjs(startDate), 'day');
+  if (spanDays <= 1) return 'today';
+  if (spanDays <= 6) return 'this_week';
+  if (spanDays <= 31) return 'this_month';
+  if (spanDays <= 92) return 'this_quarter';
+  return 'this_year';
+}
+
+function aggregateByGranularity(data, granularity, overrideBucketSize) {
   if (!data || data.length === 0) return [];
 
-  const bucketSize = getAggregationBucketSize(granularity);
+  const bucketSize = overrideBucketSize || getAggregationBucketSize(granularity);
 
   const buckets = new Map();
   for (const item of data) {
@@ -142,10 +160,10 @@ function aggregateByGranularity(data, granularity) {
   return Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
 }
 
-function aggregateTrendByModel(data, granularity) {
+function aggregateTrendByModel(data, granularity, overrideBucketSize) {
   if (!data || data.length === 0) return [];
 
-  const bucketSize = getAggregationBucketSize(granularity);
+  const bucketSize = overrideBucketSize || getAggregationBucketSize(granularity);
 
   const buckets = new Map();
   for (const item of data) {
@@ -176,6 +194,13 @@ export const useDataOverviewData = () => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [granularity, setGranularity] = useState('this_month');
   const granularityRef = useRef(granularity);
+
+  const defaultDateRange = useMemo(() => [
+    dayjs().startOf('month').toDate(),
+    dayjs().endOf('month').toDate(),
+  ], []);
+  const [dateRange, setDateRange] = useState(defaultDateRange);
+  const dateRangeRef = useRef(dateRange);
 
   const [logs, setLogs] = useState([]);
   const [logsTotal, setLogsTotal] = useState(0);
@@ -218,15 +243,28 @@ export const useDataOverviewData = () => {
     }
   }, [selectedDeptId, fetchDepartmentLogs]);
 
-  const fetchChildrenStats = useCallback(async (deptId, gran) => {
+  const resolveTimeRange = useCallback((timeRangeOrGran) => {
+    if (typeof timeRangeOrGran === 'object' && timeRangeOrGran) {
+      return timeRangeOrGran;
+    }
+    const dr = dateRangeRef.current;
+    if (dr && dr[0] && dr[1]) {
+      return {
+        start_time: Math.floor(new Date(dr[0]).getTime() / 1000),
+        end_time: Math.floor(new Date(dr[1]).getTime() / 1000),
+      };
+    }
+    return getTimeRange(timeRangeOrGran || granularityRef.current);
+  }, []);
+
+  const fetchChildrenStats = useCallback(async (deptId, timeRangeOrGran) => {
     if (!deptId) {
       setChildrenStats([]);
       return;
     }
     setChildrenStatsLoading(true);
     try {
-      const g = gran || granularityRef.current;
-      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
+      const { start_time: startTime, end_time: endTime } = resolveTimeRange(timeRangeOrGran);
       const res = await API.get('/api/department/children-stats', {
         params: { dept_id: deptId, start_time: startTime, end_time: endTime },
       });
@@ -240,17 +278,19 @@ export const useDataOverviewData = () => {
     } finally {
       setChildrenStatsLoading(false);
     }
-  }, []);
+  }, [resolveTimeRange]);
 
-  const fetchDepartmentStats = useCallback(async (deptId, gran) => {
+  const fetchDepartmentStats = useCallback(async (deptId, timeRangeOrGran) => {
     if (!deptId) {
       setStatsData(null);
       return;
     }
     setStatsLoading(true);
     try {
-      const g = gran || granularityRef.current;
-      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
+      const resolved = resolveTimeRange(timeRangeOrGran);
+      const { start_time: startTime, end_time: endTime } = resolved;
+      const bucketSize = resolved.bucketSize || getAggregationBucketSize(granularityRef.current);
+      const g = inferGranularity(new Date(startTime * 1000), new Date(endTime * 1000));
 
       const res = await API.get('/api/department/stats', {
         params: { dept_id: deptId, start_time: startTime, end_time: endTime },
@@ -258,8 +298,8 @@ export const useDataOverviewData = () => {
       if (res?.data?.success) {
         const raw = res.data.data;
         const trendRaw = raw.trend_data || [];
-        const aggregated = aggregateByGranularity(trendRaw, g);
-        const byModel = aggregateTrendByModel(trendRaw, g);
+        const aggregated = aggregateByGranularity(trendRaw, g, bucketSize);
+        const byModel = aggregateTrendByModel(trendRaw, g, bucketSize);
 
         setStatsData({
           overview: raw.overview,
@@ -275,17 +315,16 @@ export const useDataOverviewData = () => {
     } finally {
       setStatsLoading(false);
     }
-  }, []);
+  }, [resolveTimeRange]);
 
-  const fetchDepartmentUsers = useCallback(async (deptId, gran, options = {}) => {
+  const fetchDepartmentUsers = useCallback(async (deptId, timeRangeOrGran, options = {}) => {
     if (!deptId) {
       setUsers([]);
       return;
     }
     setUsersLoading(true);
     try {
-      const g = gran || granularityRef.current;
-      const { start_time: startTime, end_time: endTime } = getTimeRange(g);
+      const { start_time: startTime, end_time: endTime } = resolveTimeRange(timeRangeOrGran);
       const params = { dept_id: deptId, include_children: 'true', start_time: startTime, end_time: endTime };
       if (options.registered !== undefined && options.registered !== '') {
         params.registered = options.registered;
@@ -301,12 +340,43 @@ export const useDataOverviewData = () => {
     } finally {
       setUsersLoading(false);
     }
+  }, [resolveTimeRange]);
+
+  const presetClickedRef = useRef(false);
+  const pendingGranularityRef = useRef(null);
+
+  const handlePresetClick = useCallback((item) => {
+    presetClickedRef.current = true;
+    pendingGranularityRef.current = item.granularity || null;
   }, []);
 
-  const changeGranularity = useCallback((g) => {
-    granularityRef.current = g;
-    setGranularity(g);
+  const changeDateRange = useCallback((range) => {
+    if (range && range[0] && range[1]) {
+      setDateRange(range);
+      dateRangeRef.current = range;
+      if (presetClickedRef.current && pendingGranularityRef.current) {
+        granularityRef.current = pendingGranularityRef.current;
+        setGranularity(pendingGranularityRef.current);
+        presetClickedRef.current = false;
+        pendingGranularityRef.current = null;
+      } else {
+        const g = inferGranularity(range[0], range[1]);
+        granularityRef.current = g;
+        setGranularity(g);
+      }
+    }
   }, []);
+
+  const queryByDateRange = useCallback((deptId, startDate, endDate) => {
+    if (!deptId) return;
+    const startTime = Math.floor(new Date(startDate).getTime() / 1000);
+    const endTime = Math.floor(new Date(endDate).getTime() / 1000);
+    const bucketSize = inferBucketSize(startTime, endTime);
+    const timeRange = { start_time: startTime, end_time: endTime, bucketSize };
+    fetchDepartmentUsers(deptId, timeRange);
+    fetchDepartmentStats(deptId, timeRange);
+    fetchChildrenStats(deptId, timeRange);
+  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats]);
 
   const fetchDepartmentTree = useCallback(async () => {
     setTreeLoading(true);
@@ -369,13 +439,6 @@ export const useDataOverviewData = () => {
     [],
   );
 
-  const queryData = useCallback((deptId, g) => {
-    if (!deptId) return;
-    fetchDepartmentUsers(deptId, g);
-    fetchDepartmentStats(deptId, g);
-    fetchChildrenStats(deptId, g);
-  }, [fetchDepartmentUsers, fetchDepartmentStats, fetchChildrenStats]);
-
   useEffect(() => {
     fetchDepartmentTree();
   }, [fetchDepartmentTree]);
@@ -392,13 +455,15 @@ export const useDataOverviewData = () => {
     setSelectedDeptLabel,
     leaderDeptIds,
     handleDeptChange,
-    queryData,
     fetchDepartmentTree,
     fetchDepartmentUsers,
     statsData,
     statsLoading,
     granularity,
-    changeGranularity,
+    dateRange,
+    changeDateRange,
+    handlePresetClick,
+    queryByDateRange,
     childrenStats,
     childrenStatsLoading,
     fetchChildrenStats,
