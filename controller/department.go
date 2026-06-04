@@ -318,6 +318,7 @@ func GetDepartmentTree(c *gin.Context) {
 		"data":            filteredTree,
 		"leader_dept_ids": scope.rootDeptIds,
 		"tenant_info":     tenantInfo,
+		"disable_root":    !scope.isAdmin,
 	})
 }
 

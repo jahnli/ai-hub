@@ -62,6 +62,7 @@ import {
   showError,
   isAdmin,
 } from '../../helpers';
+import { DASHBOARD_DATE_PRESETS } from '../../constants/dashboard.constants';
 import { useDataOverviewData } from '../../hooks/dataOverview/useDataOverviewData';
 import {
   OverviewCards,
@@ -347,20 +348,6 @@ const cardTitleStyle = {
   color: 'var(--semi-color-primary)',
   fontWeight: 600,
 };
-
-const DATA_OVERVIEW_DATE_PRESETS = [
-  { text: '今天', start: () => dayjs().startOf('day').toDate(), end: () => dayjs().endOf('day').toDate() },
-  { text: '昨天', start: () => dayjs().subtract(1, 'day').startOf('day').toDate(), end: () => dayjs().subtract(1, 'day').endOf('day').toDate() },
-  { text: '本周', start: () => dayjs().startOf('isoWeek').toDate(), end: () => dayjs().toDate() },
-  { text: '上周', start: () => dayjs().subtract(1, 'week').startOf('isoWeek').toDate(), end: () => dayjs().subtract(1, 'week').endOf('isoWeek').toDate() },
-  { text: '本月', start: () => dayjs().startOf('month').toDate(), end: () => dayjs().toDate() },
-  { text: '上月', start: () => dayjs().subtract(1, 'month').startOf('month').toDate(), end: () => dayjs().subtract(1, 'month').endOf('month').toDate() },
-  { text: '本季度', start: () => dayjs().startOf('quarter').toDate(), end: () => dayjs().toDate() },
-  { text: '上季度', start: () => dayjs().subtract(1, 'quarter').startOf('quarter').toDate(), end: () => dayjs().subtract(1, 'quarter').endOf('quarter').toDate() },
-  { text: '本年', start: () => dayjs().startOf('year').toDate(), end: () => dayjs().toDate() },
-  { text: '去年', start: () => dayjs().subtract(1, 'year').startOf('year').toDate(), end: () => dayjs().subtract(1, 'year').endOf('year').toDate() },
-];
-
 const DataOverview = () => {
   const { t } = useTranslation();
   const {
@@ -1045,7 +1032,7 @@ const DataOverview = () => {
           <DatePicker
             type='dateTimeRange'
             value={dateRange}
-            presets={DATA_OVERVIEW_DATE_PRESETS}
+            presets={DASHBOARD_DATE_PRESETS}
             presetPosition='left'
             onChange={handleDateRangeChange}
             density='compact'
