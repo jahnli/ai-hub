@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { history } from './history';
+import { hasDepartmentDataAccess } from './utils';
 
 export function authHeader() {
   // return authorization header with jwt token
@@ -72,7 +73,7 @@ export function DeptLeaderRoute({ children }) {
   }
   try {
     const user = JSON.parse(raw);
-    if (user && (user.is_dept_leader || (typeof user.role === 'number' && user.role >= 10))) {
+    if (hasDepartmentDataAccess(user)) {
       return children;
     }
   } catch (e) {

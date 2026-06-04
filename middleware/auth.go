@@ -189,7 +189,6 @@ func DeptLeaderAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
 		username := session.Get("username")
-		role := session.Get("role")
 		id := session.Get("id")
 		status := session.Get("status")
 		useAccessToken := false
@@ -215,7 +214,6 @@ func DeptLeaderAuth() func(c *gin.Context) {
 			}
 			if user != nil && user.Username != "" {
 				username = user.Username
-				role = user.Role
 				id = user.Id
 				status = user.Status
 				useAccessToken = true
@@ -267,17 +265,6 @@ func DeptLeaderAuth() func(c *gin.Context) {
 			}
 		}
 
-		c.Set("username", username)
-		c.Set("role", role)
-		c.Set("id", id)
-		c.Set("use_access_token", useAccessToken)
-
-		userRole, _ := role.(int)
-		if userRole >= common.RoleAdminUser {
-			c.Next()
-			return
-		}
-
 		userId, _ := id.(int)
 		user, err := model.GetUserById(userId, false)
 		if err != nil || user == nil {
@@ -288,6 +275,27 @@ func DeptLeaderAuth() func(c *gin.Context) {
 			c.Abort()
 			return
 		}
+		if user.Status == common.UserStatusDisabled {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "user is banned",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Set("username", username)
+		c.Set("role", user.Role)
+		c.Set("id", id)
+		c.Set("use_access_token", useAccessToken)
+
+		if user.Role >= common.RoleAdminUser ||
+			user.Role == common.RoleBusinessBPUser ||
+			user.Role == common.RoleCenterBPUser {
+			c.Next()
+			return
+		}
+
 		if !user.IsDeptLeader {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
