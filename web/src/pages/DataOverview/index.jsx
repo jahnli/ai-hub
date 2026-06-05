@@ -72,7 +72,6 @@ import {
   ModelTrendChart,
   ModelPieChart,
   ModelRankChart,
-  TIME_RANGE_OPTIONS,
   getAggregationBucketSize,
 } from '../../components/stats/StatsCharts';
 import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
@@ -457,11 +456,25 @@ const DataOverview = () => {
     setExportLoading(true);
     try {
       const deptName = getDeptName();
-      const fmt = (d) => dayjs(d).format('YYYY-MM-DD');
       const hasDateRange = dateRange && dateRange[0] && dateRange[1];
-      const timeLabel = hasDateRange
-        ? `${fmt(dateRange[0])} ~ ${fmt(dateRange[1])}`
-        : (TIME_RANGE_OPTIONS.find((o) => o.value === granularity)?.label || granularity);
+      let timeLabel;
+      if (hasDateRange) {
+        const s = dayjs(dateRange[0]);
+        const e = dayjs(dateRange[1]);
+        const isSameDay = s.format('YYYY-MM-DD') === e.format('YYYY-MM-DD');
+        const isWholeDayBoundary =
+          s.hour() === 0 && s.minute() === 0 && s.second() === 0 &&
+          e.hour() === 23 && e.minute() === 59;
+        if (isSameDay) {
+          timeLabel = `${s.format('YYYY-MM-DD')} ${s.format('HH:mm')}~${e.format('HH:mm')}`;
+        } else if (isWholeDayBoundary) {
+          timeLabel = `${s.format('YYYY-MM-DD')}~${e.format('YYYY-MM-DD')}`;
+        } else {
+          timeLabel = `${s.format('YYYY-MM-DD HH:mm')}~${e.format('YYYY-MM-DD HH:mm')}`;
+        }
+      } else {
+        timeLabel = dayjs().format('YYYY-MM-DD');
+      }
       const startTime = hasDateRange
         ? Math.floor(new Date(dateRange[0]).getTime() / 1000)
         : null;
