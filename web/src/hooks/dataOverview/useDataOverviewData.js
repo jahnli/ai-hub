@@ -388,8 +388,9 @@ export const useDataOverviewData = () => {
         const tenant = res.data.tenant_info || null;
         setTenantInfo(tenant);
 
+        const disableRoot = res.data.disable_root || false;
         const finalTree = tenant
-          ? [{ value: '__tenant_root__', label: tenant.name, children: tree, isLeaf: false }]
+          ? [{ value: '__tenant_root__', label: tenant.name, children: tree, isLeaf: false, disabled: disableRoot }]
           : tree;
         setTreeData(finalTree);
         setLeaderDeptIds(leaderIds);
