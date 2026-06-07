@@ -3,10 +3,25 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 )
+
+var injectedTagRegexes = []*regexp.Regexp{
+	regexp.MustCompile(`(?s)<system-reminder>.*?</system-reminder>`),
+	regexp.MustCompile(`(?s)<ide_selection>.*?</ide_selection>`),
+	regexp.MustCompile(`(?s)<ide_opened_file>.*?</ide_opened_file>`),
+}
+
+func stripInjectedTags(content string) string {
+	result := content
+	for _, re := range injectedTagRegexes {
+		result = re.ReplaceAllString(result, "")
+	}
+	return strings.TrimSpace(result)
+}
 
 type RequestMessage struct {
 	Id        int    `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -101,8 +116,15 @@ func SaveRequestMessages(requestId string, userId int, messages []UserMessageIte
 	if requestId == "" || len(messages) == 0 {
 		return
 	}
-	summary := BuildUserMessageSummary(messages)
-	messagesJson, err := json.Marshal(messages)
+	cleaned := make([]UserMessageItem, len(messages))
+	for i, msg := range messages {
+		cleaned[i] = UserMessageItem{
+			Role:    msg.Role,
+			Content: stripInjectedTags(msg.Content),
+		}
+	}
+	summary := BuildUserMessageSummary(cleaned)
+	messagesJson, err := json.Marshal(cleaned)
 	if err != nil {
 		common.SysLog("failed to marshal request messages: " + err.Error())
 		return
