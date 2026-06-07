@@ -9,10 +9,32 @@ import (
 	"github.com/QuantumNous/new-api/common"
 )
 
-var injectedTagRegexes = []*regexp.Regexp{
-	regexp.MustCompile(`(?s)<system-reminder>.*?</system-reminder>`),
-	regexp.MustCompile(`(?s)<ide_selection>.*?</ide_selection>`),
-	regexp.MustCompile(`(?s)<ide_opened_file>.*?</ide_opened_file>`),
+var injectedTagNames = []string{
+	// Common
+	"system-reminder", "system_reminder",
+	// Cursor
+	"user_info", "user_query",
+	"ide_state", "ide_selection", "ide_opened_file",
+	"visible_files", "recently_viewed_files",
+	"available_skills", "available_instructions",
+	"agent_transcripts",
+	"custom_instructions", "cursor_rules_context", "attached-files",
+	// Claude Code
+	"task-notification", "user-prompt-submit-hook",
+	// OpenCode
+	"env", "project", "available-skills", "skill", "template",
+	// Codex
+	"context", "repository_map",
+}
+
+var injectedTagRegexes []*regexp.Regexp
+
+func init() {
+	for _, tag := range injectedTagNames {
+		injectedTagRegexes = append(injectedTagRegexes,
+			regexp.MustCompile(`(?s)<`+regexp.QuoteMeta(tag)+`[\s>].*?</`+regexp.QuoteMeta(tag)+`>`),
+		)
+	}
 }
 
 func stripInjectedTags(content string) string {
