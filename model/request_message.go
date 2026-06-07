@@ -134,6 +134,12 @@ func BuildUserMessageSummary(messages []UserMessageItem) string {
 	return lastContent
 }
 
+var emptyReasonLabels = map[string]string{
+	"multimodal_only": "[系统标记] 多模态内容（图片/音频等）",
+	"no_messages":     "[系统标记] 请求中无 messages",
+	"tags_only":       "[系统标记] 仅含系统注入标签，无用户内容",
+}
+
 func SaveRequestMessages(requestId string, userId int, messages []UserMessageItem) {
 	if requestId == "" || len(messages) == 0 {
 		return
@@ -146,10 +152,29 @@ func SaveRequestMessages(requestId string, userId int, messages []UserMessageIte
 		}
 	}
 	summary := BuildUserMessageSummary(cleaned)
+	if summary == "" {
+		summary = emptyReasonLabels["tags_only"]
+	}
 	messagesJson, err := json.Marshal(cleaned)
 	if err != nil {
 		common.SysLog("failed to marshal request messages: " + err.Error())
 		return
 	}
 	CreateRequestMessage(requestId, userId, summary, string(messagesJson))
+}
+
+func SaveRequestMessagesWithReason(requestId string, userId int, reason string) {
+	if requestId == "" {
+		return
+	}
+	var label string
+	if strings.HasPrefix(reason, "unsupported_format:") {
+		formatType := strings.TrimPrefix(reason, "unsupported_format:")
+		label = "[系统标记] 不支持提取的请求格式: " + formatType
+	} else if l, ok := emptyReasonLabels[reason]; ok {
+		label = l
+	} else {
+		label = "[系统标记] 未知原因: " + reason
+	}
+	CreateRequestMessage(requestId, userId, label, "")
 }

@@ -68,5 +68,6 @@ const (
 	ContextKeyIsStream ContextKey = "is_stream"
 
 	// ContextKeyUserMessages stores captured user messages for audit logging
-	ContextKeyUserMessages ContextKey = "user_messages"
+	ContextKeyUserMessages            ContextKey = "user_messages"
+	ContextKeyUserMessagesEmptyReason ContextKey = "user_messages_empty_reason"
 )

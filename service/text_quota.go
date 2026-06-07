@@ -479,5 +479,11 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		gopool.Go(func() {
 			model.SaveRequestMessages(requestId, userId, userMessages)
 		})
+	} else if emptyReason := common.GetContextKeyString(ctx, constant.ContextKeyUserMessagesEmptyReason); emptyReason != "" {
+		requestId := ctx.GetString(common.RequestIdKey)
+		userId := relayInfo.UserId
+		gopool.Go(func() {
+			model.SaveRequestMessagesWithReason(requestId, userId, emptyReason)
+		})
 	}
 }
