@@ -730,52 +730,28 @@ export const getLogsColumns = ({
       },
     },
     {
-      key: COLUMN_KEYS.IP,
-      title: (
-        <div className='flex items-center gap-1'>
-          {t('IP')}
-          <Tooltip
-            content={t(
-              '管理员在运营设置中开启IP记录后，将记录请求和错误类型日志的IP',
-            )}
+      key: COLUMN_KEYS.MESSAGES,
+      title: t('请求内容'),
+      dataIndex: 'message_summary',
+      width: 180,
+      render: (text, record) => {
+        if (!canViewMessages || !text) return <></>;
+        return (
+          <Typography.Paragraph
+            ellipsis={{ rows: 2 }}
+            style={{
+              maxWidth: 160,
+              marginBottom: 0,
+              cursor: 'pointer',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              viewMessageDetail?.(record.request_id);
+            }}
           >
-            <IconHelpCircle className='text-gray-400 cursor-help' />
-          </Tooltip>
-        </div>
-      ),
-      dataIndex: 'ip',
-      render: (text, record, index) => {
-        const displayIp = text === '::1' ? 'localhost' : text;
-        const showIp =
-          (record.type === 2 ||
-            record.type === 5 ||
-            (isAdminUser && record.type === 1)) &&
-          text;
-        return showIp ? (
-          <Tooltip content={text}>
-            <span>
-              <Tag
-                color='orange'
-                shape='circle'
-                onClick={(event) => {
-                  copyText(event, text);
-                }}
-              >
-                {displayIp}
-              </Tag>
-            </span>
-          </Tooltip>
-        ) : (
-          <></>
+            {text}
+          </Typography.Paragraph>
         );
-      },
-    },
-    {
-      key: COLUMN_KEYS.TYPE,
-      title: t('类型'),
-      dataIndex: 'type',
-      render: (text, record, index) => {
-        return <>{renderType(text, t)}</>;
       },
     },
     {
@@ -873,26 +849,70 @@ export const getLogsColumns = ({
       },
     },
     {
-      key: COLUMN_KEYS.TOKEN,
-      title: t('令牌'),
-      dataIndex: 'token_name',
+      key: COLUMN_KEYS.RETRY,
+      title: t('重试'),
+      dataIndex: 'retry',
       render: (text, record, index) => {
-        return record.type === 0 ||
-          record.type === 2 ||
-          record.type === 5 ||
-          record.type === 6 ? (
-          <div>
-            <Tag
-              color='grey'
-              shape='circle'
-              onClick={(event) => {
-                copyText(event, text);
-              }}
-            >
-              {' '}
-              {t(text)}{' '}
-            </Tag>
-          </div>
+        if (!(record.type === 2 || record.type === 5)) {
+          return <></>;
+        }
+        let content = t('渠道') + `：${record.channel}`;
+        if (record.other !== '') {
+          let other = JSON.parse(record.other);
+          if (other === null) {
+            return <></>;
+          }
+          if (other.admin_info !== undefined) {
+            if (
+              other.admin_info.use_channel !== null &&
+              other.admin_info.use_channel !== undefined &&
+              other.admin_info.use_channel !== ''
+            ) {
+              let useChannel = other.admin_info.use_channel;
+              let useChannelStr = useChannel.join('->');
+              content = t('渠道') + `：${useChannelStr}`;
+            }
+          }
+        }
+        return isAdminUser ? <div>{content}</div> : <></>;
+      },
+    },
+    {
+      key: COLUMN_KEYS.IP,
+      title: (
+        <div className='flex items-center gap-1'>
+          {t('IP')}
+          <Tooltip
+            content={t(
+              '管理员在运营设置中开启IP记录后，将记录请求和错误类型日志的IP',
+            )}
+          >
+            <IconHelpCircle className='text-gray-400 cursor-help' />
+          </Tooltip>
+        </div>
+      ),
+      dataIndex: 'ip',
+      render: (text, record, index) => {
+        const displayIp = text === '::1' ? 'localhost' : text;
+        const showIp =
+          (record.type === 2 ||
+            record.type === 5 ||
+            (isAdminUser && record.type === 1)) &&
+          text;
+        return showIp ? (
+          <Tooltip content={text}>
+            <span>
+              <Tag
+                color='orange'
+                shape='circle'
+                onClick={(event) => {
+                  copyText(event, text);
+                }}
+              >
+                {displayIp}
+              </Tag>
+            </span>
+          </Tooltip>
         ) : (
           <></>
         );
@@ -936,57 +956,38 @@ export const getLogsColumns = ({
       },
     },
     {
-      key: COLUMN_KEYS.RETRY,
-      title: t('重试'),
-      dataIndex: 'retry',
+      key: COLUMN_KEYS.TOKEN,
+      title: t('令牌'),
+      dataIndex: 'token_name',
+      width: 100,
       render: (text, record, index) => {
-        if (!(record.type === 2 || record.type === 5)) {
-          return <></>;
-        }
-        let content = t('渠道') + `：${record.channel}`;
-        if (record.other !== '') {
-          let other = JSON.parse(record.other);
-          if (other === null) {
-            return <></>;
-          }
-          if (other.admin_info !== undefined) {
-            if (
-              other.admin_info.use_channel !== null &&
-              other.admin_info.use_channel !== undefined &&
-              other.admin_info.use_channel !== ''
-            ) {
-              let useChannel = other.admin_info.use_channel;
-              let useChannelStr = useChannel.join('->');
-              content = t('渠道') + `：${useChannelStr}`;
-            }
-          }
-        }
-        return isAdminUser ? <div>{content}</div> : <></>;
+        return record.type === 0 ||
+          record.type === 2 ||
+          record.type === 5 ||
+          record.type === 6 ? (
+          <div style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Tag
+              color='grey'
+              shape='circle'
+              onClick={(event) => {
+                copyText(event, text);
+              }}
+            >
+              {' '}
+              {t(text)}{' '}
+            </Tag>
+          </div>
+        ) : (
+          <></>
+        );
       },
     },
     {
-      key: COLUMN_KEYS.MESSAGES,
-      title: t('请求内容'),
-      dataIndex: 'message_summary',
-      width: 180,
-      render: (text, record) => {
-        if (!canViewMessages || !text) return <></>;
-        return (
-          <Typography.Paragraph
-            ellipsis={{ rows: 2 }}
-            style={{
-              maxWidth: 160,
-              marginBottom: 0,
-              cursor: 'pointer',
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              viewMessageDetail?.(record.request_id);
-            }}
-          >
-            {text}
-          </Typography.Paragraph>
-        );
+      key: COLUMN_KEYS.TYPE,
+      title: t('类型'),
+      dataIndex: 'type',
+      render: (text, record, index) => {
+        return <>{renderType(text, t)}</>;
       },
     },
     {

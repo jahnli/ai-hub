@@ -21,7 +21,7 @@ const MessageDetailModal = ({
       centered
       closable
       maskClosable
-      width={640}
+      width='50%'
     >
       <div style={{ padding: '8px 20px 20px' }}>
         {messageDetailTarget?.requestId && (
