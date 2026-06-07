@@ -508,6 +508,8 @@ export const getLogsColumns = ({
   openChannelAffinityUsageCacheModal,
   isAdminUser,
   billingDisplayMode = 'price',
+  canViewMessages = false,
+  viewMessageDetail,
 }) => {
   return [
     {
@@ -960,6 +962,31 @@ export const getLogsColumns = ({
           }
         }
         return isAdminUser ? <div>{content}</div> : <></>;
+      },
+    },
+    {
+      key: COLUMN_KEYS.MESSAGES,
+      title: t('请求内容'),
+      dataIndex: 'message_summary',
+      width: 180,
+      render: (text, record) => {
+        if (!canViewMessages || !text) return <></>;
+        return (
+          <Typography.Paragraph
+            ellipsis={{ rows: 2 }}
+            style={{
+              maxWidth: 160,
+              marginBottom: 0,
+              cursor: 'pointer',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              viewMessageDetail?.(record.request_id);
+            }}
+          >
+            {text}
+          </Typography.Paragraph>
+        );
       },
     },
     {

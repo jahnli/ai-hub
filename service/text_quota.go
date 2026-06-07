@@ -15,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/types"
 
+	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
@@ -471,4 +472,12 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		Group:            relayInfo.UsingGroup,
 		Other:            other,
 	})
+
+	if userMessages, ok := common.GetContextKeyType[[]model.UserMessageItem](ctx, constant.ContextKeyUserMessages); ok && len(userMessages) > 0 {
+		requestId := ctx.GetString(common.RequestIdKey)
+		userId := relayInfo.UserId
+		gopool.Go(func() {
+			model.SaveRequestMessages(requestId, userId, userMessages)
+		})
+	}
 }

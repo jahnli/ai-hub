@@ -116,6 +116,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
+	captureUserMessages(c, request)
+
 	relayInfo, err := relaycommon.GenRelayInfo(c, relayFormat, request, ws)
 	if err != nil {
 		newAPIError = types.NewError(err, types.ErrorCodeGenRelayInfoFailed)
@@ -644,4 +646,40 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return false
 	}
 	return true
+}
+
+func captureUserMessages(c *gin.Context, request dto.Request) {
+	if request == nil {
+		return
+	}
+	var userMessages []model.UserMessageItem
+	switch r := request.(type) {
+	case *dto.GeneralOpenAIRequest:
+		for _, msg := range r.Messages {
+			if msg.Role == "user" {
+				content := msg.StringContent()
+				if content != "" {
+					userMessages = append(userMessages, model.UserMessageItem{
+						Role:    msg.Role,
+						Content: content,
+					})
+				}
+			}
+		}
+	case *dto.ClaudeRequest:
+		for _, msg := range r.Messages {
+			if msg.Role == "user" {
+				content := msg.GetStringContent()
+				if content != "" {
+					userMessages = append(userMessages, model.UserMessageItem{
+						Role:    msg.Role,
+						Content: content,
+					})
+				}
+			}
+		}
+	}
+	if len(userMessages) > 0 {
+		common.SetContextKey(c, constant.ContextKeyUserMessages, userMessages)
+	}
 }

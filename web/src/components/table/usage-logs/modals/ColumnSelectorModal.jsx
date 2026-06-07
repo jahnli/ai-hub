@@ -32,6 +32,7 @@ const ColumnSelectorModal = ({
   setBillingDisplayMode,
   COLUMN_KEYS,
   isAdminUser,
+  canViewMessages,
   copyText,
   showUserInfoFunc,
   t,
@@ -52,6 +53,7 @@ const ColumnSelectorModal = ({
     showUserInfoFunc,
     isAdminUser,
     billingDisplayMode,
+    canViewMessages,
   });
 
   return (
@@ -110,6 +112,9 @@ const ColumnSelectorModal = ({
               column.key === COLUMN_KEYS.USERNAME ||
               column.key === COLUMN_KEYS.RETRY)
           ) {
+            return null;
+          }
+          if (!canViewMessages && column.key === COLUMN_KEYS.MESSAGES) {
             return null;
           }
 
