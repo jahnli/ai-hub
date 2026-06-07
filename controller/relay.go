@@ -705,7 +705,14 @@ func captureUserMessages(c *gin.Context, request dto.Request) {
 	case *dto.GeminiChatRequest:
 		emptyReason = "unsupported_format:Gemini"
 	case *dto.ImageRequest:
-		emptyReason = "unsupported_format:Image"
+		if r.Prompt != "" {
+			userMessages = append(userMessages, model.UserMessageItem{
+				Role:    "user",
+				Content: r.Prompt,
+			})
+		} else {
+			emptyReason = "no_messages"
+		}
 	case *dto.EmbeddingRequest:
 		emptyReason = "unsupported_format:Embedding"
 	case *dto.RerankRequest:

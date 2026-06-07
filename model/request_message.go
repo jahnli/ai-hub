@@ -31,8 +31,14 @@ var injectedTagRegexes []*regexp.Regexp
 
 func init() {
 	for _, tag := range injectedTagNames {
+		escaped := regexp.QuoteMeta(tag)
+		// 匹配完整标签对（含属性）
 		injectedTagRegexes = append(injectedTagRegexes,
-			regexp.MustCompile(`(?s)<`+regexp.QuoteMeta(tag)+`[\s>].*?</`+regexp.QuoteMeta(tag)+`>`),
+			regexp.MustCompile(`(?s)<`+escaped+`[\s>].*?</`+escaped+`>`),
+		)
+		// 匹配残余的闭合标签
+		injectedTagRegexes = append(injectedTagRegexes,
+			regexp.MustCompile(`</`+escaped+`>`),
 		)
 	}
 }
