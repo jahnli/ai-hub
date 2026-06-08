@@ -24,6 +24,8 @@ import {
   API,
   getTodayStartTimestamp,
   isAdmin,
+  isRoot,
+  getUserIdFromLocalStorage,
   showError,
   showSuccess,
   timestamp2string,
@@ -63,6 +65,7 @@ export const useLogsData = () => {
     RETRY: 'retry',
     IP: 'ip',
     DETAILS: 'details',
+    MESSAGES: 'messages',
   };
 
   // Basic state
@@ -78,6 +81,7 @@ export const useLogsData = () => {
 
   // User and admin
   const isAdminUser = isAdmin();
+  const canViewMessages = isRoot() && getUserIdFromLocalStorage() === 1;
   // Role-specific storage key to prevent different roles from overwriting each other
   const STORAGE_KEY = isAdminUser
     ? 'logs-table-columns-admin'
@@ -126,6 +130,7 @@ export const useLogsData = () => {
       [COLUMN_KEYS.RETRY]: isAdminUser,
       [COLUMN_KEYS.IP]: true,
       [COLUMN_KEYS.DETAILS]: true,
+      [COLUMN_KEYS.MESSAGES]: canViewMessages,
     };
   };
 
@@ -145,6 +150,9 @@ export const useLogsData = () => {
         merged[COLUMN_KEYS.CHANNEL] = false;
         merged[COLUMN_KEYS.USERNAME] = false;
         merged[COLUMN_KEYS.RETRY] = false;
+      }
+      if (!canViewMessages) {
+        merged[COLUMN_KEYS.MESSAGES] = false;
       }
 
       return merged;
@@ -188,6 +196,11 @@ export const useLogsData = () => {
   const [showParamOverrideModal, setShowParamOverrideModal] = useState(false);
   const [paramOverrideTarget, setParamOverrideTarget] = useState(null);
 
+  // Message detail modal state (super admin only)
+  const [showMessageDetailModal, setShowMessageDetailModal] = useState(false);
+  const [messageDetailTarget, setMessageDetailTarget] = useState(null);
+  const [messageDetailLoading, setMessageDetailLoading] = useState(false);
+
   // Initialize default column visibility
   const initDefaultColumns = () => {
     const defaults = getDefaultColumnVisibility();
@@ -213,6 +226,8 @@ export const useLogsData = () => {
           key === COLUMN_KEYS.RETRY) &&
         !isAdminUser
       ) {
+        updatedColumns[key] = false;
+      } else if (key === COLUMN_KEYS.MESSAGES && !canViewMessages) {
         updatedColumns[key] = false;
       } else {
         updatedColumns[key] = checked;
@@ -363,6 +378,63 @@ export const useLogsData = () => {
       requestPath: other?.request_path || '',
     });
     setShowParamOverrideModal(true);
+  };
+
+  // Fetch message summaries for current page (super admin only)
+  const fetchMessageSummaries = async (logsData) => {
+    if (!canViewMessages || !logsData || logsData.length === 0) return;
+    const requestIds = logsData
+      .map((log) => log.request_id)
+      .filter((id) => id && id !== '');
+    if (requestIds.length === 0) return;
+    try {
+      const res = await API.get(
+        `/api/log/messages/batch?request_ids=${requestIds.join(',')}`,
+      );
+      const { success, data } = res.data;
+      if (success && data) {
+        setLogs((prevLogs) =>
+          prevLogs.map((log) => ({
+            ...log,
+            message_summary: data[log.request_id] || '',
+          })),
+        );
+      }
+    } catch (e) {
+      // silently ignore
+    }
+  };
+
+  // View full messages for a request
+  const viewMessageDetail = async (requestId) => {
+    if (!canViewMessages || !requestId) return;
+    setMessageDetailLoading(true);
+    try {
+      const res = await API.get(
+        `/api/log/messages?request_id=${requestId}`,
+      );
+      const { success, data } = res.data;
+      if (success && data) {
+        let messages = [];
+        try {
+          messages =
+            typeof data.messages === 'string'
+              ? JSON.parse(data.messages)
+              : data.messages || [];
+        } catch (e) {
+          messages = [];
+        }
+        setMessageDetailTarget({
+          requestId,
+          summary: data.summary,
+          messages,
+        });
+        setShowMessageDetailModal(true);
+      }
+    } catch (e) {
+      showError('获取消息详情失败');
+    }
+    setMessageDetailLoading(false);
   };
 
   // Format logs data
@@ -767,6 +839,7 @@ export const useLogsData = () => {
       setLogCount(data.total);
 
       setLogsFormat(newPageData);
+      fetchMessageSummaries(newPageData);
     } else {
       showError(message);
     }
@@ -882,6 +955,14 @@ export const useLogsData = () => {
     showParamOverrideModal,
     setShowParamOverrideModal,
     paramOverrideTarget,
+
+    // Message detail modal (super admin only)
+    canViewMessages,
+    showMessageDetailModal,
+    setShowMessageDetailModal,
+    messageDetailTarget,
+    messageDetailLoading,
+    viewMessageDetail,
 
     // Functions
     loadLogs,

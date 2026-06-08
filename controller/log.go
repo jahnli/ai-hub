@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
@@ -213,10 +214,78 @@ func DeleteHistoryLogs(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	if _, msgErr := model.DeleteOldRequestMessages(c.Request.Context(), targetTimestamp, 100); msgErr != nil {
+		common.SysLog("failed to delete old request messages: " + msgErr.Error())
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    count,
 	})
 	return
+}
+
+func isSuperAdmin(c *gin.Context) bool {
+	return c.GetInt("role") >= common.RoleRootUser && c.GetInt("id") == 1
+}
+
+func GetLogMessages(c *gin.Context) {
+	if !isSuperAdmin(c) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": "无权访问",
+		})
+		return
+	}
+	requestId := c.Query("request_id")
+	if requestId == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "request_id is required",
+		})
+		return
+	}
+	rm, err := model.GetRequestMessageByRequestId(requestId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    nil,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    rm,
+	})
+}
+
+func GetLogMessagesBatch(c *gin.Context) {
+	if !isSuperAdmin(c) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": "无权访问",
+		})
+		return
+	}
+	requestIdsStr := c.Query("request_ids")
+	if requestIdsStr == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    map[string]string{},
+		})
+		return
+	}
+	requestIds := strings.Split(requestIdsStr, ",")
+	if len(requestIds) > 100 {
+		requestIds = requestIds[:100]
+	}
+	summaries, err := model.GetRequestMessageSummariesByRequestIds(requestIds)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    summaries,
+	})
 }

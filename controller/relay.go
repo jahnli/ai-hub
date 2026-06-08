@@ -116,6 +116,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
+	captureUserMessages(c, request)
+
 	relayInfo, err := relaycommon.GenRelayInfo(c, relayFormat, request, ws)
 	if err != nil {
 		newAPIError = types.NewError(err, types.ErrorCodeGenRelayInfoFailed)
@@ -644,4 +646,81 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return false
 	}
 	return true
+}
+
+func captureUserMessages(c *gin.Context, request dto.Request) {
+	if request == nil {
+		return
+	}
+	var userMessages []model.UserMessageItem
+	var emptyReason string
+	switch r := request.(type) {
+	case *dto.GeneralOpenAIRequest:
+		if len(r.Messages) == 0 {
+			emptyReason = "no_messages"
+			break
+		}
+		for _, msg := range r.Messages {
+			if msg.Role == "user" {
+				content := msg.StringContent()
+				if content != "" {
+					userMessages = append(userMessages, model.UserMessageItem{
+						Role:    msg.Role,
+						Content: content,
+					})
+				}
+			}
+		}
+		if len(userMessages) == 0 {
+			emptyReason = "multimodal_only"
+		}
+	case *dto.ClaudeRequest:
+		for _, msg := range r.Messages {
+			if msg.Role == "user" {
+				content := msg.GetStringContent()
+				if content != "" {
+					userMessages = append(userMessages, model.UserMessageItem{
+						Role:    msg.Role,
+						Content: content,
+					})
+				}
+			}
+		}
+		if len(userMessages) == 0 {
+			emptyReason = "multimodal_only"
+		}
+	case *dto.OpenAIResponsesRequest:
+		inputs := r.ParseInput()
+		for _, input := range inputs {
+			if input.Type == "input_text" && input.Text != "" {
+				userMessages = append(userMessages, model.UserMessageItem{
+					Role:    "user",
+					Content: input.Text,
+				})
+			}
+		}
+		if len(userMessages) == 0 {
+			emptyReason = "multimodal_only"
+		}
+	case *dto.GeminiChatRequest:
+		emptyReason = "unsupported_format:Gemini"
+	case *dto.ImageRequest:
+		emptyReason = "unsupported_format:Image"
+	case *dto.EmbeddingRequest:
+		emptyReason = "unsupported_format:Embedding"
+	case *dto.RerankRequest:
+		emptyReason = "unsupported_format:Rerank"
+	case *dto.AudioRequest:
+		emptyReason = "unsupported_format:Audio"
+	case *dto.OpenAIResponsesCompactionRequest:
+		emptyReason = "unsupported_format:ResponsesCompaction"
+	default:
+		emptyReason = "unsupported_format:Unknown"
+	}
+	if len(userMessages) > 0 {
+		common.SetContextKey(c, constant.ContextKeyUserMessages, userMessages)
+	}
+	if emptyReason != "" {
+		common.SetContextKey(c, constant.ContextKeyUserMessagesEmptyReason, emptyReason)
+	}
 }

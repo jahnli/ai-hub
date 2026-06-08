@@ -66,4 +66,8 @@ const (
 	// ContextKeyLanguage stores the user's language preference for i18n
 	ContextKeyLanguage ContextKey = "language"
 	ContextKeyIsStream ContextKey = "is_stream"
+
+	// ContextKeyUserMessages stores captured user messages for audit logging
+	ContextKeyUserMessages            ContextKey = "user_messages"
+	ContextKeyUserMessagesEmptyReason ContextKey = "user_messages_empty_reason"
 )
