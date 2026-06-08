@@ -3923,6 +3923,18 @@
     "whsec_xxx 的 Webhook 签名密钥，敏感信息不显示": "Clé de signature Webhook whsec_xxx, les informations sensibles ne sont pas affichées",
     "Worker地址": "Adresse du Worker",
     "Worker密钥": "Clé du Worker",
+    "通知设置": "Paramètres de notification",
+    "数据报告通知": "Notification de rapport de données",
+    "按所选周期推送数据总览飞书卡片报告": "Envoyer le rapport de carte Lark d'aperçu des données selon la période sélectionnée",
+    "请选择通知频率": "Sélectionner la fréquence de notification",
+    "按周通知": "Hebdomadaire",
+    "按月通知": "Mensuel",
+    "每周每月都通知": "Hebdomadaire et mensuel",
+    "部门超额提醒": "Alerte de dépassement de quota du département",
+    "部门成员当日累计消耗超出指定额度后，通过飞书提醒你": "Vous alerter via Lark lorsque la consommation cumulée quotidienne des membres du département dépasse le quota spécifié",
+    "输入额度阈值": "Saisir le seuil de quota",
+    "元（人民币）": "CNY",
+    "部门超额提醒的额度必须大于 0": "Le seuil d'alerte de dépassement de quota du département doit être supérieur à 0",
     "X 也可以小于 1，当折扣用。想做\"只给输出加价\"或\"额外加固定费用\"，请直接写完整计费公式。": ""
   }
 }

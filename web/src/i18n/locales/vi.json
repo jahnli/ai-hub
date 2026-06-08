@@ -4447,6 +4447,18 @@
     "whsec_xxx 的 Webhook 签名密钥，敏感信息不显示": "Khóa chữ ký Webhook cho whsec_xxx, thông tin nhạy cảm không được hiển thị",
     "Worker地址": "Địa chỉ Worker",
     "Worker密钥": "Khóa Worker",
+    "通知设置": "Cài đặt thông báo",
+    "数据报告通知": "Thông báo báo cáo dữ liệu",
+    "按所选周期推送数据总览飞书卡片报告": "Gửi báo cáo thẻ Lark tổng quan dữ liệu theo chu kỳ đã chọn",
+    "请选择通知频率": "Chọn tần suất thông báo",
+    "按周通知": "Hàng tuần",
+    "按月通知": "Hàng tháng",
+    "每周每月都通知": "Hàng tuần và hàng tháng",
+    "部门超额提醒": "Cảnh báo vượt hạn mức phòng ban",
+    "部门成员当日累计消耗超出指定额度后，通过飞书提醒你": "Thông báo qua Lark khi tổng mức tiêu thụ trong ngày của thành viên phòng ban vượt hạn mức chỉ định",
+    "输入额度阈值": "Nhập ngưỡng hạn mức",
+    "元（人民币）": "CNY",
+    "部门超额提醒的额度必须大于 0": "Ngưỡng cảnh báo vượt hạn mức phòng ban phải lớn hơn 0",
     "X 也可以小于 1，当折扣用。想做\"只给输出加价\"或\"额外加固定费用\"，请直接写完整计费公式。": ""
   }
 }
