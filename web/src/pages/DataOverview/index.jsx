@@ -42,12 +42,15 @@ import {
   Modal,
   Space,
   Checkbox,
+  Select,
+  InputNumber,
 } from '@douyinfe/semi-ui';
 import {
   IconRefresh,
   IconHistory,
   IconSearch,
   IconDownload,
+  IconBell,
 } from '@douyinfe/semi-icons';
 import {
   IllustrationNoResult,
@@ -347,6 +350,38 @@ const cardTitleStyle = {
   color: 'var(--semi-color-primary)',
   fontWeight: 600,
 };
+
+const ToggleSwitch = ({ enabled, onChange }) => (
+  <button
+    onClick={() => onChange((v) => !v)}
+    style={{
+      flexShrink: 0,
+      width: 44,
+      height: 24,
+      borderRadius: 12,
+      border: 'none',
+      cursor: 'pointer',
+      padding: 0,
+      position: 'relative',
+      background: enabled ? 'var(--semi-color-success)' : 'var(--semi-color-fill-2)',
+      transition: 'background 0.2s',
+    }}
+  >
+    <span
+      style={{
+        position: 'absolute',
+        top: 3,
+        left: enabled ? 23 : 3,
+        width: 18,
+        height: 18,
+        borderRadius: '50%',
+        background: '#fff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        transition: 'left 0.2s',
+      }}
+    />
+  </button>
+);
 const DataOverview = () => {
   const { t } = useTranslation();
   const {
@@ -397,6 +432,70 @@ const DataOverview = () => {
 
   const [exportLoading, setExportLoading] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
+
+  const [notifyModalVisible, setNotifyModalVisible] = useState(false);
+  const [notifyEnabled, setNotifyEnabled] = useState(false);
+  const [notifyType, setNotifyType] = useState(1);
+  const [quotaEnabled, setQuotaEnabled] = useState(false);
+  const [quotaValue, setQuotaValue] = useState(null);
+  const [quotaLeaveEnabled, setQuotaLeaveEnabled] = useState(false);
+  const [quotaLeaveValue, setQuotaLeaveValue] = useState(null);
+  const [notifyLoading, setNotifyLoading] = useState(false);
+  const [notifySaving, setNotifySaving] = useState(false);
+
+  const handleOpenNotifyModal = useCallback(async () => {
+    setNotifyModalVisible(true);
+    setNotifyLoading(true);
+    try {
+      const res = await API.get('/api/report-notify-setting/self');
+      if (res?.data?.success) {
+        const d = res.data.data ?? {};
+        const freq = d.frequency ?? 0;
+        setNotifyEnabled(freq !== 0);
+        setNotifyType(freq !== 0 ? freq : 1);
+        const q = d.quota ?? 0;
+        setQuotaEnabled(q > 0);
+        setQuotaValue(q > 0 ? q : null);
+        const ql = d.quota_leave ?? 0;
+        setQuotaLeaveEnabled(ql > 0);
+        setQuotaLeaveValue(ql > 0 ? ql : null);
+      }
+    } catch (e) {
+      showError(e);
+    } finally {
+      setNotifyLoading(false);
+    }
+  }, []);
+
+  const handleSaveNotify = useCallback(async () => {
+    if (quotaEnabled && (quotaValue === null || quotaValue <= 0)) {
+      Toast.warning(t('部门超额提醒的额度必须大于 0'));
+      return;
+    }
+    if (quotaLeaveEnabled && (quotaLeaveValue === null || quotaLeaveValue <= 0)) {
+      Toast.warning(t('请假超额提醒的额度必须大于 0'));
+      return;
+    }
+    const payload = {
+      frequency: notifyEnabled ? notifyType : 0,
+      quota: quotaEnabled ? quotaValue : 0,
+      quota_leave: quotaLeaveEnabled ? quotaLeaveValue : 0,
+    };
+    setNotifySaving(true);
+    try {
+      const res = await API.put('/api/report-notify-setting/self', payload);
+      if (res?.data?.success) {
+        Toast.success(t('保存成功'));
+        setNotifyModalVisible(false);
+      } else {
+        showError(res?.data?.message || t('保存失败'));
+      }
+    } catch (e) {
+      showError(e);
+    } finally {
+      setNotifySaving(false);
+    }
+  }, [notifyEnabled, notifyType, quotaEnabled, quotaValue, quotaLeaveEnabled, quotaLeaveValue, t]);
 
   const displayTreeData = useMemo(() => {
     if (!tenantInfo || treeData.length === 0) return treeData;
@@ -1068,6 +1167,12 @@ const DataOverview = () => {
             >
               {t('导出')}
             </Button>
+            <Button
+              icon={<IconBell />}
+              onClick={handleOpenNotifyModal}
+            >
+              {t('通知设置')}
+            </Button>
           </div>
         </div>
       ) : (
@@ -1516,6 +1621,83 @@ const DataOverview = () => {
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal
+        visible={notifyModalVisible}
+        onCancel={() => setNotifyModalVisible(false)}
+        onOk={handleSaveNotify}
+        title={t('通知设置')}
+        okText={t('保存')}
+        cancelText={t('取消')}
+        okButtonProps={{ loading: notifySaving }}
+        width={440}
+      >
+        <Spin spinning={notifyLoading}>
+          {/* 数据报告通知频率 */}
+          <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
+            {t('数据报告通知')}
+          </div>
+          <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            {t('按所选周期推送数据总览飞书卡片报告')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <ToggleSwitch enabled={notifyEnabled} onChange={setNotifyEnabled} />
+            <Select
+              value={notifyEnabled ? notifyType : undefined}
+              onChange={(val) => setNotifyType(val)}
+              disabled={!notifyEnabled}
+              placeholder={t('请选择通知频率')}
+              style={{ flex: 1 }}
+            >
+              <Select.Option value={1}>{t('按周通知')}</Select.Option>
+              <Select.Option value={2}>{t('按月通知')}</Select.Option>
+              <Select.Option value={3}>{t('每周每月都通知')}</Select.Option>
+            </Select>
+          </div>
+
+          {/* 部门超额提醒 */}
+          <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
+            {t('部门超额提醒')}
+          </div>
+          <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            {t('部门成员当日累计消耗超出指定额度后，通过飞书提醒你')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <ToggleSwitch enabled={quotaEnabled} onChange={setQuotaEnabled} />
+            <InputNumber
+              value={quotaEnabled ? quotaValue : undefined}
+              onChange={(val) => setQuotaValue(val)}
+              disabled={!quotaEnabled}
+              placeholder={t('输入额度阈值')}
+              min={1}
+              precision={0}
+              style={{ flex: 1 }}
+              hideButtons
+            />
+          </div>
+
+          {/* 请假超额提醒 */}
+          <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
+            {t('请假超额提醒')}
+          </div>
+          <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            {t('成员请假期间当日累计消耗超出指定额度后，通过飞书提醒你')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ToggleSwitch enabled={quotaLeaveEnabled} onChange={setQuotaLeaveEnabled} />
+            <InputNumber
+              value={quotaLeaveEnabled ? quotaLeaveValue : undefined}
+              onChange={(val) => setQuotaLeaveValue(val)}
+              disabled={!quotaLeaveEnabled}
+              placeholder={t('输入额度阈值')}
+              min={1}
+              precision={0}
+              style={{ flex: 1 }}
+              hideButtons
+            />
+          </div>
+        </Spin>
       </Modal>
     </div>
   );

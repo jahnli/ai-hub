@@ -351,6 +351,13 @@ func SetApiRouter(router *gin.Engine) {
 		deptRoute.GET("/user-stats/:id", controller.GetDepartmentUserStats)
 		}
 
+		reportNotifyRoute := apiRouter.Group("/report-notify-setting")
+		reportNotifyRoute.Use(middleware.UserAuth())
+		{
+			reportNotifyRoute.GET("/self", controller.GetReportNotifySettingSelf)
+			reportNotifyRoute.PUT("/self", controller.UpdateReportNotifySettingSelf)
+		}
+
 		mjRoute := apiRouter.Group("/mj")
 		mjRoute.GET("/self", middleware.UserAuth(), controller.GetUserMidjourney)
 		mjRoute.GET("/", middleware.AdminAuth(), controller.GetAllMidjourney)
