@@ -226,7 +226,7 @@ func DeleteHistoryLogs(c *gin.Context) {
 }
 
 func isSuperAdmin(c *gin.Context) bool {
-	return c.GetInt("role") >= common.RoleRootUser && c.GetInt("id") == 1
+	return c.GetInt("role") >= common.RoleRootUser
 }
 
 func GetLogMessages(c *gin.Context) {
