@@ -1,12 +1,28 @@
 import React, { useMemo } from 'react';
-import { Tag, Typography, Table, Descriptions } from '@douyinfe/semi-ui';
+import { Typography, Descriptions } from '@douyinfe/semi-ui';
 import { VChart } from '@visactor/react-vchart';
 import { initVChartSemiTheme } from '@visactor/vchart-semi-theme';
 import { renderQuota, renderNumber, modelColorMap } from '../../helpers';
+import RecentUsageLogsTable from './RecentUsageLogsTable';
+import {
+  GRANULARITY_OPTIONS,
+  TIME_RANGE_OPTIONS,
+  formatTimeRangeDisplay,
+  getAggregationBucketSize,
+  getTimeRange,
+} from '../../hooks/stats/useStatsTimeRange';
 
 initVChartSemiTheme();
 
 const { Title } = Typography;
+
+export {
+  GRANULARITY_OPTIONS,
+  TIME_RANGE_OPTIONS,
+  formatTimeRangeDisplay,
+  getAggregationBucketSize,
+  getTimeRange,
+};
 
 const chartFontStyle = {
   axes: [
@@ -36,144 +52,6 @@ export function formatBucketTime(ts, granularity) {
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     default:
       return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-}
-
-export const TIME_RANGE_OPTIONS = [
-  { value: 'today', label: '今天' },
-  { value: 'yesterday', label: '昨天' },
-  { value: 'this_week', label: '本周' },
-  { value: 'last_week', label: '上周' },
-  { value: 'this_month', label: '本月' },
-  { value: 'last_month', label: '上月' },
-  { value: 'this_quarter', label: '本季度' },
-  { value: 'last_quarter', label: '上季度' },
-  { value: 'first_half', label: '上半年' },
-  { value: 'second_half', label: '下半年' },
-  { value: 'this_year', label: '本年' },
-  { value: 'last_year', label: '去年' },
-];
-
-export const GRANULARITY_OPTIONS = TIME_RANGE_OPTIONS;
-
-export function getTimeRange(rangeKey) {
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-  let start, end;
-
-  switch (rangeKey) {
-    case 'today':
-      start = startOfDay;
-      end = endOfToday;
-      break;
-    case 'yesterday': {
-      const d = new Date(startOfDay);
-      d.setDate(d.getDate() - 1);
-      start = d;
-      end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-      break;
-    }
-    case 'this_week': {
-      const day = now.getDay() || 7;
-      start = new Date(startOfDay);
-      start.setDate(start.getDate() - (day - 1));
-      end = endOfToday;
-      break;
-    }
-    case 'last_week': {
-      const day = now.getDay() || 7;
-      const thisMonday = new Date(startOfDay);
-      thisMonday.setDate(thisMonday.getDate() - (day - 1));
-      const lastSunday = new Date(thisMonday);
-      lastSunday.setDate(lastSunday.getDate() - 1);
-      start = new Date(thisMonday);
-      start.setDate(start.getDate() - 7);
-      end = new Date(lastSunday.getFullYear(), lastSunday.getMonth(), lastSunday.getDate(), 23, 59, 59);
-      break;
-    }
-    case 'this_month':
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = endOfToday;
-      break;
-    case 'last_month':
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      break;
-    case 'this_quarter': {
-      const q = Math.floor(now.getMonth() / 3);
-      start = new Date(now.getFullYear(), q * 3, 1);
-      end = endOfToday;
-      break;
-    }
-    case 'last_quarter': {
-      const q = Math.floor(now.getMonth() / 3);
-      start = new Date(now.getFullYear(), (q - 1) * 3, 1);
-      end = new Date(now.getFullYear(), q * 3, 0, 23, 59, 59);
-      break;
-    }
-    case 'this_year':
-      start = new Date(now.getFullYear(), 0, 1);
-      end = endOfToday;
-      break;
-    case 'last_year':
-      start = new Date(now.getFullYear() - 1, 0, 1);
-      end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
-      break;
-    case 'first_half':
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear(), 5, 30, 23, 59, 59);
-      break;
-    case 'second_half':
-      start = new Date(now.getFullYear(), 6, 1);
-      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-      break;
-    default:
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = endOfToday;
-  }
-
-  return {
-    start_time: Math.floor(start.getTime() / 1000),
-    end_time: Math.floor(end.getTime() / 1000),
-  };
-}
-
-export function formatTimeRangeDisplay(rangeKey) {
-  const { start_time, end_time } = getTimeRange(rangeKey);
-  const fmt = (ts) => {
-    const d = new Date(ts * 1000);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    const sec = String(d.getSeconds()).padStart(2, '0');
-    return `${y}-${m}-${day} ${h}:${min}:${sec}`;
-  };
-  return `${fmt(start_time)} ~ ${fmt(end_time)}`;
-}
-
-export function getAggregationBucketSize(rangeKey) {
-  switch (rangeKey) {
-    case 'today':
-    case 'yesterday':
-      return 3600;
-    case 'this_week':
-    case 'last_week':
-    case 'this_month':
-    case 'last_month':
-      return 86400;
-    case 'this_quarter':
-    case 'last_quarter':
-      return 7 * 86400;
-    case 'this_year':
-    case 'last_year':
-    case 'first_half':
-    case 'second_half':
-      return 30 * 86400;
-    default:
-      return 86400;
   }
 }
 
@@ -465,51 +343,21 @@ export const TokenDistChart = ({ data, t }) => {
   );
 };
 
-export const RecentLogsTable = ({ logs, t, showUsername = false, showType = true, total, currentPage, pageSize, onPageChange, loading }) => {
+export const RecentLogsTable = ({ logs, t, total, currentPage, pageSize, onPageChange, loading }) => {
   if (!onPageChange && (!logs || logs.length === 0)) return null;
-
-  const columns = [
-    { title: t('时间'), dataIndex: 'created_at', width: 140, render: (v) => formatTimestamp(v) },
-    ...(showUsername ? [{ title: t('用户'), dataIndex: 'username', width: 100, ellipsis: true }] : []),
-    ...(showType ? [{ title: t('类型'), dataIndex: 'type', width: 70, render: (v) => {
-      const map = { 1: t('充值'), 2: t('消费'), 3: t('管理'), 4: t('系统'), 5: t('错误'), 6: t('退款') };
-      const colorMap = { 1: 'green', 2: 'blue', 3: 'orange', 5: 'red', 6: 'purple' };
-      return <Tag color={colorMap[v] || 'grey'} size='small'>{map[v] || t('未知')}</Tag>;
-    }}] : []),
-    { title: t('模型'), dataIndex: 'model_name', width: 180, ellipsis: true },
-    { title: t('用时'), dataIndex: 'use_time', width: 70, render: (v) => {
-      if (!v) return '-';
-      const time = parseInt(v);
-      const color = time < 101 ? 'green' : time < 300 ? 'orange' : 'red';
-      return <Tag color={color} size='small'>{time}s</Tag>;
-    }},
-    { title: t('输入'), dataIndex: 'prompt_tokens', width: 80, render: (v) => v > 0 ? renderNumber(v) : '-' },
-    { title: t('输出'), dataIndex: 'completion_tokens', width: 80, render: (v) => v > 0 ? renderNumber(v) : '-' },
-    { title: t('花费'), dataIndex: 'quota', width: 100, render: (v) => renderQuota(v || 0, 6) },
-  ];
-
-  const pagination = onPageChange
-    ? {
-        currentPage: currentPage || 1,
-        pageSize: pageSize || 10,
-        total: total || 0,
-        showSizeChanger: true,
-        pageSizeOpts: [10, 20, 50],
-        onPageChange: (page) => onPageChange(page, pageSize || 10),
-        onPageSizeChange: (size) => onPageChange(1, size),
-      }
-    : false;
 
   return (
     <div>
       <Title heading={6} className='mb-2'>{t('最近调用记录')}</Title>
-      <Table
-        columns={columns}
-        dataSource={logs}
-        pagination={pagination}
+      <RecentUsageLogsTable
+        logs={logs}
+        t={t}
+        total={total}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
         loading={loading}
-        size='small'
-        rowKey='id'
+        showPagination={Boolean(onPageChange)}
       />
     </div>
   );

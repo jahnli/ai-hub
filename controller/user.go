@@ -122,14 +122,14 @@ func setupLogin(user *model.User, c *gin.Context) {
 		"message": "",
 		"success": true,
 		"data": map[string]any{
-			"id":               user.Id,
-			"username":         user.Username,
-			"display_name":     user.DisplayName,
-			"role":             user.Role,
-			"status":           user.Status,
-			"group":            user.Group,
-			"avatar_url":       user.AvatarUrl,
-			"is_dept_leader":   user.IsDeptLeader,
+			"id":                user.Id,
+			"username":          user.Username,
+			"display_name":      user.DisplayName,
+			"role":              user.Role,
+			"status":            user.Status,
+			"group":             user.Group,
+			"avatar_url":        user.AvatarUrl,
+			"is_dept_leader":    user.IsDeptLeader,
 			"leader_dept_level": user.LeaderDeptLevel,
 		},
 	})
@@ -1389,6 +1389,8 @@ func GetUserStats(c *gin.Context) {
 	endTimeStr := c.DefaultQuery("end_time", "0")
 	startTime, _ := strconv.ParseInt(startTimeStr, 10, 64)
 	endTime, _ := strconv.ParseInt(endTimeStr, 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("log_page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("log_page_size", "10"))
 
 	overview, err := model.GetUserStatsOverview(id)
 	if err != nil {
@@ -1430,9 +1432,10 @@ func GetUserStats(c *gin.Context) {
 		}
 	}
 
-	recentLogs, err := model.GetUserRecentLogs(id, 20)
+	recentLogs, logsTotal, err := model.GetUserRecentLogsPaged(id, page, pageSize)
 	if err != nil {
 		recentLogs = []*model.Log{}
+		logsTotal = 0
 	}
 
 	common.ApiSuccess(c, gin.H{
@@ -1452,5 +1455,6 @@ func GetUserStats(c *gin.Context) {
 		"token_distribution": tokenDist,
 		"trend_data":         trendData,
 		"recent_logs":        recentLogs,
+		"logs_total":         logsTotal,
 	})
 }

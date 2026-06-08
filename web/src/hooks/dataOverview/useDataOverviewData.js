@@ -1,89 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dayjs from 'dayjs';
 import { API, showError } from '../../helpers';
-
-function getTimeRange(rangeKey) {
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-  let start, end;
-
-  switch (rangeKey) {
-    case 'today':
-      start = startOfDay;
-      end = endOfToday;
-      break;
-    case 'yesterday': {
-      const d = new Date(startOfDay);
-      d.setDate(d.getDate() - 1);
-      start = d;
-      end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-      break;
-    }
-    case 'this_week': {
-      const day = now.getDay() || 7;
-      start = new Date(startOfDay);
-      start.setDate(start.getDate() - (day - 1));
-      end = endOfToday;
-      break;
-    }
-    case 'last_week': {
-      const day = now.getDay() || 7;
-      const thisMonday = new Date(startOfDay);
-      thisMonday.setDate(thisMonday.getDate() - (day - 1));
-      const lastSunday = new Date(thisMonday);
-      lastSunday.setDate(lastSunday.getDate() - 1);
-      start = new Date(thisMonday);
-      start.setDate(start.getDate() - 7);
-      end = new Date(lastSunday.getFullYear(), lastSunday.getMonth(), lastSunday.getDate(), 23, 59, 59);
-      break;
-    }
-    case 'this_month':
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = endOfToday;
-      break;
-    case 'last_month':
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      break;
-    case 'this_quarter': {
-      const q = Math.floor(now.getMonth() / 3);
-      start = new Date(now.getFullYear(), q * 3, 1);
-      end = endOfToday;
-      break;
-    }
-    case 'last_quarter': {
-      const q = Math.floor(now.getMonth() / 3);
-      start = new Date(now.getFullYear(), (q - 1) * 3, 1);
-      end = new Date(now.getFullYear(), q * 3, 0, 23, 59, 59);
-      break;
-    }
-    case 'this_year':
-      start = new Date(now.getFullYear(), 0, 1);
-      end = endOfToday;
-      break;
-    case 'last_year':
-      start = new Date(now.getFullYear() - 1, 0, 1);
-      end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
-      break;
-    case 'first_half':
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear(), 5, 30, 23, 59, 59);
-      break;
-    case 'second_half':
-      start = new Date(now.getFullYear(), 6, 1);
-      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-      break;
-    default:
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = endOfToday;
-  }
-
-  return {
-    start_time: Math.floor(start.getTime() / 1000),
-    end_time: Math.floor(end.getTime() / 1000),
-  };
-}
+import {
+  aggregateByGranularity,
+  aggregateTrendByModel,
+  getAggregationBucketSize,
+  getTimeRange,
+  inferBucketSize,
+  inferGranularity,
+} from '../stats/useStatsTimeRange';
 
 function findPathToNode(tree, targetValue) {
   for (const node of tree) {
@@ -98,86 +23,6 @@ function findPathToNode(tree, targetValue) {
     }
   }
   return null;
-}
-
-function getAggregationBucketSize(rangeKey) {
-  switch (rangeKey) {
-    case 'today':
-    case 'yesterday':
-      return 3600; // 1 hour
-    case 'this_week':
-    case 'last_week':
-      return 86400; // 1 day
-    case 'this_month':
-    case 'last_month':
-      return 86400; // 1 day
-    case 'this_quarter':
-    case 'last_quarter':
-      return 7 * 86400; // 1 week
-    case 'this_year':
-    case 'last_year':
-    case 'first_half':
-    case 'second_half':
-      return 30 * 86400; // ~1 month
-    default:
-      return 86400;
-  }
-}
-
-function inferBucketSize(startTime, endTime) {
-  const spanDays = (endTime - startTime) / 86400;
-  if (spanDays <= 2) return 3600;        // ≤ 2天 → 1小时
-  if (spanDays <= 35) return 86400;      // ≤ 35天 → 1天
-  if (spanDays <= 100) return 7 * 86400; // ≤ 100天 → 1周
-  return 30 * 86400;                     // > 100天 → ~1月
-}
-
-function inferGranularity(startDate, endDate) {
-  const spanDays = dayjs(endDate).diff(dayjs(startDate), 'day');
-  if (spanDays <= 1) return 'today';
-  if (spanDays <= 6) return 'this_week';
-  if (spanDays <= 31) return 'this_month';
-  if (spanDays <= 92) return 'this_quarter';
-  return 'this_year';
-}
-
-function aggregateByGranularity(data, granularity, overrideBucketSize) {
-  if (!data || data.length === 0) return [];
-
-  const bucketSize = overrideBucketSize || getAggregationBucketSize(granularity);
-
-  const buckets = new Map();
-  for (const item of data) {
-    const bucketKey = Math.floor(item.created_at / bucketSize) * bucketSize;
-    if (!buckets.has(bucketKey)) {
-      buckets.set(bucketKey, { created_at: bucketKey, quota: 0, count: 0, token_used: 0 });
-    }
-    const b = buckets.get(bucketKey);
-    b.quota += item.quota || 0;
-    b.count += item.count || 0;
-    b.token_used += item.token_used || 0;
-  }
-  return Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
-}
-
-function aggregateTrendByModel(data, granularity, overrideBucketSize) {
-  if (!data || data.length === 0) return [];
-
-  const bucketSize = overrideBucketSize || getAggregationBucketSize(granularity);
-
-  const buckets = new Map();
-  for (const item of data) {
-    const bucketKey = Math.floor(item.created_at / bucketSize) * bucketSize;
-    const key = `${bucketKey}_${item.model_name}`;
-    if (!buckets.has(key)) {
-      buckets.set(key, { created_at: bucketKey, model_name: item.model_name, quota: 0, count: 0, token_used: 0 });
-    }
-    const b = buckets.get(key);
-    b.quota += item.quota || 0;
-    b.count += item.count || 0;
-    b.token_used += item.token_used || 0;
-  }
-  return Array.from(buckets.values()).sort((a, b) => a.created_at - b.created_at);
 }
 
 export const useDataOverviewData = () => {

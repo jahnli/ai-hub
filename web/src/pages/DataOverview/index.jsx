@@ -59,7 +59,6 @@ import {
 import {
   renderQuota,
   renderNumber,
-  timestamp2string,
   copy,
   API,
   showError,
@@ -75,11 +74,13 @@ import {
   ModelTrendChart,
   ModelPieChart,
   ModelRankChart,
-  getAggregationBucketSize,
 } from '../../components/stats/StatsCharts';
-import { getLogsColumns } from '../../components/table/usage-logs/UsageLogsColumnDefs';
+import {
+  aggregateByGranularity,
+  aggregateTrendByModel,
+} from '../../hooks/stats/useStatsTimeRange';
 import { VChart } from '@visactor/react-vchart';
-import CardTable from '../../components/common/ui/CardTable';
+import RecentUsageLogsTable from '../../components/stats/RecentUsageLogsTable';
 import UserStatsModal from '../../components/table/users/modals/UserStatsModal';
 import { exportDataOverview } from './exportUtils';
 
@@ -309,40 +310,6 @@ const UsersPieChart = React.memo(({ data, t }) => {
     />
   );
 });
-
-const COLUMN_KEYS = {
-  TIME: 'time',
-  CHANNEL: 'channel',
-  USERNAME: 'username',
-  TOKEN: 'token',
-  GROUP: 'group',
-  TYPE: 'type',
-  MODEL: 'model',
-  USE_TIME: 'use_time',
-  PROMPT: 'prompt',
-  COMPLETION: 'completion',
-  COST: 'cost',
-  RETRY: 'retry',
-  IP: 'ip',
-  DETAILS: 'details',
-};
-
-const VISIBLE_COLUMNS = {
-  [COLUMN_KEYS.TIME]: true,
-  [COLUMN_KEYS.USERNAME]: true,
-  [COLUMN_KEYS.MODEL]: true,
-  [COLUMN_KEYS.USE_TIME]: true,
-  [COLUMN_KEYS.PROMPT]: true,
-  [COLUMN_KEYS.COMPLETION]: true,
-  [COLUMN_KEYS.COST]: true,
-  [COLUMN_KEYS.TYPE]: true,
-  [COLUMN_KEYS.TOKEN]: true,
-  [COLUMN_KEYS.GROUP]: true,
-  [COLUMN_KEYS.IP]: true,
-  [COLUMN_KEYS.DETAILS]: true,
-  [COLUMN_KEYS.CHANNEL]: false,
-  [COLUMN_KEYS.RETRY]: false,
-};
 
 const cardShadowStyle = { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' };
 const cardTitleStyle = {
@@ -705,7 +672,6 @@ const DataOverview = () => {
       try {
         const startTime = Math.floor(new Date(dateRange[0]).getTime() / 1000);
         const endTime = Math.floor(new Date(dateRange[1]).getTime() / 1000);
-        const bucketSize = getAggregationBucketSize(granularity);
         const res = await API.get('/api/department/stats', {
           params: {
             dept_id: dept.dept_id,
@@ -716,49 +682,11 @@ const DataOverview = () => {
         if (res?.data?.success) {
           const raw = res.data.data;
           const trendRaw = raw.trend_data || [];
-          const buckets = new Map();
-          for (const item of trendRaw) {
-            const bk = Math.floor(item.created_at / bucketSize) * bucketSize;
-            if (!buckets.has(bk))
-              buckets.set(bk, {
-                created_at: bk,
-                quota: 0,
-                count: 0,
-                token_used: 0,
-              });
-            const b = buckets.get(bk);
-            b.quota += item.quota || 0;
-            b.count += item.count || 0;
-            b.token_used += item.token_used || 0;
-          }
-          const trendAggregated = Array.from(buckets.values()).sort(
-            (a, b) => a.created_at - b.created_at,
-          );
-          const modelBuckets = new Map();
-          for (const item of trendRaw) {
-            const bk = Math.floor(item.created_at / bucketSize) * bucketSize;
-            const key = `${bk}_${item.model_name}`;
-            if (!modelBuckets.has(key))
-              modelBuckets.set(key, {
-                created_at: bk,
-                model_name: item.model_name,
-                quota: 0,
-                count: 0,
-                token_used: 0,
-              });
-            const b = modelBuckets.get(key);
-            b.quota += item.quota || 0;
-            b.count += item.count || 0;
-            b.token_used += item.token_used || 0;
-          }
-          const trendByModel = Array.from(modelBuckets.values()).sort(
-            (a, b) => a.created_at - b.created_at,
-          );
           setDeptStatsData({
             overview: raw.overview,
             modelDistribution: raw.model_distribution || [],
-            trendAggregated,
-            trendByModel,
+            trendAggregated: aggregateByGranularity(trendRaw, granularity),
+            trendByModel: aggregateTrendByModel(trendRaw, granularity),
           });
         }
       } catch (error) {
@@ -836,36 +764,16 @@ const DataOverview = () => {
   );
 
   const copyText = useCallback(
-    (event, text) => {
-      event.stopPropagation();
-      if (copy(text)) {
+    async (event, text) => {
+      event?.stopPropagation?.();
+      const copied = await copy(text);
+      if (copied) {
         Toast.success(t('已复制'));
       }
+      return copied;
     },
     [t],
   );
-
-  const formattedLogs = useMemo(() => {
-    if (!logs || logs.length === 0) return [];
-    return logs.map((log) => ({
-      ...log,
-      timestamp2string: timestamp2string(log.created_at),
-      key: log.id,
-    }));
-  }, [logs]);
-
-  const logsColumns = useMemo(() => {
-    const allCols = getLogsColumns({
-      t,
-      COLUMN_KEYS,
-      copyText,
-      showUserInfoFunc: () => {},
-      openChannelAffinityUsageCacheModal: () => {},
-      isAdminUser: true,
-      billingDisplayMode: 'price',
-    });
-    return allCols.filter((col) => VISIBLE_COLUMNS[col.key]);
-  }, [t, copyText]);
 
   const usersSummary = useMemo(() => {
     if (!users || users.length === 0) return null;
@@ -1451,13 +1359,11 @@ const DataOverview = () => {
         width={1800}
         bodyStyle={{ padding: 12 }}
       >
-        <CardTable
-          columns={logsColumns}
-          dataSource={formattedLogs}
-          rowKey='key'
+        <RecentUsageLogsTable
+          logs={logs}
+          t={t}
+          copyText={copyText}
           loading={logsLoading}
-          size='small'
-          scroll={{ x: 'max-content' }}
           empty={
             <Empty
               image={
@@ -1470,15 +1376,10 @@ const DataOverview = () => {
               style={{ padding: 30 }}
             />
           }
-          pagination={{
-            currentPage: logsPage,
-            pageSize: logsPageSize,
-            total: logsTotal,
-            pageSizeOptions: [10, 20, 50],
-            showSizeChanger: true,
-            onPageChange: (page) => handleLogsPageChange(page, logsPageSize),
-            onPageSizeChange: (size) => handleLogsPageChange(1, size),
-          }}
+          currentPage={logsPage}
+          pageSize={logsPageSize}
+          total={logsTotal}
+          onPageChange={handleLogsPageChange}
         />
       </Modal>
 

@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   SideSheet,
   Modal,
@@ -38,31 +38,14 @@ import {
   ModelPieChart,
   ModelRankChart,
   TokenDistChart,
-  RecentLogsTable,
-  GRANULARITY_OPTIONS,
   TIME_RANGE_OPTIONS,
 } from '../../../stats/StatsCharts';
-import { getLogsColumns } from '../../usage-logs/UsageLogsColumnDefs';
-import CardTable from '../../../common/ui/CardTable';
+import RecentUsageLogsTable from '../../../stats/RecentUsageLogsTable';
 import { useUserStats } from '../../../../hooks/users/useUserStats';
 import { useIsMobile } from '../../../../hooks/common/useIsMobile';
-import { timestamp2string, copy } from '../../../../helpers';
+import { copy } from '../../../../helpers';
 
 const { Text } = Typography;
-
-const MODAL_COLUMN_KEYS = {
-  TIME: 'time', CHANNEL: 'channel', USERNAME: 'username', TOKEN: 'token',
-  GROUP: 'group', TYPE: 'type', MODEL: 'model', USE_TIME: 'use_time',
-  PROMPT: 'prompt', COMPLETION: 'completion', COST: 'cost', RETRY: 'retry',
-  IP: 'ip', DETAILS: 'details',
-};
-
-const MODAL_VISIBLE_COLUMNS = {
-  time: true, username: false, model: true, use_time: true,
-  prompt: true, completion: true, cost: true, type: true,
-  token: true, group: true, ip: true, details: true,
-  channel: false, retry: false,
-};
 
 const UserStatsModal = ({ visible, onCancel, user, t, apiPrefix, mode }) => {
   const isMobile = useIsMobile();
@@ -84,32 +67,10 @@ const UserStatsModal = ({ visible, onCancel, user, t, apiPrefix, mode }) => {
     }
   }, [user?.id, fetchLogs]);
 
-  const copyText = useCallback((text) => {
-    copy(text, t('已复制'));
-  }, [t]);
-
-  const modalLogsColumns = useMemo(() => {
-    if (mode !== 'modal') return [];
-    const allCols = getLogsColumns({
-      t,
-      COLUMN_KEYS: MODAL_COLUMN_KEYS,
-      copyText,
-      showUserInfoFunc: () => {},
-      openChannelAffinityUsageCacheModal: () => {},
-      isAdminUser: true,
-      billingDisplayMode: 'price',
-    });
-    return allCols.filter((col) => MODAL_VISIBLE_COLUMNS[col.key]);
-  }, [t, copyText, mode]);
-
-  const formattedLogs = useMemo(() => {
-    if (!statsData?.recentLogs || statsData.recentLogs.length === 0) return [];
-    return statsData.recentLogs.map((log) => ({
-      ...log,
-      timestamp2string: timestamp2string(log.created_at),
-      key: log.id,
-    }));
-  }, [statsData?.recentLogs]);
+  const copyText = useCallback((event, text) => {
+    event?.stopPropagation?.();
+    return copy(text);
+  }, []);
 
   const content = (
     <Spin spinning={loading}>
@@ -159,32 +120,19 @@ const UserStatsModal = ({ visible, onCancel, user, t, apiPrefix, mode }) => {
             <TokenDistChart data={statsData.tokenDistribution} t={t} />
           </Card>
 
-          {mode === 'modal' ? (
-            <Card bodyStyle={{ padding: 12 }}>
-              <Text strong className='mb-2 block'>{t('最近调用记录')}</Text>
-              <CardTable
-                columns={modalLogsColumns}
-                dataSource={formattedLogs}
-                rowKey='key'
-                loading={logsLoading}
-                size='small'
-                scroll={{ x: 'max-content' }}
-                pagination={{
-                  currentPage: logsPage,
-                  pageSize: logsPageSize,
-                  total: logsTotal,
-                  pageSizeOptions: [10, 20, 50],
-                  showSizeChanger: true,
-                  onPageChange: (page) => handleLogsPageChange(page, logsPageSize),
-                  onPageSizeChange: (size) => handleLogsPageChange(1, size),
-                }}
-              />
-            </Card>
-          ) : (
-            <Card bodyStyle={{ padding: 12 }}>
-              <RecentLogsTable logs={statsData.recentLogs} t={t} />
-            </Card>
-          )}
+          <Card bodyStyle={{ padding: 12 }}>
+            <Text strong className='mb-2 block'>{t('最近调用记录')}</Text>
+            <RecentUsageLogsTable
+              logs={statsData.recentLogs}
+              t={t}
+              copyText={copyText}
+              loading={logsLoading}
+              currentPage={logsPage}
+              pageSize={logsPageSize}
+              total={logsTotal}
+              onPageChange={handleLogsPageChange}
+            />
+          </Card>
         </div>
       )}
     </Spin>
