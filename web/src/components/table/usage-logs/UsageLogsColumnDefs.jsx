@@ -733,14 +733,14 @@ export const getLogsColumns = ({
       key: COLUMN_KEYS.MESSAGES,
       title: t('请求内容'),
       dataIndex: 'message_summary',
-      width: 180,
+      width: 280,
       render: (text, record) => {
         if (!canViewMessages || !text) return <></>;
         return (
           <Typography.Paragraph
             ellipsis={{ rows: 2 }}
             style={{
-              maxWidth: 160,
+              maxWidth: 260,
               marginBottom: 0,
               cursor: 'pointer',
             }}
