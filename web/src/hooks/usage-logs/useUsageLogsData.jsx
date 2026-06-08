@@ -81,7 +81,7 @@ export const useLogsData = () => {
 
   // User and admin
   const isAdminUser = isAdmin();
-  const canViewMessages = isRoot() && getUserIdFromLocalStorage() === 1;
+  const canViewMessages = isRoot();
   // Role-specific storage key to prevent different roles from overwriting each other
   const STORAGE_KEY = isAdminUser
     ? 'logs-table-columns-admin'
