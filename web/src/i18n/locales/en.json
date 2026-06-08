@@ -4048,6 +4048,18 @@
     "whsec_xxx 的 Webhook 签名密钥，敏感信息不显示": "Webhook signature key for whsec_xxx, sensitive information not displayed",
     "Worker地址": "Worker Address",
     "Worker密钥": "Worker Key",
+    "通知设置": "Notification Settings",
+    "数据报告通知": "Data Report Notification",
+    "按所选周期推送数据总览飞书卡片报告": "Push data overview Lark card report by selected period",
+    "请选择通知频率": "Select notification frequency",
+    "按周通知": "Weekly",
+    "按月通知": "Monthly",
+    "每周每月都通知": "Weekly & Monthly",
+    "部门超额提醒": "Department Over-Quota Alert",
+    "部门成员当日累计消耗超出指定额度后，通过飞书提醒你": "Alert you via Lark when department members' daily cumulative usage exceeds the specified quota",
+    "输入额度阈值": "Enter quota threshold",
+    "元（人民币）": "CNY",
+    "部门超额提醒的额度必须大于 0": "Department over-quota alert threshold must be greater than 0",
     "X 也可以小于 1，当折扣用。想做\"只给输出加价\"或\"额外加固定费用\"，请直接写完整计费公式。": ""
   }
 }
