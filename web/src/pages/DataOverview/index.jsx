@@ -1389,7 +1389,6 @@ const DataOverview = () => {
         user={statsUser}
         t={t}
         apiPrefix='/api/department/user-stats'
-        mode='modal'
       />
 
       <Modal

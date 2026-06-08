@@ -310,6 +310,7 @@ const UsersTable = (usersData) => {
         onCancel={() => setShowUserStatsModalVisible(false)}
         user={modalUser}
         t={t}
+        showOverview
       />
     </>
   );

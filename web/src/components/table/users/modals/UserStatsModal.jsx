@@ -19,10 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import React, { useEffect, useCallback } from 'react';
 import {
-  SideSheet,
   Modal,
-  Space,
-  Tag,
   Typography,
   Card,
   Spin,
@@ -47,7 +44,14 @@ import { copy } from '../../../../helpers';
 
 const { Text } = Typography;
 
-const UserStatsModal = ({ visible, onCancel, user, t, apiPrefix, mode }) => {
+const UserStatsModal = ({
+  visible,
+  onCancel,
+  user,
+  t,
+  apiPrefix,
+  showOverview = false,
+}) => {
   const isMobile = useIsMobile();
   const { loading, statsData, granularity, fetchStats, changeGranularity, logsPage, logsPageSize, logsTotal, logsLoading, fetchLogs } = useUserStats(apiPrefix);
 
@@ -76,7 +80,7 @@ const UserStatsModal = ({ visible, onCancel, user, t, apiPrefix, mode }) => {
     <Spin spinning={loading}>
       {statsData && (
         <div className='flex flex-col gap-4'>
-          {mode !== 'modal' && <OverviewCards overview={statsData.overview} t={t} />}
+          {showOverview && <OverviewCards overview={statsData.overview} t={t} />}
 
           <div className='flex items-center gap-2'>
             <Text strong>{t('时间范围')}:</Text>
@@ -138,38 +142,18 @@ const UserStatsModal = ({ visible, onCancel, user, t, apiPrefix, mode }) => {
     </Spin>
   );
 
-  if (mode === 'modal') {
-    return (
-      <Modal
-        visible={visible}
-        onCancel={onCancel}
-        footer={null}
-        width={isMobile ? '100%' : 1400}
-        bodyStyle={{ padding: '16px', maxHeight: '80vh', overflowY: 'auto' }}
-        title={user?.name || user?.username}
-        fullScreen={isMobile}
-      >
-        {content}
-      </Modal>
-    );
-  }
-
   return (
-    <SideSheet
+    <Modal
       visible={visible}
-      placement='right'
-      width={isMobile ? '100%' : 960}
-      bodyStyle={{ padding: '16px', overflowY: 'auto' }}
       onCancel={onCancel}
-      title={
-        <Space>
-          <Tag color='cyan' shape='circle'>{t('详情')}</Tag>
-          <Text>{user?.username}</Text>
-        </Space>
-      }
+      footer={null}
+      width={isMobile ? '100%' : 1400}
+      bodyStyle={{ padding: '16px', maxHeight: '80vh', overflowY: 'auto' }}
+      title={user?.name || user?.username}
+      fullScreen={isMobile}
     >
       {content}
-    </SideSheet>
+    </Modal>
   );
 };
 
