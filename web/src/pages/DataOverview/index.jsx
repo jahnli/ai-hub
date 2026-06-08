@@ -22,6 +22,7 @@ import React, {
   useCallback,
   useRef,
   useEffect,
+  useContext,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -65,6 +66,7 @@ import {
   showError,
   isAdmin,
 } from '../../helpers';
+import { UserContext } from '../../context/User';
 import { DASHBOARD_DATE_PRESETS } from '../../constants/dashboard.constants';
 import { useDataOverviewData } from '../../hooks/dataOverview/useDataOverviewData';
 import {
@@ -384,6 +386,8 @@ const ToggleSwitch = ({ enabled, onChange }) => (
 );
 const DataOverview = () => {
   const { t } = useTranslation();
+  const [userState] = useContext(UserContext);
+  const isDeptLeader = userState?.user?.is_dept_leader === true;
   const {
     treeData,
     treeLoading,
@@ -1656,47 +1660,55 @@ const DataOverview = () => {
             </Select>
           </div>
 
-          {/* 部门超额提醒 */}
-          <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
-            {t('部门超额提醒')}
-          </div>
-          <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-            {t('部门成员当日累计消耗超出指定额度后，通过飞书提醒你')}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <ToggleSwitch enabled={quotaEnabled} onChange={setQuotaEnabled} />
-            <InputNumber
-              value={quotaEnabled ? quotaValue : undefined}
-              onChange={(val) => setQuotaValue(val)}
-              disabled={!quotaEnabled}
-              placeholder={t('输入额度阈值')}
-              min={1}
-              precision={0}
-              style={{ flex: 1 }}
-              hideButtons
-            />
-          </div>
+          {/* 部门超额提醒 & 请假超额提醒 — 仅部门领导可见 */}
+          {isDeptLeader && (
+            <>
+              {/* 部门超额提醒 */}
+              <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
+                {t('部门超额提醒')}
+              </div>
+              <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                {t('部门成员当日累计消耗超出指定额度后，通过飞书提醒你')}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <ToggleSwitch enabled={quotaEnabled} onChange={setQuotaEnabled} />
+                <InputNumber
+                  value={quotaEnabled ? quotaValue : undefined}
+                  onChange={(val) => setQuotaValue(val)}
+                  disabled={!quotaEnabled}
+                  placeholder={t('输入额度阈值')}
+                  min={1}
+                  precision={0}
+                  style={{ flex: 1 }}
+                  hideButtons
+                />
+                <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}>{t('元（人民币）')}</span>
+              </div>
 
-          {/* 请假超额提醒 */}
-          <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
-            {t('请假超额提醒')}
-          </div>
-          <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-            {t('成员请假期间当日累计消耗超出指定额度后，通过飞书提醒你')}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ToggleSwitch enabled={quotaLeaveEnabled} onChange={setQuotaLeaveEnabled} />
-            <InputNumber
-              value={quotaLeaveEnabled ? quotaLeaveValue : undefined}
-              onChange={(val) => setQuotaLeaveValue(val)}
-              disabled={!quotaLeaveEnabled}
-              placeholder={t('输入额度阈值')}
-              min={1}
-              precision={0}
-              style={{ flex: 1 }}
-              hideButtons
-            />
-          </div>
+              {/* 请假超额提醒 — 暂不显示
+              <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
+                {t('请假超额提醒')}
+              </div>
+              <div style={{ marginBottom: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                {t('成员请假期间当日累计消耗超出指定额度后，通过飞书提醒你')}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <ToggleSwitch enabled={quotaLeaveEnabled} onChange={setQuotaLeaveEnabled} />
+                <InputNumber
+                  value={quotaLeaveEnabled ? quotaLeaveValue : undefined}
+                  onChange={(val) => setQuotaLeaveValue(val)}
+                  disabled={!quotaLeaveEnabled}
+                  placeholder={t('输入额度阈值')}
+                  min={1}
+                  precision={0}
+                  style={{ flex: 1 }}
+                  hideButtons
+                />
+                <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}>{t('元（人民币）')}</span>
+              </div>
+              */}
+            </>
+          )}
         </Spin>
       </Modal>
     </div>
