@@ -1,7 +1,28 @@
 import React from 'react';
-import { Modal, Empty, Typography, Tag, Spin } from '@douyinfe/semi-ui';
+import {
+  Modal,
+  Empty,
+  Typography,
+  Tag,
+  Spin,
+  Collapse,
+  Button,
+  Tooltip,
+} from '@douyinfe/semi-ui';
+import { IconCopy } from '@douyinfe/semi-icons';
+import { copy, showError, showSuccess } from '../../../../helpers';
 
 const { Text } = Typography;
+
+const stringifyMessageContent = (content) => {
+  if (content === undefined || content === null) {
+    return '';
+  }
+  if (typeof content === 'string') {
+    return content;
+  }
+  return JSON.stringify(content, null, 2);
+};
 
 const MessageDetailModal = ({
   showMessageDetailModal,
@@ -11,6 +32,20 @@ const MessageDetailModal = ({
   t,
 }) => {
   const messages = messageDetailTarget?.messages || [];
+  const defaultActiveKeys = messages.map((_, index) => `${index}`);
+
+  const handleCopy = async (event, content) => {
+    event.stopPropagation();
+    const text = stringifyMessageContent(content);
+    if (!text) {
+      return;
+    }
+    if (await copy(text)) {
+      showSuccess(t('消息已复制到剪贴板'));
+      return;
+    }
+    showError(t('无法复制到剪贴板，请手动复制'));
+  };
 
   return (
     <Modal
@@ -44,47 +79,84 @@ const MessageDetailModal = ({
         ) : (
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
               maxHeight: '56vh',
               overflowY: 'auto',
               paddingRight: 2,
             }}
           >
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  border: '1px solid var(--semi-color-border)',
-                  background: 'var(--semi-color-fill-0)',
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div style={{ flex: '0 0 auto' }}>
-                  <Tag color='blue' shape='circle' size='small'>
-                    {msg.role || 'user'}
-                  </Tag>
-                </div>
-                <Text
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    color: 'var(--semi-color-text-0)',
-                  }}
+            <Collapse defaultActiveKey={defaultActiveKeys} accordion={false}>
+              {messages.map((msg, index) => (
+                <Collapse.Panel
+                  key={index}
+                  itemKey={`${index}`}
+                  header={
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        minWidth: 0,
+                        width: '100%',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          minWidth: 0,
+                        }}
+                      >
+                        <Tag color='blue' shape='circle' size='small'>
+                          {msg.role || 'user'}
+                        </Tag>
+                        <Text size='small' type='tertiary'>
+                          #{index + 1}
+                        </Text>
+                      </div>
+                      <Tooltip content={t('复制')}>
+                        <Button
+                          icon={
+                            <IconCopy
+                              style={{
+                                color: 'var(--semi-color-text-2)',
+                                fontSize: 13,
+                              }}
+                            />
+                          }
+                          theme='borderless'
+                          type='tertiary'
+                          size='small'
+                          style={{
+                            color: 'var(--semi-color-text-2)',
+                            height: 22,
+                            width: 22,
+                            padding: 0,
+                          }}
+                          aria-label={t('复制')}
+                          onClick={(event) => handleCopy(event, msg.content)}
+                          disabled={!stringifyMessageContent(msg.content)}
+                        />
+                      </Tooltip>
+                    </div>
+                  }
                 >
-                  {msg.content || ''}
-                </Text>
-              </div>
-            ))}
+                  <Text
+                    style={{
+                      display: 'block',
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: 'var(--semi-color-text-0)',
+                    }}
+                  >
+                    {stringifyMessageContent(msg.content)}
+                  </Text>
+                </Collapse.Panel>
+              ))}
+            </Collapse>
           </div>
         )}
       </div>
