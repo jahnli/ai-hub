@@ -1585,7 +1585,7 @@ const DataOverview = () => {
                 <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}>{t('元（人民币）')}</span>
               </div>
 
-              {/* 请假超额提醒 — 暂不显示
+              {/* 请假超额提醒 */}
               <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: 'var(--semi-color-text-0)' }}>
                 {t('请假超额提醒')}
               </div>
@@ -1606,7 +1606,6 @@ const DataOverview = () => {
                 />
                 <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}>{t('元（人民币）')}</span>
               </div>
-              */}
             </>
           )}
         </Spin>
