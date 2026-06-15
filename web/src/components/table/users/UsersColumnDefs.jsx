@@ -82,8 +82,7 @@ const renderRole = (role, t) => {
 const renderUsername = (text, record) => {
   const remark = record.remark;
   const cn = parseLdapCN(record.ldap_id);
-  const ous = parseLdapOUs(record.ldap_id).filter((o) => o);
-  const deptDisplay = ous.length > 0 ? ous.join(' / ') : '';
+  const deptDisplay = parseDeptPath(record.department_path);
   const displayName = (cn && cn !== text) ? cn : text;
   const openId = record.open_id;
 
@@ -391,18 +390,17 @@ const parseLdapCN = (dn) => {
   return '';
 };
 
-const parseLdapOUs = (dn) => {
-  if (!dn) return [];
-  const ous = [];
-  const parts = dn.split(',');
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (trimmed.toUpperCase().startsWith('OU=')) {
-      ous.push(trimmed.substring(3));
-    }
+const parseDeptPath = (raw) => {
+  if (!raw) return '';
+  try {
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const first = Array.isArray(arr) ? arr[0] : null;
+    const pathName = first?.department_path?.department_path_name?.name;
+    if (!pathName) return '';
+    return pathName.split('-').map((s) => s.trim()).filter(Boolean).join(' / ');
+  } catch {
+    return '';
   }
-  const len = ous.length;
-  return [ous[len - 4] || '', ous[len - 5] || '', ous[len - 6] || ''];
 };
 
 /**
@@ -499,16 +497,16 @@ export const getUsersColumns = ({
     },
     {
       title: t('部门'),
-      dataIndex: 'ldap_id',
+      dataIndex: 'department_path',
       render: (text) => {
-        const ous = parseLdapOUs(text);
-        const parts = ous.filter((o) => o);
-        if (parts.length === 0) return '-';
-        const display = parts[0];
-        if (parts.length <= 1) return display;
+        const fullPath = parseDeptPath(text);
+        if (!fullPath) return '-';
+        const segments = fullPath.split(' / ');
+        const first = segments[0];
+        if (segments.length <= 1) return first;
         return (
-          <Tooltip content={parts.join(' / ')} position='top'>
-            <span>{display}</span>
+          <Tooltip content={fullPath} position='top'>
+            <span>{first}</span>
           </Tooltip>
         );
       },
