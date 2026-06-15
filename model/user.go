@@ -704,10 +704,12 @@ func (user *User) Edit(updatePassword bool) error {
 
 	newUser := *user
 	updates := map[string]interface{}{
-		"username":     newUser.Username,
-		"display_name": newUser.DisplayName,
-		"group":        newUser.Group,
-		"remark":       newUser.Remark,
+		"username":         newUser.Username,
+		"display_name":     newUser.DisplayName,
+		"group":            newUser.Group,
+		"remark":           newUser.Remark,
+		"department_ids":   newUser.DepartmentIds,
+		"department_path":  newUser.DepartmentPath,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

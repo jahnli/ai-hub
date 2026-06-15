@@ -47,6 +47,7 @@ import {
   InputNumber,
   RadioGroup,
   Radio,
+  Cascader,
 } from '@douyinfe/semi-ui';
 import {
   IconUser,
@@ -59,6 +60,49 @@ import {
 import UserBindingManagementModal from './UserBindingManagementModal';
 
 const { Text, Title } = Typography;
+
+function findDeptPath(tree, targetId) {
+  for (const node of tree) {
+    if (node.value === targetId) return [node.value];
+    if (node.children && node.children.length > 0) {
+      const childPath = findDeptPath(node.children, targetId);
+      if (childPath) return [node.value, ...childPath];
+    }
+  }
+  return null;
+}
+
+function getDeptName(tree, targetId) {
+  for (const node of tree) {
+    if (node.value === targetId) return node.label;
+    if (node.children && node.children.length > 0) {
+      const name = getDeptName(node.children, targetId);
+      if (name) return name;
+    }
+  }
+  return '';
+}
+
+function buildDeptPathEntry(tree, leafId) {
+  const pathIds = findDeptPath(tree, leafId) || [leafId];
+  const pathNames = pathIds.map((id) => getDeptName(tree, id));
+  const leafName = pathNames[pathNames.length - 1] || '';
+  return {
+    department_id: leafId,
+    department_name: {
+      name: leafName,
+      i18n_name: { zh_cn: leafName, en_us: '', ja_jp: '' },
+    },
+    department_path: {
+      department_ids: pathIds,
+      department_path_name: {
+        name: pathNames.join('-'),
+        i18n_name: { zh_cn: pathNames.join('-'), en_us: '', ja_jp: '' },
+      },
+    },
+  };
+}
+
 
 const EditUserModal = (props) => {
   const { t } = useTranslation();
@@ -76,6 +120,7 @@ const EditUserModal = (props) => {
   const [showAdjustQuotaRaw, setShowAdjustQuotaRaw] = useState(false);
   const [showQuotaInput, setShowQuotaInput] = useState(false);
   const [inputs, setInputs] = useState(null);
+  const [deptTree, setDeptTree] = useState([]);
 
   const isEdit = Boolean(userId);
 
@@ -102,6 +147,17 @@ const EditUserModal = (props) => {
       setGroupOptions(res.data.data.map((g) => ({ label: g, value: g })));
     } catch (e) {
       showError(e.message);
+    }
+  };
+
+  const fetchDeptTree = async () => {
+    try {
+      const res = await API.get('/api/department/tree');
+      if (res?.data?.success) {
+        setDeptTree(res.data.data || []);
+      }
+    } catch (e) {
+      // non-critical, silently ignore
     }
   };
 
@@ -133,6 +189,7 @@ const EditUserModal = (props) => {
   useEffect(() => {
     loadUser();
     if (userId) fetchGroups();
+    fetchDeptTree();
     setBindingModalVisible(false);
   }, [props.editingUser.id]);
 
@@ -150,6 +207,20 @@ const EditUserModal = (props) => {
     let payload = { ...values };
     delete payload.quota;
     delete payload.quota_amount;
+    // Merge department_ids from inputs (managed by Form.Slot, not a real form field)
+    if (inputs?.department_ids !== undefined) {
+      payload.department_ids = inputs.department_ids;
+    }
+    if (inputs?.department_path !== undefined) {
+      payload.department_path = inputs.department_path;
+    }
+    // Serialize array fields to JSON string for the backend
+    if (Array.isArray(payload.department_ids)) {
+      payload.department_ids = JSON.stringify(payload.department_ids);
+    }
+    if (Array.isArray(payload.department_path)) {
+      payload.department_path = JSON.stringify(payload.department_path);
+    }
     if (userId) {
       payload.id = parseInt(userId);
     }
@@ -239,7 +310,7 @@ const EditUserModal = (props) => {
         }
         bodyStyle={{ padding: 0 }}
         visible={props.visible}
-        width={isMobile ? '100%' : 600}
+        width={isMobile ? '100%' : 850}
         footer={
           <div className='flex justify-end bg-white'>
             <Space>
@@ -331,6 +402,41 @@ const EditUserModal = (props) => {
                         showClear
                       />
                     </Col>
+
+                    {isEdit && (
+                      <Col span={24}>
+                        <Form.Slot label={t('所属部门')}>
+                          <Cascader
+                            treeData={deptTree}
+                            placeholder={t('选择部门（外部项目账号用）')}
+                            value={
+                              Array.isArray(inputs?.department_ids) && inputs.department_ids.length > 0
+                                ? findDeptPath(deptTree, inputs.department_ids[0])
+                                : undefined
+                            }
+                            onChange={(path) => {
+                              if (path && path.length > 0) {
+                                const leafId = path[path.length - 1];
+                                const deptPathEntry = buildDeptPathEntry(deptTree, leafId);
+                                setInputs((prev) => ({
+                                  ...prev,
+                                  department_ids: [leafId],
+                                  department_path: [deptPathEntry],
+                                }));
+                              } else {
+                                setInputs((prev) => ({ ...prev, department_ids: [], department_path: [] }));
+                              }
+                            }}
+                            changeOnSelect
+                            filterTreeNode
+                            showClear
+                            showNext='hover'
+                            style={{ width: '100%' }}
+                            dropdownClassName='dept-cascader-dropdown'
+                          />
+                        </Form.Slot>
+                      </Col>
+                    )}
                   </Row>
                 </Card>
 

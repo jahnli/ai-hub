@@ -1382,3 +1382,14 @@ html.dark .bridge-path {
 }
 
 .ec-dbcd0a3c01b55203 { forced-color-adjust: auto; }
+
+/* Department Cascader: fit 5-level deep trees without truncation */
+.dept-cascader-dropdown .semi-cascader-option-list {
+  min-width: 140px;
+  max-width: 200px;
+}
+.dept-cascader-dropdown .semi-cascader-option-list .semi-cascader-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

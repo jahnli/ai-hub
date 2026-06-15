@@ -1259,7 +1259,7 @@ const DataOverview = () => {
                 <Table
                   columns={columns}
                   dataSource={users}
-                  rowKey='open_id'
+                  rowKey={(record) => record.open_id || `user-${record.id || Math.random()}`}
                   onChange={handleTableChange}
                   pagination={{
                     pageSize: 10,

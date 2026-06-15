@@ -506,12 +506,161 @@ func GetDepartmentUsers(c *gin.Context) {
 		result = append(result, item)
 	}
 
+	// Append locally-assigned users (non-Feishu accounts with department_ids)
+	feishuOpenIdSet := make(map[string]bool, len(feishuOpenIds))
+	for _, oid := range feishuOpenIds {
+		feishuOpenIdSet[oid] = true
+	}
+	extraLocalUsers := queryLocalUsersByDeptIds(targetDeptIds, feishuOpenIdSet)
+	if len(extraLocalUsers) > 0 {
+		extraUserIds := make([]int, 0, len(extraLocalUsers))
+		for i := range extraLocalUsers {
+			extraUserIds = append(extraUserIds, extraLocalUsers[i].Id)
+		}
+
+		var extraSubSummaries map[int]model.SubscriptionQuotaSummary
+		var extraConsumptionSummaries map[int]model.UserConsumptionSummary
+		var extraTopModels map[int]string
+		var extraWg sync.WaitGroup
+		extraWg.Add(3)
+		go func() {
+			defer extraWg.Done()
+			extraSubSummaries, _ = model.GetActiveSubscriptionQuotaSummaryByUserIds(extraUserIds)
+		}()
+		go func() {
+			defer extraWg.Done()
+			extraConsumptionSummaries, _ = model.GetUserConsumptionSummaryByIdsWithTimeRange(extraUserIds, startTime, endTime)
+		}()
+		go func() {
+			defer extraWg.Done()
+			extraTopModels, _ = model.GetTopModelByUserIdsWithTimeRange(extraUserIds, startTime, endTime)
+		}()
+		extraWg.Wait()
+
+		for i := range extraLocalUsers {
+			lu := &extraLocalUsers[i]
+			if registeredFilter == "true" && lu.Id == 0 {
+				continue
+			}
+			if registeredFilter == "false" && lu.Id != 0 {
+				continue
+			}
+
+			item := departmentUserItem{
+				Name:        lu.Name,
+				OpenId:      lu.OpenId,
+				Registered:  true,
+				Id:          lu.Id,
+				Username:    lu.Username,
+				DisplayName: lu.DisplayName,
+				Email:       lu.Email,
+				LastLoginAt: lu.LastLoginAt,
+			}
+			if !lu.CreatedAt.IsZero() {
+				item.CreatedAt = lu.CreatedAt.Format("2006-01-02 15:04:05")
+			}
+			if item.Name == "" {
+				item.Name = lu.DisplayName
+			}
+			if item.Name == "" {
+				item.Name = lu.Username
+			}
+
+			if s, ok := extraSubSummaries[lu.Id]; ok {
+				item.SubQuotaTotal = s.AmountTotal
+				item.SubQuotaUsed = s.AmountUsed
+				item.SubscriptionResetCount = s.ResetCount
+			}
+			if c, ok := extraConsumptionSummaries[lu.Id]; ok {
+				item.TotalConsumedQuota = c.TotalQuota
+				item.TotalPromptTokens = c.TotalPrompt
+				item.TotalCompletionTokens = c.TotalCompletion
+				item.RequestCount = c.TotalRequestCount
+			}
+			if m, ok := extraTopModels[lu.Id]; ok {
+				item.TopModel = m
+			}
+			result = append(result, item)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    result,
 	})
 }
+// queryLocalUserIdsByDeptIds returns user IDs whose department_ids JSON array
+// contains at least one of the given target department IDs.
+func queryLocalUserIdsByDeptIds(targetDeptIds []string) []int {
+	if len(targetDeptIds) == 0 {
+		return nil
+	}
+	var users []model.User
+	model.DB.Model(&model.User{}).
+		Select("id, department_ids").
+		Where("department_ids != ''").
+		Find(&users)
+
+	var result []int
+	for _, u := range users {
+		if u.DepartmentIds == "" {
+			continue
+		}
+		deptIds, err := parseUserDepartmentIds(u.DepartmentIds)
+		if err != nil {
+			continue
+		}
+		for _, dId := range deptIds {
+			for _, targetId := range targetDeptIds {
+				if dId == targetId {
+					result = append(result, u.Id)
+					goto nextUser
+				}
+			}
+		}
+	nextUser:
+	}
+	return result
+}
+
+// queryLocalUsersByDeptIds returns full User records whose department_ids JSON array
+// contains at least one of the given target department IDs, excluding users whose
+// open_id is in the excludeOpenIds set (typically Feishu users already covered).
+func queryLocalUsersByDeptIds(targetDeptIds []string, excludeOpenIds map[string]bool) []model.User {
+	if len(targetDeptIds) == 0 {
+		return nil
+	}
+	var users []model.User
+	model.DB.Model(&model.User{}).
+		Where("department_ids != ''").
+		Find(&users)
+
+	var result []model.User
+	for _, u := range users {
+		if u.DepartmentIds == "" {
+			continue
+		}
+		if excludeOpenIds != nil && u.OpenId != "" && excludeOpenIds[u.OpenId] {
+			continue
+		}
+		deptIds, err := parseUserDepartmentIds(u.DepartmentIds)
+		if err != nil {
+			continue
+		}
+		for _, dId := range deptIds {
+			for _, targetId := range targetDeptIds {
+				if dId == targetId {
+					result = append(result, u)
+					goto nextUser2
+				}
+			}
+		}
+	nextUser2:
+	}
+	return result
+}
+
 
 func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 	entries, err := parseUserDeptPathEntries(raw)
@@ -671,20 +820,24 @@ func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
 		feishuOpenIds = append(feishuOpenIds, fu.OpenId)
 	}
 
-	if len(feishuOpenIds) == 0 {
-		return []int{}, nil
+	var userIds []int
+	if len(feishuOpenIds) > 0 {
+		var localUsers []model.User
+		model.DB.Model(&model.User{}).
+			Select("id").
+			Where("open_id IN ?", feishuOpenIds).
+			Find(&localUsers)
+		for _, lu := range localUsers {
+			userIds = append(userIds, lu.Id)
+		}
 	}
 
-	var localUsers []model.User
-	model.DB.Model(&model.User{}).
-		Select("id").
-		Where("open_id IN ?", feishuOpenIds).
-		Find(&localUsers)
-
-	userIds := make([]int, 0, len(localUsers))
-	for _, lu := range localUsers {
-		userIds = append(userIds, lu.Id)
+	// Also include local users (non-Feishu accounts) assigned to these departments via department_ids
+	extraUserIds := queryLocalUserIdsByDeptIds(targetDeptIds)
+	for _, uid := range extraUserIds {
+		userIds = append(userIds, uid)
 	}
+
 	return userIds, nil
 }
 
@@ -890,6 +1043,32 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		}
 	}
 
+	// Also assign locally-assigned users (non-Feishu accounts) to child departments
+	extraAllLocalUsers := queryLocalUsersByDeptIds(allDeptIds, nil)
+	childLocalUserIds := make(map[string][]int, len(directChildren))
+	for _, lu := range extraAllLocalUsers {
+		if lu.DepartmentIds == "" {
+			continue
+		}
+		deptIds, err := parseUserDepartmentIds(lu.DepartmentIds)
+		if err != nil {
+			continue
+		}
+		for _, child := range directChildren {
+			matched := false
+			for _, dId := range deptIds {
+				if childDescendants[child.DepartmentId][dId] {
+					matched = true
+					break
+				}
+			}
+			if matched {
+				childLocalUserIds[child.DepartmentId] = append(childLocalUserIds[child.DepartmentId], lu.Id)
+				break
+			}
+		}
+	}
+
 	type childStat struct {
 		DeptId          string `json:"dept_id"`
 		DeptName        string `json:"dept_name"`
@@ -927,13 +1106,14 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 
 	for i, child := range directChildren {
 		openIds := childFeishuUsers[child.DepartmentId]
+		localIds := childLocalUserIds[child.DepartmentId]
 		stat := childStat{
 			DeptId:      child.DepartmentId,
 			DeptName:    child.GetName(),
-			MemberCount: len(openIds),
+			MemberCount: len(openIds) + len(localIds),
 		}
 
-		if len(openIds) == 0 {
+		if len(openIds) == 0 && len(localIds) == 0 {
 			resultsCh <- childStatResult{index: i, stat: stat}
 			continue
 		}
@@ -943,6 +1123,10 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 			if uid, ok := allLocalUserMap[oid]; ok {
 				userIds = append(userIds, uid)
 			}
+		}
+		// Add locally-assigned user IDs directly
+		for _, uid := range localIds {
+			userIds = append(userIds, uid)
 		}
 		stat.RegisteredCount = len(userIds)
 
