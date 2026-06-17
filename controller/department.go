@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -188,12 +189,24 @@ func getBPDeptRootIds(rawDeptPath string, role int) ([]string, map[string]bool, 
 }
 
 func getLeaderDeptIds(feishuOpenId string, departments []*service.FeishuDepartment) []string {
+	deptMap := make(map[string]*service.FeishuDepartment, len(departments))
+	for _, d := range departments {
+		deptMap[d.DepartmentId] = d
+	}
+
 	leaderDeptIds := make([]string, 0)
 	for _, dept := range departments {
 		if dept.LeaderUserId == feishuOpenId {
 			leaderDeptIds = append(leaderDeptIds, dept.DepartmentId)
 		}
 	}
+
+	// Sort by level ascending so the highest-level (shallowest) dept is first,
+	// which becomes the default selection on the frontend.
+	sort.Slice(leaderDeptIds, func(i, j int) bool {
+		return service.CalcDeptLevel(leaderDeptIds[i], deptMap) < service.CalcDeptLevel(leaderDeptIds[j], deptMap)
+	})
+
 	return leaderDeptIds
 }
 
@@ -334,6 +347,12 @@ func mergeTreeRoots(existing, incoming []*cascaderNode) []*cascaderNode {
 
 	for _, node := range incoming {
 		if ex, ok := existingMap[node.Value]; ok {
+			// If the incoming node is enabled, promote the existing node too.
+			// This handles the case where the same dept appears as both an
+			// ancestor (Disabled: true) and a leader root (Disabled: false).
+			if !node.Disabled {
+				ex.Disabled = false
+			}
 			ex.Children = mergeTreeRoots(ex.Children, node.Children)
 		} else {
 			existing = append(existing, node)
