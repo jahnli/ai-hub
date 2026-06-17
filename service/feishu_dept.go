@@ -473,3 +473,117 @@ func CalcDeptLevel(deptId string, deptMap map[string]*FeishuDepartment) int {
 	}
 	return level
 }
+
+// SendCardMessage sends a Feishu interactive card to a user identified by open_id.
+func SendCardMessage(openId, cardJSON string) error {
+	token, err := GetTenantAccessToken()
+	if err != nil {
+		return fmt.Errorf("get tenant token: %w", err)
+	}
+	body := map[string]string{
+		"receive_id": openId,
+		"msg_type":   "interactive",
+		"content":    cardJSON,
+	}
+	jsonData, _ := json.Marshal(body)
+
+	req, err := http.NewRequest("POST",
+		"https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id",
+		bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send message: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	if result.Code != 0 {
+		return fmt.Errorf("feishu error code=%d msg=%s", result.Code, result.Msg)
+	}
+	return nil
+}
+
+// BuildViolationCard builds a Feishu card notifying the user of a policy violation.
+func BuildViolationCard(requestTime, requestId, modelName string) string {
+	card := map[string]any{
+		"schema": "2.0",
+		"config": map[string]any{"update_multi": true},
+		"header": map[string]any{
+			"template": "red",
+			"title":    map[string]string{"tag": "plain_text", "content": "⚠️ AI Hub 安全审计提醒"},
+		},
+		"body": map[string]any{
+			"direction": "vertical",
+			"elements": []any{
+				map[string]any{
+					"tag":     "markdown",
+					"content": "检测到以下请求疑似包含非工作内容。根据公司安全条例，此行为已被记录。请勿使用公司 AI Hub 模型处理私人事务。",
+					"margin":  "0px 0px 12px 0px",
+				},
+				map[string]any{
+					"tag":                "column_set",
+					"flex_mode":          "stretch",
+					"horizontal_spacing": "12px",
+					"columns": []any{
+						map[string]any{
+							"tag":              "column",
+							"background_style": "grey-50",
+							"width":            "weighted",
+							"weight":           1,
+							"padding":          "12px 12px 12px 12px",
+							"elements": []any{
+								map[string]any{"tag": "markdown", "content": "<font color='grey'>请求时间</font>"},
+								map[string]any{"tag": "markdown", "content": "**" + requestTime + "**"},
+							},
+						},
+						map[string]any{
+							"tag":              "column",
+							"background_style": "grey-50",
+							"width":            "weighted",
+							"weight":           1,
+							"padding":          "12px 12px 12px 12px",
+							"elements": []any{
+								map[string]any{"tag": "markdown", "content": "<font color='grey'>使用模型</font>"},
+								map[string]any{"tag": "markdown", "content": "**" + modelName + "**"},
+							},
+						},
+					},
+				},
+				map[string]any{
+					"tag":                "column_set",
+					"flex_mode":          "stretch",
+					"horizontal_spacing": "12px",
+					"margin":             "8px 0px 0px 0px",
+					"columns": []any{
+						map[string]any{
+							"tag":              "column",
+							"background_style": "grey-50",
+							"width":            "weighted",
+							"weight":           1,
+							"padding":          "12px 12px 12px 12px",
+							"elements": []any{
+								map[string]any{"tag": "markdown", "content": "<font color='grey'>Request ID</font>"},
+								map[string]any{"tag": "markdown", "content": "**" + requestId + "**"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, _ := json.Marshal(card)
+	return string(data)
+}

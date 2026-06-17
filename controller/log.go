@@ -4,9 +4,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -288,4 +290,49 @@ func GetLogMessagesBatch(c *gin.Context) {
 		"success": true,
 		"data":    summaries,
 	})
+}
+
+type notifyViolationRequest struct {
+	RequestId  string `json:"request_id"`
+	UserId     int    `json:"user_id"`
+	ModelName  string `json:"model_name"`
+	CreatedAt  int64  `json:"created_at"`
+}
+
+func NotifyViolation(c *gin.Context) {
+	if !isSuperAdmin(c) {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "无权访问"})
+		return
+	}
+
+	var req notifyViolationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "参数错误: " + err.Error()})
+		return
+	}
+	if req.RequestId == "" || req.UserId == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "request_id 和 user_id 不能为空"})
+		return
+	}
+
+	extras, err := model.GetUserLogExtrasByIds([]int{req.UserId})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "查询用户信息失败: " + err.Error()})
+		return
+	}
+	extra, ok := extras[req.UserId]
+	if !ok || extra.OpenId == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "该用户未绑定飞书账号，无法发送通知"})
+		return
+	}
+
+	requestTime := time.Unix(req.CreatedAt, 0).Format("2006-01-02 15:04:05")
+	cardJSON := service.BuildViolationCard(requestTime, req.RequestId, req.ModelName)
+
+	if err := service.SendCardMessage(extra.OpenId, cardJSON); err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "发送飞书通知失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "通知已发送"})
 }

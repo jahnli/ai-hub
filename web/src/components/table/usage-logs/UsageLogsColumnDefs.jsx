@@ -746,7 +746,7 @@ export const getLogsColumns = ({
             }}
             onClick={(e) => {
               e.stopPropagation();
-              viewMessageDetail?.(record.request_id);
+              viewMessageDetail?.(record);
             }}
           >
             {text}

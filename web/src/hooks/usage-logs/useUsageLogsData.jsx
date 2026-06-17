@@ -406,7 +406,8 @@ export const useLogsData = () => {
   };
 
   // View full messages for a request
-  const viewMessageDetail = async (requestId) => {
+  const viewMessageDetail = async (record) => {
+    const requestId = typeof record === 'string' ? record : record?.request_id;
     if (!canViewMessages || !requestId) return;
     setMessageDetailLoading(true);
     try {
@@ -428,6 +429,9 @@ export const useLogsData = () => {
           requestId,
           summary: data.summary,
           messages,
+          userId: typeof record === 'object' ? record?.user_id : undefined,
+          modelName: typeof record === 'object' ? record?.model_name : undefined,
+          createdAt: typeof record === 'object' ? record?.created_at : undefined,
         });
         setShowMessageDetailModal(true);
       }
@@ -435,6 +439,29 @@ export const useLogsData = () => {
       showError('获取消息详情失败');
     }
     setMessageDetailLoading(false);
+  };
+
+  const notifyViolation = async (target) => {
+    if (!target?.requestId || !target?.userId) {
+      showError('缺少必要信息，无法发送通知');
+      return;
+    }
+    try {
+      const res = await API.post('/api/log/notify-violation', {
+        request_id: target.requestId,
+        user_id: target.userId,
+        model_name: target.modelName || '',
+        created_at: target.createdAt || 0,
+      });
+      const { success, message } = res.data;
+      if (success) {
+        showSuccess('飞书违规通知已发送');
+      } else {
+        showError(message || '发送失败');
+      }
+    } catch (e) {
+      showError('发送通知失败');
+    }
   };
 
   // Format logs data
@@ -963,6 +990,7 @@ export const useLogsData = () => {
     messageDetailTarget,
     messageDetailLoading,
     viewMessageDetail,
+    notifyViolation,
 
     // Functions
     loadLogs,
