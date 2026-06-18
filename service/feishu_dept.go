@@ -581,6 +581,11 @@ func BuildViolationCard(requestTime, requestId, modelName string) string {
 						},
 					},
 				},
+				map[string]any{
+					"tag":     "markdown",
+					"content": "如误告警，忽略即可",
+					"margin":  "12px 0px 0px 0px",
+				},
 			},
 		},
 	}
