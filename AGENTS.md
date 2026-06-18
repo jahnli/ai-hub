@@ -141,18 +141,10 @@ web/             — 前端主题容器
 
 **完成代码变更后的步骤：**
 
-1. 阅读 `docs/changes/_TEMPLATE.md` 获取文档结构。
-2. 在 `docs/changes/YYYY-MM-DD/` 下创建新文件：
-   - 若日期文件夹不存在，先创建
-   - 文件命名为 `<type>-<short-name>.md`
-   - type: `feat` | `fix` | `enhance` | `refactor`
-   - short-name: 2–4 个英文单词，kebab-case
-   - 示例: `docs/changes/2026-06-18/feat-billing-expression.md`
-   - 同日同类型多个变更: 追加序号，如 `feat-xxx-2.md`
-3. 按模板填写，特别关注：
-   - "与上游的差异"：标注此变更是二开专属新增还是对上游行为的修改，以及合并注意事项
-   - "修改的文件"：列出所有被修改的文件及变更类型
-4. 更新 `docs/changes/_index.md`：在 `<!-- 新记录添加在此行上方 -->` 标记**上方**插入一行：
-   ```
-   | YYYY-MM-DD | type | 标题 | [链接](./YYYY-MM-DD/filename.md) |
-   ```
+在 `docs/changes/CHANGELOG.md` 表格末尾追加一行：
+
+| YYYY-MM-DD | 一句话说明 | `file.go`（具体改动，如字段/值：旧→新）、`file2.go`（...） | 二开变更 / 与上游一致 | 保留 / 检查 / 可丢弃 |
+
+- **涉及文件**：列出路径并在括号内注明具体改动，方便合并时看懂冲突
+- **与上游差异**：二开变更需简述与上游的不同
+- **合并指引**：保留（长期二开）、检查（上游更新后确认是否仍需）、可丢弃（上游已支持或临时方案）
