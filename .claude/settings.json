@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CHANGED=$( { git diff --name-only HEAD; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u); OUTSIDE=$(echo \"$CHANGED\" | grep -vE '^(docs/changes/|\\.claude/|$)' | head -1); INSIDE=$(echo \"$CHANGED\" | grep '^docs/changes/' | head -1); if [ -n \"$OUTSIDE\" ] && [ -z \"$INSIDE\" ]; then echo '{\"systemMessage\": \"⚠️ 缺少变更记录！检测到代码修改但 docs/changes/ 未更新，请按规则 6 创建变更记录。\"}'; else echo '{}'; fi",
+            "shell": "bash"
+          }
+        ]
+      }
+    ]
+  }
+}
