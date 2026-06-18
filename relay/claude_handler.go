@@ -21,7 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
+func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
 
 	info.InitChannelMeta(c)
 
@@ -178,7 +178,7 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 			if err != nil {
-				return newAPIErrorFromParamOverride(err)
+				return AIHubErrorFromParamOverride(err)
 			}
 		}
 
@@ -204,18 +204,18 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		httpResp = resp.(*http.Response)
 		info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
 		if httpResp.StatusCode != http.StatusOK {
-			newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			AIHubError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
-			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-			return newAPIError
+			service.ResetStatusCode(AIHubError, statusCodeMappingStr)
+			return AIHubError
 		}
 	}
 
-	usage, newAPIError := adaptor.DoResponse(c, httpResp, info)
-	if newAPIError != nil {
+	usage, AIHubError := adaptor.DoResponse(c, httpResp, info)
+	if AIHubError != nil {
 		// reset status code 重置状态码
-		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
-		return newAPIError
+		service.ResetStatusCode(AIHubError, statusCodeMappingStr)
+		return AIHubError
 	}
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)

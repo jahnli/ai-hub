@@ -1,8 +1,8 @@
 <div align="center">
 
-![new-api](/web/default/public/logo.png)
+![AI Hub](/web/default/public/logo.png)
 
-# New API
+# AI Hub
 
 🍥 **新一代大模型網關與AI資產管理系統**
 

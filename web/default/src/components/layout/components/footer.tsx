@@ -133,7 +133,7 @@ function ProjectAttribution(props: { currentYear: number; inline?: boolean }) {
         rel='noopener noreferrer'
         className='text-foreground/70 hover:text-foreground font-medium transition-colors'
       >
-        {t('New API')}
+        {t('AI Hub')}
       </a>
       . {t(NEW_API_FOOTER_ATTRIBUTION_KEY)}
     </span>
@@ -158,7 +158,7 @@ export function Footer(props: FooterProps) {
   } = useSystemConfig()
 
   const displayLogo = systemLogo || props.logo || '/logo.png'
-  const displayName = systemName || props.name || 'New API'
+  const displayName = systemName || props.name || 'AI Hub'
   const isDemoSiteMode = Boolean(demoSiteEnabled)
   const currentYear = new Date().getFullYear()
 
@@ -169,15 +169,15 @@ export function Footer(props: FooterProps) {
         links: [
           {
             text: t('footer.columns.about.links.aboutProject'),
-            href: 'https://docs.newapi.pro/wiki/project-introduction/',
+            href: 'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c',
           },
           {
             text: t('footer.columns.about.links.contact'),
-            href: 'https://docs.newapi.pro/support/community-interaction/',
+            href: 'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c',
           },
           {
             text: t('footer.columns.about.links.features'),
-            href: 'https://docs.newapi.pro/wiki/features-introduction/',
+            href: 'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c',
           },
         ],
       },
@@ -186,15 +186,15 @@ export function Footer(props: FooterProps) {
         links: [
           {
             text: t('footer.columns.docs.links.quickStart'),
-            href: 'https://docs.newapi.pro/getting-started/',
+            href: 'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c',
           },
           {
             text: t('footer.columns.docs.links.installation'),
-            href: 'https://docs.newapi.pro/installation/',
+            href: 'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c',
           },
           {
             text: t('footer.columns.docs.links.apiDocs'),
-            href: 'https://docs.newapi.pro/api/',
+            href: 'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c',
           },
         ],
       },
