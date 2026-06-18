@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "node .cursor/hooks/changelog-reminder.js",
+        "timeout": 10,
+        "loop_limit": 1
+      }
+    ]
+  }
+}
