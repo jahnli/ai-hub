@@ -9,3 +9,4 @@
 | 2026-06-18 | 移除主页底部 Footer 组件 | `web/default/src/features/home/index.tsx`（删除 `Footer` import 及 `<Footer />` 渲染）、`web/default/src/components/layout/components/footer.tsx`（删除整个文件） | 二开变更 | 保留 |
 | 2026-06-19 | 删除已废弃的 Footer 组件翻译 key | `web/default/src/i18n/locales/{en,zh,fr,ja,ru,vi}.json`（删除 `footer.columns.*`、`footer.defaultCopyright`、`footer.newapi.projectAttributionSuffix` 共 14 key × 6 语言） | 二开变更 | 保留 |
 | 2026-06-19 | 修复前端 dev server 端口冲突 | `web/default/rsbuild.config.ts`（`server` 新增 `port: 5173`，避免与 Go 后端 3000 端口冲突） | 二开变更 | 保留 |
+| 2026-06-19 | 移除开发环境 devtools 面板 | `web/default/src/routes/__root.tsx`（删除 `ReactQueryDevtools`、`TanStackRouterDevtools` 渲染及 import） | 二开变更 | 可丢弃 |
