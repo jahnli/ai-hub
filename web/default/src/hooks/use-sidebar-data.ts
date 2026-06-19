@@ -28,7 +28,6 @@ import {
   MessageSquare,
   Radio,
   Settings,
-  Ticket,
   User,
   Users,
   Wallet,
@@ -130,11 +129,6 @@ export function useSidebarData(): SidebarData {
             title: t('Users'),
             url: '/users',
             icon: Users,
-          },
-          {
-            title: t('Redemption Codes'),
-            url: '/redemption-codes',
-            icon: Ticket,
           },
           {
             title: t('Subscription Management'),
