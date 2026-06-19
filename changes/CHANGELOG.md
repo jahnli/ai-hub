@@ -1,15 +1,15 @@
 # 变更日志
 
-仅记录二开修改，用于未来与上游合并时快速定位差异。每次 AI 完成的实质性代码变更，在此文件追加一行。
+仅记录二开修改，用于未来与上游合并时快速定位差异。详细文件列表见 [details/](details/) 目录。
 
-| 日期 | 说明 | 涉及文件 | 与上游差异 | 合并指引 |
-|------|------|---------|-----------|---------|
-| 2026-06-18 | 启动默认主题改为 default | `common/constants.go`（`init()` 中 `themeValue.Store("classic")` → `"default"`）、`setting/system_setting/theme.go`（`Frontend: "classic"` → `"default"`） | 二开变更 | 保留 |
-| 2026-06-18 | 全局品牌重命名 New API → AI Hub | 后端 Go（SystemName/CLI/类型名 `NewAPIError→AIHubError`/error type 字符串/Redis 命名空间/缓存目录/User-Agent/DocsLink→飞书）、部署（Dockerfile 产物名/docker-compose 服务名镜像名/makefile）、CI workflows（Docker 镜像→`quantumnous/ai-hub`/release 产物名/Gitee/issue 模板链接→飞书）、Electron（包名/appId/extraResources）、前端 web/default（title/品牌文案/i18n 6 语言键值/常量标识/文档链接→飞书）、README 全部语言版本。**未改**：`go.mod` import path、上游 API 路径 `/api/newapi/`、GitHub 更新检查 API、HTTP-Referer、`X-Oneapi-Request-Id` | 二开变更 | 检查 |
-| 2026-06-18 | 移除主页底部 Footer 组件 | `web/default/src/features/home/index.tsx`（删除 `Footer` import 及 `<Footer />` 渲染）、`web/default/src/components/layout/components/footer.tsx`（删除整个文件） | 二开变更 | 保留 |
-| 2026-06-19 | 删除已废弃的 Footer 组件翻译 key | `web/default/src/i18n/locales/{en,zh,fr,ja,ru,vi}.json`（删除 `footer.columns.*`、`footer.defaultCopyright`、`footer.newapi.projectAttributionSuffix` 共 14 key × 6 语言） | 二开变更 | 保留 |
-| 2026-06-19 | 修复前端 dev server 端口冲突 | `web/default/rsbuild.config.ts`（`server` 新增 `port: 5173`，避免与 Go 后端 3000 端口冲突） | 二开变更 | 保留 |
-| 2026-06-19 | 移除开发环境 devtools 面板 | `web/default/src/routes/__root.tsx`（删除 `ReactQueryDevtools`、`TanStackRouterDevtools` 渲染及 import） | 二开变更 | 可丢弃 |
-| 2026-06-19 | 删除 About 页面及所有相关引用 | `features/about/`（删除整个目录：`index.tsx`、`api.ts`、`types.ts`）、`routes/about/index.tsx`（删除路由）、`hooks/use-top-nav-links.ts`（删除 About 导航链接）、`lib/nav-modules.ts`（删除 `about` 字段及默认值）、`system-settings/maintenance/config.ts`（删除类型和默认配置中的 `about`）、`system-settings/maintenance/header-navigation-section.tsx`（删除 About 开关/schema/表单值）、`system-settings/general/system-info-section.tsx`（删除 About 配置表单字段及 schema）、`i18n/static-keys.ts`（删除 `'About'` key）、`i18n/locales/{en,zh,fr,ja,ru,vi}.json`（删除 5 个 About 专属翻译 key × 6 语言） | 二开变更 | 保留 |
-| 2026-06-19 | 删除兑换码管理界面及所有相关引用 | `features/redemption-codes/`（删除整个目录 16 文件）、`routes/_authenticated/redemption-codes/`（删除路由）、`features/wallet/hooks/use-redemption.ts`（删除兑换 hook）、`features/wallet/api.ts`（删除 `redeemTopupCode` 函数及类型导入）、`features/wallet/types.ts`（删除 `RedemptionRequest`/`RedemptionResponse`）、`features/wallet/index.tsx`（移除兑换码状态/逻辑/组件传参）、`features/wallet/components/recharge-form-card.tsx`（移除兑换码输入区域/props/`topupLink`；无在线充值提示文案：旧→含 redemption code、新→仅联系管理员）、`features/wallet/hooks/index.ts`（移除 `use-redemption` 导出）、`hooks/use-sidebar-data.ts`（移除兑换码导航入口及 `Ticket` 图标）、`hooks/use-sidebar-config.ts`（移除 `redemption` 模块配置及 `/redemption-codes` URL 映射）、`features/system-settings/maintenance/sidebar-modules-section.tsx`（移除 `redemption` 模块元数据）、`features/usage-logs/lib/format.ts`（移除 `redemption.*` 审计模板 4 条）、`features/system-settings/integrations/payment-settings-section.tsx`（合规提示：旧→含 redemption codes、新→不含）、`i18n/static-keys.ts`（移除兑换码相关静态 key）、`i18n/locales/{en,zh,fr,ja,ru,vi}.json`（移除 ~34 个兑换码翻译 key × 6 语言，新增 2 个替代文案翻译） | 二开变更 | 保留 |
-| 2026-06-19 | 删除后端兑换码功能及数据库表 | `model/redemption.go`（删除整个文件：`Redemption` 结构体及全部 CRUD/兑换逻辑）、`controller/redemption.go`（删除整个文件：兑换码管理 handler 7 个）、`model/main.go`（`migrateDB`/`migrateDBFast` 移除 `&Redemption{}`；新增启动时 `DROP TABLE redemptions`）、`model/errors.go`（移除 `ErrRedeemFailed`）、`model/user.go`（默认侧边栏配置移除 `"redemption": true` × 2 处）、`controller/user.go`（移除 `TopUp` 函数及 `topUpRequest`/锁机制/`"redemption"` 权限 × 2 处；清理未用 import `sync`、`operation_setting`）、`controller/topup.go`（`enable_redemption` 硬编码 `false`）、`controller/audit.go`（移除 `redemption.create` 审计模板）、`router/api-router.go`（移除 `/api/redemption` 路由组 7 条 + `/api/user/topup` 路由）、`common/constants.go`（移除 `RedemptionCodeStatus*` 常量 3 个）、`middleware/audit.go`（移除 `redemption.*` 审计映射 3 条）、`i18n/keys.go`（移除 `MsgRedemption*` 10 个 + `MsgRedeemFailed`）、`i18n/locales/{en,zh-CN,zh-TW}.yaml`（移除 `redemption.*`/`redeem.*` 翻译 11 条 × 3 语言） | 二开变更 | 保留 |
+| 编号 | 日期 | 说明 | 与上游差异 | 合并指引 | 详情 |
+|------|------|------|-----------|---------|------|
+| 001 | 2026-06-18 | 启动默认主题改为 default | 二开变更 | 保留 | `common/constants.go`、`setting/system_setting/theme.go` |
+| 002 | 2026-06-18 | 全局品牌重命名 New API → AI Hub | 二开变更 | 检查 | [详情](details/002-brand-rename.md) |
+| 003 | 2026-06-18 | 移除主页底部 Footer 组件 | 二开变更 | 保留 | `features/home/index.tsx`、`layout/components/footer.tsx` |
+| 004 | 2026-06-19 | 删除已废弃的 Footer 组件翻译 key | 二开变更 | 保留 | `i18n/locales/{en,zh,fr,ja,ru,vi}.json`（14 key × 6 语言） |
+| 005 | 2026-06-19 | 修复前端 dev server 端口冲突 | 二开变更 | 保留 | `web/default/rsbuild.config.ts` |
+| 006 | 2026-06-19 | 移除开发环境 devtools 面板 | 二开变更 | 可丢弃 | `web/default/src/routes/__root.tsx` |
+| 007 | 2026-06-19 | 删除 About 页面及所有相关引用 | 二开变更 | 保留 | [详情](details/007-remove-about.md) |
+| 008 | 2026-06-19 | 删除兑换码管理界面及前端引用 | 二开变更 | 保留 | [详情](details/008-remove-redemption-frontend.md) |
+| 009 | 2026-06-19 | 删除后端兑换码功能及数据库表 | 二开变更 | 保留 | [详情](details/009-remove-redemption-backend.md) |
