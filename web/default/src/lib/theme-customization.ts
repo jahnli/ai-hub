@@ -30,19 +30,6 @@ export const THEME_PRESETS = [
     swatches: ['oklch(0.13 0 0)', 'oklch(0.95 0 0)'],
   },
   {
-    // Inspired by Anthropic's official brand language: warm cream canvas
-    // (#faf9f5) paired with clay/coral (#d97757) as the single accent.
-    // Swatches preview the canvas → accent gradient that defines the system.
-    value: 'anthropic',
-    name: 'Anthropic',
-    swatches: ['oklch(0.984 0.005 95)', 'oklch(0.685 0.142 38)'],
-  },
-  {
-    value: 'simple-large',
-    name: 'Simple Large-font',
-    swatches: ['oklch(0.15 0 0)', 'oklch(0.99 0 0)'],
-  },
-  {
     value: 'underground',
     name: 'Underground',
     swatches: ['oklch(0.5315 0.0694 156.19)', 'oklch(0.5748 0.0862 336.52)'],
@@ -88,8 +75,7 @@ export type ContentLayout = 'full' | 'centered'
  * Font axis for the theme.
  *
  * - `default` — resolve at runtime from the active preset
- *   (see `PRESET_DEFAULT_FONT`). The shipped `default` and `anthropic`
- *   presets resolve to serif; other named color presets fall back to
+ *   (see `PRESET_DEFAULT_FONT`). Other named color presets fall back to
  *   sans unless they list a different choice. Mirrors how
  *   `radius: 'default'` defers to a per-preset hint.
  * - `sans` — humanist sans (Public Sans), the project's UI fallback.
@@ -177,7 +163,6 @@ export const PRESET_DEFAULT_FONT: Partial<
   Record<ThemePreset, ResolvedThemeFont>
 > = {
   default: 'sans',
-  anthropic: 'serif',
 }
 
 /**
