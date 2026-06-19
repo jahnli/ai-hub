@@ -605,3 +605,10 @@ For commercial licensing, please contact support@quantumnous.com
     animation: none !important;
   }
 }
+
+/* Sonner toast: move close button from left to right */
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  left: unset !important;
+  right: 0 !important;
+  transform: translate(35%, -35%) !important;
+}

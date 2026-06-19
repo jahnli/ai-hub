@@ -13,3 +13,4 @@
 | 007 | 2026-06-19 | 删除 About 页面及所有相关引用 | 二开变更 | 保留 | [详情](details/007-remove-about.md) |
 | 008 | 2026-06-19 | 删除兑换码管理界面及前端引用 | 二开变更 | 保留 | [详情](details/008-remove-redemption-frontend.md) |
 | 009 | 2026-06-19 | 删除后端兑换码功能及数据库表 | 二开变更 | 保留 | [详情](details/009-remove-redemption-backend.md) |
+| 010 | 2026-06-19 | Toast 关闭按钮位置由左上角改为右上角 | 二开变更 | 可丢弃 | `web/default/src/styles/index.css` |
