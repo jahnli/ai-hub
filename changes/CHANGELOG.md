@@ -15,3 +15,4 @@
 | 009 | 2026-06-19 | 删除后端兑换码功能及数据库表 | 二开变更 | 保留 | [详情](details/009-remove-redemption-backend.md) |
 | 010 | 2026-06-19 | Toast 关闭按钮位置由左上角改为右上角 | 二开变更 | 可丢弃 | `web/default/src/styles/index.css` |
 | 011 | 2026-06-19 | 移除 Anthropic 和 Simple Large-font 主题颜色预设 | 二开变更 | 保留 | [详情](details/011-remove-theme-presets.md) |
+| 012 | 2026-06-19 | 侧边栏样式默认值改为 sidebar，选项顺序调整为侧边栏→浮动→内嵌 | 二开变更 | 可丢弃 | `web/default/src/context/layout-provider.tsx`、`web/default/src/components/config-drawer.tsx` |

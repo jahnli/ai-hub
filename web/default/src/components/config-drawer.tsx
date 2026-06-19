@@ -557,13 +557,13 @@ function SidebarConfig() {
         aria-describedby='sidebar-description'
       >
         {[
-          { value: 'inset', label: t('Inset'), icon: IconSidebarInset },
+          { value: 'sidebar', label: t('Sidebar'), icon: IconSidebarSidebar },
           {
             value: 'floating',
             label: t('Floating'),
             icon: IconSidebarFloating,
           },
-          { value: 'sidebar', label: t('Sidebar'), icon: IconSidebarSidebar },
+          { value: 'inset', label: t('Inset'), icon: IconSidebarInset },
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} />
         ))}
