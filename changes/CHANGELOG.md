@@ -18,3 +18,4 @@
 | 012 | 2026-06-19 | 侧边栏样式默认值改为 floating，选项顺序调整为浮动→侧边栏→内嵌 | 二开变更 | 可丢弃 | `web/default/src/context/layout-provider.tsx`、`web/default/src/components/config-drawer.tsx` |
 | 013 | 2026-06-19 | 侧边栏背景色改为透明（所有主题预设、明暗模式） | 二开变更 | 可丢弃 | `web/default/src/styles/theme.css`、`web/default/src/styles/theme-presets.css` |
 | 014 | 2026-06-19 | 主题预设定制：新增碧空并设为默认、移除海风、侧边栏选中色改主题色、移除预设文字标签及翻译、调整预设顺序、修复预设属性 Bug | 二开变更 | 可丢弃 | [详情](details/014-theme-preset-customization.md) |
+| 015 | 2026-06-19 | 合并上游 14 个 commit（data-table 卡片布局、channels 重组、oxc 工具链、codex UI 重构等） | 与上游一致（合并后仍有本地差异，详见解冲突记录） | 检查 | [详情](details/015-upstream-merge.md) |
