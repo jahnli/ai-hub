@@ -118,8 +118,8 @@ For commercial licensing, please contact support@quantumnous.com
   --chart-3: oklch(0.8748 0.1016 173.51);
   --chart-4: oklch(0.6397 0.0908 171.39);
   --chart-5: oklch(0.9326 0.0532 174.18);
-  --sidebar-primary: oklch(0.8294 0.1296 168.05);
-  --sidebar-primary-foreground: oklch(0.3155 0.0252 183.88);
+  --sidebar-primary: oklch(0.6214 0.153 153.18);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.8294 0.1296 168.05);
   --sidebar-accent-foreground: oklch(0.3155 0.0252 183.88);
   --sidebar-ring: oklch(0.8294 0.1296 168.05);
@@ -136,8 +136,8 @@ For commercial licensing, please contact support@quantumnous.com
   --chart-3: oklch(0.8748 0.1016 173.51);
   --chart-4: oklch(0.6397 0.0908 171.39);
   --chart-5: oklch(0.9326 0.0532 174.18);
-  --sidebar-primary: oklch(0.8294 0.1296 168.05);
-  --sidebar-primary-foreground: oklch(0.3155 0.0252 183.88);
+  --sidebar-primary: oklch(0.6214 0.153 153.18);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.8294 0.1296 168.05);
   --sidebar-accent-foreground: oklch(0.3155 0.0252 183.88);
   --sidebar-ring: oklch(0.8294 0.1296 168.05);
