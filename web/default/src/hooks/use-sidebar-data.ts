@@ -48,7 +48,7 @@ export function useSidebarData(): SidebarData {
     navGroups: [
       {
         id: 'chat',
-        title: t('Chat'),
+        title: t('Shortcuts'),
         items: [
           {
             title: t('Playground'),
@@ -56,7 +56,7 @@ export function useSidebarData(): SidebarData {
             icon: FlaskConical,
           },
           {
-            title: t('Chat'),
+            title: t('Shortcuts'),
             icon: MessageSquare,
             type: 'chat-presets',
           },

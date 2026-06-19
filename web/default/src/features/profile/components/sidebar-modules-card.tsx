@@ -66,8 +66,8 @@ export function SidebarModulesCard() {
         },
         {
           key: 'chat',
-          title: t('Chat'),
-          description: t('Chat session management'),
+          title: t('Shortcuts'),
+          description: t('Quick access links to chat applications'),
         },
       ],
     },

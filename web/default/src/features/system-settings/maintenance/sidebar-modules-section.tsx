@@ -89,8 +89,8 @@ export function SidebarModulesSection({
         description: t('Experiment with prompts and models in real time.'),
       },
       chat: {
-        title: t('Chat'),
-        description: t('Access previous conversations and start new ones.'),
+        title: t('Shortcuts'),
+        description: t('Quick access links to chat applications.'),
       },
     },
     console: {
