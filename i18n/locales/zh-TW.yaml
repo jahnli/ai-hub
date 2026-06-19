@@ -49,18 +49,6 @@ token.exhausted: "該令牌額度已用盡 TokenStatusExhausted[sk-{{.Prefix}}**
 token.status_unavailable: "該令牌狀態不可用"
 token.db_error: "無效的令牌，資料庫查詢出錯，請聯繫管理員"
 
-# Redemption messages
-redemption.name_length: "兌換碼名稱長度必須在1-20之間"
-redemption.count_positive: "兌換碼個數必須大於0"
-redemption.count_max: "一次兌換碼批量生成的個數不能大於 100"
-redemption.create_failed: "建立兌換碼失敗，請稍後重試"
-redemption.invalid: "無效的兌換碼"
-redemption.used: "該兌換碼已被使用"
-redemption.expired: "該兌換碼已過期"
-redemption.failed: "兌換失敗，請稍後重試"
-redemption.not_provided: "未提供兌換碼"
-redemption.expire_time_invalid: "過期時間不能早於當前時間"
-
 # User messages
 user.password_login_disabled: "管理員關閉了密碼登錄"
 user.register_disabled: "管理員關閉了新使用者註冊"
@@ -250,7 +238,6 @@ oauth.user_info_empty: "{{.Provider}} 獲取使用者資訊為空，請檢查設
 oauth.trust_level_low: "Linux DO 信任等級未達到管理員設定的最低信任等級"
 
 # Model layer error messages
-redeem.failed: "兌換失敗，請稍後重試"
 user.create_default_token_error: "建立預設令牌失敗"
 common.uuid_duplicate: "請重試，系統生成的 UUID 竟然重複了！"
 common.invalid_input: "輸入不合法"

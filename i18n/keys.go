@@ -57,20 +57,6 @@ const (
 	MsgTokenDbError              = "token.db_error"
 )
 
-// Redemption related messages
-const (
-	MsgRedemptionNameLength        = "redemption.name_length"
-	MsgRedemptionCountPositive     = "redemption.count_positive"
-	MsgRedemptionCountMax          = "redemption.count_max"
-	MsgRedemptionCreateFailed      = "redemption.create_failed"
-	MsgRedemptionInvalid           = "redemption.invalid"
-	MsgRedemptionUsed              = "redemption.used"
-	MsgRedemptionExpired           = "redemption.expired"
-	MsgRedemptionFailed            = "redemption.failed"
-	MsgRedemptionNotProvided       = "redemption.not_provided"
-	MsgRedemptionExpireTimeInvalid = "redemption.expire_time_invalid"
-)
-
 // User related messages
 const (
 	MsgUserPasswordLoginDisabled     = "user.password_login_disabled"
@@ -297,7 +283,6 @@ const (
 
 // Model layer error messages (for translation in controller)
 const (
-	MsgRedeemFailed          = "redeem.failed"
 	MsgCreateDefaultTokenErr = "user.create_default_token_error"
 	MsgUuidDuplicate         = "common.uuid_duplicate"
 	MsgInvalidInput          = "common.invalid_input"

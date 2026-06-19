@@ -255,13 +255,20 @@ func migrateDB() error {
 		return err
 	}
 
+	if DB.Migrator().HasTable("redemptions") {
+		if err := DB.Migrator().DropTable("redemptions"); err != nil {
+			common.SysError("failed to drop redemptions table: " + err.Error())
+		} else {
+			common.SysLog("dropped deprecated redemptions table")
+		}
+	}
+
 	err := DB.AutoMigrate(
 		&Channel{},
 		&Token{},
 		&User{},
 		&PasskeyCredential{},
 		&Option{},
-		&Redemption{},
 		&Ability{},
 		&Log{},
 		&Midjourney{},
@@ -310,7 +317,6 @@ func migrateDBFast() error {
 		{&User{}, "User"},
 		{&PasskeyCredential{}, "PasskeyCredential"},
 		{&Option{}, "Option"},
-		{&Redemption{}, "Redemption"},
 		{&Ability{}, "Ability"},
 		{&Log{}, "Log"},
 		{&Midjourney{}, "Midjourney"},

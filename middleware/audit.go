@@ -61,11 +61,6 @@ var auditRouteActions = map[string]string{
 	"POST /api/performance/gc":           "performance.gc",
 	"DELETE /api/performance/logs":       "performance.clear_logs",
 
-	// 兑换码
-	"PUT /api/redemption/":           "redemption.update",
-	"DELETE /api/redemption/:id":     "redemption.delete",
-	"DELETE /api/redemption/invalid": "redemption.delete_invalid",
-
 	// 预填组
 	"POST /api/prefill_group/":      "prefill_group.create",
 	"PUT /api/prefill_group/":       "prefill_group.update",
