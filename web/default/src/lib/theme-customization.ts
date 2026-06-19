@@ -25,14 +25,19 @@ For commercial licensing, please contact support@quantumnous.com
 
 export const THEME_PRESETS = [
   {
+    value: 'azure-sky',
+    name: 'Azure Sky',
+    swatches: ['oklch(0.49 0.2401 264.05)', 'oklch(0.96 0.0194 240.11)'],
+  },
+  {
     value: 'default',
     name: 'Default',
     swatches: ['oklch(0.13 0 0)', 'oklch(0.95 0 0)'],
   },
   {
-    value: 'underground',
-    name: 'Underground',
-    swatches: ['oklch(0.5315 0.0694 156.19)', 'oklch(0.5748 0.0862 336.52)'],
+    value: 'lake-view',
+    name: 'Lake View',
+    swatches: ['oklch(0.765 0.177 163.22)', 'oklch(0.551 0.0899 200.52)'],
   },
   {
     value: 'rose-garden',
@@ -40,9 +45,9 @@ export const THEME_PRESETS = [
     swatches: ['oklch(0.5827 0.2418 12.23)', 'oklch(0.8131 0.1129 5.67)'],
   },
   {
-    value: 'lake-view',
-    name: 'Lake View',
-    swatches: ['oklch(0.765 0.177 163.22)', 'oklch(0.551 0.0899 200.52)'],
+    value: 'underground',
+    name: 'Underground',
+    swatches: ['oklch(0.5315 0.0694 156.19)', 'oklch(0.5748 0.0862 336.52)'],
   },
   {
     value: 'sunset-glow',
@@ -53,11 +58,6 @@ export const THEME_PRESETS = [
     value: 'forest-whisper',
     name: 'Forest Whisper',
     swatches: ['oklch(0.5276 0.1072 182.22)', 'oklch(0.5236 0.0505 250.18)'],
-  },
-  {
-    value: 'ocean-breeze',
-    name: 'Ocean Breeze',
-    swatches: ['oklch(0.5461 0.2152 262.88)', 'oklch(0.5854 0.2041 277.12)'],
   },
   {
     value: 'lavender-dream',
@@ -102,7 +102,7 @@ export type ThemeCustomization = {
 }
 
 export const DEFAULT_THEME_CUSTOMIZATION: ThemeCustomization = {
-  preset: 'default',
+  preset: 'azure-sky',
   font: 'default',
   radius: 'default',
   scale: 'default',
