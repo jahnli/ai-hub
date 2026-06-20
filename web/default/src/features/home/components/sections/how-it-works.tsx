@@ -17,7 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Settings, Zap, BarChart3 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
+import { Link } from '@tanstack/react-router'
 import { AnimateInView } from '@/components/animate-in-view'
 
 export function HowItWorks() {
@@ -27,16 +28,32 @@ export function HowItWorks() {
     {
       num: '1',
       title: t('Configure'),
-      desc: t(
-        'Add your API keys, set up channels and configure access permissions'
+      desc: (
+        <Trans i18nKey='Add your <1>API Keys</1>, set up channels and configure access permissions'>
+          {'Add your '}
+          <Link to='/keys' className='text-primary font-medium hover:underline'>
+            API Keys
+          </Link>
+          {', set up channels and configure access permissions'}
+        </Trans>
       ),
       icon: <Settings className='size-6' strokeWidth={1.5} />,
     },
     {
       num: '2',
       title: t('Connect'),
-      desc: t(
-        'Connect through OpenAI, Claude, Gemini, and other compatible API routes'
+      desc: (
+        <>
+          {t(
+            'Connect through OpenAI, Claude, Gemini, and other compatible API routes'
+          )}
+          <span className='mt-1.5 flex items-center justify-center gap-1.5'>
+            <span className='text-muted-foreground/50 text-xs'>{t('API Base URL')}:</span>
+            <code className='text-primary/80 bg-primary/5 rounded px-1.5 py-0.5 text-xs font-medium'>
+              https://ai.semi-tech.com
+            </code>
+          </span>
+        </>
       ),
       icon: <Zap className='size-6' strokeWidth={1.5} />,
     },
@@ -77,7 +94,7 @@ export function HowItWorks() {
                 </div>
               </div>
               <h3 className='mb-2 text-base font-semibold'>{step.title}</h3>
-              <p className='text-muted-foreground max-w-[240px] text-sm leading-relaxed'>
+              <p className='text-muted-foreground max-w-[280px] text-sm leading-relaxed'>
                 {step.desc}
               </p>
             </AnimateInView>
