@@ -25,3 +25,4 @@
 | 019 | 2026-06-20 | 修复侧边栏选中项悬停时文字颜色被覆盖的问题，保持主题色 | `web/default/src/components/ui/sidebar.tsx` |
 | 020 | 2026-06-20 | 移除邀请人/邀请码功能（后端模型/控制器/路由、前端组件/类型/i18n、数据库迁移、计费设置默认值残留字段修复） | [详情](details/020-remove-invitation.md) |
 | 021 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
+| 022 | 2026-06-20 | 个人资料页统计行下方内联展示订阅详情（计划名、状态、剩余天数、配额进度条等） | `web/default/src/features/profile/components/profile-header.tsx` |
