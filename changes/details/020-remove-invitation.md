@@ -26,6 +26,7 @@
 
 ### 默认前端（修改的文件）
 
+- `web/default/src/features/system-settings/billing/index.tsx` — 移除 `defaultBillingSettings` 中残留的 `QuotaForInviter`/`QuotaForInvitee` 默认值
 - `web/default/src/features/wallet/index.tsx` — 移除邀请卡片、转账对话框、useAffiliate hook
 - `web/default/src/features/wallet/hooks/index.ts` — 移除 `use-affiliate` 导出
 - `web/default/src/features/wallet/lib/index.ts` — 移除 `affiliate` 导出
