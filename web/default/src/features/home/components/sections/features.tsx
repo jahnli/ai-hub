@@ -24,7 +24,6 @@ import {
   Gauge,
   DollarSign,
   Users,
-  HeartHandshake,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { AnimateInView } from '@/components/animate-in-view'
@@ -48,7 +47,7 @@ export function Features(_props: FeaturesProps) {
       icon: <Zap className='size-4 text-blue-400' />,
       visual: (
         <div className='mt-4 grid grid-cols-3 gap-2'>
-          {['OpenAI', 'Claude', 'Gemini', 'DeepSeek', 'Qwen', 'Llama'].map(
+          {['OpenAI', 'Claude', 'Gemini', 'DeepSeek', 'GLM', 'Kimi'].map(
             (name) => (
               <div
                 key={name}
@@ -171,11 +170,6 @@ export function Features(_props: FeaturesProps) {
       title: t('Team Collaboration'),
       desc: t('Multi-user management with flexible permission allocation'),
     },
-    {
-      icon: <HeartHandshake className='size-5' strokeWidth={1.5} />,
-      title: t('Open Source'),
-      desc: t('Community driven, self-hosted, and extensible'),
-    },
   ]
 
   return (
@@ -216,7 +210,7 @@ export function Features(_props: FeaturesProps) {
         </div>
 
         {/* Additional features row */}
-        <div className='mt-12 grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-12'>
+        <div className='mt-12 grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-12'>
           {additionalFeatures.map((f, i) => (
             <AnimateInView
               key={f.title}
