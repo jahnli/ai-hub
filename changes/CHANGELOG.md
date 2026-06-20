@@ -27,4 +27,4 @@
 | 021 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
 | 022 | 2026-06-20 | 个人资料页内联展示订阅详情（计划名、状态、剩余天数、配额进度条等），皇冠图标改为金色 | `web/default/src/features/profile/components/profile-header.tsx` |
 | 023 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
-| 024 | 2026-06-21 | 首页定制：移除「常用应用支持」区块和「开源项目」卡片，模型标签 Qwen/Llama 替换为 GLM/Kimi，三步上手 API Keys 改为主题色链接、新增 API Base URL 提示 | [详情](details/024-homepage-cleanup.md) |
+| 024 | 2026-06-21 | 首页定制：移除「常用应用支持」和「开源项目」，模型标签替换，三步上手优化，底部新增飞书联系信息 | [详情](details/024-homepage-cleanup.md) |
