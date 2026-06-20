@@ -105,6 +105,7 @@ web/             — 前端主题容器
 
 - 确保所有迁移在三种数据库上都能运行。
 - 对于 SQLite，使用 `ALTER TABLE ... ADD COLUMN` 而非 `ALTER COLUMN`（参见 `model/main.go` 中的模式）。
+- 当默认值是由代码强制的业务规则时，避免使用 `gorm:"default:true"` 等 GORM 布尔默认标签。MySQL 和 PostgreSQL 对布尔默认值的归一化方式不同，可能导致 GORM `AutoMigrate` 在每次启动时重复执行 `ALTER TABLE`。应在请求/模型归一化、钩子、构造函数或服务逻辑中设置这些默认值；不要将 `default:true` 替换为 `default:1`，除非已在 SQLite、MySQL 和 PostgreSQL 上验证过行为。
 
 ### 规则 3: 新渠道 StreamOptions 支持
 
