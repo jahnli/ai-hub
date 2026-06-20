@@ -262,10 +262,6 @@ export const statusPresets = {
     variant: 'neutral' as const,
     label: 'Inactive',
   },
-  invited: {
-    variant: 'info' as const,
-    label: 'Invited',
-  },
   suspended: {
     variant: 'danger' as const,
     label: 'Suspended',

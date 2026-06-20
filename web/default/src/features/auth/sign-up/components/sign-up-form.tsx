@@ -46,10 +46,6 @@ import { registerFormSchema } from '@/features/auth/constants'
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
 import { useEmailVerification } from '@/features/auth/hooks/use-email-verification'
 import { useTurnstile } from '@/features/auth/hooks/use-turnstile'
-import {
-  getAffiliateCode,
-  saveAffiliateCode,
-} from '@/features/auth/lib/storage'
 
 export function SignUpForm({
   className,
@@ -127,13 +123,6 @@ export function SignUpForm({
     }
   }, [requiresLegalConsent])
 
-  useEffect(() => {
-    const aff = new URLSearchParams(window.location.search).get('aff')?.trim()
-    if (aff) {
-      saveAffiliateCode(aff)
-    }
-  }, [])
-
   async function onSubmit(data: z.infer<typeof registerFormSchema>) {
     if (requiresLegalConsent && !agreedToLegal) {
       toast.error(legalConsentErrorMessage)
@@ -161,7 +150,6 @@ export function SignUpForm({
         password: data.password,
         email: data.email || undefined,
         verification_code: verificationCode || undefined,
-        aff_code: getAffiliateCode(),
         turnstile: turnstileToken,
       })
 

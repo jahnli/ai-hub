@@ -20,14 +20,11 @@ import { api } from '@/lib/api'
 import type {
   PaymentRequest,
   AmountRequest,
-  AffiliateTransferRequest,
   ApiResponse,
   TopupInfoResponse,
   AmountResponse,
   PaymentResponse,
   StripePaymentResponse,
-  AffiliateCodeResponse,
-  AffiliateTransferResponse,
   BillingHistoryResponse,
   CompleteOrderRequest,
   CreemPaymentRequest,
@@ -153,24 +150,6 @@ export async function requestWaffoPancakePayment(
   const res = await api.post('/api/user/waffo-pancake/pay', request, {
     skipBusinessError: true,
   } as Record<string, unknown>)
-  return res.data
-}
-
-/**
- * Get affiliate code
- */
-export async function getAffiliateCode(): Promise<AffiliateCodeResponse> {
-  const res = await api.get('/api/user/aff')
-  return res.data
-}
-
-/**
- * Transfer affiliate quota to balance
- */
-export async function transferAffiliateQuota(
-  request: AffiliateTransferRequest
-): Promise<AffiliateTransferResponse> {
-  const res = await api.post('/api/user/aff_transfer', request)
   return res.data
 }
 
