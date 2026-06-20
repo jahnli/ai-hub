@@ -110,7 +110,7 @@ function SubscriptionSummary() {
       <div className='px-3 py-2.5 sm:px-5 sm:py-3'>
         {/* Header row */}
         <div className='flex min-w-0 items-center gap-2'>
-          <Crown className='text-muted-foreground/60 size-3.5 shrink-0' />
+          <Crown className='size-3.5 shrink-0 text-amber-500' />
           <span className='text-muted-foreground text-xs font-medium tracking-wider uppercase'>
             {t('My Subscriptions')}
           </span>
