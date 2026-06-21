@@ -562,6 +562,74 @@ For commercial licensing, please contact support@quantumnous.com
   contain-intrinsic-size: 0 80px;
 }
 
+/* ── Orbit animation (provider showcase rings) ── */
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-reverse {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.orbit-ring {
+  position: absolute;
+  border: 1.5px dashed rgba(99, 102, 241, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: orbit 60s linear infinite;
+}
+
+.dark .orbit-ring {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.orbit-ring-inner {
+  width: 340px;
+  height: 340px;
+  animation-duration: 20s;
+}
+
+.orbit-ring-outer {
+  width: 400px;
+  height: 400px;
+  animation-duration: 20s;
+  animation-name: orbit-reverse;
+}
+
+.orbit-dot {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--background);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.dark .orbit-dot {
+  box-shadow: 0 2px 16px rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring {
+    animation: none !important;
+  }
+}
+
 /* ── Hero terminal demo animations ── */
 @keyframes terminal-demo-blink {
   0%,

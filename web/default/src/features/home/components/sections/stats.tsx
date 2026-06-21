@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { HeroTerminalDemo } from '../hero-terminal-demo'
 
 interface CounterProps {
   end: number
@@ -106,8 +107,9 @@ export function Stats(_props: StatsProps) {
 
   return (
     <div className='border-border/40 bg-muted/10 relative z-10 border-y'>
-      <div className='mx-auto max-w-6xl px-6 py-10 md:py-12'>
-        <div className='grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-12'>
+      <div className='mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-6 py-10 md:py-12 lg:grid-cols-2 lg:gap-12'>
+        {/* Left: stat counters in 2×2 grid */}
+        <div className='grid grid-cols-2 gap-8'>
           {stats.map((s) => (
             <div
               key={s.label}
@@ -122,6 +124,9 @@ export function Stats(_props: StatsProps) {
             </div>
           ))}
         </div>
+
+        {/* Right: terminal demo */}
+        <HeroTerminalDemo className='mx-auto w-full max-w-xl' />
       </div>
     </div>
   )

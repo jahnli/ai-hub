@@ -21,7 +21,7 @@ import { ArrowRight, BookOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useStatus } from '@/hooks/use-status'
 import { Button } from '@/components/ui/button'
-import { HeroTerminalDemo } from '../hero-terminal-demo'
+import { OrbitAnimation } from '../orbit-animation'
 
 interface HeroProps {
   className?: string
@@ -155,12 +155,12 @@ export function Hero(props: HeroProps) {
 
         </div>
 
-        {/* Right Column: Hero Terminal API Demo */}
+        {/* Right Column: Orbit animation (desktop) / Terminal demo (mobile) */}
         <div
-          className='landing-animate-fade-up flex w-full justify-center opacity-0 lg:col-span-6'
+          className='landing-animate-fade-up hidden w-full items-center justify-center opacity-0 lg:col-span-6 lg:flex'
           style={{ animationDelay: '320ms' }}
         >
-          <HeroTerminalDemo className='mt-8 lg:mt-0' />
+          <OrbitAnimation />
         </div>
       </div>
     </section>
