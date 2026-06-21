@@ -6,7 +6,7 @@
 
 - `web/default/src/features/home/index.tsx` — 移除主页底部 Footer 组件引用
 - `web/default/src/layout/components/footer.tsx` — 移除 Footer 组件
-- `web/default/src/features/home/components/sections/hero.tsx` — 移除「常用应用支持」整块区域（标题、描述、Cherry Studio / CC Switch / 更多应用卡片链接），清理未使用的 `CherryStudio` import 和 `MoreIcon` 组件
+- `web/default/src/features/home/components/sections/hero.tsx` — 移除「常用应用支持」整块区域（标题、描述、Cherry Studio / CC Switch / 更多应用卡片链接），清理未使用的 `CherryStudio` import 和 `MoreIcon` 组件；底部内边距缩短约一半（pb-16→pb-8 / md:pb-24→md:pb-14 / lg:pb-28→lg:pb-16）
 - `web/default/src/features/home/components/sections/features.tsx` — 移除「开源项目（Open Source）」附加特性卡片，清理 `HeartHandshake` import，网格布局从 `md:grid-cols-4` 调整为 `md:grid-cols-3`；「极速」卡片模型标签 Qwen / Llama 替换为 GLM / Kimi
 - `web/default/src/features/home/constants.ts` — 从 `DEFAULT_FEATURES` 常量数组中移除 `Open Source` 条目
 - `web/default/src/features/home/components/sections/how-it-works.tsx` — 第一步「配置」中 API Keys 改为主题色可点击链接（跳转 `/keys`），第二步「连接」新增 API Base URL 提示，描述区域 max-width 放宽到 280px；布局改为 5 列（3 卡片 + 2 连接线容器）集成 `StepConnectionLine` 组件
