@@ -6,7 +6,7 @@
 |------|------|------|------|
 | 001 | 2026-06-18 | 启动默认主题改为 default | `common/constants.go`、`setting/system_setting/theme.go` |
 | 002 | 2026-06-18 | 全局品牌重命名 New API → AI Hub | [详情](details/002-brand-rename.md) |
-| 003 | 2026-06-18 | 移除主页底部 Footer 组件 | `features/home/index.tsx`、`layout/components/footer.tsx` |
+| 003 | 2026-06-21 | 首页定制：移除 Footer/区块/开源卡片，模型标签替换，三步上手优化与连接线动画，底部新增飞书联系信息 | [详情](details/003-homepage-customization.md) |
 | 004 | 2026-06-19 | 删除已废弃的 Footer 组件翻译 key | `i18n/locales/{en,zh,fr,ja,ru,vi}.json`（14 key × 6 语言） |
 | 005 | 2026-06-19 | 修复前端 dev server 端口冲突 | `web/default/rsbuild.config.ts` |
 | 006 | 2026-06-19 | 移除开发环境 devtools 面板 | `web/default/src/routes/__root.tsx` |
@@ -27,4 +27,3 @@
 | 021 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
 | 022 | 2026-06-20 | 个人资料页内联展示订阅详情（计划名、状态、剩余天数、配额进度条等），皇冠图标改为金色 | `web/default/src/features/profile/components/profile-header.tsx` |
 | 023 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
-| 024 | 2026-06-21 | 首页定制：移除「常用应用支持」和「开源项目」，模型标签替换，三步上手优化，底部新增飞书联系信息，API Base URL 中文术语保留英文 | [详情](details/024-homepage-cleanup.md) |

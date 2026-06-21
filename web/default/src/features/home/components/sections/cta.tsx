@@ -31,7 +31,7 @@ export function CTA(props: CTAProps) {
   const { t } = useTranslation()
 
   return (
-    <section className='relative z-10 overflow-hidden px-6 py-8 md:py-12'>
+    <section className='relative z-10 overflow-hidden px-6 pt-0 pb-8 md:pb-12'>
       {!props.isAuthenticated && (
         <>
           {/* Gradient mesh background */}
