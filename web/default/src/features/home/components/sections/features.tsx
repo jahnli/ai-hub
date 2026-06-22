@@ -174,7 +174,7 @@ export function Features(_props: FeaturesProps) {
 
   return (
     <section className='relative z-10 px-6 py-12 md:py-16'>
-      <div className='mx-auto max-w-6xl'>
+      <div className='mx-auto max-w-7xl'>
         <AnimateInView className='mb-16 max-w-lg'>
           <p className='text-muted-foreground mb-3 text-xs font-medium tracking-widest uppercase'>
             {t('Core Features')}

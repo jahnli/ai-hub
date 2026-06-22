@@ -18,3 +18,11 @@
 - `web/default/src/i18n/locales/zh.json` — 新增 Trans 组件 key、飞书联系信息中文翻译；`API Base URL` 中文翻译改为保留英文术语；添加 "MODELS": "模型" 翻译（备用）
 - `web/default/src/features/home/components/sections/stats.tsx` — 统计数字外层 span 添加 `stat-shimmer` class 触发白色微光扫光动画；引入 lucide 图标（Layers/DollarSign/Code/Gauge），每个 stat 改为 glass-3 毛玻璃卡片 + 彩色图标 + 左对齐布局，数字字号放大到 text-3xl/4xl，网格间距从 gap-8 收紧到 gap-4
 - `web/default/src/styles/index.css` — 新增 `.stat-shimmer` CSS：`::after` 伪元素白色渐变光带，`translateX` 关键帧从左到右扫过，2.5s 循环，首次延迟 2s，含 reduced-motion 支持
+- `web/default/src/components/layout/components/public-header.tsx` — 公开页面 Header 未滚动时 max-width 从 max-w-7xl（1280px）加宽到 max-w-[90rem]（1440px）
+- `web/default/src/features/home/components/sections/hero.tsx` — Hero 区域 max-width 从 max-w-6xl（1152px）加宽到 max-w-7xl（1280px）
+- `web/default/src/features/home/components/sections/stats.tsx` — Stats 区域 max-width 从 max-w-6xl 加宽到 max-w-7xl
+- `web/default/src/features/home/components/sections/features.tsx` — Features 区域 max-width 从 max-w-6xl 加宽到 max-w-7xl
+- `web/default/src/features/home/components/sections/how-it-works.tsx` — HowItWorks 区域 max-width 从 max-w-6xl 加宽到 max-w-7xl
+- `web/default/src/features/home/components/orbit-animation.tsx` — 双轨道动画整体左移（内环 left 45%→26%，外环 55%→36%）
+- `web/default/src/features/home/components/sections/hero.tsx` — Hero 渐变标题「海量 AI 模型」添加 `hero-gradient-shimmer` class，实现白色微光扫光动画
+- `web/default/src/styles/index.css` — 新增 `.hero-gradient-shimmer` 样式：`::after` 伪元素白色渐变光带 + `mix-blend-mode: soft-light`，3s 循环，1.5s 延迟，含 reduced-motion 支持

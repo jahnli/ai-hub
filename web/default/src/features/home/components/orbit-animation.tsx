@@ -76,7 +76,7 @@ export function OrbitAnimation(props: OrbitAnimationProps) {
         className='orbit-ring orbit-ring-inner'
         style={{
           top: '12%',
-          left: '45%',
+          left: '26%',
           transform: 'translate(-50%, -50%)',
         }}
       >
@@ -88,7 +88,7 @@ export function OrbitAnimation(props: OrbitAnimationProps) {
         className='orbit-ring orbit-ring-outer'
         style={{
           top: 'calc(12% + 60px)',
-          left: '55%',
+          left: '36%',
           transform: 'translate(-50%, -50%)',
         }}
       >

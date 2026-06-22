@@ -674,6 +674,48 @@ For commercial licensing, please contact support@quantumnous.com
   }
 }
 
+/* Hero gradient text shimmer — light sweeps across gradient text */
+@keyframes hero-gradient-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.hero-gradient-shimmer {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+.hero-gradient-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: -20% 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 30%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0.25) 70%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+  transform: translateX(-100%);
+  animation: hero-gradient-shimmer 3s ease-in-out infinite;
+  animation-delay: 1.5s;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-gradient-shimmer::after {
+    animation: none;
+  }
+}
+
 /* Stat number shimmer — white light sweeps left to right */
 @keyframes stat-shimmer {
   0% {
