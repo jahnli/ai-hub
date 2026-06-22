@@ -53,6 +53,19 @@ export async function login2fa(payload: TwoFAPayload) {
   return res.data
 }
 
+// LDAP login with username and password
+export async function ldapLogin(payload: LoginPayload) {
+  const turnstile = payload.turnstile ?? ''
+  const res = await api.post<LoginResponse>(
+    `/api/user/login/ldap?turnstile=${turnstile}`,
+    {
+      username: payload.username,
+      password: payload.password,
+    }
+  )
+  return res.data
+}
+
 // User logout
 export async function logout(): Promise<ApiResponse> {
   const res = await api.get('/api/user/logout')

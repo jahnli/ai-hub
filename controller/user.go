@@ -95,6 +95,8 @@ func loginMethodFromContext(c *gin.Context) string {
 		return "password"
 	case "/api/user/login/2fa":
 		return "2fa"
+	case "/api/user/login/ldap":
+		return "ldap"
 	case "/api/user/passkey/login/finish":
 		return "passkey"
 	case "/api/oauth/wechat":

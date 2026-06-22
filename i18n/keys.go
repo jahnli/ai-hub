@@ -99,6 +99,19 @@ const (
 	MsgUserQuotaChangeZero           = "user.quota_change_zero"
 )
 
+// LDAP related messages
+const (
+	MsgLDAPNotEnabled    = "ldap.not_enabled"
+	MsgLDAPAuthFailed    = "ldap.auth_failed"
+	MsgLDAPConnectFailed = "ldap.connect_failed"
+	MsgLDAPUserBanned    = "ldap.user_banned"
+	MsgLDAPUserDeleted   = "ldap.user_deleted"
+	MsgLDAPBindAlready   = "ldap.bind_already"
+	MsgLDAPBindConflict  = "ldap.bind_conflict"
+	MsgLDAPTestFailed    = "ldap.test_failed"
+	MsgLDAPTestSuccess   = "ldap.test_success"
+)
+
 // Quota related messages
 const (
 	MsgQuotaNegative        = "quota.negative"

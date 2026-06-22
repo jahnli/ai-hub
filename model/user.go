@@ -47,6 +47,14 @@ type User struct {
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	CreatedAt        int64          `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt      int64          `json:"last_login_at" gorm:"default:0;column:last_login_at"`
+	AvatarUrl        string         `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url;default:''"`
+	OpenId           string         `json:"open_id" gorm:"type:varchar(64);column:open_id;default:''"`
+	Name             string         `json:"name" gorm:"type:varchar(64);column:name;default:''"`
+	DepartmentIds    string         `json:"department_ids" gorm:"type:text;column:department_ids;default:'[]'"`
+	DepartmentPath   string         `json:"department_path" gorm:"type:text;column:department_path;default:'[]'"`
+	IsDeptLeader     bool           `json:"is_dept_leader" gorm:"column:is_dept_leader"`
+	LeaderDeptLevel  int            `json:"leader_dept_level" gorm:"type:int;column:leader_dept_level"`
+	EmployeeNumber   string         `json:"employee_number" gorm:"type:varchar;column:employee_number"`
 }
 
 func (user *User) ToBaseUser() *UserBase {
@@ -125,20 +133,20 @@ func generateDefaultSidebarConfigForRole(userRole int) string {
 	if userRole == common.RoleAdminUser {
 		// 管理员可以访问管理员区域，但不能访问系统设置
 		defaultConfig["admin"] = map[string]interface{}{
-			"enabled":    true,
-			"channel":    true,
-			"models":     true,
-			"user":       true,
-			"setting":    false, // 管理员不能访问系统设置
+			"enabled": true,
+			"channel": true,
+			"models":  true,
+			"user":    true,
+			"setting": false, // 管理员不能访问系统设置
 		}
 	} else if userRole == common.RoleRootUser {
 		// 超级管理员可以访问所有功能
 		defaultConfig["admin"] = map[string]interface{}{
-			"enabled":    true,
-			"channel":    true,
-			"models":     true,
-			"user":       true,
-			"setting":    true,
+			"enabled": true,
+			"channel": true,
+			"models":  true,
+			"user":    true,
+			"setting": true,
 		}
 	}
 	// 普通用户不包含admin区域

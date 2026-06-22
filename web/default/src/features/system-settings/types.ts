@@ -92,6 +92,18 @@ export type AuthSettings = {
   'oidc.authorization_endpoint': string
   'oidc.token_endpoint': string
   'oidc.user_info_endpoint': string
+  'ldap.enabled': boolean
+  'ldap.server_url': string
+  'ldap.bind_dn': string
+  'ldap.bind_password': string
+  'ldap.search_base': string
+  'ldap.search_filter': string
+  'ldap.username_attribute': string
+  'ldap.email_attribute': string
+  'ldap.display_name_attribute': string
+  'ldap.start_tls': boolean
+  'ldap.skip_tls_verify': boolean
+  'ldap.login_label': string
   TelegramOAuthEnabled: boolean
   TelegramBotToken: string
   TelegramBotName: string

@@ -165,6 +165,17 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
+	case "ldap.enabled":
+		if option.Value == "true" {
+			ldap := system_setting.GetLDAPSettings()
+			if ldap.ServerURL == "" || ldap.BindDN == "" || ldap.SearchBase == "" {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "无法启用 LDAP 登录，请先填入 LDAP Server URL、Bind DN 以及 Search Base！",
+				})
+				return
+			}
+		}
 	case "LinuxDOOAuthEnabled":
 		if option.Value == "true" && common.LinuxDOClientId == "" {
 			c.JSON(http.StatusOK, gin.H{

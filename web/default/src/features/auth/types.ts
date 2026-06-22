@@ -98,6 +98,8 @@ export interface SystemStatus {
     oidc_enabled?: boolean
     oidc_authorization_endpoint?: string
     oidc_client_id?: string
+    ldap_enabled?: boolean
+    ldap_login_label?: string
     linuxdo_oauth?: boolean
     linuxdo_client_id?: string
     telegram_oauth?: boolean
@@ -141,6 +143,8 @@ export interface SystemStatus {
   oidc_enabled?: boolean
   oidc_authorization_endpoint?: string
   oidc_client_id?: string
+  ldap_enabled?: boolean
+  ldap_login_label?: string
   linuxdo_oauth?: boolean
   linuxdo_client_id?: string
   telegram_oauth?: boolean

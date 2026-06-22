@@ -89,6 +89,17 @@ user.telegram_not_bound: "該 Telegram 帳號未綁定"
 user.linux_do_id_empty: "Linux DO id 為空！"
 user.quota_change_zero: "額度變更量不能為0"
 
+# LDAP messages
+ldap.not_enabled: "LDAP 登入未啟用"
+ldap.auth_failed: "LDAP 認證失敗，請檢查使用者名稱和密碼"
+ldap.connect_failed: "無法連接 LDAP 伺服器"
+ldap.user_banned: "使用者已被封禁"
+ldap.user_deleted: "使用者已被刪除"
+ldap.bind_already: "該 LDAP 帳號已綁定到其他使用者"
+ldap.bind_conflict: "該使用者名稱已被其他使用者佔用"
+ldap.test_failed: "LDAP 連接測試失敗"
+ldap.test_success: "LDAP 連接測試成功"
+
 # Quota messages
 quota.negative: "額度不能為負數！"
 quota.exceed_max: "額度值超出有效範圍"

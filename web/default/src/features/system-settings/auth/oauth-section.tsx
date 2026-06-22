@@ -34,7 +34,9 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { api } from '@/lib/api'
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
 import {
@@ -70,6 +72,20 @@ const oauthSchema = z.object({
     token_endpoint: z.string(),
     user_info_endpoint: z.string(),
   }),
+  ldap: z.object({
+    enabled: z.boolean(),
+    server_url: z.string(),
+    bind_dn: z.string(),
+    bind_password: z.string(),
+    search_base: z.string(),
+    search_filter: z.string(),
+    username_attribute: z.string(),
+    email_attribute: z.string(),
+    display_name_attribute: z.string(),
+    start_tls: z.boolean(),
+    skip_tls_verify: z.boolean(),
+    login_label: z.string(),
+  }),
   TelegramOAuthEnabled: z.boolean(),
   TelegramBotToken: z.string(),
   TelegramBotName: z.string(),
@@ -99,6 +115,18 @@ type FlatOAuthDefaults = {
   'oidc.authorization_endpoint': string
   'oidc.token_endpoint': string
   'oidc.user_info_endpoint': string
+  'ldap.enabled': boolean
+  'ldap.server_url': string
+  'ldap.bind_dn': string
+  'ldap.bind_password': string
+  'ldap.search_base': string
+  'ldap.search_filter': string
+  'ldap.username_attribute': string
+  'ldap.email_attribute': string
+  'ldap.display_name_attribute': string
+  'ldap.start_tls': boolean
+  'ldap.skip_tls_verify': boolean
+  'ldap.login_label': string
   TelegramOAuthEnabled: boolean
   TelegramBotToken: string
   TelegramBotName: string
@@ -133,6 +161,20 @@ const buildFormDefaults = (defaults: FlatOAuthDefaults): OAuthFormValues => ({
     token_endpoint: defaults['oidc.token_endpoint'] ?? '',
     user_info_endpoint: defaults['oidc.user_info_endpoint'] ?? '',
   },
+  ldap: {
+    enabled: defaults['ldap.enabled'],
+    server_url: defaults['ldap.server_url'] ?? '',
+    bind_dn: defaults['ldap.bind_dn'] ?? '',
+    bind_password: defaults['ldap.bind_password'] ?? '',
+    search_base: defaults['ldap.search_base'] ?? '',
+    search_filter: defaults['ldap.search_filter'] ?? '(uid={{username}})',
+    username_attribute: defaults['ldap.username_attribute'] ?? 'uid',
+    email_attribute: defaults['ldap.email_attribute'] ?? 'mail',
+    display_name_attribute: defaults['ldap.display_name_attribute'] ?? 'cn',
+    start_tls: defaults['ldap.start_tls'],
+    skip_tls_verify: defaults['ldap.skip_tls_verify'],
+    login_label: defaults['ldap.login_label'] ?? '',
+  },
   TelegramOAuthEnabled: defaults.TelegramOAuthEnabled,
   TelegramBotToken: defaults.TelegramBotToken ?? '',
   TelegramBotName: defaults.TelegramBotName ?? '',
@@ -160,6 +202,18 @@ const normalizeFormValues = (values: OAuthFormValues): FlatOAuthDefaults => ({
   'oidc.authorization_endpoint': values.oidc.authorization_endpoint,
   'oidc.token_endpoint': values.oidc.token_endpoint,
   'oidc.user_info_endpoint': values.oidc.user_info_endpoint,
+  'ldap.enabled': values.ldap.enabled,
+  'ldap.server_url': values.ldap.server_url,
+  'ldap.bind_dn': values.ldap.bind_dn,
+  'ldap.bind_password': values.ldap.bind_password,
+  'ldap.search_base': values.ldap.search_base,
+  'ldap.search_filter': values.ldap.search_filter,
+  'ldap.username_attribute': values.ldap.username_attribute,
+  'ldap.email_attribute': values.ldap.email_attribute,
+  'ldap.display_name_attribute': values.ldap.display_name_attribute,
+  'ldap.start_tls': values.ldap.start_tls,
+  'ldap.skip_tls_verify': values.ldap.skip_tls_verify,
+  'ldap.login_label': values.ldap.login_label,
   TelegramOAuthEnabled: values.TelegramOAuthEnabled,
   TelegramBotToken: values.TelegramBotToken,
   TelegramBotName: values.TelegramBotName,
@@ -278,6 +332,23 @@ export function OAuthSection(props: OAuthSectionProps) {
     toast.success(t('Form reset to saved values'))
   }
 
+  const [isTestingLDAP, setIsTestingLDAP] = useState(false)
+  const handleTestLDAP = async () => {
+    setIsTestingLDAP(true)
+    try {
+      const res = await api.post('/api/option/ldap/test')
+      if (res.data?.success) {
+        toast.success(t('LDAP connection test succeeded'))
+      } else {
+        toast.error(res.data?.message || t('LDAP connection test failed'))
+      }
+    } catch (err) {
+      toast.error(t('LDAP connection test failed'))
+    } finally {
+      setIsTestingLDAP(false)
+    }
+  }
+
   return (
     <>
       <FormNavigationGuard when={form.formState.isDirty} />
@@ -294,13 +365,14 @@ export function OAuthSection(props: OAuthSectionProps) {
             <FormDirtyIndicator isDirty={form.formState.isDirty} />
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className='grid w-full grid-cols-6'>
+              <TabsList className='grid w-full grid-cols-7'>
                 <TabsTrigger value='github'>{t('GitHub')}</TabsTrigger>
                 <TabsTrigger value='discord'>{t('Discord')}</TabsTrigger>
                 <TabsTrigger value='oidc'>{t('OIDC')}</TabsTrigger>
                 <TabsTrigger value='telegram'>{t('Telegram')}</TabsTrigger>
                 <TabsTrigger value='linuxdo'>{t('LinuxDO')}</TabsTrigger>
                 <TabsTrigger value='wechat'>{t('WeChat')}</TabsTrigger>
+                <TabsTrigger value='ldap'>{t('LDAP')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value='github' className={oauthTabContentClassName}>
@@ -892,6 +964,310 @@ export function OAuthSection(props: OAuthSectionProps) {
                     </FormItem>
                   )}
                 />
+              </TabsContent>
+
+              <TabsContent value='ldap' className={oauthTabContentClassName}>
+                <FormField
+                  control={form.control}
+                  name='ldap.enabled'
+                  render={({ field }) => (
+                    <SettingsSwitchItem>
+                      <SettingsSwitchContent>
+                        <FormLabel>{t('Enable LDAP Login')}</FormLabel>
+                        <FormDescription>
+                          {t('Allow users to sign in with LDAP credentials')}
+                        </FormDescription>
+                      </SettingsSwitchContent>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </SettingsSwitchItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.server_url'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Server URL')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t('ldap://host:port or ldaps://host:port')}
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.bind_dn'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Bind DN')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t('Service account DN for searching')}
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.bind_password'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Bind Password')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type='password'
+                          placeholder={t('Service account password')}
+                          autoComplete='new-password'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.search_base'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Search Base')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t('Base DN to search users')}
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.search_filter'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Search Filter')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='(uid={{username}})'
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t('Use {{username}} as the placeholder for the login username')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.username_attribute'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Username Attribute')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='uid'
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.email_attribute'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Email Attribute')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='mail'
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.display_name_attribute'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Display Name Attribute')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='cn'
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.login_label'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Login Button Label')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t('Continue with LDAP')}
+                          autoComplete='off'
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t('Custom label for the LDAP login button')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.start_tls'
+                  render={({ field }) => (
+                    <SettingsSwitchItem>
+                      <SettingsSwitchContent>
+                        <FormLabel>{t('StartTLS')}</FormLabel>
+                        <FormDescription>
+                          {t('Upgrade plain LDAP connection to TLS')}
+                        </FormDescription>
+                      </SettingsSwitchContent>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </SettingsSwitchItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='ldap.skip_tls_verify'
+                  render={({ field }) => (
+                    <SettingsSwitchItem>
+                      <SettingsSwitchContent>
+                        <FormLabel>{t('Skip TLS Verify')}</FormLabel>
+                        <FormDescription>
+                          {t('Skip TLS certificate verification (not recommended)')}
+                        </FormDescription>
+                      </SettingsSwitchContent>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </SettingsSwitchItem>
+                  )}
+                />
+
+                <FormItem className='lg:col-span-2'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={handleTestLDAP}
+                    disabled={isTestingLDAP}
+                  >
+                    {isTestingLDAP
+                      ? t('Testing...')
+                      : t('Test Connection')}
+                  </Button>
+                  <FormDescription>
+                    {t('Save configuration before testing the LDAP connection')}
+                  </FormDescription>
+                </FormItem>
               </TabsContent>
             </Tabs>
           </SettingsForm>
