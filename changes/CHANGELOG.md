@@ -6,7 +6,7 @@
 |------|------|------|------|
 | 001 | 2026-06-18 | 启动默认主题改为 default | `common/constants.go`、`setting/system_setting/theme.go` |
 | 002 | 2026-06-18 | 全局品牌重命名 New API → AI Hub | [详情](details/002-brand-rename.md) |
-| 003 | 2026-06-22 | 首页定制：移除 Footer/区块/开源卡片，模型标签替换，三步上手优化与连接线动画，Hero 右侧新增轨道动画替换 Terminal Demo，底部新增飞书联系信息 | [详情](details/003-homepage-customization.md) |
+| 003 | 2026-06-22 | 首页定制：移除 Footer/区块/开源卡片，模型标签替换，三步上手优化与连接线动画，Hero 右侧新增轨道动画替换 Terminal Demo，底部新增飞书联系信息，统计数字白色微光扫光动画 | [详情](details/003-homepage-customization.md) |
 | 004 | 2026-06-19 | 删除已废弃的 Footer 组件翻译 key | `i18n/locales/{en,zh,fr,ja,ru,vi}.json`（14 key × 6 语言） |
 | 005 | 2026-06-19 | 修复前端 dev server 端口冲突 | `web/default/rsbuild.config.ts` |
 | 006 | 2026-06-19 | 移除开发环境 devtools 面板 | `web/default/src/routes/__root.tsx` |

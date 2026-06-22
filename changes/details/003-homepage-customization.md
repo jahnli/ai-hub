@@ -16,3 +16,5 @@
 - `web/default/src/features/home/components/sections/cta.tsx` — 底部新增飞书联系信息区块（Feishu 图标链接、AI 工程效率科・李佳衡、遇到问题？飞书聊一聊）；重构 CTA 组件使联系信息在登录后仍然显示
 - `web/default/src/i18n/locales/en.json` — 添加 "MODELS" 翻译键（备用）
 - `web/default/src/i18n/locales/zh.json` — 新增 Trans 组件 key、飞书联系信息中文翻译；`API Base URL` 中文翻译改为保留英文术语；添加 "MODELS": "模型" 翻译（备用）
+- `web/default/src/features/home/components/sections/stats.tsx` — 统计数字外层 span 添加 `stat-shimmer` class，触发白色微光扫光动画
+- `web/default/src/styles/index.css` — 新增 `.stat-shimmer` CSS：`::after` 伪元素白色渐变光带，`translateX` 关键帧从左到右扫过，2.5s 循环，首次延迟 2s，含 reduced-motion 支持
