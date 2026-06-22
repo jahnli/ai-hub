@@ -674,47 +674,42 @@ For commercial licensing, please contact support@quantumnous.com
   }
 }
 
-/* Hero gradient text shimmer — light sweeps across gradient text */
-@keyframes hero-gradient-shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
+/* Hero title gradient text */
 .hero-gradient-shimmer {
   position: relative;
   display: inline-block;
   overflow: hidden;
-}
-
-.hero-gradient-shimmer::after {
-  content: '';
-  position: absolute;
-  inset: -20% 0;
-  width: 100%;
   background: linear-gradient(
     90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.25) 30%,
-    rgba(255, 255, 255, 0.7) 50%,
-    rgba(255, 255, 255, 0.25) 70%,
-    transparent 100%
+    color-mix(in oklch, var(--primary) 68%, var(--background)) 0%,
+    color-mix(in oklch, var(--primary) 74%, var(--background)) 35%,
+    color-mix(in oklch, var(--primary) 88%, var(--background)) 65%,
+    color-mix(in oklch, var(--primary) 80%, var(--background)) 100%
   );
-  mix-blend-mode: soft-light;
-  transform: translateX(-100%);
-  animation: hero-gradient-shimmer 3s ease-in-out infinite;
-  animation-delay: 1.5s;
-  pointer-events: none;
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  filter:
+    drop-shadow(0 0 10px color-mix(in oklch, var(--primary) 22%, transparent))
+    drop-shadow(0 0 24px color-mix(in oklch, var(--primary) 14%, transparent));
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero-gradient-shimmer::after {
-    animation: none;
-  }
+.dark .hero-gradient-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--primary) 56%, var(--background)) 0%,
+    color-mix(in oklch, var(--primary) 70%, var(--background)) 35%,
+    color-mix(in oklch, var(--primary) 84%, var(--background)) 65%,
+    color-mix(in oklch, var(--primary) 76%, var(--background)) 100%
+  );
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  filter:
+    drop-shadow(0 0 12px color-mix(in oklch, var(--primary) 36%, transparent))
+    drop-shadow(0 0 30px color-mix(in oklch, var(--primary) 22%, transparent));
 }
+
 
 /* Stat number shimmer — white light sweeps left to right */
 @keyframes stat-shimmer {
