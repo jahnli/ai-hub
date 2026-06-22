@@ -1,6 +1,6 @@
 # 首页定制
 
-**日期**: 2026-06-18 ~ 2026-06-22
+**日期**: 2026-06-18 ~ 2026-06-23
 
 ## 涉及文件
 
@@ -25,4 +25,4 @@
 - `web/default/src/features/home/components/sections/how-it-works.tsx` — HowItWorks 区域 max-width 从 max-w-6xl 加宽到 max-w-7xl
 - `web/default/src/features/home/components/orbit-animation.tsx` — 双轨道动画整体左移（内环 left 45%→26%，外环 55%→36%）
 - `web/default/src/features/home/components/sections/hero.tsx` — Hero 渐变标题「海量 AI 模型」添加 `hero-gradient-shimmer` class，实现白色微光扫光动画
-- `web/default/src/styles/index.css` — 新增 `.hero-gradient-shimmer` 样式：`::after` 伪元素白色渐变光带 + `mix-blend-mode: soft-light`，3s 循环，1.5s 延迟，含 reduced-motion 支持
+- `web/default/src/styles/index.css` — 新增 `.hero-gradient-shimmer` 样式：`::after` 伪元素白色渐变光带，3.5s 循环，1.5s 延迟，暗色模式降低光带透明度，含 reduced-motion 支持
