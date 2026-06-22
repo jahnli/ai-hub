@@ -27,3 +27,4 @@
 | 021 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
 | 022 | 2026-06-20 | 个人资料页内联展示订阅详情（计划名、状态、剩余天数、配额进度条等），皇冠图标改为金色 | `web/default/src/features/profile/components/profile-header.tsx` |
 | 023 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
+| 024 | 2026-06-22 | 新增 LDAP 登录与用户同步（飞书同步）：后端 LDAP 认证/绑定/解绑、飞书用户同步服务、前端登录弹窗与系统设置、6 语言翻译 | [详情](details/024-ldap-login.md) |

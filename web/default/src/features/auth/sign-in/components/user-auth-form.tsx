@@ -47,6 +47,7 @@ import { PasswordInput } from '@/components/password-input'
 import { Turnstile } from '@/components/turnstile'
 import { login, wechatLoginByCode } from '@/features/auth/api'
 import { LegalConsent } from '@/features/auth/components/legal-consent'
+import { LDAPLoginDialog } from '@/features/auth/components/ldap-login-dialog'
 import { OAuthProviders } from '@/features/auth/components/oauth-providers'
 import { loginFormSchema } from '@/features/auth/constants'
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
@@ -67,6 +68,7 @@ export function UserAuthForm({
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [isWeChatDialogOpen, setIsWeChatDialogOpen] = useState(false)
   const [isWeChatSubmitting, setIsWeChatSubmitting] = useState(false)
+  const [isLDAPDialogOpen, setIsLDAPDialogOpen] = useState(false)
   const legalConsentErrorMessage = t('Please agree to the legal terms first')
   const loginFailedMessage = t('Login failed')
 
@@ -95,13 +97,16 @@ export function UserAuthForm({
     !passkeySupported ||
     (requiresLegalConsent && !agreedToLegal)
   const hasWeChatLogin = Boolean(status?.wechat_login)
+  const hasLDAPLogin = Boolean(status?.ldap_enabled)
+  const ldapLoginLabel = status?.ldap_login_label || ''
   const hasOAuthLogin = Boolean(
     status?.github_oauth ||
     status?.discord_oauth ||
     status?.oidc_enabled ||
     status?.linuxdo_oauth ||
     status?.telegram_oauth ||
-    (status?.custom_oauth_providers?.length ?? 0) > 0
+    (status?.custom_oauth_providers?.length ?? 0) > 0 ||
+    hasLDAPLogin
   )
   const hasAlternativeLogin =
     passkeyLoginEnabled || hasWeChatLogin || hasOAuthLogin
@@ -314,6 +319,7 @@ export function UserAuthForm({
         disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
         onWeChatLogin={hasWeChatLogin ? handleOpenWeChatDialog : undefined}
         isWeChatLoading={isWeChatSubmitting}
+        onLDAPLogin={hasLDAPLogin ? () => setIsLDAPDialogOpen(true) : undefined}
       />
     </>
   )
@@ -467,6 +473,17 @@ export function UserAuthForm({
             />
           </div>
         </Dialog>
+      )}
+
+      {hasLDAPLogin && (
+        <LDAPLoginDialog
+          open={isLDAPDialogOpen}
+          onOpenChange={setIsLDAPDialogOpen}
+          loginLabel={ldapLoginLabel}
+          redirectTo={redirectTo}
+          requiresLegalConsent={requiresLegalConsent}
+          agreedToLegal={agreedToLegal}
+        />
       )}
     </Form>
   )

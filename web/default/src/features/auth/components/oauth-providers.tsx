@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Building2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -35,6 +36,7 @@ type OAuthProvidersProps = {
   className?: string
   onWeChatLogin?: () => void
   isWeChatLoading?: boolean
+  onLDAPLogin?: () => void
 }
 
 type ProviderButton = {
@@ -51,6 +53,7 @@ export function OAuthProviders({
   className,
   onWeChatLogin,
   isWeChatLoading = false,
+  onLDAPLogin,
 }: OAuthProvidersProps) {
   const { t } = useTranslation()
   const {
@@ -131,6 +134,15 @@ export function OAuthProviders({
         onClick: () => handleCustomOAuthLogin(provider),
       })
     }
+  }
+
+  if (status?.ldap_enabled && onLDAPLogin) {
+    providerButtons.push({
+      key: 'ldap',
+      label: status.ldap_login_label || t('Continue with LDAP'),
+      onClick: onLDAPLogin,
+      icon: <Building2 className='h-4 w-4' />,
+    })
   }
 
   if (providerButtons.length === 0) return null
