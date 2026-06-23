@@ -134,7 +134,7 @@ export function Stats(_props: StatsProps) {
 
   return (
     <div className='border-border/40 bg-muted/10 relative z-10 border-y'>
-      <div className='mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-6 py-10 md:py-12 lg:grid-cols-2 lg:gap-12 lg:px-0'>
+      <div className='mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-6 py-10 md:py-12 lg:grid-cols-2 lg:gap-12 lg:px-0'>
         {/* Left: stat counters in 2×2 grid */}
         <div className='grid grid-cols-2 gap-4'>
           {stats.map((s) => (

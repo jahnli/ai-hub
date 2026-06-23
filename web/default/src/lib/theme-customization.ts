@@ -37,7 +37,7 @@ export const THEME_PRESETS = [
   {
     value: 'lake-view',
     name: 'Lake View',
-    swatches: ['oklch(0.8294 0.1296 168.05)', 'oklch(0.6469 0.1057 173.8)'],
+    swatches: ['oklch(0.6214 0.153 153.16)', 'oklch(0.7414 0.1071 173.16)'],
   },
   {
     value: 'rose-garden',

@@ -93,6 +93,7 @@ web/             — 前端主题容器
 - 对 `group` 和 `key` 等保留字列，使用 `model/main.go` 中的 `commonGroupCol`、`commonKeyCol` 变量。
 - 布尔值不同：PostgreSQL 使用 `true`/`false`，MySQL/SQLite 使用 `1`/`0`。使用 `commonTrueVal`/`commonFalseVal`。
 - 使用 `common.UsingPostgreSQL`、`common.UsingSQLite`、`common.UsingMySQL` 标志来分支特定数据库逻辑。
+- 使用 `common.UsingMainDatabase(...)` 判断主数据库类型，使用 `common.UsingLogDatabase(...)` 判断日志数据库类型（日志数据库可能使用不同的后端，如 ClickHouse）。
 
 **禁止在没有跨数据库兜底的情况下使用：**
 

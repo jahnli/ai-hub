@@ -108,39 +108,39 @@ For commercial licensing, please contact support@quantumnous.com
 
 /* ── Lake View ────────────────────────────────────────────────────────── */
 [data-theme-preset="lake-view"] {
-  --primary: oklch(0.8294 0.1296 168.05);
-  --primary-foreground: oklch(0.3155 0.0252 183.88);
-  --secondary: oklch(0.6469 0.1057 173.8);
+  --primary: oklch(0.6214 0.153 153.16);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.7414 0.1071 173.16);
   --secondary-foreground: oklch(1 0 0);
-  --ring: oklch(0.8294 0.1296 168.05);
-  --chart-1: oklch(0.8294 0.1296 168.05);
-  --chart-2: oklch(0.6469 0.1057 173.8);
-  --chart-3: oklch(0.8748 0.1016 173.51);
-  --chart-4: oklch(0.6397 0.0908 171.39);
-  --chart-5: oklch(0.9326 0.0532 174.18);
-  --sidebar-primary: oklch(0.6214 0.153 153.18);
+  --ring: oklch(0.6214 0.153 153.16);
+  --chart-1: oklch(0.6214 0.153 153.16);
+  --chart-2: oklch(0.7414 0.1071 173.16);
+  --chart-3: oklch(0.8614 0.1041 158.16);
+  --chart-4: oklch(0.7214 0.0918 151.16);
+  --chart-5: oklch(0.9414 0.0536 159.16);
+  --sidebar-primary: oklch(0.6214 0.153 153.16);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.8294 0.1296 168.05);
-  --sidebar-accent-foreground: oklch(0.3155 0.0252 183.88);
-  --sidebar-ring: oklch(0.8294 0.1296 168.05);
+  --sidebar-accent: oklch(0.6214 0.153 153.16);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-ring: oklch(0.6214 0.153 153.16);
   --radius: 0.75rem;
 }
 .dark [data-theme-preset="lake-view"] {
-  --primary: oklch(0.8294 0.1296 168.05);
-  --primary-foreground: oklch(0.3155 0.0252 183.88);
-  --secondary: oklch(0.6469 0.1057 173.8);
+  --primary: oklch(0.6914 0.1607 153.16);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.7414 0.1071 173.16);
   --secondary-foreground: oklch(1 0 0);
-  --ring: oklch(0.8294 0.1296 168.05);
-  --chart-1: oklch(0.8294 0.1296 168.05);
-  --chart-2: oklch(0.6469 0.1057 173.8);
-  --chart-3: oklch(0.8748 0.1016 173.51);
-  --chart-4: oklch(0.6397 0.0908 171.39);
-  --chart-5: oklch(0.9326 0.0532 174.18);
-  --sidebar-primary: oklch(0.6214 0.153 153.18);
+  --ring: oklch(0.6914 0.1607 153.16);
+  --chart-1: oklch(0.6914 0.1607 153.16);
+  --chart-2: oklch(0.7414 0.1071 173.16);
+  --chart-3: oklch(0.8614 0.1041 158.16);
+  --chart-4: oklch(0.7214 0.0918 151.16);
+  --chart-5: oklch(0.9414 0.0536 159.16);
+  --sidebar-primary: oklch(0.6914 0.1607 153.16);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.8294 0.1296 168.05);
-  --sidebar-accent-foreground: oklch(0.3155 0.0252 183.88);
-  --sidebar-ring: oklch(0.8294 0.1296 168.05);
+  --sidebar-accent: oklch(0.6914 0.1607 153.16);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-ring: oklch(0.6914 0.1607 153.16);
 }
 
 /* ── Sunset Glow ──────────────────────────────────────────────────────── */
