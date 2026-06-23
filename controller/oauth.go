@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -208,26 +207,6 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 		return user, nil
 	}
 
-	// Try to find user with legacy ID (for GitHub migration from login to numeric ID)
-	if legacyID, ok := oauthUser.Extra["legacy_id"].(string); ok && legacyID != "" {
-		if provider.IsUserIDTaken(legacyID) {
-			err := provider.FillUserByProviderID(user, legacyID)
-			if err != nil {
-				return nil, err
-			}
-			if user.Id != 0 {
-				// Found user with legacy ID, migrate to new ID
-				common.SysLog(fmt.Sprintf("[OAuth] Migrating user %d from legacy_id=%s to new_id=%s",
-					user.Id, legacyID, oauthUser.ProviderUserID))
-				if err := user.UpdateGitHubId(oauthUser.ProviderUserID); err != nil {
-					common.SysError(fmt.Sprintf("[OAuth] Failed to migrate user %d: %s", user.Id, err.Error()))
-					// Continue with login even if migration fails
-				}
-				return user, nil
-			}
-		}
-	}
-
 	// User doesn't exist, create new user if registration is enabled
 	if !common.RegisterEnabled {
 		return nil, &OAuthRegistrationDisabledError{}
@@ -296,12 +275,8 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 			// Set the provider user ID on the user model and update
 			provider.SetProviderUserID(user, oauthUser.ProviderUserID)
 			if err := tx.Model(user).Updates(map[string]interface{}{
-				"github_id":   user.GitHubId,
-				"discord_id":  user.DiscordId,
-				"oidc_id":     user.OidcId,
-				"linux_do_id": user.LinuxDOId,
-				"wechat_id":   user.WeChatId,
-				"telegram_id": user.TelegramId,
+				"oidc_id":   user.OidcId,
+				"wechat_id": user.WeChatId,
 			}).Error; err != nil {
 				return err
 			}
@@ -343,8 +318,6 @@ func handleOAuthError(c *gin.Context, err error) {
 		}
 	case *oauth.AccessDeniedError:
 		common.ApiErrorMsg(c, e.Message)
-	case *oauth.TrustLevelError:
-		common.ApiErrorI18n(c, i18n.MsgOAuthTrustLevelLow)
 	default:
 		common.ApiError(c, err)
 	}

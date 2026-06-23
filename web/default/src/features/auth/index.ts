@@ -31,7 +31,7 @@ export {
   getOAuthState,
   githubOAuthStart,
   wechatLoginByCode,
-} from './api'
+} from "./api";
 
 // ============================================================================
 // Types
@@ -50,7 +50,7 @@ export type {
   SystemStatus,
   OAuthProvider,
   AuthFormProps,
-} from './types'
+} from "./types";
 
 // ============================================================================
 // Constants & Schemas
@@ -69,28 +69,19 @@ export {
   OTP_REGEX,
   EMAIL_VERIFICATION_COUNTDOWN,
   PASSWORD_RESET_COUNTDOWN,
-} from './constants'
+} from "./constants";
 
 // ============================================================================
 // Utilities
 // ============================================================================
 
 export {
-  buildGitHubOAuthUrl,
-  buildDiscordOAuthUrl,
   buildOIDCOAuthUrl,
-  buildLinuxDOOAuthUrl,
   getAvailableOAuthProviders,
   hasOAuthProviders,
-} from './lib/oauth'
+} from "./lib/oauth";
 
-export {
-  saveUserId,
-  getUserId,
-  removeUserId,
-  getAffiliateCode,
-  saveAffiliateCode,
-} from './lib/storage'
+export { saveUserId, getUserId, removeUserId } from "./lib/storage";
 
 export {
   isValidOTP,
@@ -98,26 +89,26 @@ export {
   formatBackupCode,
   cleanBackupCode,
   isValidEmail,
-} from './lib/validation'
+} from "./lib/validation";
 
 // ============================================================================
 // Hooks
 // ============================================================================
 
-export { useTurnstile } from './hooks/use-turnstile'
-export { useOAuthLogin } from './hooks/use-oauth-login'
-export { useAuthRedirect } from './hooks/use-auth-redirect'
-export { useEmailVerification } from './hooks/use-email-verification'
+export { useTurnstile } from "./hooks/use-turnstile";
+export { useOAuthLogin } from "./hooks/use-oauth-login";
+export { useAuthRedirect } from "./hooks/use-auth-redirect";
+export { useEmailVerification } from "./hooks/use-email-verification";
 
 // ============================================================================
 // Components
 // ============================================================================
 
-export { AuthLayout } from './auth-layout'
-export { OAuthProviders } from './components/oauth-providers'
-export { TermsFooter } from './components/terms-footer'
-export { LegalConsent } from './components/legal-consent'
-export { SignIn } from './sign-in'
-export { SignUp } from './sign-up'
-export { ForgotPassword } from './forgot-password'
-export { Otp } from './otp'
+export { AuthLayout } from "./auth-layout";
+export { OAuthProviders } from "./components/oauth-providers";
+export { TermsFooter } from "./components/terms-footer";
+export { LegalConsent } from "./components/legal-consent";
+export { SignIn } from "./sign-in";
+export { SignUp } from "./sign-up";
+export { ForgotPassword } from "./forgot-password";
+export { Otp } from "./otp";

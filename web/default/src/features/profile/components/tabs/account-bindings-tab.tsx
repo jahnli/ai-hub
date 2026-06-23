@@ -17,17 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Mail, Shield, Send, Link2, Unlink } from 'lucide-react'
+import { Mail, Shield, Link2, Unlink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { SiGithub, SiWechat, SiLinux } from 'react-icons/si'
+import { SiWechat } from 'react-icons/si'
 import { toast } from 'sonner'
-import { IconDiscord } from '@/assets/brand-icons'
-import {
-  handleGitHubOAuth,
-  handleOIDCOAuth,
-  handleDiscordOAuth,
-  handleLinuxDOOAuth,
-} from '@/lib/oauth'
+import { handleOIDCOAuth } from '@/lib/oauth'
 import { useDialogs } from '@/hooks/use-dialog'
 import { useStatus } from '@/hooks/use-status'
 import { Button } from '@/components/ui/button'
@@ -42,7 +36,6 @@ import {
 } from '../../api'
 import type { UserProfile, BindingItem } from '../../types'
 import { EmailBindDialog } from '../dialogs/email-bind-dialog'
-import { TelegramBindDialog } from '../dialogs/telegram-bind-dialog'
 import { WeChatBindDialog } from '../dialogs/wechat-bind-dialog'
 
 // ============================================================================
@@ -54,7 +47,7 @@ interface AccountBindingsTabProps {
   onUpdate: () => void
 }
 
-type DialogKey = 'email' | 'wechat' | 'telegram'
+type DialogKey = 'email' | 'wechat'
 
 export function AccountBindingsTab({
   profile,
@@ -172,40 +165,6 @@ export function AccountBindingsTab({
         onBind: () => dialogs.open('wechat'),
       },
       {
-        id: 'github',
-        label: t('GitHub'),
-        icon: SiGithub,
-        value: (profile as unknown as Record<string, unknown>).github_id as
-          | string
-          | undefined,
-        isBound: Boolean(
-          (profile as unknown as Record<string, unknown>).github_id
-        ),
-        isEnabled: status?.github_oauth || false,
-        onBind: () => {
-          if (status?.github_client_id) {
-            handleGitHubOAuth(status.github_client_id)
-          }
-        },
-      },
-      {
-        id: 'discord',
-        label: t('Discord'),
-        icon: IconDiscord,
-        value: (profile as unknown as Record<string, unknown>).discord_id as
-          | string
-          | undefined,
-        isBound: Boolean(
-          (profile as unknown as Record<string, unknown>).discord_id
-        ),
-        isEnabled: status?.discord_oauth || false,
-        onBind: () => {
-          if (status?.discord_client_id) {
-            handleDiscordOAuth(status.discord_client_id)
-          }
-        },
-      },
-      {
         id: 'oidc',
         label: t('OIDC'),
         icon: Shield,
@@ -222,36 +181,6 @@ export function AccountBindingsTab({
               status.oidc_authorization_endpoint,
               status.oidc_client_id
             )
-          }
-        },
-      },
-      {
-        id: 'telegram',
-        label: t('Telegram'),
-        icon: Send,
-        value: (profile as unknown as Record<string, unknown>).telegram_id as
-          | string
-          | undefined,
-        isBound: Boolean(
-          (profile as unknown as Record<string, unknown>).telegram_id
-        ),
-        isEnabled: status?.telegram_oauth || false,
-        onBind: () => dialogs.open('telegram'),
-      },
-      {
-        id: 'linuxdo',
-        label: t('LinuxDO'),
-        icon: SiLinux as React.ComponentType<{ className?: string }>,
-        value: (profile as unknown as Record<string, unknown>).linux_do_id as
-          | string
-          | undefined,
-        isBound: Boolean(
-          (profile as unknown as Record<string, unknown>).linux_do_id
-        ),
-        isEnabled: status?.linuxdo_oauth || false,
-        onBind: () => {
-          if (status?.linuxdo_client_id) {
-            handleLinuxDOOAuth(status.linuxdo_client_id)
           }
         },
       },
@@ -409,17 +338,6 @@ export function AccountBindingsTab({
         onSuccess={onUpdate}
       />
 
-      {/* Telegram Bind Dialog */}
-      {status?.telegram_bot_name && (
-        <TelegramBindDialog
-          open={dialogs.isOpen('telegram')}
-          onOpenChange={(open) =>
-            open ? dialogs.open('telegram') : dialogs.close('telegram')
-          }
-          botName={status.telegram_bot_name as string}
-          onSuccess={onUpdate}
-        />
-      )}
     </>
   )
 }

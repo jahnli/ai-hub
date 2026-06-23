@@ -51,18 +51,10 @@ import { useUpdateOption } from '../hooks/use-update-option'
 /**
  * react-hook-form 7 treats dotted `name` strings as nested paths. To keep
  * form state, schema validation, and dirty tracking aligned, the
- * `discord.*` and `oidc.*` fields are modeled as nested objects here and
+ * `oidc.*` and `ldap.*` fields are modeled as nested objects here and
  * flattened back to dotted server keys only when persisting.
  */
 const oauthSchema = z.object({
-  GitHubOAuthEnabled: z.boolean(),
-  GitHubClientId: z.string(),
-  GitHubClientSecret: z.string(),
-  discord: z.object({
-    enabled: z.boolean(),
-    client_id: z.string(),
-    client_secret: z.string(),
-  }),
   oidc: z.object({
     enabled: z.boolean(),
     client_id: z.string(),
@@ -86,13 +78,6 @@ const oauthSchema = z.object({
     skip_tls_verify: z.boolean(),
     login_label: z.string(),
   }),
-  TelegramOAuthEnabled: z.boolean(),
-  TelegramBotToken: z.string(),
-  TelegramBotName: z.string(),
-  LinuxDOOAuthEnabled: z.boolean(),
-  LinuxDOClientId: z.string(),
-  LinuxDOClientSecret: z.string(),
-  LinuxDOMinimumTrustLevel: z.string(),
   WeChatAuthEnabled: z.boolean(),
   WeChatServerAddress: z.string(),
   WeChatServerToken: z.string(),
@@ -102,12 +87,6 @@ const oauthSchema = z.object({
 type OAuthFormValues = z.infer<typeof oauthSchema>
 
 type FlatOAuthDefaults = {
-  GitHubOAuthEnabled: boolean
-  GitHubClientId: string
-  GitHubClientSecret: string
-  'discord.enabled': boolean
-  'discord.client_id': string
-  'discord.client_secret': string
   'oidc.enabled': boolean
   'oidc.client_id': string
   'oidc.client_secret': string
@@ -127,13 +106,6 @@ type FlatOAuthDefaults = {
   'ldap.start_tls': boolean
   'ldap.skip_tls_verify': boolean
   'ldap.login_label': string
-  TelegramOAuthEnabled: boolean
-  TelegramBotToken: string
-  TelegramBotName: string
-  LinuxDOOAuthEnabled: boolean
-  LinuxDOClientId: string
-  LinuxDOClientSecret: string
-  LinuxDOMinimumTrustLevel: string
   WeChatAuthEnabled: boolean
   WeChatServerAddress: string
   WeChatServerToken: string
@@ -144,14 +116,6 @@ const oauthTabContentClassName =
   'grid min-w-0 gap-x-5 gap-y-6 lg:grid-cols-2 [&>[data-slot=form-item]]:min-w-0 lg:[&>[data-slot=form-item]:has([data-slot=switch])]:col-span-2'
 
 const buildFormDefaults = (defaults: FlatOAuthDefaults): OAuthFormValues => ({
-  GitHubOAuthEnabled: defaults.GitHubOAuthEnabled,
-  GitHubClientId: defaults.GitHubClientId ?? '',
-  GitHubClientSecret: defaults.GitHubClientSecret ?? '',
-  discord: {
-    enabled: defaults['discord.enabled'],
-    client_id: defaults['discord.client_id'] ?? '',
-    client_secret: defaults['discord.client_secret'] ?? '',
-  },
   oidc: {
     enabled: defaults['oidc.enabled'],
     client_id: defaults['oidc.client_id'] ?? '',
@@ -175,13 +139,6 @@ const buildFormDefaults = (defaults: FlatOAuthDefaults): OAuthFormValues => ({
     skip_tls_verify: defaults['ldap.skip_tls_verify'],
     login_label: defaults['ldap.login_label'] ?? '',
   },
-  TelegramOAuthEnabled: defaults.TelegramOAuthEnabled,
-  TelegramBotToken: defaults.TelegramBotToken ?? '',
-  TelegramBotName: defaults.TelegramBotName ?? '',
-  LinuxDOOAuthEnabled: defaults.LinuxDOOAuthEnabled,
-  LinuxDOClientId: defaults.LinuxDOClientId ?? '',
-  LinuxDOClientSecret: defaults.LinuxDOClientSecret ?? '',
-  LinuxDOMinimumTrustLevel: defaults.LinuxDOMinimumTrustLevel ?? '',
   WeChatAuthEnabled: defaults.WeChatAuthEnabled,
   WeChatServerAddress: defaults.WeChatServerAddress ?? '',
   WeChatServerToken: defaults.WeChatServerToken ?? '',
@@ -189,12 +146,6 @@ const buildFormDefaults = (defaults: FlatOAuthDefaults): OAuthFormValues => ({
 })
 
 const normalizeFormValues = (values: OAuthFormValues): FlatOAuthDefaults => ({
-  GitHubOAuthEnabled: values.GitHubOAuthEnabled,
-  GitHubClientId: values.GitHubClientId,
-  GitHubClientSecret: values.GitHubClientSecret,
-  'discord.enabled': values.discord.enabled,
-  'discord.client_id': values.discord.client_id,
-  'discord.client_secret': values.discord.client_secret,
   'oidc.enabled': values.oidc.enabled,
   'oidc.client_id': values.oidc.client_id,
   'oidc.client_secret': values.oidc.client_secret,
@@ -214,13 +165,6 @@ const normalizeFormValues = (values: OAuthFormValues): FlatOAuthDefaults => ({
   'ldap.start_tls': values.ldap.start_tls,
   'ldap.skip_tls_verify': values.ldap.skip_tls_verify,
   'ldap.login_label': values.ldap.login_label,
-  TelegramOAuthEnabled: values.TelegramOAuthEnabled,
-  TelegramBotToken: values.TelegramBotToken,
-  TelegramBotName: values.TelegramBotName,
-  LinuxDOOAuthEnabled: values.LinuxDOOAuthEnabled,
-  LinuxDOClientId: values.LinuxDOClientId,
-  LinuxDOClientSecret: values.LinuxDOClientSecret,
-  LinuxDOMinimumTrustLevel: values.LinuxDOMinimumTrustLevel,
   WeChatAuthEnabled: values.WeChatAuthEnabled,
   WeChatServerAddress: values.WeChatServerAddress,
   WeChatServerToken: values.WeChatServerToken,
@@ -234,7 +178,7 @@ type OAuthSectionProps = {
 export function OAuthSection(props: OAuthSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const [activeTab, setActiveTab] = useState('github')
+  const [activeTab, setActiveTab] = useState('oidc')
 
   const formDefaults = useMemo(
     () => buildFormDefaults(props.defaultValues),
@@ -365,159 +309,11 @@ export function OAuthSection(props: OAuthSectionProps) {
             <FormDirtyIndicator isDirty={form.formState.isDirty} />
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className='grid w-full grid-cols-7'>
-                <TabsTrigger value='github'>{t('GitHub')}</TabsTrigger>
-                <TabsTrigger value='discord'>{t('Discord')}</TabsTrigger>
+              <TabsList className='grid w-full grid-cols-3'>
                 <TabsTrigger value='oidc'>{t('OIDC')}</TabsTrigger>
-                <TabsTrigger value='telegram'>{t('Telegram')}</TabsTrigger>
-                <TabsTrigger value='linuxdo'>{t('LinuxDO')}</TabsTrigger>
                 <TabsTrigger value='wechat'>{t('WeChat')}</TabsTrigger>
                 <TabsTrigger value='ldap'>{t('LDAP')}</TabsTrigger>
               </TabsList>
-
-              <TabsContent value='github' className={oauthTabContentClassName}>
-                <FormField
-                  control={form.control}
-                  name='GitHubOAuthEnabled'
-                  render={({ field }) => (
-                    <SettingsSwitchItem>
-                      <SettingsSwitchContent>
-                        <FormLabel>{t('Enable GitHub OAuth')}</FormLabel>
-                        <FormDescription>
-                          {t('Allow users to sign in with GitHub')}
-                        </FormDescription>
-                      </SettingsSwitchContent>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </SettingsSwitchItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='GitHubClientId'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Client ID')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t('Your GitHub OAuth Client ID')}
-                          autoComplete='off'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='GitHubClientSecret'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Client Secret')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type='password'
-                          placeholder={t('Your GitHub OAuth Client Secret')}
-                          autoComplete='new-password'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-
-              <TabsContent value='discord' className={oauthTabContentClassName}>
-                <FormField
-                  control={form.control}
-                  name='discord.enabled'
-                  render={({ field }) => (
-                    <SettingsSwitchItem>
-                      <SettingsSwitchContent>
-                        <FormLabel>{t('Enable Discord OAuth')}</FormLabel>
-                        <FormDescription>
-                          {t('Allow users to sign in with Discord')}
-                        </FormDescription>
-                      </SettingsSwitchContent>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </SettingsSwitchItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='discord.client_id'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Client ID')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t('Your Discord OAuth Client ID')}
-                          autoComplete='off'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='discord.client_secret'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Client Secret')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type='password'
-                          placeholder={t('Your Discord OAuth Client Secret')}
-                          autoComplete='new-password'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
 
               <TabsContent value='oidc' className={oauthTabContentClassName}>
                 <FormField
@@ -690,180 +486,6 @@ export function OAuthSection(props: OAuthSectionProps) {
                           ref={field.ref}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-
-              <TabsContent
-                value='telegram'
-                className={oauthTabContentClassName}
-              >
-                <FormField
-                  control={form.control}
-                  name='TelegramOAuthEnabled'
-                  render={({ field }) => (
-                    <SettingsSwitchItem>
-                      <SettingsSwitchContent>
-                        <FormLabel>{t('Enable Telegram OAuth')}</FormLabel>
-                        <FormDescription>
-                          {t('Allow users to sign in with Telegram')}
-                        </FormDescription>
-                      </SettingsSwitchContent>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </SettingsSwitchItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='TelegramBotToken'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Bot Token')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type='password'
-                          placeholder={t('Your Telegram Bot Token')}
-                          autoComplete='new-password'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='TelegramBotName'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Bot Name')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t('Your Bot Name')}
-                          autoComplete='off'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </TabsContent>
-
-              <TabsContent value='linuxdo' className={oauthTabContentClassName}>
-                <FormField
-                  control={form.control}
-                  name='LinuxDOOAuthEnabled'
-                  render={({ field }) => (
-                    <SettingsSwitchItem>
-                      <SettingsSwitchContent>
-                        <FormLabel>{t('Enable LinuxDO OAuth')}</FormLabel>
-                        <FormDescription>
-                          {t('Allow users to sign in with LinuxDO')}
-                        </FormDescription>
-                      </SettingsSwitchContent>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </SettingsSwitchItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='LinuxDOClientId'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Client ID')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t('LinuxDO Client ID')}
-                          autoComplete='off'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='LinuxDOClientSecret'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Client Secret')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type='password'
-                          placeholder={t('LinuxDO Client Secret')}
-                          autoComplete='new-password'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='LinuxDOMinimumTrustLevel'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Minimum Trust Level')}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder='0'
-                          autoComplete='off'
-                          value={field.value ?? ''}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                          name={field.name}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        {t('Minimum LinuxDO trust level required')}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

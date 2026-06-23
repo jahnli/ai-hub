@@ -123,12 +123,6 @@ export type AuthSettings = {
   EmailDomainRestrictionEnabled: boolean
   EmailAliasRestrictionEnabled: boolean
   EmailDomainWhitelist: string
-  GitHubOAuthEnabled: boolean
-  GitHubClientId: string
-  GitHubClientSecret: string
-  'discord.enabled': boolean
-  'discord.client_id': string
-  'discord.client_secret': string
   'oidc.enabled': boolean
   'oidc.client_id': string
   'oidc.client_secret': string
@@ -148,13 +142,6 @@ export type AuthSettings = {
   'ldap.start_tls': boolean
   'ldap.skip_tls_verify': boolean
   'ldap.login_label': string
-  TelegramOAuthEnabled: boolean
-  TelegramBotToken: string
-  TelegramBotName: string
-  LinuxDOOAuthEnabled: boolean
-  LinuxDOClientId: string
-  LinuxDOClientSecret: string
-  LinuxDOMinimumTrustLevel: string
   WeChatAuthEnabled: boolean
   WeChatServerAddress: string
   WeChatServerToken: string

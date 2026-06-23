@@ -29,11 +29,8 @@ type User struct {
 	Role             int            `json:"role" gorm:"type:int;default:1"`   // admin, common
 	Status           int            `json:"status" gorm:"type:int;default:1"` // enabled, disabled
 	Email            string         `json:"email" gorm:"index" validate:"max=50"`
-	GitHubId         string         `json:"github_id" gorm:"column:github_id;index"`
-	DiscordId        string         `json:"discord_id" gorm:"column:discord_id;index"`
 	OidcId           string         `json:"oidc_id" gorm:"column:oidc_id;index"`
 	WeChatId         string         `json:"wechat_id" gorm:"column:wechat_id;index"`
-	TelegramId       string         `json:"telegram_id" gorm:"column:telegram_id;index"`
 	VerificationCode string         `json:"verification_code" gorm:"-:all"`                         // this field is only for Email verification, don't save it to database!
 	AccessToken      *string        `json:"-" gorm:"type:char(32);column:access_token;uniqueIndex"` // this token is for system management
 	Quota            int            `json:"quota" gorm:"type:int;default:0"`
@@ -41,7 +38,6 @@ type User struct {
 	RequestCount     int            `json:"request_count" gorm:"type:int;default:0;"`               // request number
 	Group            string         `json:"group" gorm:"type:varchar(64);default:'default'"`
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
-	LinuxDOId        string         `json:"linux_do_id" gorm:"column:linux_do_id;index"`
 	Setting          string         `json:"setting" gorm:"type:text;column:setting"`
 	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
@@ -463,13 +459,9 @@ func (user *User) ClearBinding(bindingType string) error {
 	}
 
 	bindingColumnMap := map[string]string{
-		"email":    "email",
-		"github":   "github_id",
-		"discord":  "discord_id",
-		"oidc":     "oidc_id",
-		"wechat":   "wechat_id",
-		"telegram": "telegram_id",
-		"linuxdo":  "linux_do_id",
+		"email":  "email",
+		"oidc":   "oidc_id",
+		"wechat": "wechat_id",
 	}
 
 	column, ok := bindingColumnMap[bindingType]
@@ -553,29 +545,7 @@ func (user *User) FillUserByEmail() error {
 	return nil
 }
 
-func (user *User) FillUserByGitHubId() error {
-	if user.GitHubId == "" {
-		return errors.New("GitHub id 为空！")
-	}
-	DB.Where(User{GitHubId: user.GitHubId}).First(user)
-	return nil
-}
 
-// UpdateGitHubId updates the user's GitHub ID (used for migration from login to numeric ID)
-func (user *User) UpdateGitHubId(newGitHubId string) error {
-	if user.Id == 0 {
-		return errors.New("user id is empty")
-	}
-	return DB.Model(user).Update("github_id", newGitHubId).Error
-}
-
-func (user *User) FillUserByDiscordId() error {
-	if user.DiscordId == "" {
-		return errors.New("discord id 为空！")
-	}
-	DB.Where(User{DiscordId: user.DiscordId}).First(user)
-	return nil
-}
 
 func (user *User) FillUserByOidcId() error {
 	if user.OidcId == "" {
@@ -593,16 +563,7 @@ func (user *User) FillUserByWeChatId() error {
 	return nil
 }
 
-func (user *User) FillUserByTelegramId() error {
-	if user.TelegramId == "" {
-		return errors.New("Telegram id 为空！")
-	}
-	err := DB.Where(User{TelegramId: user.TelegramId}).First(user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return errors.New("该 Telegram 账户未绑定")
-	}
-	return nil
-}
+
 
 func IsEmailAlreadyTaken(email string) bool {
 	return DB.Unscoped().Where("email = ?", email).Find(&User{}).RowsAffected == 1
@@ -612,21 +573,13 @@ func IsWeChatIdAlreadyTaken(wechatId string) bool {
 	return DB.Unscoped().Where("wechat_id = ?", wechatId).Find(&User{}).RowsAffected == 1
 }
 
-func IsGitHubIdAlreadyTaken(githubId string) bool {
-	return DB.Unscoped().Where("github_id = ?", githubId).Find(&User{}).RowsAffected == 1
-}
 
-func IsDiscordIdAlreadyTaken(discordId string) bool {
-	return DB.Unscoped().Where("discord_id = ?", discordId).Find(&User{}).RowsAffected == 1
-}
 
 func IsOidcIdAlreadyTaken(oidcId string) bool {
 	return DB.Where("oidc_id = ?", oidcId).Find(&User{}).RowsAffected == 1
 }
 
-func IsTelegramIdAlreadyTaken(telegramId string) bool {
-	return DB.Unscoped().Where("telegram_id = ?", telegramId).Find(&User{}).RowsAffected == 1
-}
+
 
 func ResetUserPasswordByEmail(email string, password string) error {
 	if email == "" || password == "" {
@@ -970,19 +923,7 @@ func GetUsernameById(id int, fromDB bool) (username string, err error) {
 	return username, nil
 }
 
-func IsLinuxDOIdAlreadyTaken(linuxDOId string) bool {
-	var user User
-	err := DB.Unscoped().Where("linux_do_id = ?", linuxDOId).First(&user).Error
-	return !errors.Is(err, gorm.ErrRecordNotFound)
-}
 
-func (user *User) FillUserByLinuxDOId() error {
-	if user.LinuxDOId == "" {
-		return errors.New("linux do id is empty")
-	}
-	err := DB.Where("linux_do_id = ?", user.LinuxDOId).First(user).Error
-	return err
-}
 
 func RootUserExists() bool {
 	var user User

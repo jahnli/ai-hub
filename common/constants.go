@@ -84,10 +84,7 @@ var MaxRecentItems = 1000
 var PasswordLoginEnabled = true
 var PasswordRegisterEnabled = true
 var EmailVerificationEnabled = false
-var GitHubOAuthEnabled = false
-var LinuxDOOAuthEnabled = false
 var WeChatAuthEnabled = false
-var TelegramOAuthEnabled = false
 var TurnstileCheckEnabled = false
 var RegisterEnabled = true
 
@@ -125,21 +122,12 @@ var SMTPAccount = ""
 var SMTPFrom = ""
 var SMTPToken = ""
 
-var GitHubClientId = ""
-var GitHubClientSecret = ""
-var LinuxDOClientId = ""
-var LinuxDOClientSecret = ""
-var LinuxDOMinimumTrustLevel = 0
-
 var WeChatServerAddress = ""
 var WeChatServerToken = ""
 var WeChatAccountQRCodeImageURL = ""
 
 var TurnstileSiteKey = ""
 var TurnstileSecretKey = ""
-
-var TelegramBotToken = ""
-var TelegramBotName = ""
 
 var QuotaForNewUser = 0
 var ChannelDisableThreshold = 5.0

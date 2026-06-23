@@ -80,13 +80,8 @@ user.topup_processing: "充值处理中，请稍后重试"
 user.register_failed: "用户注册失败或用户ID获取失败"
 user.default_token_failed: "生成默认令牌失败"
 user.email_empty: "email 为空！"
-user.github_id_empty: "GitHub id 为空！"
-user.discord_id_empty: "discord id 为空！"
 user.oidc_id_empty: "oidc id 为空！"
 user.wechat_id_empty: "WeChat id 为空！"
-user.telegram_id_empty: "Telegram id 为空！"
-user.telegram_not_bound: "该 Telegram 账户未绑定"
-user.linux_do_id_empty: "Linux DO id 为空！"
 user.quota_change_zero: "额度变更量不能为0"
 
 # LDAP messages
@@ -243,7 +238,6 @@ oauth.already_bound: "该 {{.Provider}} 账户已被绑定"
 oauth.connect_failed: "无法连接至 {{.Provider}} 服务器，请稍后重试"
 oauth.token_failed: "{{.Provider}} 获取 Token 失败，请检查设置"
 oauth.user_info_empty: "{{.Provider}} 获取用户信息为空，请检查设置"
-oauth.trust_level_low: "Linux DO 信任等级未达到管理员设置的最低信任等级"
 
 # Model layer error messages
 user.create_default_token_error: "创建默认令牌失败"
