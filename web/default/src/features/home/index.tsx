@@ -65,7 +65,7 @@ export function Home() {
       <Stats />
       <Features />
       <HowItWorks />
-      <CTA isAuthenticated={isAuthenticated} />
+      <CTA />
     </PublicLayout>
   )
 }
