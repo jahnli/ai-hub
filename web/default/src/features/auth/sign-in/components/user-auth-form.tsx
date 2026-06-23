@@ -104,11 +104,7 @@ export function UserAuthForm({
   const hasLDAPLogin = Boolean(status?.ldap_enabled)
   const ldapLoginLabel = status?.ldap_login_label || ''
   const hasOAuthLogin = Boolean(
-    status?.github_oauth ||
-      status?.discord_oauth ||
-      status?.oidc_enabled ||
-      status?.linuxdo_oauth ||
-      status?.telegram_oauth ||
+    status?.oidc_enabled ||
       (status?.custom_oauth_providers?.length ?? 0) > 0
   )
   const hasAlternativeLogin =

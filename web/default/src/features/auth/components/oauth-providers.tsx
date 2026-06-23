@@ -18,12 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  IconDiscord,
-  IconGithub,
-  IconLinuxDo,
-  IconWeChat,
-} from '@/assets/brand-icons'
+import { IconWeChat } from '@/assets/brand-icons'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useOAuthLogin } from '../hooks/use-oauth-login'
@@ -55,13 +50,7 @@ export function OAuthProviders({
   const { t } = useTranslation()
   const {
     isLoading,
-    githubButtonText,
-    githubButtonDisabled,
-    handleGitHubLogin,
-    handleDiscordLogin,
     handleOIDCLogin,
-    handleLinuxDOLogin,
-    handleTelegramLogin,
     handleCustomOAuthLogin,
   } = useOAuthLogin(status)
 
@@ -77,47 +66,11 @@ export function OAuthProviders({
     })
   }
 
-  if (status?.github_oauth) {
-    providerButtons.push({
-      key: 'github',
-      label: githubButtonText || t('Continue with GitHub'),
-      onClick: handleGitHubLogin,
-      icon: <IconGithub className='h-4 w-4' />,
-      disabled: githubButtonDisabled,
-    })
-  }
-
-  if (status?.discord_oauth) {
-    providerButtons.push({
-      key: 'discord',
-      label: t('Continue with Discord'),
-      onClick: handleDiscordLogin,
-      icon: <IconDiscord className='h-4 w-4' />,
-    })
-  }
-
   if (status?.oidc_enabled) {
     providerButtons.push({
       key: 'oidc',
       label: t('Continue with OIDC'),
       onClick: handleOIDCLogin,
-    })
-  }
-
-  if (status?.linuxdo_oauth) {
-    providerButtons.push({
-      key: 'linuxdo',
-      label: t('Continue with LinuxDO'),
-      onClick: handleLinuxDOLogin,
-      icon: <IconLinuxDo className='h-4 w-4' />,
-    })
-  }
-
-  if (status?.telegram_oauth) {
-    providerButtons.push({
-      key: 'telegram',
-      label: t('Continue with Telegram'),
-      onClick: handleTelegramLogin,
     })
   }
 
