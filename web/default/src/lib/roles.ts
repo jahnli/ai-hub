@@ -36,10 +36,21 @@ const ROLE_LABEL_KEYS: Record<RoleValue, string> = {
   [ROLE.GUEST]: 'Guest',
 }
 
+const ROLE_ICONS: Record<RoleValue, string> = {
+  [ROLE.SUPER_ADMIN]: '👑',
+  [ROLE.ADMIN]: '🏅',
+  [ROLE.USER]: '🧑‍💼',
+  [ROLE.GUEST]: '👁️',
+}
+
 export function getRoleLabelKey(role?: number): string {
   return ROLE_LABEL_KEYS[role as RoleValue] ?? ROLE_LABEL_KEYS[DEFAULT_ROLE]
 }
 
 export function getRoleLabel(role?: number): string {
   return t(getRoleLabelKey(role))
+}
+
+export function getRoleIcon(role?: number): string {
+  return ROLE_ICONS[role as RoleValue] ?? ROLE_ICONS[DEFAULT_ROLE]
 }

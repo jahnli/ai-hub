@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useMemo } from 'react'
+import { useMemo, useRef, useState, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { User, Wallet, LogOut, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -41,9 +41,23 @@ const avatarFallbackClassName = 'font-semibold text-white'
 export function ProfileDropdown() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [open, setOpen] = useDialogState()
+  const [signOutOpen, setSignOutOpen] = useDialogState()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  const handleMouseEnter = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    setMenuOpen(true)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    closeTimerRef.current = setTimeout(() => setMenuOpen(false), 150)
+  }, [])
   const user = useAuthStore((state) => state.auth.user)
-  const { displayName, roleLabel } = useUserDisplay(user)
+  const { displayName, roleLabel, roleIcon } = useUserDisplay(user)
   const isSuperAdmin = user?.role === ROLE.SUPER_ADMIN
   const avatarName = user?.username || displayName
   const avatarFallback = getUserAvatarFallback(avatarName)
@@ -56,87 +70,104 @@ export function ProfileDropdown() {
 
   return (
     <>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger
-          render={<Button variant='ghost' className='relative size-6 p-0' />}
+      <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+        <DropdownMenu
+          modal={false}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
         >
-          <Avatar className='size-6'>
-            {avatarUrl && <AvatarImage src={avatarUrl} alt={avatarName} />}
-            <AvatarFallback
-              className={`${avatarFallbackClassName} text-[11px]`}
-              style={avatarFallbackStyle}
-            >
-              {avatarFallback}
-            </AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align='end' sideOffset={8} className='w-56'>
-          <div className='flex items-center gap-2 px-1.5 py-1.5'>
-            <Avatar className='size-8'>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant='ghost'
+                className='relative flex items-center gap-1.5 p-0 sm:pe-1'
+              />
+            }
+          >
+            <Avatar className='size-6'>
               {avatarUrl && <AvatarImage src={avatarUrl} alt={avatarName} />}
               <AvatarFallback
-                className={`${avatarFallbackClassName} text-xs`}
+                className={`${avatarFallbackClassName} text-[11px]`}
                 style={avatarFallbackStyle}
               >
                 {avatarFallback}
               </AvatarFallback>
             </Avatar>
-            <div className='flex flex-1 flex-col gap-0.5 overflow-hidden'>
-              <p className='text-foreground truncate text-sm font-medium'>
-                {displayName}
-              </p>
-              <div className='flex items-center gap-1.5'>
-                <span className='text-muted-foreground text-xs'>
-                  {roleLabel}
-                </span>
-                {user?.group && (
-                  <>
-                    <span className='text-muted-foreground text-xs'>·</span>
-                    <span className='text-muted-foreground truncate text-xs'>
-                      {String(user.group)}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>
-            <User className='size-4' />
-            {t('Profile')}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={() => navigate({ to: '/wallet' })}>
-            <Wallet className='size-4' />
-            {t('Wallet')}
-          </DropdownMenuItem>
-
-          {isSuperAdmin && (
-            <DropdownMenuItem
-              onClick={() =>
-                navigate({
-                  to: '/system-settings/site/$section',
-                  params: { section: 'system-info' },
-                })
-              }
+            <span className='text-foreground hidden max-w-[100px] truncate text-sm font-medium sm:inline'>
+              {displayName}
+            </span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end' sideOffset={8} className='w-56'>
+            <div
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
-              <Settings className='size-4' />
-              {t('System Settings')}
-            </DropdownMenuItem>
-          )}
+              <div className='flex items-center gap-2 px-1.5 py-1.5'>
+                <Avatar className='size-8'>
+                  {avatarUrl && (
+                    <AvatarImage src={avatarUrl} alt={avatarName} />
+                  )}
+                  <AvatarFallback
+                    className={`${avatarFallbackClassName} text-xs`}
+                    style={avatarFallbackStyle}
+                  >
+                    {avatarFallback}
+                  </AvatarFallback>
+                </Avatar>
+                <div className='flex flex-1 flex-col gap-0.5 overflow-hidden'>
+                  <p className='text-foreground truncate text-sm font-medium'>
+                    {displayName}
+                  </p>
+                  <span className='text-muted-foreground text-xs'>
+                    <span className='relative -top-px text-[13px]'>
+                      {roleIcon}
+                    </span>{' '}
+                    {roleLabel}
+                  </span>
+                </div>
+              </div>
 
-          <DropdownMenuSeparator />
+              <DropdownMenuSeparator />
 
-          <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
-            <LogOut className='size-4' />
-            {t('Sign out')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <DropdownMenuItem onClick={() => navigate({ to: '/profile' })}>
+                <User className='size-4' />
+                {t('Profile')}
+              </DropdownMenuItem>
 
-      <SignOutDialog open={!!open} onOpenChange={setOpen} />
+              <DropdownMenuItem onClick={() => navigate({ to: '/wallet' })}>
+                <Wallet className='size-4' />
+                {t('Wallet')}
+              </DropdownMenuItem>
+
+              {isSuperAdmin && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    navigate({
+                      to: '/system-settings/site/$section',
+                      params: { section: 'system-info' },
+                    })
+                  }
+                >
+                  <Settings className='size-4' />
+                  {t('System Settings')}
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                variant='destructive'
+                onClick={() => setSignOutOpen(true)}
+              >
+                <LogOut className='size-4' />
+                {t('Sign out')}
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <SignOutDialog open={!!signOutOpen} onOpenChange={setSignOutOpen} />
     </>
   )
 }

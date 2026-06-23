@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthUser } from '@/stores/auth-store'
-import { getRoleLabel } from '@/lib/roles'
+import { getRoleLabel, getRoleIcon } from '@/lib/roles'
 
 /**
  * Custom hook to format user display information
@@ -61,14 +61,16 @@ export function useUserDisplay(user: AuthUser | null | undefined) {
       .toUpperCase()
       .slice(0, 2)
 
-    // Get role label
+    // Get role label and icon
     const roleLabel = getRoleLabel(user.role)
+    const roleIcon = getRoleIcon(user.role)
 
     return {
       displayName,
       secondaryText,
       initials,
       roleLabel,
+      roleIcon,
     }
   }, [user, t])
 }
