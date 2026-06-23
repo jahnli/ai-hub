@@ -21,7 +21,7 @@ import type { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
-import { Loader2, LogIn, KeyRound } from 'lucide-react'
+import { Loader2, LogIn, KeyRound, Building2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -45,15 +45,16 @@ import { Label } from '@/components/ui/label'
 import { Dialog } from '@/components/dialog'
 import { PasswordInput } from '@/components/password-input'
 import { Turnstile } from '@/components/turnstile'
-import { login, wechatLoginByCode } from '@/features/auth/api'
+import { login, ldapLogin, wechatLoginByCode } from '@/features/auth/api'
 import { LegalConsent } from '@/features/auth/components/legal-consent'
-import { LDAPLoginDialog } from '@/features/auth/components/ldap-login-dialog'
 import { OAuthProviders } from '@/features/auth/components/oauth-providers'
 import { loginFormSchema } from '@/features/auth/constants'
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
 import { useTurnstile } from '@/features/auth/hooks/use-turnstile'
 import { beginPasskeyLogin, finishPasskeyLogin } from '@/features/auth/passkey'
 import type { AuthFormProps } from '@/features/auth/types'
+
+type LoginView = 'ldap' | 'password' | 'oauth'
 
 export function UserAuthForm({
   className,
@@ -68,7 +69,10 @@ export function UserAuthForm({
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [isWeChatDialogOpen, setIsWeChatDialogOpen] = useState(false)
   const [isWeChatSubmitting, setIsWeChatSubmitting] = useState(false)
-  const [isLDAPDialogOpen, setIsLDAPDialogOpen] = useState(false)
+  const [ldapUsername, setLdapUsername] = useState('')
+  const [ldapPassword, setLdapPassword] = useState('')
+  const [isLdapSubmitting, setIsLdapSubmitting] = useState(false)
+  const [activeView, setActiveView] = useState<LoginView | null>(null)
   const legalConsentErrorMessage = t('Please agree to the legal terms first')
   const loginFailedMessage = t('Login failed')
 
@@ -101,15 +105,32 @@ export function UserAuthForm({
   const ldapLoginLabel = status?.ldap_login_label || ''
   const hasOAuthLogin = Boolean(
     status?.github_oauth ||
-    status?.discord_oauth ||
-    status?.oidc_enabled ||
-    status?.linuxdo_oauth ||
-    status?.telegram_oauth ||
-    (status?.custom_oauth_providers?.length ?? 0) > 0 ||
-    hasLDAPLogin
+      status?.discord_oauth ||
+      status?.oidc_enabled ||
+      status?.linuxdo_oauth ||
+      status?.telegram_oauth ||
+      (status?.custom_oauth_providers?.length ?? 0) > 0
   )
   const hasAlternativeLogin =
     passkeyLoginEnabled || hasWeChatLogin || hasOAuthLogin
+
+  useEffect(() => {
+    if (status && activeView === null) {
+      if (hasLDAPLogin) {
+        setActiveView('ldap')
+      } else if (hasAlternativeLogin && !passwordLoginEnabled) {
+        setActiveView('oauth')
+      } else {
+        setActiveView('password')
+      }
+    }
+  }, [
+    status,
+    activeView,
+    hasLDAPLogin,
+    hasAlternativeLogin,
+    passwordLoginEnabled,
+  ])
 
   useEffect(() => {
     if (requiresLegalConsent) {
@@ -179,12 +200,40 @@ export function UserAuthForm({
     }
   }
 
+  async function handleLdapSubmit() {
+    if (requiresLegalConsent && !agreedToLegal) {
+      toast.error(legalConsentErrorMessage)
+      return
+    }
+    if (!ldapUsername.trim() || !ldapPassword) {
+      toast.error(t('Username or password is empty'))
+      return
+    }
+    if (!validateTurnstile()) return
+
+    setIsLdapSubmitting(true)
+    try {
+      const res = await ldapLogin({
+        username: ldapUsername.trim(),
+        password: ldapPassword,
+        turnstile: turnstileToken,
+      })
+      if (res.success) {
+        await handleLoginSuccess(res.data as { id?: number } | null, redirectTo)
+        toast.success(t('Welcome back!'))
+      }
+    } catch (_error) {
+      // Errors are handled by global interceptor
+    } finally {
+      setIsLdapSubmitting(false)
+    }
+  }
+
   const handleOpenWeChatDialog = () => {
     if (requiresLegalConsent && !agreedToLegal) {
       toast.error(legalConsentErrorMessage)
       return
     }
-
     setIsWeChatDialogOpen(true)
   }
 
@@ -287,10 +336,183 @@ export function UserAuthForm({
     }
   }
 
-  const alternativeLoginMethods = (
+  const switchLinks = useMemo(() => {
+    const links: { label: string; view: LoginView; icon?: React.ReactNode }[] =
+      []
+    if (activeView !== 'ldap' && hasLDAPLogin) {
+      links.push({
+        label: ldapLoginLabel || t('Sign in with LDAP'),
+        view: 'ldap',
+        icon: <Building2 className='h-4 w-4' />,
+      })
+    }
+    if (activeView !== 'password' && passwordLoginEnabled) {
+      links.push({
+        label: t('Sign in with username or email'),
+        view: 'password',
+      })
+    }
+    if (activeView !== 'oauth' && hasAlternativeLogin) {
+      links.push({
+        label: t('Other sign in options'),
+        view: 'oauth',
+      })
+    }
+    return links
+  }, [
+    activeView,
+    hasLDAPLogin,
+    passwordLoginEnabled,
+    hasAlternativeLogin,
+    ldapLoginLabel,
+    t,
+  ])
+
+  const renderSwitchLinks = () => {
+    if (switchLinks.length === 0) return null
+    return (
+      <div className='space-y-3'>
+        <div className='relative'>
+          <div className='absolute inset-0 flex items-center'>
+            <span className='w-full border-t' />
+          </div>
+          <div className='relative flex justify-center text-xs uppercase'>
+            <span className='bg-background text-muted-foreground px-2'>
+              {t('Or')}
+            </span>
+          </div>
+        </div>
+        <div className='flex flex-col gap-2'>
+          {switchLinks.map((link) => (
+            <Button
+              key={link.view}
+              type='button'
+              variant='outline'
+              className='h-11 w-full justify-center gap-2 rounded-lg'
+              onClick={() => setActiveView(link.view)}
+            >
+              {link.icon}
+              {link.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const renderLdapForm = () => (
+    <div className='grid gap-4'>
+      <div className='grid gap-2'>
+        <Label htmlFor='ldap-username'>{t('Username')}</Label>
+        <Input
+          id='ldap-username'
+          placeholder={t('Enter your username')}
+          value={ldapUsername}
+          onChange={(e) => setLdapUsername(e.target.value)}
+          autoComplete='username'
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleLdapSubmit()
+            }
+          }}
+        />
+      </div>
+      <div className='grid gap-2'>
+        <Label htmlFor='ldap-password'>{t('Password')}</Label>
+        <PasswordInput
+          id='ldap-password'
+          placeholder={t('Enter password')}
+          value={ldapPassword}
+          onChange={(e) => setLdapPassword(e.target.value)}
+          autoComplete='current-password'
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleLdapSubmit()
+            }
+          }}
+        />
+      </div>
+
+      <Button
+        type='button'
+        className='mt-2 w-full justify-center gap-2'
+        disabled={isLdapSubmitting || (requiresLegalConsent && !agreedToLegal)}
+        onClick={handleLdapSubmit}
+      >
+        {isLdapSubmitting ? <Loader2 className='animate-spin' /> : <LogIn />}
+        {t('Sign in')}
+      </Button>
+
+      {isTurnstileEnabled && (
+        <div className='mt-2'>
+          <Turnstile siteKey={turnstileSiteKey} onVerify={setTurnstileToken} />
+        </div>
+      )}
+    </div>
+  )
+
+  const renderPasswordForm = () => (
     <>
+      <FormField
+        control={form.control}
+        name='username'
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('Username or Email')}</FormLabel>
+            <FormControl>
+              <Input
+                placeholder={t('Enter your username or email')}
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name='password'
+        render={({ field }) => (
+          <FormItem className='relative'>
+            <FormLabel>{t('Password')}</FormLabel>
+            <FormControl>
+              <PasswordInput placeholder={t('Enter password')} {...field} />
+            </FormControl>
+            <FormMessage />
+            <Link
+              to='/forgot-password'
+              className='text-muted-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium hover:opacity-75'
+            >
+              {t('Forgot password?')}
+            </Link>
+          </FormItem>
+        )}
+      />
+
+      <Button
+        type='submit'
+        className='mt-2 w-full justify-center gap-2'
+        disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
+      >
+        {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
+        {t('Sign in')}
+      </Button>
+
+      {isTurnstileEnabled && (
+        <div className='mt-2'>
+          <Turnstile siteKey={turnstileSiteKey} onVerify={setTurnstileToken} />
+        </div>
+      )}
+    </>
+  )
+
+  const renderOAuthView = () => (
+    <div className='grid gap-4'>
       {passkeyLoginEnabled && (
-        <div className='mt-2 space-y-1'>
+        <div className='space-y-1'>
           <Button
             type='button'
             variant='outline'
@@ -313,15 +535,13 @@ export function UserAuthForm({
         </div>
       )}
 
-      {/* OAuth Providers */}
       <OAuthProviders
         status={status}
         disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
         onWeChatLogin={hasWeChatLogin ? handleOpenWeChatDialog : undefined}
         isWeChatLoading={isWeChatSubmitting}
-        onLDAPLogin={hasLDAPLogin ? () => setIsLDAPDialogOpen(true) : undefined}
       />
-    </>
+    </div>
   )
 
   return (
@@ -331,73 +551,9 @@ export function UserAuthForm({
         className={cn('grid gap-4', className)}
         {...props}
       >
-        {hasAlternativeLogin && alternativeLoginMethods}
-
-        {passwordLoginEnabled && (
-          <>
-            {/* Username Field */}
-            <FormField
-              control={form.control}
-              name='username'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Username or Email')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t('Enter your username or email')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Password Field */}
-            <FormField
-              control={form.control}
-              name='password'
-              render={({ field }) => (
-                <FormItem className='relative'>
-                  <FormLabel>{t('Password')}</FormLabel>
-                  <FormControl>
-                    <PasswordInput
-                      placeholder={t('Enter password')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  <Link
-                    to='/forgot-password'
-                    className='text-muted-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium hover:opacity-75'
-                  >
-                    {t('Forgot password?')}
-                  </Link>
-                </FormItem>
-              )}
-            />
-
-            {/* Submit Button */}
-            <Button
-              type='submit'
-              className='mt-2 w-full justify-center gap-2'
-              disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
-            >
-              {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-              {t('Sign in')}
-            </Button>
-
-            {/* Turnstile */}
-            {isTurnstileEnabled && (
-              <div className='mt-2'>
-                <Turnstile
-                  siteKey={turnstileSiteKey}
-                  onVerify={setTurnstileToken}
-                />
-              </div>
-            )}
-          </>
-        )}
+        {activeView === 'ldap' && renderLdapForm()}
+        {activeView === 'password' && renderPasswordForm()}
+        {activeView === 'oauth' && renderOAuthView()}
 
         <LegalConsent
           status={status}
@@ -406,7 +562,7 @@ export function UserAuthForm({
           className='mt-1'
         />
 
-        {!hasAlternativeLogin && alternativeLoginMethods}
+        {renderSwitchLinks()}
       </form>
 
       {hasWeChatLogin && (
@@ -415,7 +571,7 @@ export function UserAuthForm({
           onOpenChange={handleWeChatDialogChange}
           title={t('WeChat sign in')}
           description={t(
-            'Scan the QR code to follow the official account and reply with “验证码” to receive your verification code.'
+            'Scan the QR code to follow the official account and reply with "验证码" to receive your verification code.'
           )}
           contentClassName='max-w-sm'
           headerClassName='text-left'
@@ -473,17 +629,6 @@ export function UserAuthForm({
             />
           </div>
         </Dialog>
-      )}
-
-      {hasLDAPLogin && (
-        <LDAPLoginDialog
-          open={isLDAPDialogOpen}
-          onOpenChange={setIsLDAPDialogOpen}
-          loginLabel={ldapLoginLabel}
-          redirectTo={redirectTo}
-          requiresLegalConsent={requiresLegalConsent}
-          agreedToLegal={agreedToLegal}
-        />
       )}
     </Form>
   )

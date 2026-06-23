@@ -24,7 +24,7 @@ const (
 type feishuSyncSummary struct {
 	AvatarUrl       string
 	OpenId          string
-	Name            string
+	DisplayName     string
 	DepartmentIds   string // JSON 数组字符串
 	DepartmentPath  string // JSON 数组字符串
 	IsDeptLeader    bool
@@ -76,12 +76,18 @@ func SyncFeishuUser(user *model.User) error {
 
 	deptCache, _ := preloadDepartments(token)
 	summary := buildFeishuSummary(info, openId, empNo, deptCache)
-	return applyFeishuSummary(user.Id, summary)
+	if err := applyFeishuSummary(user.Id, summary); err != nil {
+		return err
+	}
+	// 回写到 user 指针，使调用方（如 setupLogin）能立即读到飞书字段。
+	user.AvatarUrl = summary.AvatarUrl
+	user.DisplayName = summary.DisplayName
+	return nil
 }
 
 // buildFeishuEmail 用用户名拼接飞书邮箱后缀。
 func buildFeishuEmail(username string) string {
-	return username + system_setting.FeishuEmailSuffix
+	return username + system_setting.FeishuEmailSuffix()
 }
 
 func feishuHTTPClient() *http.Client {
@@ -140,8 +146,8 @@ func feishuCheckResult(respBody []byte, status int) (*feishuAPIResult, error) {
 
 func feishuGetTenantAccessToken() (string, error) {
 	body := map[string]string{
-		"app_id":     system_setting.FeishuAppID,
-		"app_secret": system_setting.FeishuAppSecret,
+		"app_id":     system_setting.FeishuAppID(),
+		"app_secret": system_setting.FeishuAppSecret(),
 	}
 	respBody, _, err := feishuDoRequest(http.MethodPost, feishuBaseURL+"/auth/v3/tenant_access_token/internal", body, "")
 	if err != nil {
@@ -330,7 +336,7 @@ func buildFeishuSummary(info *feishuUserInfo, openID, empNo string, deptCache ma
 	s := feishuSyncSummary{
 		AvatarUrl:      info.Avatar.Avatar240,
 		OpenId:         openID,
-		Name:           info.Name,
+		DisplayName:    info.Name,
 		DepartmentIds:  jsonStringArray(info.DepartmentIDs),
 		EmployeeNumber: empNo,
 	}
@@ -363,7 +369,7 @@ func applyFeishuSummary(userID int, s feishuSyncSummary) error {
 	updates := map[string]any{
 		"avatar_url":        s.AvatarUrl,
 		"open_id":           s.OpenId,
-		"name":              s.Name,
+		"display_name":      s.DisplayName,
 		"department_ids":    s.DepartmentIds,
 		"department_path":   s.DepartmentPath,
 		"is_dept_leader":    s.IsDeptLeader,

@@ -111,9 +111,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	} else {
 		user.DisplayName = user.Username
 	}
-	if ldapUser.Email != "" {
-		user.Email = ldapUser.Email
-	}
+	user.Email = user.Username + system_setting.FeishuEmailSuffix()
 	user.Role = common.RoleCommonUser
 	user.Status = common.UserStatusEnabled
 
@@ -121,8 +119,11 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		return nil, err
 	}
 
-	// 注册成功后异步同步飞书字段（avatar_url/open_id/name/department_*/employee_number 等）
-	service.SyncFeishuUserAsync(user)
+	// 注册成功后同步飞书字段（avatar_url/open_id/display_name/department_*/employee_number 等）
+	// 使用同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
+	if err := service.SyncFeishuUser(user); err != nil {
+		common.SysError(fmt.Sprintf("飞书字段同步失败 user=%s: %s", user.Username, err.Error()))
+	}
 
 	return user, nil
 }

@@ -49,7 +49,6 @@ type User struct {
 	LastLoginAt      int64          `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AvatarUrl        string         `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url;default:''"`
 	OpenId           string         `json:"open_id" gorm:"type:varchar(64);column:open_id;default:''"`
-	Name             string         `json:"name" gorm:"type:varchar(64);column:name;default:''"`
 	DepartmentIds    string         `json:"department_ids" gorm:"type:text;column:department_ids;default:'[]'"`
 	DepartmentPath   string         `json:"department_path" gorm:"type:text;column:department_path;default:'[]'"`
 	IsDeptLeader     bool           `json:"is_dept_leader" gorm:"column:is_dept_leader"`

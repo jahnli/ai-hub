@@ -23,7 +23,7 @@ import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatCompactNumber, formatQuota } from '@/lib/format'
 import { getRoleLabel } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -316,6 +316,7 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
   const avatarName = profile.username || displayName
   const avatarFallback = getUserAvatarFallback(avatarName)
   const avatarFallbackStyle = getUserAvatarStyle(avatarName)
+  const avatarUrl = profile.avatar_url
   const roleLabel = getRoleLabel(profile.role)
   const stats = [
     {
@@ -343,6 +344,13 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
       <CardContent className='p-3 sm:p-5'>
         <div className='flex items-center gap-3 text-left sm:gap-4'>
           <Avatar className='ring-background h-12 w-12 rounded-xl text-sm ring-2 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-lg sm:ring-4'>
+            {avatarUrl && (
+              <AvatarImage
+                src={avatarUrl}
+                alt={avatarName}
+                className='rounded-xl sm:rounded-2xl'
+              />
+            )}
             <AvatarFallback
               className='rounded-xl font-semibold text-white sm:rounded-2xl'
               style={avatarFallbackStyle}
