@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# pre-commit hook — 两项检查：
+# pre-commit hook — 两项功能：
 # 1. 前端 typecheck（暂存区有 web/default/ 下的 TS/TSX 时）
-# 2. changelog 检测（有实质性代码变更时，changes/ 须同步更新）
+# 2. changelog 自动生成（有实质性代码变更时，自动追加 changes/CHANGELOG.md）
 
 set -e
 
@@ -22,30 +22,157 @@ if [ -n "$STAGED_TS" ]; then
   echo "[pre-commit] typecheck passed."
 fi
 
-# === 2. Changelog check ===
+# === 2. Changelog auto-generation ===
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 
-# 排除不需要记录的文件
-SUBSTANTIVE=$(echo "$STAGED_FILES" | grep -vE '^(changes/|\.cursor/|\.claude/|\.agents/|\.githooks/|\.gitignore$|package-lock\.json$|bun\.lockb$)' || true)
+SUBSTANTIVE=$(echo "$STAGED_FILES" | grep -vE '^(changes/|\.cursor/|\.claude/|\.agents/|\.githooks/|\.github/|\.gitignore$|package-lock\.json$|bun\.lockb$|AGENTS\.md$|CLAUDE\.md$|README.*\.md$|LICENSE$)' || true)
 
-# 检查 changes/ 下是否有文件被暂存
 CHANGELOG_UPDATED=$(echo "$STAGED_FILES" | grep -E '^changes/' || true)
 
-if [ -n "$SUBSTANTIVE" ] && [ -z "$CHANGELOG_UPDATED" ]; then
-  echo ""
-  echo "[pre-commit] ⚠️  检测到实质性代码变更但 changes/ 未更新。"
-  echo "  请按 AGENTS.md 规则 6 在 changes/CHANGELOG.md 追加变更记录后再提交。"
-  echo ""
-  echo "  变更文件："
-  echo "$SUBSTANTIVE" | head -10 | sed 's/^/    /'
-  COUNT=$(echo "$SUBSTANTIVE" | wc -l | tr -d ' ')
-  if [ "$COUNT" -gt 10 ]; then
-    echo "    …（共 ${COUNT} 个文件）"
-  fi
-  echo ""
-  echo "  如确认无需记录（如纯格式化/注释），可使用 git commit --no-verify 跳过。"
-  exit 1
+if [ -z "$SUBSTANTIVE" ] || [ -n "$CHANGELOG_UPDATED" ]; then
+  exit 0
 fi
+
+CHANGELOG="changes/CHANGELOG.md"
+DETAILS_DIR="changes/details"
+
+if [ ! -f "$CHANGELOG" ]; then
+  exit 0
+fi
+
+# --- 获取下一个编号 ---
+LAST_NUM=$(awk -F'|' '/^\| [0-9]/ { gsub(/^[ \t]+|[ \t]+$/, "", $2); n=$2+0; if(n>max) max=n } END { print max+0 }' "$CHANGELOG")
+NEXT_NUM=$((LAST_NUM + 1))
+NEXT_NUM_PAD=$(printf "%03d" "$NEXT_NUM")
+
+TODAY=$(date +%Y-%m-%d)
+
+# --- 推断变更说明 ---
+infer_description() {
+  local files="$1"
+  local parts=""
+
+  local has_fe=""
+  local has_be=""
+  local fe_modules=""
+  local be_modules=""
+
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+      web/default/src/features/*)
+        has_fe=1
+        local mod
+        mod=$(echo "$f" | sed 's|web/default/src/features/||' | cut -d'/' -f1)
+        case "$fe_modules" in
+          *"$mod"*) ;;
+          *) fe_modules="${fe_modules:+$fe_modules,}$mod" ;;
+        esac
+        ;;
+      web/default/src/components/*|web/default/src/styles/*|web/default/src/lib/*|web/default/src/context/*)
+        has_fe=1
+        ;;
+      web/default/src/i18n/*)
+        has_fe=1
+        case "$fe_modules" in
+          *"i18n"*) ;;
+          *) fe_modules="${fe_modules:+$fe_modules,}i18n" ;;
+        esac
+        ;;
+      web/*)
+        has_fe=1
+        ;;
+      controller/*)
+        has_be=1
+        local mod
+        mod=$(echo "$f" | sed 's|controller/||' | sed 's|\.go$||' | cut -d'/' -f1)
+        case "$be_modules" in
+          *"$mod"*) ;;
+          *) be_modules="${be_modules:+$be_modules,}$mod" ;;
+        esac
+        ;;
+      service/*|model/*|middleware/*|router/*|relay/*|setting/*|common/*|dto/*|constant/*|types/*|i18n/*|oauth/*|pkg/*)
+        has_be=1
+        local dir
+        dir=$(echo "$f" | cut -d'/' -f1)
+        case "$be_modules" in
+          *"$dir"*) ;;
+          *) be_modules="${be_modules:+$be_modules,}$dir" ;;
+        esac
+        ;;
+      *.go)
+        has_be=1
+        ;;
+    esac
+  done <<< "$files"
+
+  if [ -n "$has_fe" ] && [ -n "$has_be" ]; then
+    parts="前后端更新"
+    if [ -n "$fe_modules" ]; then
+      parts="${parts}（前端: ${fe_modules}"
+      if [ -n "$be_modules" ]; then
+        parts="${parts}; 后端: ${be_modules}）"
+      else
+        parts="${parts}）"
+      fi
+    elif [ -n "$be_modules" ]; then
+      parts="${parts}（后端: ${be_modules}）"
+    fi
+  elif [ -n "$has_fe" ]; then
+    if [ -n "$fe_modules" ]; then
+      parts="前端更新（${fe_modules}）"
+    else
+      parts="前端更新"
+    fi
+  elif [ -n "$has_be" ]; then
+    if [ -n "$be_modules" ]; then
+      parts="后端更新（${be_modules}）"
+    else
+      parts="后端更新"
+    fi
+  else
+    parts="项目更新"
+  fi
+
+  echo "$parts"
+}
+
+DESC=$(infer_description "$SUBSTANTIVE")
+
+# --- 统计文件数 ---
+FILE_COUNT=$(echo "$SUBSTANTIVE" | grep -c . || echo "0")
+
+# --- 生成详情列 ---
+if [ "$FILE_COUNT" -le 3 ]; then
+  DETAIL_COL=$(echo "$SUBSTANTIVE" | awk 'NR>0 { printf "%s`%s`", sep, $0; sep="、" } END { print "" }')
+  DETAIL_FILE=""
+else
+  mkdir -p "$DETAILS_DIR"
+  DETAIL_FILE="${DETAILS_DIR}/${NEXT_NUM_PAD}-auto-changelog.md"
+  {
+    echo "# ${DESC}"
+    echo ""
+    echo "**日期**: ${TODAY}"
+    echo ""
+    echo "## 涉及文件"
+    echo ""
+    echo "$SUBSTANTIVE" | while IFS= read -r f; do
+      [ -n "$f" ] && echo "- \`$f\`"
+    done
+  } > "$DETAIL_FILE"
+  DETAIL_COL="[详情](details/${NEXT_NUM_PAD}-auto-changelog.md)"
+fi
+
+# --- 追加 CHANGELOG 条目 ---
+echo "| ${NEXT_NUM_PAD} | ${TODAY} | ${DESC} | ${DETAIL_COL} |" >> "$CHANGELOG"
+
+# --- 将生成的文件加入暂存区 ---
+git add "$CHANGELOG"
+if [ -n "$DETAIL_FILE" ]; then
+  git add "$DETAIL_FILE"
+fi
+
+echo "[pre-commit] ✅ 已自动生成变更日志 #${NEXT_NUM_PAD}: ${DESC}"
 
 exit 0
