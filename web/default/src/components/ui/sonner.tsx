@@ -29,8 +29,24 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 import { useTheme } from '@/context/theme-provider'
 
+const toastColors = {
+  light: {
+    info: '#2080F0',
+    success: '#67c23a',
+    warning: '#e6a23c',
+    error: '#f56c6c',
+  },
+  dark: {
+    info: '#70C0E8',
+    success: '#63e2b7',
+    warning: '#f2c97d',
+    error: '#e88080',
+  },
+} as const
+
 const Toaster = (props: ToasterProps) => {
   const { resolvedTheme } = useTheme()
+  const c = resolvedTheme === 'dark' ? toastColors.dark : toastColors.light
 
   return (
     <Sonner
@@ -78,25 +94,18 @@ const Toaster = (props: ToasterProps) => {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
-          '--success-bg':
-            'color-mix(in oklch, var(--success) 16%, var(--popover))',
-          '--success-border':
-            'color-mix(in oklch, var(--success) 35%, var(--border))',
-          '--success-text': 'var(--success)',
-          '--info-bg': 'color-mix(in oklch, var(--info) 16%, var(--popover))',
-          '--info-border':
-            'color-mix(in oklch, var(--info) 35%, var(--border))',
-          '--info-text': 'var(--info)',
-          '--warning-bg':
-            'color-mix(in oklch, var(--warning) 18%, var(--popover))',
-          '--warning-border':
-            'color-mix(in oklch, var(--warning) 38%, var(--border))',
-          '--warning-text': 'var(--warning)',
-          '--error-bg':
-            'color-mix(in oklch, var(--destructive) 16%, var(--popover))',
-          '--error-border':
-            'color-mix(in oklch, var(--destructive) 35%, var(--border))',
-          '--error-text': 'var(--destructive)',
+          '--success-bg': `color-mix(in srgb, ${c.success} 16%, var(--popover))`,
+          '--success-border': `color-mix(in srgb, ${c.success} 35%, var(--border))`,
+          '--success-text': c.success,
+          '--info-bg': `color-mix(in srgb, ${c.info} 16%, var(--popover))`,
+          '--info-border': `color-mix(in srgb, ${c.info} 35%, var(--border))`,
+          '--info-text': c.info,
+          '--warning-bg': `color-mix(in srgb, ${c.warning} 18%, var(--popover))`,
+          '--warning-border': `color-mix(in srgb, ${c.warning} 38%, var(--border))`,
+          '--warning-text': c.warning,
+          '--error-bg': `color-mix(in srgb, ${c.error} 16%, var(--popover))`,
+          '--error-border': `color-mix(in srgb, ${c.error} 35%, var(--border))`,
+          '--error-text': c.error,
           '--border-radius': 'var(--radius)',
         } as React.CSSProperties
       }
