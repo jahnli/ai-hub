@@ -1635,6 +1635,7 @@
     "Example (all channels):": "示例（全部渠道）：",
     "Example (specific channels):": "示例（指定渠道）：",
     "Example:": "示例：",
+    "Example: {{example}}": "示例：{{example}}",
     "example.com&#10;blocked-site.com": "example.com&#10;blocked-site.com",
     "example.com&#10;company.com": "example.com&#10;company.com",
     "Excellent": "优秀",

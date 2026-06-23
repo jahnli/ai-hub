@@ -1601,6 +1601,7 @@
         "Example (all channels):": "Пример (все каналы):",
         "Example (specific channels):": "Пример (указанные каналы):",
         "Example:": "Пример:",
+        "Example: {{example}}": "Пример: {{example}}",
         "example.com&#10;blocked-site.com": "example.com&#10;blocked-site.com",
         "example.com&#10;company.com": "example.com&#10;company.com",
         "Excellent": "Отлично",

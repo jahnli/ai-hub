@@ -413,6 +413,9 @@ export function UserAuthForm({
             }
           }}
         />
+        <p className='text-muted-foreground text-xs'>
+          {t('Example: {{example}}', { example: 'lijiaheng' })}
+        </p>
       </div>
       <div className='grid gap-2'>
         <Label htmlFor='ldap-password'>{t('Password')}</Label>

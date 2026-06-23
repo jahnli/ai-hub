@@ -1601,6 +1601,7 @@
         "Example (all channels):": "例（全チャネル）：",
         "Example (specific channels):": "例（特定チャネル）：",
         "Example:": "例:",
+        "Example: {{example}}": "例: {{example}}",
         "example.com&#10;blocked-site.com": "example.com &#10;blocked-site.com",
         "example.com&#10;company.com": "example.com &#10;company.com",
         "Excellent": "優秀",

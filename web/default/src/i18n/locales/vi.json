@@ -1601,6 +1601,7 @@
         "Example (all channels):": "Ví dụ (tất cả kênh):",
         "Example (specific channels):": "Ví dụ (kênh cụ thể):",
         "Example:": "Ví dụ:",
+        "Example: {{example}}": "Ví dụ: {{example}}",
         "example.com&#10;blocked-site.com": "example.com\nblocked-site.com",
         "example.com&#10;company.com": "example.com\ncompany.com",
         "Excellent": "Tuyệt vời",
