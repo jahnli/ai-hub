@@ -16,65 +16,44 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { HelpCircle } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
-import { Markdown } from '@/components/ui/markdown'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { useFAQ } from '@/features/dashboard/hooks/use-status-data'
-import type { FAQItem } from '@/features/dashboard/types'
-import { PanelWrapper } from '../ui/panel-wrapper'
+import { ArrowRight, HelpCircle, MessageCircleQuestion } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useFAQ } from "@/features/dashboard/hooks/use-status-data";
+import { PanelWrapper } from "../ui/panel-wrapper";
+
+const FAQ_URL =
+  "https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c#share-PWiQdlsbnoqtqqx2U3UcC8iunTh";
 
 export function FAQPanel() {
-  const { t } = useTranslation()
-  const { items: list, loading } = useFAQ()
+  const { t } = useTranslation();
+  const { loading } = useFAQ();
 
   return (
     <PanelWrapper
       title={
-        <span className='flex items-center gap-2'>
-          <HelpCircle className='text-muted-foreground/60 size-4' />
-          {t('FAQ')}
+        <span className="flex items-center gap-2">
+          <HelpCircle className="text-muted-foreground/60 size-4" />
+          {t("FAQ")}
         </span>
       }
-      description={t('Answers for common access and billing questions')}
       loading={loading}
-      empty={!list.length}
-      emptyMessage={t('No FAQ entries available')}
-      height='h-80'
-      contentClassName='p-0'
+      height="h-80"
+      contentClassName="p-0"
     >
-      <ScrollArea className='h-80'>
-        <Accordion className='w-full px-4 sm:px-5'>
-          {list.map((item: FAQItem, idx: number) => {
-            const key = item.id ?? `faq-${idx}`
-            const value = `item-${key}`
-            return (
-              <AccordionItem
-                key={key}
-                value={value}
-                className='border-border/60'
-              >
-                <AccordionTrigger className='text-start hover:no-underline'>
-                  <Markdown className='text-sm leading-relaxed font-semibold'>
-                    {item.question}
-                  </Markdown>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Markdown className='text-muted-foreground/60 text-sm'>
-                    {item.answer}
-                  </Markdown>
-                </AccordionContent>
-              </AccordionItem>
-            )
-          })}
-        </Accordion>
-      </ScrollArea>
+      <div className="flex h-80 flex-col items-center justify-center gap-6 px-6">
+        <div className="bg-muted/50 flex size-24 items-center justify-center rounded-full">
+          <MessageCircleQuestion className="text-primary/70 size-12 stroke-[1.2]" />
+        </div>
+        <a
+          href={FAQ_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group bg-muted hover:bg-muted/80 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+        >
+          {t("Click to visit FAQ")}
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+        </a>
+      </div>
     </PanelWrapper>
-  )
+  );
 }

@@ -27,7 +27,7 @@ import StatsCards from './StatsCards';
 import ChartsPanel from './ChartsPanel';
 import ApiInfoPanel from './ApiInfoPanel';
 import AnnouncementsPanel from './AnnouncementsPanel';
-import FaqPanel from './FaqPanel';
+// import FaqPanel from './FaqPanel';
 import UptimePanel from './UptimePanel';
 import SearchModal from './modals/SearchModal';
 
@@ -238,8 +238,8 @@ const Dashboard = () => {
               />
             )}
 
-            {/* 常见问答卡片 */}
-            {dashboardData.faqEnabled && (
+            {/* 常见问答卡片 - 已注释 */}
+            {/* {dashboardData.faqEnabled && (
               <FaqPanel
                 faqData={faqData}
                 CARD_PROPS={CARD_PROPS}
@@ -247,7 +247,7 @@ const Dashboard = () => {
                 ILLUSTRATION_SIZE={ILLUSTRATION_SIZE}
                 t={dashboardData.t}
               />
-            )}
+            )} */}
 
             {/* 服务可用性卡片 */}
             {dashboardData.uptimeEnabled && (
