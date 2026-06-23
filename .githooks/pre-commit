@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# pre-commit hook — 两项检查：
+# 1. 前端 typecheck（暂存区有 web/default/ 下的 TS/TSX 时）
+# 2. changelog 检测（有实质性代码变更时，changes/ 须同步更新）
+
+set -e
+
+# === 1. Frontend typecheck ===
+
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^web/default/.*\.(tsx?|mts|cts)$' || true)
+
+if [ -n "$STAGED_TS" ]; then
+  echo "[pre-commit] Staged TS/TSX files detected in web/default/, running typecheck..."
+
+  if command -v bun >/dev/null 2>&1; then
+    RUNNER="bun run"
+  else
+    RUNNER="npm run"
+  fi
+
+  (cd web/default && $RUNNER typecheck)
+  echo "[pre-commit] typecheck passed."
+fi
+
+# === 2. Changelog check ===
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+
+# 排除不需要记录的文件
+SUBSTANTIVE=$(echo "$STAGED_FILES" | grep -vE '^(changes/|\.cursor/|\.claude/|\.agents/|\.githooks/|\.gitignore$|package-lock\.json$|bun\.lockb$)' || true)
+
+# 检查 changes/ 下是否有文件被暂存
+CHANGELOG_UPDATED=$(echo "$STAGED_FILES" | grep -E '^changes/' || true)
+
+if [ -n "$SUBSTANTIVE" ] && [ -z "$CHANGELOG_UPDATED" ]; then
+  echo ""
+  echo "[pre-commit] ⚠️  检测到实质性代码变更但 changes/ 未更新。"
+  echo "  请按 AGENTS.md 规则 6 在 changes/CHANGELOG.md 追加变更记录后再提交。"
+  echo ""
+  echo "  变更文件："
+  echo "$SUBSTANTIVE" | head -10 | sed 's/^/    /'
+  COUNT=$(echo "$SUBSTANTIVE" | wc -l | tr -d ' ')
+  if [ "$COUNT" -gt 10 ]; then
+    echo "    …（共 ${COUNT} 个文件）"
+  fi
+  echo ""
+  echo "  如确认无需记录（如纯格式化/注释），可使用 git commit --no-verify 跳过。"
+  exit 1
+fi
+
+exit 0
