@@ -44,3 +44,4 @@
 | 037 | 2026-06-24 | 订阅管理增强：支持全员订阅，并允许管理员按人民币金额为单个有效用户订阅增加额度 | [详情](details/037-subscribe-all-users.md) |
 | 038 | 2026-06-24 | 系统设置侧边栏菜单默认展开：新增 NavCollapsible.defaultOpen 属性，系统设置下所有分组设为默认展开 | `web/default/src/components/layout/types.ts`、`web/default/src/components/layout/components/nav-group.tsx`、`web/default/src/components/layout/config/system-settings.config.ts` |
 | 039 | 2026-06-24 | 用户管理表格调整：用户名列增加头像、display_name 与 username 展示位置互换；列顺序改为用户名→额度→最后登录→创建时间→角色→状态→分组 | `web/default/src/features/users/components/users-columns.tsx`、`web/default/src/features/users/types.ts` |
+| 040 | 2026-06-24 | 日志筛选日期范围选择器快捷预设从 5 个扩展为 13 个（含季度、半年等），新增 dayjs quarterOfYear 插件及 6 语言翻译 | [详情](details/040-date-picker-presets.md) |

@@ -84,31 +84,90 @@ export function CompactDateTimeRangePicker({
     setOpen(false)
   }
 
-  const applyPreset = (kind: 'today' | '7d' | 'week' | '30d' | 'month') => {
+  type PresetKind =
+    | 'lastHour'
+    | 'today'
+    | 'yesterday'
+    | 'thisWeek'
+    | 'lastWeek'
+    | 'thisMonth'
+    | 'lastMonth'
+    | 'thisQuarter'
+    | 'lastQuarter'
+    | 'thisHalfYear'
+    | 'lastHalfYear'
+    | 'thisYear'
+    | 'lastYear'
+
+  const applyPreset = (kind: PresetKind) => {
     const now = dayjs()
-    const presets = {
+    const presetMap: Record<PresetKind, { start: Date; end: Date }> = {
+      lastHour: {
+        start: now.subtract(1, 'hour').toDate(),
+        end: now.toDate(),
+      },
       today: {
         start: now.startOf('day').toDate(),
         end: now.endOf('day').toDate(),
       },
-      '7d': {
-        start: now.subtract(6, 'day').startOf('day').toDate(),
-        end: now.endOf('day').toDate(),
+      yesterday: {
+        start: now.subtract(1, 'day').startOf('day').toDate(),
+        end: now.subtract(1, 'day').endOf('day').toDate(),
       },
-      week: {
+      thisWeek: {
         start: now.startOf('week').toDate(),
         end: now.endOf('week').toDate(),
       },
-      '30d': {
-        start: now.subtract(29, 'day').startOf('day').toDate(),
-        end: now.endOf('day').toDate(),
+      lastWeek: {
+        start: now.subtract(1, 'week').startOf('week').toDate(),
+        end: now.subtract(1, 'week').endOf('week').toDate(),
       },
-      month: {
+      thisMonth: {
         start: now.startOf('month').toDate(),
         end: now.endOf('month').toDate(),
       },
+      lastMonth: {
+        start: now.subtract(1, 'month').startOf('month').toDate(),
+        end: now.subtract(1, 'month').endOf('month').toDate(),
+      },
+      thisQuarter: {
+        start: now.startOf('quarter').toDate(),
+        end: now.endOf('quarter').toDate(),
+      },
+      lastQuarter: {
+        start: now.subtract(1, 'quarter').startOf('quarter').toDate(),
+        end: now.subtract(1, 'quarter').endOf('quarter').toDate(),
+      },
+      thisHalfYear: {
+        start: (now.month() < 6
+          ? now.startOf('year')
+          : now.startOf('year').add(6, 'month')
+        ).toDate(),
+        end: (now.month() < 6
+          ? now.startOf('year').add(5, 'month').endOf('month')
+          : now.endOf('year')
+        ).toDate(),
+      },
+      lastHalfYear: {
+        start: (now.month() < 6
+          ? now.subtract(1, 'year').startOf('year').add(6, 'month')
+          : now.startOf('year')
+        ).toDate(),
+        end: (now.month() < 6
+          ? now.subtract(1, 'year').endOf('year')
+          : now.startOf('year').add(5, 'month').endOf('month')
+        ).toDate(),
+      },
+      thisYear: {
+        start: now.startOf('year').toDate(),
+        end: now.endOf('year').toDate(),
+      },
+      lastYear: {
+        start: now.subtract(1, 'year').startOf('year').toDate(),
+        end: now.subtract(1, 'year').endOf('year').toDate(),
+      },
     }
-    const range = presets[kind]
+    const range = presetMap[kind]
     setDraftStart(toInputValue(range.start))
     setDraftEnd(toInputValue(range.end))
     onChange(range)
@@ -167,51 +226,34 @@ export function CompactDateTimeRangePicker({
           </div>
 
           <div className='flex flex-wrap gap-1.5'>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('today')}
-            >
-              {t('Today')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('7d')}
-            >
-              {t('7 Days')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('week')}
-            >
-              {t('This week')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('30d')}
-            >
-              {t('30 Days')}
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              className='h-7 flex-1 px-2 text-xs'
-              onClick={() => applyPreset('month')}
-            >
-              {t('This month')}
-            </Button>
+            {(
+              [
+                ['lastHour', 'Last Hour'],
+                ['today', 'Today'],
+                ['yesterday', 'Yesterday'],
+                ['thisWeek', 'This Week'],
+                ['lastWeek', 'Last Week'],
+                ['thisMonth', 'This Month'],
+                ['lastMonth', 'Last Month'],
+                ['thisQuarter', 'This Quarter'],
+                ['lastQuarter', 'Last Quarter'],
+                ['thisHalfYear', 'This Half Year'],
+                ['lastHalfYear', 'Last Half Year'],
+                ['thisYear', 'This Year'],
+                ['lastYear', 'Last Year'],
+              ] as const
+            ).map(([kind, label]) => (
+              <Button
+                key={kind}
+                type='button'
+                variant='secondary'
+                size='sm'
+                className='h-7 flex-1 px-2 text-xs'
+                onClick={() => applyPreset(kind)}
+              >
+                {t(label)}
+              </Button>
+            ))}
           </div>
 
           <div className='flex justify-end'>

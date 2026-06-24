@@ -17,8 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import dayjs from 'dayjs'
+import quarterOfYear from 'dayjs/plugin/quarterOfYear'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 dayjs.extend(relativeTime)
+dayjs.extend(quarterOfYear)
 
 export default dayjs
