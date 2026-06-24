@@ -507,4 +507,16 @@ export const STATIC_I18N_KEYS = [
   'Failed to load',
   'Expired at',
   'Cancelled at',
+
+  // User profile hover card
+  'Job Title',
+  'Job Number',
+  'Job Level',
+  'Job Description',
+  'Join Date',
+  'Birthday',
+  'Ethnicity',
+  'Hometown',
+  'Department',
+  'Mobile',
 ] as const

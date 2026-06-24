@@ -42,6 +42,7 @@ import {
 } from '../constants'
 import { type User } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
+import { UserProfileHoverCard } from './user-profile-hover-card'
 
 function getQuotaProgressColor(percentage: number): string {
   if (percentage <= 10) return '[&_[data-slot=progress-indicator]]:bg-rose-500'
@@ -100,17 +101,19 @@ export function useUsersColumns(): ColumnDef<User>[] {
 
         return (
           <div className='flex min-w-[160px] items-center gap-3'>
-            <Avatar size='sm' className='shrink-0'>
-              {avatarUrl && (
-                <AvatarImage src={avatarUrl} alt={primaryName} />
-              )}
-              <AvatarFallback
-                className='text-xs font-medium text-white'
-                style={avatarFallbackStyle}
-              >
-                {avatarFallback}
-              </AvatarFallback>
-            </Avatar>
+            <UserProfileHoverCard user={row.original}>
+              <Avatar size='sm' className='shrink-0'>
+                {avatarUrl && (
+                  <AvatarImage src={avatarUrl} alt={primaryName} />
+                )}
+                <AvatarFallback
+                  className='text-xs font-medium text-white'
+                  style={avatarFallbackStyle}
+                >
+                  {avatarFallback}
+                </AvatarFallback>
+              </Avatar>
+            </UserProfileHoverCard>
             <div className='flex flex-col gap-1'>
               <div className='flex items-center gap-2'>
                 <LongText className='max-w-[140px] font-medium'>

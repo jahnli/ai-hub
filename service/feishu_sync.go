@@ -40,11 +40,13 @@ type feishuDirectoryData struct {
 			Avatar struct {
 				Avatar240 string `json:"avatar_240"`
 			} `json:"avatar"`
-			Description string `json:"description"`
-			Gender      int    `json:"gender"`
-			LeaderId    string `json:"leader_id"`
-			Mobile      string `json:"mobile"`
-			Name        struct {
+			BackgroundImage   string          `json:"background_image"`
+			Description       string          `json:"description"`
+			Gender            int             `json:"gender"`
+			LeaderId          string          `json:"leader_id"`
+			Mobile            string          `json:"mobile"`
+			CustomFieldValues json.RawMessage `json:"custom_field_values"`
+			Name              struct {
 				Name struct {
 					DefaultValue string `json:"default_value"`
 				} `json:"name"`
@@ -64,10 +66,12 @@ type feishuDirectoryData struct {
 				Name struct {
 					DefaultValue string `json:"default_value"`
 				} `json:"name"`
+				CustomFieldValues json.RawMessage `json:"custom_field_values"`
 			} `json:"departments"`
 		} `json:"base_info"`
 		WorkInfo struct {
 			JobNumber string `json:"job_number"`
+			JoinDate  string `json:"join_date"`
 			JobTitle  struct {
 				JobTitleName struct {
 					DefaultValue string `json:"default_value"`
@@ -170,18 +174,44 @@ func SyncFeishuUser(user *model.User) error {
 		departmentName = strings.Join(names, " / ")
 	}
 
+	// custom_field_values：将数组结构扁平化为 {field_key: text_value} 的 map，跳过无 text_value 的条目
+	customFieldValuesStr := "{}"
+	if len(base.CustomFieldValues) > 0 && string(base.CustomFieldValues) != "null" {
+		var rawFields []struct {
+			FieldKey  string `json:"field_key"`
+			FieldType int    `json:"field_type"`
+			TextValue *struct {
+				DefaultValue string `json:"default_value"`
+			} `json:"text_value"`
+		}
+		if err := common.Unmarshal(base.CustomFieldValues, &rawFields); err == nil {
+			flat := make(map[string]string, len(rawFields))
+			for _, f := range rawFields {
+				if f.TextValue != nil {
+					flat[f.FieldKey] = f.TextValue.DefaultValue
+				}
+			}
+			if b, err := common.Marshal(flat); err == nil {
+				customFieldValuesStr = string(b)
+			}
+		}
+	}
+
 	updates := map[string]any{
-		"avatar_url":      base.Avatar.Avatar240,
-		"open_id":         openId,
-		"display_name":    base.Name.Name.DefaultValue,
-		"description":     base.Description,
-		"gender":          base.Gender,
-		"leader_id":       base.LeaderId,
-		"mobile":          base.Mobile,
-		"job_number":      work.JobNumber,
-		"job_title":       work.JobTitle.JobTitleName.DefaultValue,
-		"departments":     string(deptsJSON),
-		"department_name": departmentName,
+		"avatar_url":          base.Avatar.Avatar240,
+		"background_image":    base.BackgroundImage,
+		"open_id":             openId,
+		"display_name":        base.Name.Name.DefaultValue,
+		"description":         base.Description,
+		"gender":              base.Gender,
+		"leader_id":           base.LeaderId,
+		"mobile":              base.Mobile,
+		"job_number":          work.JobNumber,
+		"job_title":           work.JobTitle.JobTitleName.DefaultValue,
+		"join_date":           work.JoinDate,
+		"departments":         string(deptsJSON),
+		"department_name":     departmentName,
+		"custom_field_values": customFieldValuesStr,
 	}
 	if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(updates).Error; err != nil {
 		return err

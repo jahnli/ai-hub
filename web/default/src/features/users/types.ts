@@ -50,6 +50,15 @@ export const userSchema = z.object({
   DeletedAt: z.any().nullable().optional(),
   remark: z.string().optional(),
   avatar_url: z.string().optional(),
+  department_name: z.string().optional(),
+  job_title: z.string().optional(),
+  job_number: z.string().optional(),
+  mobile: z.string().optional(),
+  gender: z.number().optional(),
+  description: z.string().optional(),
+  background_image: z.string().optional(),
+  custom_field_values: z.string().optional(),
+  join_date: z.string().optional(),
 })
 export type User = z.infer<typeof userSchema>
 
