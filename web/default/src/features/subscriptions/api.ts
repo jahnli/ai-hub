@@ -62,6 +62,15 @@ export async function patchPlanStatus(
   return res.data
 }
 
+export async function subscribeAllUsers(
+  id: number
+): Promise<ApiResponse<{ created: number; skipped: number; failed: number }>> {
+  const res = await api.post(
+    `/api/subscription/admin/plans/${id}/subscribe-all`
+  )
+  return res.data
+}
+
 // ============================================================================
 // Admin User Subscription Management
 // ============================================================================

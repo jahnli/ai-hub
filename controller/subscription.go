@@ -348,6 +348,24 @@ func AdminUpdateSubscriptionPlanStatus(c *gin.Context) {
 	common.ApiSuccess(c, nil)
 }
 
+func AdminSubscribeAllUsersToPlan(c *gin.Context) {
+	if !requirePaymentCompliance(c) {
+		return
+	}
+
+	id, _ := strconv.Atoi(c.Param("id"))
+	if id <= 0 {
+		common.ApiErrorMsg(c, "无效的ID")
+		return
+	}
+	result, err := model.AdminSubscribeAllUsers(id)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, result)
+}
+
 type AdminBindSubscriptionRequest struct {
 	UserId int `json:"user_id"`
 	PlanId int `json:"plan_id"`

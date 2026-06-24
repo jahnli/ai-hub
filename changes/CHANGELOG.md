@@ -41,3 +41,4 @@
 | 034 | 2026-06-23 | 用户头像下拉菜单增强：头像旁显示用户名、角色标签前加图标（👑🏅🧑‍💼）、下拉菜单改为悬停触发、移除分组显示 | [详情](details/034-profile-dropdown-enhance.md) |
 | 035 | 2026-06-24 | 常见问答面板重构：移除问答列表，改为插画图标+外链按钮跳转飞书文档；经典前端注释掉 FAQ 面板 | [详情](details/035-faq-panel-redesign.md) |
 | 036 | 2026-06-24 | 系统公告弹窗宽度由 26rem 加大到 36rem | `web/default/src/components/notification-popover.tsx` |
+| 037 | 2026-06-24 | 订阅管理新增「全员订阅」功能：管理员可一键为所有启用用户绑定指定套餐，含后端批量处理、前端确认弹窗及 6 语言翻译 | [详情](details/037-subscribe-all-users.md) |

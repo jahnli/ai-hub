@@ -706,6 +706,50 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 	return "", nil
 }
 
+type AdminSubscribeAllUsersResult struct {
+	Created int `json:"created"`
+	Skipped int `json:"skipped"`
+	Failed  int `json:"failed"`
+}
+
+func AdminSubscribeAllUsers(planId int) (AdminSubscribeAllUsersResult, error) {
+	if planId <= 0 {
+		return AdminSubscribeAllUsersResult{}, errors.New("invalid planId")
+	}
+	plan, err := GetSubscriptionPlanById(planId)
+	if err != nil {
+		return AdminSubscribeAllUsersResult{}, err
+	}
+	if !plan.Enabled {
+		return AdminSubscribeAllUsersResult{}, errors.New("禁用套餐不能全员订阅")
+	}
+
+	result := AdminSubscribeAllUsersResult{}
+	var users []User
+	err = DB.Model(&User{}).
+		Select("id").
+		Where("deleted_at IS NULL").
+		Where("status = ?", common.UserStatusEnabled).
+		FindInBatches(&users, 500, func(tx *gorm.DB, batch int) error {
+			for _, user := range users {
+				if user.Id <= 0 {
+					result.Skipped++
+					continue
+				}
+				if _, err := AdminBindSubscription(user.Id, planId, ""); err != nil {
+					result.Failed++
+					continue
+				}
+				result.Created++
+			}
+			return nil
+		}).Error
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 func calcSubscriptionBalanceQuota(priceAmount float64) (int, error) {
 	if priceAmount <= 0 {
 		return 0, nil
