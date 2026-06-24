@@ -44,6 +44,8 @@ export type NavLink = BaseNavItem & {
  */
 export type NavCollapsible = BaseNavItem & {
   items: (BaseNavItem & { url: LinkProps['to'] | (string & {}) })[]
+  /** When true the collapsible starts expanded regardless of the current URL. */
+  defaultOpen?: boolean
   url?: never
   type?: never
 }
