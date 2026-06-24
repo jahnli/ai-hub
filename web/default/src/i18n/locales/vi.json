@@ -1,5 +1,11 @@
 {
-    "translation": {
+  "translation": {
+    "Amount (CNY)": "Số tiền (CNY)",
+    "Enter the CNY amount to add to this subscription.": "Nhập số tiền CNY cần thêm vào đăng ký này.",
+    "Increase": "Tăng",
+    "Increase quota": "Tăng hạn mức",
+    "Please enter a valid amount": "Vui lòng nhập số tiền hợp lệ",
+    "Quota increased successfully": "Đã tăng hạn mức thành công",
         "360": "360",
         "1000": "1000",
         "10000": "10000",

@@ -1,5 +1,11 @@
 {
-    "translation": {
+  "translation": {
+    "Amount (CNY)": "金額（CNY）",
+    "Enter the CNY amount to add to this subscription.": "このサブスクリプションに追加する CNY 金額を入力してください。",
+    "Increase": "追加",
+    "Increase quota": "クォータを追加",
+    "Please enter a valid amount": "有効な金額を入力してください",
+    "Quota increased successfully": "クォータを追加しました",
         "360": "360",
         "1000": "1000",
         "10000": "10000",

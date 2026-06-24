@@ -10,6 +10,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/cachex"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/samber/hot"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -930,6 +931,51 @@ func buildSubscriptionSummaries(subs []UserSubscription) []SubscriptionSummary {
 		})
 	}
 	return result
+}
+
+func AdminIncreaseUserSubscriptionQuota(userSubscriptionId int, amountCNY float64) (int64, error) {
+	if userSubscriptionId <= 0 {
+		return 0, errors.New("invalid userSubscriptionId")
+	}
+	if amountCNY <= 0 {
+		return 0, errors.New("amount must be greater than 0")
+	}
+	if common.QuotaPerUnit <= 0 {
+		return 0, errors.New("额度单位配置错误")
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+	quotaDelta := decimal.NewFromFloat(amountCNY).
+		Div(decimal.NewFromFloat(usdExchangeRate)).
+		Mul(decimal.NewFromFloat(common.QuotaPerUnit)).
+		Ceil().
+		IntPart()
+	if quotaDelta <= 0 {
+		return 0, errors.New("quota must be greater than 0")
+	}
+	now := common.GetTimestamp()
+	var updatedTotal int64
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var sub UserSubscription
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").
+			Where("id = ?", userSubscriptionId).First(&sub).Error; err != nil {
+			return err
+		}
+		if sub.Status != "active" || (sub.EndTime > 0 && sub.EndTime <= now) {
+			return errors.New("只能给有效订阅增加额度")
+		}
+		updatedTotal = sub.AmountTotal + quotaDelta
+		return tx.Model(&sub).Updates(map[string]interface{}{
+			"amount_total": updatedTotal,
+			"updated_at":   now,
+		}).Error
+	})
+	if err != nil {
+		return 0, err
+	}
+	return quotaDelta, nil
 }
 
 // AdminInvalidateUserSubscription marks a user subscription as cancelled and ends it immediately.

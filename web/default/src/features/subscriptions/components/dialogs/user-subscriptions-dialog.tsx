@@ -21,6 +21,8 @@ import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -49,6 +51,7 @@ import {
   getAdminPlans,
   getUserSubscriptions,
   createUserSubscription,
+  increaseUserSubscriptionQuota,
   invalidateUserSubscription,
   deleteUserSubscription,
 } from '../../api'
@@ -103,8 +106,9 @@ export function UserSubscriptionsDialog(props: Props) {
   const [plans, setPlans] = useState<PlanRecord[]>([])
   const [subs, setSubs] = useState<UserSubscriptionRecord[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string>('')
+  const [increaseAmount, setIncreaseAmount] = useState('500')
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'invalidate' | 'delete'
+    type: 'increase' | 'invalidate' | 'delete'
     subId: number
   } | null>(null)
 
@@ -166,7 +170,22 @@ export function UserSubscriptionsDialog(props: Props) {
   const handleConfirmAction = async () => {
     if (!confirmAction) return
     try {
-      if (confirmAction.type === 'invalidate') {
+      if (confirmAction.type === 'increase') {
+        const amount = Number(increaseAmount)
+        if (!Number.isFinite(amount) || amount <= 0) {
+          toast.error(t('Please enter a valid amount'))
+          return
+        }
+        const res = await increaseUserSubscriptionQuota(
+          confirmAction.subId,
+          amount
+        )
+        if (res.success) {
+          toast.success(t('Quota increased successfully'))
+          await loadData()
+          props.onSuccess?.()
+        }
+      } else if (confirmAction.type === 'invalidate') {
         const res = await invalidateUserSubscription(confirmAction.subId)
         if (res.success) {
           toast.success(res.data?.message || t('Has been invalidated'))
@@ -191,7 +210,7 @@ export function UserSubscriptionsDialog(props: Props) {
   return (
     <>
       <Sheet open={props.open} onOpenChange={props.onOpenChange}>
-        <SheetContent className={sideDrawerContentClassName('sm:max-w-2xl')}>
+        <SheetContent className={sideDrawerContentClassName('sm:max-w-4xl')}>
           <SheetHeader className={sideDrawerHeaderClassName()}>
             <SheetTitle>{t('User Subscription Management')}</SheetTitle>
             <SheetDescription>
@@ -325,6 +344,20 @@ export function UserSubscriptionsDialog(props: Props) {
                           size='sm'
                           variant='outline'
                           disabled={!isActive}
+                          onClick={() => {
+                            setIncreaseAmount('500')
+                            setConfirmAction({
+                              type: 'increase',
+                              subId: sub.id,
+                            })
+                          }}
+                        >
+                          {t('Increase')}
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={!isActive}
                           onClick={() =>
                             setConfirmAction({
                               type: 'invalidate',
@@ -361,22 +394,45 @@ export function UserSubscriptionsDialog(props: Props) {
           open
           onOpenChange={(v) => !v && setConfirmAction(null)}
           title={
-            confirmAction.type === 'invalidate'
-              ? t('Confirm invalidate')
-              : t('Confirm delete')
+            confirmAction.type === 'increase'
+              ? t('Increase quota')
+              : confirmAction.type === 'invalidate'
+                ? t('Confirm invalidate')
+                : t('Confirm delete')
           }
           desc={
-            confirmAction.type === 'invalidate'
-              ? t(
-                  'After invalidating, this subscription will be immediately deactivated. Historical records are not affected. Continue?'
-                )
+            confirmAction.type === 'increase'
+              ? t('Enter the CNY amount to add to this subscription.')
+              : confirmAction.type === 'invalidate'
+                ? t(
+                    'After invalidating, this subscription will be immediately deactivated. Historical records are not affected. Continue?'
+                  )
               : t(
                   'Deleting will permanently remove this subscription record (including benefit details). Continue?'
                 )
           }
           handleConfirm={handleConfirmAction}
           destructive={confirmAction.type === 'delete'}
-        />
+          confirmText={
+            confirmAction.type === 'increase' ? t('Increase') : t('Confirm')
+          }
+        >
+          {confirmAction.type === 'increase' ? (
+            <div className='grid gap-2'>
+              <Label htmlFor='subscription-increase-amount'>
+                {t('Amount (CNY)')}
+              </Label>
+              <Input
+                id='subscription-increase-amount'
+                type='number'
+                min='0'
+                step='1'
+                value={increaseAmount}
+                onChange={(event) => setIncreaseAmount(event.target.value)}
+              />
+            </div>
+          ) : null}
+        </ConfirmDialog>
       )}
     </>
   )

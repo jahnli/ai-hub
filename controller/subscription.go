@@ -413,6 +413,10 @@ type AdminCreateUserSubscriptionRequest struct {
 	PlanId int `json:"plan_id"`
 }
 
+type AdminIncreaseUserSubscriptionQuotaRequest struct {
+	Amount float64 `json:"amount"`
+}
+
 // AdminCreateUserSubscription creates a new user subscription from a plan (no payment).
 func AdminCreateUserSubscription(c *gin.Context) {
 	if !requirePaymentCompliance(c) {
@@ -439,6 +443,30 @@ func AdminCreateUserSubscription(c *gin.Context) {
 		return
 	}
 	common.ApiSuccess(c, nil)
+}
+
+// AdminIncreaseUserSubscriptionQuota increases an active subscription's quota by a CNY amount.
+func AdminIncreaseUserSubscriptionQuota(c *gin.Context) {
+	if !requirePaymentCompliance(c) {
+		return
+	}
+
+	subId, _ := strconv.Atoi(c.Param("id"))
+	if subId <= 0 {
+		common.ApiErrorMsg(c, "无效的订阅ID")
+		return
+	}
+	var req AdminIncreaseUserSubscriptionQuotaRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.Amount <= 0 {
+		common.ApiErrorMsg(c, "金额必须大于0")
+		return
+	}
+	quotaDelta, err := model.AdminIncreaseUserSubscriptionQuota(subId, req.Amount)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, gin.H{"quota_delta": quotaDelta})
 }
 
 // AdminInvalidateUserSubscription cancels a user subscription immediately.

@@ -1,5 +1,11 @@
 {
   "translation": {
+    "Amount (CNY)": "金额（人民币）",
+    "Enter the CNY amount to add to this subscription.": "请输入要增加到该订阅的人民币金额。",
+    "Increase": "增加",
+    "Increase quota": "增加额度",
+    "Please enter a valid amount": "请输入有效金额",
+    "Quota increased successfully": "额度增加成功",
     "360": "360",
     "1000": "1000",
     "10000": "10000",

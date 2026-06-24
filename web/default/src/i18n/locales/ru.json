@@ -1,5 +1,11 @@
 {
-    "translation": {
+  "translation": {
+    "Amount (CNY)": "Сумма (CNY)",
+    "Enter the CNY amount to add to this subscription.": "Введите сумму в CNY для добавления к этой подписке.",
+    "Increase": "Увеличить",
+    "Increase quota": "Увеличить квоту",
+    "Please enter a valid amount": "Введите корректную сумму",
+    "Quota increased successfully": "Квота успешно увеличена",
         "360": "360",
         "1000": "1000",
         "10000": "10000",
