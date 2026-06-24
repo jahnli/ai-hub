@@ -19,7 +19,9 @@ For commercial licensing, please contact support@quantumnous.com
 import { type ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 import { formatQuota, formatTimestamp } from '@/lib/format'
+import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -91,76 +93,54 @@ export function useUsersColumns(): ColumnDef<User>[] {
         const username = row.getValue('username') as string
         const displayName = row.original.display_name
         const remark = row.original.remark
+        const avatarUrl = row.original.avatar_url
+        const primaryName = displayName || username
+        const avatarFallback = getUserAvatarFallback(primaryName)
+        const avatarFallbackStyle = getUserAvatarStyle(primaryName)
 
         return (
-          <div className='flex min-w-[160px] flex-col gap-1'>
-            <div className='flex items-center gap-2'>
-              <LongText className='max-w-[140px] font-medium'>
-                {username}
-              </LongText>
-              {remark && (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={<StatusBadge variant='success' copyable={false} />}
-                  >
-                    <LongText className='max-w-[80px]'>{remark}</LongText>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className='text-xs'>{remark}</p>
-                  </TooltipContent>
-                </Tooltip>
+          <div className='flex min-w-[160px] items-center gap-3'>
+            <Avatar size='sm' className='shrink-0'>
+              {avatarUrl && (
+                <AvatarImage src={avatarUrl} alt={primaryName} />
+              )}
+              <AvatarFallback
+                className='text-xs font-medium text-white'
+                style={avatarFallbackStyle}
+              >
+                {avatarFallback}
+              </AvatarFallback>
+            </Avatar>
+            <div className='flex flex-col gap-1'>
+              <div className='flex items-center gap-2'>
+                <LongText className='max-w-[140px] font-medium'>
+                  {primaryName}
+                </LongText>
+                {remark && (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<StatusBadge variant='success' copyable={false} />}
+                    >
+                      <LongText className='max-w-[80px]'>{remark}</LongText>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className='text-xs'>{remark}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+              {displayName && displayName !== username && (
+                <LongText className='text-muted-foreground max-w-[180px] text-xs'>
+                  {username}
+                </LongText>
               )}
             </div>
-            {displayName && displayName !== username && (
-              <LongText className='text-muted-foreground max-w-[180px] text-xs'>
-                {displayName}
-              </LongText>
-            )}
           </div>
         )
       },
       enableHiding: false,
-      size: 220,
+      size: 260,
       meta: { mobileTitle: true },
-    },
-    {
-      accessorKey: 'status',
-      header: t('Status'),
-      cell: ({ row }) => {
-        const user = row.original
-        const requestCount = user.request_count
-
-        const statusConfig = isUserDeleted(user)
-          ? USER_STATUSES[USER_STATUS.DELETED]
-          : USER_STATUSES[user.status as keyof typeof USER_STATUSES]
-
-        if (!statusConfig) {
-          return null
-        }
-
-        return (
-          <Tooltip>
-            <TooltipTrigger render={<div className='-ml-1.5 cursor-help' />}>
-              <StatusBadge
-                label={t(statusConfig.labelKey)}
-                variant={statusConfig.variant}
-                copyable={false}
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className='text-xs'>
-                {t('Requests:')} {requestCount.toLocaleString()}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        )
-      },
-      filterFn: (row, id, value) => {
-        return value.includes(String(row.getValue(id)))
-      },
-      enableSorting: false,
-      size: 120,
-      meta: { mobileBadge: true },
     },
     {
       id: 'quota',
@@ -224,22 +204,32 @@ export function useUsersColumns(): ColumnDef<User>[] {
       size: 170,
     },
     {
-      accessorKey: 'group',
-      header: t('Group'),
+      accessorKey: 'last_login_at',
+      header: t('Last Login'),
       cell: ({ row }) => {
-        const group = row.getValue('group') as string
+        const ts = row.getValue('last_login_at') as number | undefined
         return (
-          <BadgeCell>
-            <GroupBadge group={group} />
-          </BadgeCell>
+          <span className='text-muted-foreground text-sm'>
+            {ts ? formatTimestamp(ts) : '-'}
+          </span>
         )
       },
-      filterFn: (row, id, value) => {
-        const group = String(row.getValue(id) || t('User Group')).toLowerCase()
-        const searchValue = String(value).toLowerCase()
-        return group.includes(searchValue)
+      size: 180,
+      meta: { mobileHidden: true },
+    },
+    {
+      accessorKey: 'created_at',
+      header: t('Created At'),
+      cell: ({ row }) => {
+        const ts = row.getValue('created_at') as number | undefined
+        return (
+          <span className='text-muted-foreground text-sm'>
+            {ts ? formatTimestamp(ts) : '-'}
+          </span>
+        )
       },
-      size: 140,
+      size: 180,
+      meta: { mobileHidden: true },
     },
     {
       accessorKey: 'role',
@@ -268,32 +258,61 @@ export function useUsersColumns(): ColumnDef<User>[] {
       size: 120,
     },
     {
-      accessorKey: 'created_at',
-      header: t('Created At'),
+      accessorKey: 'status',
+      header: t('Status'),
       cell: ({ row }) => {
-        const ts = row.getValue('created_at') as number | undefined
+        const user = row.original
+        const requestCount = user.request_count
+
+        const statusConfig = isUserDeleted(user)
+          ? USER_STATUSES[USER_STATUS.DELETED]
+          : USER_STATUSES[user.status as keyof typeof USER_STATUSES]
+
+        if (!statusConfig) {
+          return null
+        }
+
         return (
-          <span className='text-muted-foreground text-sm'>
-            {ts ? formatTimestamp(ts) : '-'}
-          </span>
+          <Tooltip>
+            <TooltipTrigger render={<div className='-ml-1.5 cursor-help' />}>
+              <StatusBadge
+                label={t(statusConfig.labelKey)}
+                variant={statusConfig.variant}
+                copyable={false}
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className='text-xs'>
+                {t('Requests:')} {requestCount.toLocaleString()}
+              </p>
+            </TooltipContent>
+          </Tooltip>
         )
       },
-      size: 180,
-      meta: { mobileHidden: true },
+      filterFn: (row, id, value) => {
+        return value.includes(String(row.getValue(id)))
+      },
+      enableSorting: false,
+      size: 120,
+      meta: { mobileBadge: true },
     },
     {
-      accessorKey: 'last_login_at',
-      header: t('Last Login'),
+      accessorKey: 'group',
+      header: t('Group'),
       cell: ({ row }) => {
-        const ts = row.getValue('last_login_at') as number | undefined
+        const group = row.getValue('group') as string
         return (
-          <span className='text-muted-foreground text-sm'>
-            {ts ? formatTimestamp(ts) : '-'}
-          </span>
+          <BadgeCell>
+            <GroupBadge group={group} />
+          </BadgeCell>
         )
       },
-      size: 180,
-      meta: { mobileHidden: true },
+      filterFn: (row, id, value) => {
+        const group = String(row.getValue(id) || t('User Group')).toLowerCase()
+        const searchValue = String(value).toLowerCase()
+        return group.includes(searchValue)
+      },
+      size: 140,
     },
     {
       id: 'actions',

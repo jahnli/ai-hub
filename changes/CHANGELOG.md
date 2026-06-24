@@ -43,3 +43,4 @@
 | 036 | 2026-06-24 | 系统公告弹窗宽度由 26rem 加大到 36rem | `web/default/src/components/notification-popover.tsx` |
 | 037 | 2026-06-24 | 订阅管理新增「全员订阅」功能：管理员可一键为所有启用用户绑定指定套餐，含后端批量处理、前端确认弹窗及 6 语言翻译 | [详情](details/037-subscribe-all-users.md) |
 | 038 | 2026-06-24 | 系统设置侧边栏菜单默认展开：新增 NavCollapsible.defaultOpen 属性，系统设置下所有分组设为默认展开 | `web/default/src/components/layout/types.ts`、`web/default/src/components/layout/components/nav-group.tsx`、`web/default/src/components/layout/config/system-settings.config.ts` |
+| 039 | 2026-06-24 | 用户管理表格调整：用户名列增加头像、display_name 与 username 展示位置互换；列顺序改为用户名→额度→最后登录→创建时间→角色→状态→分组 | `web/default/src/features/users/components/users-columns.tsx`、`web/default/src/features/users/types.ts` |
