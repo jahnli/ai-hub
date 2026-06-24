@@ -45,11 +45,14 @@ type User struct {
 	LastLoginAt      int64          `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AvatarUrl        string         `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url;default:''"`
 	OpenId           string         `json:"open_id" gorm:"type:varchar(64);column:open_id;default:''"`
-	DepartmentIds    string         `json:"department_ids" gorm:"type:text;column:department_ids;default:'[]'"`
-	DepartmentPath   string         `json:"department_path" gorm:"type:text;column:department_path;default:'[]'"`
-	IsDeptLeader     bool           `json:"is_dept_leader" gorm:"column:is_dept_leader"`
-	LeaderDeptLevel  int            `json:"leader_dept_level" gorm:"type:int;column:leader_dept_level"`
-	EmployeeNumber   string         `json:"employee_number" gorm:"type:varchar;column:employee_number"`
+	DepartmentName   string         `json:"department_name" gorm:"type:varchar(256);column:department_name;default:''"`
+	Departments      string         `json:"departments" gorm:"type:text;column:departments;default:'[]'"`
+	JobNumber        string         `json:"job_number" gorm:"type:varchar(64);column:job_number;default:''"`
+	Description      string         `json:"description" gorm:"type:text;column:description;default:''"`
+	Gender           int            `json:"gender" gorm:"type:int;column:gender;default:0"`
+	LeaderId         string         `json:"leader_id" gorm:"type:varchar(64);column:leader_id;default:''"`
+	Mobile           string         `json:"mobile" gorm:"type:varchar(32);column:mobile;default:''"`
+	JobTitle         string         `json:"job_title" gorm:"type:varchar(128);column:job_title;default:''"`
 }
 
 func (user *User) ToBaseUser() *UserBase {

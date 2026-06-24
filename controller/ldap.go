@@ -119,7 +119,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		return nil, err
 	}
 
-	// 注册成功后同步飞书字段（avatar_url/open_id/display_name/department_*/employee_number 等）
+	// 注册成功后同步飞书字段（avatar_url/open_id/display_name/departments/job_number 等）
 	// 使用同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
 	if err := service.SyncFeishuUser(user); err != nil {
 		common.SysError(fmt.Sprintf("飞书字段同步失败 user=%s: %s", user.Username, err.Error()))

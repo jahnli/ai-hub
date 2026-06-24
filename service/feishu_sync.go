@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -20,18 +21,6 @@ const (
 	feishuHTTPTimeout = 10 * time.Second
 )
 
-// feishuSyncSummary 汇总一次飞书用户同步要写入数据库的字段。
-type feishuSyncSummary struct {
-	AvatarUrl       string
-	OpenId          string
-	DisplayName     string
-	DepartmentIds   string // JSON 数组字符串
-	DepartmentPath  string // JSON 数组字符串
-	IsDeptLeader    bool
-	LeaderDeptLevel int
-	EmployeeNumber  string
-}
-
 // SyncFeishuUserAsync 在 goroutine 中同步飞书字段，不阻塞登录流程。失败仅记日志。
 func SyncFeishuUserAsync(user *model.User) {
 	if user == nil || user.Id == 0 {
@@ -44,7 +33,68 @@ func SyncFeishuUserAsync(user *model.User) {
 	})
 }
 
-// SyncFeishuUser 以用户名拼邮箱 → 查 open_id → 拉取用户信息与工号 → 写回数据库。
+// feishuDirectoryData 是 directory/v1/employees/mget 接口 data 字段的结构。
+type feishuDirectoryData struct {
+	Employees []struct {
+		BaseInfo struct {
+			Avatar struct {
+				Avatar240 string `json:"avatar_240"`
+			} `json:"avatar"`
+			Description string `json:"description"`
+			Gender      int    `json:"gender"`
+			LeaderId    string `json:"leader_id"`
+			Mobile      string `json:"mobile"`
+			Name        struct {
+				Name struct {
+					DefaultValue string `json:"default_value"`
+				} `json:"name"`
+			} `json:"name"`
+			Departments []struct {
+				DepartmentId        string `json:"department_id"`
+				DepartmentPathInfos []struct {
+					DepartmentId   string `json:"department_id"`
+					DepartmentName struct {
+						DefaultValue string `json:"default_value"`
+					} `json:"department_name"`
+				} `json:"department_path_infos"`
+				Leaders []struct {
+					LeaderId   string `json:"leader_id"`
+					LeaderType int    `json:"leader_type"`
+				} `json:"leaders"`
+				Name struct {
+					DefaultValue string `json:"default_value"`
+				} `json:"name"`
+			} `json:"departments"`
+		} `json:"base_info"`
+		WorkInfo struct {
+			JobNumber string `json:"job_number"`
+			JobTitle  struct {
+				JobTitleName struct {
+					DefaultValue string `json:"default_value"`
+				} `json:"job_title_name"`
+			} `json:"job_title"`
+		} `json:"work_info"`
+	} `json:"employees"`
+}
+
+// deptSimplified 是写库时部门字段的简化结构。
+type deptSimplified struct {
+	DepartmentId        string             `json:"department_id"`
+	DepartmentPathInfos []deptPathSimple   `json:"department_path_infos"`
+	Leaders             []deptLeaderSimple `json:"leaders"`
+	Name                string             `json:"name"`
+}
+
+type deptPathSimple struct {
+	DepartmentId   string `json:"department_id"`
+	DepartmentName string `json:"department_name"`
+}
+
+type deptLeaderSimple struct {
+	LeaderId string `json:"leader_id"`
+}
+
+// SyncFeishuUser 以用户名拼邮箱 → 查 open_id → 通过 directory API 拉取员工信息 → 写回数据库。
 func SyncFeishuUser(user *model.User) error {
 	if !system_setting.FeishuEnabled() {
 		return nil
@@ -67,21 +117,79 @@ func SyncFeishuUser(user *model.User) error {
 		return fmt.Errorf("open_id not found for email %s", email)
 	}
 
-	info, err := feishuGetUserInfo(token, openId)
+	rawData, err := feishuGetEmployeeDirectory(token, openId)
 	if err != nil {
-		return fmt.Errorf("get user info: %w", err)
+		return fmt.Errorf("get employee directory: %w", err)
 	}
 
-	empNo, _ := feishuGetEmployeeNumber(token, openId)
+	var dirData feishuDirectoryData
+	if err := common.Unmarshal(rawData, &dirData); err != nil {
+		return fmt.Errorf("decode directory data: %w", err)
+	}
+	if len(dirData.Employees) == 0 {
+		return fmt.Errorf("no employee found for open_id %s", openId)
+	}
 
-	deptCache, _ := preloadDepartments(token)
-	summary := buildFeishuSummary(info, openId, empNo, deptCache)
-	if err := applyFeishuSummary(user.Id, summary); err != nil {
+	emp := dirData.Employees[0]
+	base := emp.BaseInfo
+	work := emp.WorkInfo
+
+	// 构建简化部门结构
+	depts := make([]deptSimplified, 0, len(base.Departments))
+	for _, d := range base.Departments {
+		paths := make([]deptPathSimple, 0, len(d.DepartmentPathInfos))
+		for _, p := range d.DepartmentPathInfos {
+			paths = append(paths, deptPathSimple{
+				DepartmentId:   p.DepartmentId,
+				DepartmentName: p.DepartmentName.DefaultValue,
+			})
+		}
+		leaders := make([]deptLeaderSimple, 0, len(d.Leaders))
+		for _, l := range d.Leaders {
+			leaders = append(leaders, deptLeaderSimple{LeaderId: l.LeaderId})
+		}
+		depts = append(depts, deptSimplified{
+			DepartmentId:        d.DepartmentId,
+			DepartmentPathInfos: paths,
+			Leaders:             leaders,
+			Name:                d.Name.DefaultValue,
+		})
+	}
+	deptsJSON, err := common.Marshal(depts)
+	if err != nil {
+		return fmt.Errorf("marshal departments: %w", err)
+	}
+
+	// department_name：取第一个部门的 path 拼接为 "xx / xx / xx"
+	var departmentName string
+	if len(depts) > 0 {
+		names := make([]string, 0, len(depts[0].DepartmentPathInfos))
+		for _, p := range depts[0].DepartmentPathInfos {
+			names = append(names, p.DepartmentName)
+		}
+		departmentName = strings.Join(names, " / ")
+	}
+
+	updates := map[string]any{
+		"avatar_url":      base.Avatar.Avatar240,
+		"open_id":         openId,
+		"display_name":    base.Name.Name.DefaultValue,
+		"description":     base.Description,
+		"gender":          base.Gender,
+		"leader_id":       base.LeaderId,
+		"mobile":          base.Mobile,
+		"job_number":      work.JobNumber,
+		"job_title":       work.JobTitle.JobTitleName.DefaultValue,
+		"departments":     string(deptsJSON),
+		"department_name": departmentName,
+	}
+	if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(updates).Error; err != nil {
 		return err
 	}
-	// 回写到 user 指针，使调用方（如 setupLogin）能立即读到飞书字段。
-	user.AvatarUrl = summary.AvatarUrl
-	user.DisplayName = summary.DisplayName
+
+	user.AvatarUrl = base.Avatar.Avatar240
+	user.DisplayName = base.Name.Name.DefaultValue
+	common.SysLog(fmt.Sprintf("飞书字段同步完成 user_id=%d open_id=%s job_number=%s", user.Id, openId, work.JobNumber))
 	return nil
 }
 
@@ -200,185 +308,42 @@ func feishuGetOpenIDByEmail(token, email string) (string, error) {
 	return data.UserList[0].UserID, nil
 }
 
-// feishuUserInfo 只抽取同步所需的字段。
-type feishuUserInfo struct {
-	Avatar struct {
-		Avatar240 string `json:"avatar_240"`
-	} `json:"avatar"`
-	Name          string   `json:"name"`
-	DepartmentIDs []string `json:"department_ids"`
-	LeaderUserID  string   `json:"leader_user_id"`
+var feishuDirectoryRequiredFields = []string{
+	"base_info.name",
+	"base_info.avatar",
+	"base_info.background_image",
+	"base_info.description",
+	"base_info.mobile",
+	"base_info.email",
+	"base_info.gender",
+	"base_info.department_path_infos",
+	"base_info.leader_id",
+	"base_info.custom_field_values",
+	"base_info.departments.department_id",
+	"base_info.departments.name",
+	"base_info.departments.leaders",
+	"base_info.departments.department_path_infos",
+	"base_info.departments.custom_field_values",
+	"work_info.job_number",
+	"work_info.join_date",
+	"work_info.positions",
+	"work_info.job_title.job_title_name",
 }
 
-func feishuGetUserInfo(token, openID string) (*feishuUserInfo, error) {
-	url := fmt.Sprintf("%s/contact/v3/users/%s?user_id_type=open_id&department_id_type=open_department_id", feishuBaseURL, openID)
-	respBody, status, err := feishuDoRequest(http.MethodGet, url, nil, token)
-	if err != nil {
-		return nil, err
-	}
-	r, err := feishuCheckResult(respBody, status)
-	if err != nil {
-		return nil, err
-	}
-	var data struct {
-		User feishuUserInfo `json:"user"`
-	}
-	if err := common.Unmarshal(r.Data, &data); err != nil {
-		return nil, fmt.Errorf("decode user: %w", err)
-	}
-	return &data.User, nil
-}
-
-// feishuGetEmployeeNumber 通过飞书 CoreHR 接口按 open_id 查询工号。
-// 参考 feishu-sync 项目的 batchGetEmployeeNumbers：请求体 employment_id_list 传入 open_id。
-func feishuGetEmployeeNumber(token, openID string) (string, error) {
-	url := feishuBaseURL + "/corehr/v2/employees/search?page_size=1&user_id_type=open_id"
+// feishuGetEmployeeDirectory 通过 directory/v1/employees/mget 一次性获取员工信息。
+// 返回原始 data 字段的 JSON 字节，供调用方按需解析。
+func feishuGetEmployeeDirectory(token, openID string) (json.RawMessage, error) {
 	body := map[string]any{
-		"employment_id_list": []string{openID},
-		"fields":             []string{"employee_number"},
+		"employee_ids":    []string{openID},
+		"required_fields": feishuDirectoryRequiredFields,
 	}
-	respBody, status, err := feishuDoRequest(http.MethodPost, url, body, token)
+	respBody, status, err := feishuDoRequest(http.MethodPost, feishuBaseURL+"/directory/v1/employees/mget", body, token)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	r, err := feishuCheckResult(respBody, status)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	var data struct {
-		Items []struct {
-			EmployeeNumber string `json:"employee_number"`
-		} `json:"items"`
-	}
-	if err := common.Unmarshal(r.Data, &data); err != nil {
-		return "", fmt.Errorf("decode employee_number: %w", err)
-	}
-	if len(data.Items) == 0 {
-		return "", nil
-	}
-	return data.Items[0].EmployeeNumber, nil
-}
-
-// feishuDepartment 缓存部门信息用于构建部门路径。
-type feishuDepartment struct {
-	Name               string `json:"name"`
-	ParentDepartmentID string `json:"parent_department_id"`
-}
-
-// preloadDepartments 拉取全部部门用于路径构建。失败时返回空缓存，路径退化为 id。
-func preloadDepartments(token string) (map[string]feishuDepartment, error) {
-	cache := map[string]feishuDepartment{}
-	baseURL := feishuBaseURL + "/contact/v3/departments?department_id_type=open_department_id&parent_department_id=0&fetch_child=true&page_size=50"
-	pageToken := ""
-	for {
-		url := baseURL
-		if pageToken != "" {
-			url += "&page_token=" + pageToken
-		}
-		respBody, status, err := feishuDoRequest(http.MethodGet, url, nil, token)
-		if err != nil {
-			return cache, err
-		}
-		r, err := feishuCheckResult(respBody, status)
-		if err != nil {
-			return cache, err
-		}
-		var data struct {
-			Items []struct {
-				OpenDepartmentID   string `json:"open_department_id"`
-				Name               string `json:"name"`
-				ParentDepartmentID string `json:"parent_department_id"`
-			} `json:"items"`
-			PageToken string `json:"page_token"`
-			HasMore   bool   `json:"has_more"`
-		}
-		if err := common.Unmarshal(r.Data, &data); err != nil {
-			return cache, fmt.Errorf("decode departments: %w", err)
-		}
-		for _, d := range data.Items {
-			cache[d.OpenDepartmentID] = feishuDepartment{Name: d.Name, ParentDepartmentID: d.ParentDepartmentID}
-		}
-		if !data.HasMore || data.PageToken == "" {
-			break
-		}
-		pageToken = data.PageToken
-	}
-	return cache, nil
-}
-
-// buildDeptPath 返回从根到该部门的部门名列表。
-func buildDeptPath(deptID string, cache map[string]feishuDepartment) []string {
-	var names []string
-	current := deptID
-	visited := map[string]bool{}
-	for current != "" && current != "0" && !visited[current] {
-		visited[current] = true
-		dept, ok := cache[current]
-		if !ok {
-			break
-		}
-		names = append([]string{dept.Name}, names...)
-		current = dept.ParentDepartmentID
-	}
-	return names
-}
-
-func jsonStringArray(arr []string) string {
-	data, err := common.Marshal(arr)
-	if err != nil {
-		return "[]"
-	}
-	return string(data)
-}
-
-// buildFeishuSummary 组装要写回数据库的字段汇总。
-func buildFeishuSummary(info *feishuUserInfo, openID, empNo string, deptCache map[string]feishuDepartment) feishuSyncSummary {
-	s := feishuSyncSummary{
-		AvatarUrl:      info.Avatar.Avatar240,
-		OpenId:         openID,
-		DisplayName:    info.Name,
-		DepartmentIds:  jsonStringArray(info.DepartmentIDs),
-		EmployeeNumber: empNo,
-	}
-
-	// 部门路径：每个部门解析为从根到叶的名称链，整体存为 JSON 数组（每项一个名称数组），
-	// 与 feishu-sync 的 department_path 结构一致。无部门缓存时退化为 id 数组。
-	if len(deptCache) > 0 && len(info.DepartmentIDs) > 0 {
-		paths := make([][]string, 0, len(info.DepartmentIDs))
-		for _, deptID := range info.DepartmentIDs {
-			paths = append(paths, buildDeptPath(deptID, deptCache))
-		}
-		if data, err := common.Marshal(paths); err == nil {
-			s.DepartmentPath = string(data)
-		} else {
-			s.DepartmentPath = s.DepartmentIds
-		}
-	} else {
-		s.DepartmentPath = s.DepartmentIds
-	}
-
-	// is_dept_leader：飞书 leader_user_id 指向本人 open_id 表示该用户是其所在部门负责人。
-	if info.LeaderUserID != "" && info.LeaderUserID == openID {
-		s.IsDeptLeader = true
-	}
-	return s
-}
-
-// applyFeishuSummary 将汇总字段写回用户记录。
-func applyFeishuSummary(userID int, s feishuSyncSummary) error {
-	updates := map[string]any{
-		"avatar_url":        s.AvatarUrl,
-		"open_id":           s.OpenId,
-		"display_name":      s.DisplayName,
-		"department_ids":    s.DepartmentIds,
-		"department_path":   s.DepartmentPath,
-		"is_dept_leader":    s.IsDeptLeader,
-		"leader_dept_level": s.LeaderDeptLevel,
-		"employee_number":   s.EmployeeNumber,
-	}
-	if err := model.DB.Model(&model.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
-		return err
-	}
-	common.SysLog(fmt.Sprintf("飞书字段同步完成 user_id=%d open_id=%s emp_no=%s", userID, s.OpenId, s.EmployeeNumber))
-	return nil
+	return r.Data, nil
 }
