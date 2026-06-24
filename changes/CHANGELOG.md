@@ -42,4 +42,4 @@
 | 035 | 2026-06-24 | 常见问答面板重构：移除问答列表，改为插画图标+外链按钮跳转飞书文档；经典前端注释掉 FAQ 面板 | [详情](details/035-faq-panel-redesign.md) |
 | 036 | 2026-06-24 | 系统公告弹窗宽度由 26rem 加大到 36rem | `web/default/src/components/notification-popover.tsx` |
 | 037 | 2026-06-24 | 系统设置侧边栏菜单默认展开：新增 NavCollapsible.defaultOpen 属性，系统设置下所有分组设为默认展开 | `web/default/src/components/layout/types.ts`、`web/default/src/components/layout/components/nav-group.tsx`、`web/default/src/components/layout/config/system-settings.config.ts` |
-| 038 | 2026-06-24 | 用户管理表格调整：display_name 与 username 展示位置互换；列顺序改为用户名→额度→最后登录→创建时间→角色→状态→分组 | `web/default/src/features/users/components/users-columns.tsx` |
+| 038 | 2026-06-24 | 用户管理表格调整：用户名列增加头像、display_name 与 username 展示位置互换；列顺序改为用户名→额度→最后登录→创建时间→角色→状态→分组 | `web/default/src/features/users/components/users-columns.tsx`、`web/default/src/features/users/types.ts` |
