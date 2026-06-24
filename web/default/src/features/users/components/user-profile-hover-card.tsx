@@ -19,13 +19,14 @@ For commercial licensing, please contact support@quantumnous.com
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
+import { useAuthStore } from "@/stores/auth-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { USER_ROLES } from "../constants";
+import { USER_ROLE, USER_ROLES } from "../constants";
 import type { User } from "../types";
 
 interface UserProfileHoverCardProps {
@@ -82,6 +83,8 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
   const avatarFallbackStyle = getUserAvatarStyle(primaryName);
   const roleConfig = USER_ROLES[user.role as keyof typeof USER_ROLES];
   const customFields = parseCustomFields(user.custom_field_values);
+  const isRoot =
+    useAuthStore((s) => s.auth.user?.role) === USER_ROLE.ROOT;
 
   const bannerStyle: React.CSSProperties = user.background_image
     ? {
@@ -99,7 +102,7 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
       >
         {props.children}
       </HoverCardTrigger>
-      <HoverCardContent side="right" align="start" className="w-[19rem] p-0">
+      <HoverCardContent side="right" align="start" className="w-[20rem] p-0">
         {/* Banner */}
         <div className="h-28 rounded-t-lg" style={bannerStyle} />
 
@@ -145,32 +148,36 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
 
         {/* Fields */}
         <div className="px-5 py-2.5">
-          <ProfileField label={t("Job Title")} value={user.job_title} />
           <ProfileField
             label={t("Job Level")}
             value={customFields?.[CUSTOM_FIELD_KEYS.JOB_LEVEL]}
           />
-          <ProfileField label={t("Job Number")} value={user.job_number} />
-          <ProfileField label={t("Mobile")} value={user.mobile} />
-          <ProfileField label={t("Email")} value={user.email} />
           <ProfileField label={t("Department")} value={user.department_name} />
+          <ProfileField label={t("Join Date")} value={user.join_date} />
+          <ProfileField label={t("Email")} value={user.email} />
+          <ProfileField label={t("Job Number")} value={user.job_number} />
+          <ProfileField label={t("Job Title")} value={user.job_title} />
           <ProfileField
             label={t("Job Description")}
             value={customFields?.[CUSTOM_FIELD_KEYS.JOB_DESCRIPTION]}
           />
-          <ProfileField label={t("Join Date")} value={user.join_date} />
-          <ProfileField
-            label={t("Birthday")}
-            value={customFields?.[CUSTOM_FIELD_KEYS.BIRTHDAY]}
-          />
-          <ProfileField
-            label={t("Ethnicity")}
-            value={customFields?.[CUSTOM_FIELD_KEYS.ETHNICITY]}
-          />
-          <ProfileField
-            label={t("Hometown")}
-            value={customFields?.[CUSTOM_FIELD_KEYS.HOMETOWN]}
-          />
+          {isRoot && (
+            <>
+              <ProfileField label={t("Mobile")} value={user.mobile} />
+              <ProfileField
+                label={t("Birthday")}
+                value={customFields?.[CUSTOM_FIELD_KEYS.BIRTHDAY]}
+              />
+              <ProfileField
+                label={t("Ethnicity")}
+                value={customFields?.[CUSTOM_FIELD_KEYS.ETHNICITY]}
+              />
+              <ProfileField
+                label={t("Hometown")}
+                value={customFields?.[CUSTOM_FIELD_KEYS.HOMETOWN]}
+              />
+            </>
+          )}
         </div>
       </HoverCardContent>
     </HoverCard>
