@@ -226,6 +226,8 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     { title: t('Total Requests'), value: formatRequests(stat.total_requests) },
     { title: t('Avg Response Time'), value: formatAvgTime(stat.avg_use_time) },
     { title: t('Error Rate'), value: formatErrorRate(stat.error_rate) },
+    { title: t('Registered Users'), value: stat.registered_users.toString() },
+    { title: t('Unregistered Users'), value: stat.unregistered_users.toString() },
   ]
 
   return (

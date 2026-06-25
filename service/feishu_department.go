@@ -479,6 +479,9 @@ type DepartmentStatsRequest struct {
 }
 
 // GetDepartmentStats fetches stats for users belonging to a department (and its sub-departments).
+// It uses the Feishu Users API to get the real-time member list of each department,
+// then matches open_id against the user table to find registered usernames,
+// and finally aggregates logs for those usernames.
 func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, error) {
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
@@ -494,96 +497,157 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 		return nil, fmt.Errorf("get departments: %w", err)
 	}
 
-	// Collect all department_ids under the selected node (inclusive)
-	deptIDs := collectDeptIDsUnder(items, req.DepartmentID)
-	if len(deptIDs) == 0 {
+	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
+	if len(openDeptIDs) == 0 {
 		return &model.DepartmentStat{}, nil
 	}
 
-	// Find usernames whose departments JSON contains any of these department_ids
-	usernames, err := findUsernamesByDeptIDs(deptIDs)
+	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
 	if err != nil {
-		return nil, fmt.Errorf("find users: %w", err)
-	}
-	if len(usernames) == 0 {
-		return &model.DepartmentStat{}, nil
+		return nil, fmt.Errorf("get department members: %w", err)
 	}
 
-	return model.GetDepartmentStats(usernames, req.StartTimestamp, req.EndTimestamp)
+	usernames, err := findUsernamesByOpenIDs(memberOpenIDs)
+	if err != nil {
+		return nil, fmt.Errorf("find users by open_id: %w", err)
+	}
+
+	stat, err := model.GetDepartmentStats(usernames, req.StartTimestamp, req.EndTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	stat.RegisteredUsers = int64(len(usernames))
+	stat.UnregisteredUsers = int64(len(memberOpenIDs)) - stat.RegisteredUsers
+	return stat, nil
 }
 
-// collectDeptIDsUnder returns the department_id values for a given open_department_id
-// and all its descendants. If deptOpenID is "__tenant__", returns all department_ids.
-func collectDeptIDsUnder(items []feishuDeptItem, deptOpenID string) []string {
+
+
+// collectOpenDeptIDsUnder returns the open_department_id values for a given open_department_id
+// and all its descendants. If deptOpenID is "__tenant__", returns all open_department_ids.
+func collectOpenDeptIDsUnder(items []feishuDeptItem, deptOpenID string) []string {
 	if deptOpenID == "__tenant__" {
 		ids := make([]string, 0, len(items))
 		for _, item := range items {
-			ids = append(ids, item.DepartmentID)
+			ids = append(ids, item.OpenDepartmentID)
 		}
 		return ids
 	}
 
-	// Build parent→children map using open_department_id
 	childrenMap := make(map[string][]string, len(items))
-	openToInternal := make(map[string]string, len(items))
+	knownIDs := make(map[string]bool, len(items))
 	for _, item := range items {
 		childrenMap[item.ParentDepartmentID] = append(childrenMap[item.ParentDepartmentID], item.OpenDepartmentID)
-		openToInternal[item.OpenDepartmentID] = item.DepartmentID
+		knownIDs[item.OpenDepartmentID] = true
 	}
 
-	// BFS to collect all descendant open_department_ids
 	var result []string
 	queue := []string{deptOpenID}
 	for len(queue) > 0 {
 		curr := queue[0]
 		queue = queue[1:]
-		if id, ok := openToInternal[curr]; ok {
-			result = append(result, id)
+		if knownIDs[curr] {
+			result = append(result, curr)
 		}
-		if children, ok := childrenMap[curr]; ok {
-			queue = append(queue, children...)
-		}
+		queue = append(queue, childrenMap[curr]...)
 	}
-
 	return result
 }
 
-// findUsernamesByDeptIDs queries users whose departments JSON contains any of the given department_ids.
-func findUsernamesByDeptIDs(deptIDs []string) ([]string, error) {
-	if len(deptIDs) == 0 {
+// deptMembersCacheEntry holds cached open_id list for one department.
+type deptMembersCacheEntry struct {
+	openIDs  []string
+	cachedAt time.Time
+}
+
+var deptMembersCache sync.Map
+
+func getCachedDepartmentMembers(token, openDeptID string) ([]string, error) {
+	if v, ok := deptMembersCache.Load(openDeptID); ok {
+		entry := v.(deptMembersCacheEntry)
+		if time.Since(entry.cachedAt) < departmentCacheTTL {
+			return entry.openIDs, nil
+		}
+	}
+	openIDs, err := fetchDepartmentMembers(token, openDeptID)
+	if err != nil {
+		return nil, err
+	}
+	deptMembersCache.Store(openDeptID, deptMembersCacheEntry{openIDs: openIDs, cachedAt: time.Now()})
+	return openIDs, nil
+}
+
+func fetchDepartmentMembers(token, openDeptID string) ([]string, error) {
+	var allOpenIDs []string
+	pageToken := ""
+	for {
+		url := feishuBaseURL + "/contact/v3/users?department_id=" + openDeptID +
+			"&user_id_type=open_id&department_id_type=open_department_id&page_size=50"
+		if pageToken != "" {
+			url += "&page_token=" + pageToken
+		}
+		respBody, err := feishuRequestWithRetry(http.MethodGet, url, nil, token)
+		if err != nil {
+			return nil, fmt.Errorf("fetch department members: %w", err)
+		}
+		var result feishuAPIResult
+		if err := common.Unmarshal(respBody, &result); err != nil {
+			return nil, fmt.Errorf("decode members response: %w", err)
+		}
+		if result.Code != 0 {
+			return nil, fmt.Errorf("feishu code=%d msg=%s", result.Code, result.Msg)
+		}
+		var page struct {
+			HasMore   bool   `json:"has_more"`
+			PageToken string `json:"page_token"`
+			Items     []struct {
+				OpenID string `json:"open_id"`
+			} `json:"items"`
+		}
+		if err := common.Unmarshal(result.Data, &page); err != nil {
+			return nil, fmt.Errorf("decode members data: %w", err)
+		}
+		for _, item := range page.Items {
+			if item.OpenID != "" {
+				allOpenIDs = append(allOpenIDs, item.OpenID)
+			}
+		}
+		if !page.HasMore {
+			break
+		}
+		pageToken = page.PageToken
+	}
+	return allOpenIDs, nil
+}
+
+func getAllMembersUnderDepts(token string, openDeptIDs []string) ([]string, error) {
+	seen := make(map[string]bool)
+	var result []string
+	for _, deptID := range openDeptIDs {
+		members, err := getCachedDepartmentMembers(token, deptID)
+		if err != nil {
+			return nil, err
+		}
+		for _, openID := range members {
+			if !seen[openID] {
+				seen[openID] = true
+				result = append(result, openID)
+			}
+		}
+	}
+	return result, nil
+}
+
+func findUsernamesByOpenIDs(openIDs []string) ([]string, error) {
+	if len(openIDs) == 0 {
 		return nil, nil
 	}
-
-	// The `departments` column stores JSON like: [{"department_id":"xxx",...}, ...]
-	// Use LIKE-based matching for cross-database compatibility.
-	tx := model.DB.Model(&model.User{}).Select("username").Where("username != ''")
-
-	if len(deptIDs) == 1 {
-		tx = tx.Where("departments LIKE ?", "%"+deptIDs[0]+"%")
-	} else {
-		conditions := make([]string, 0, len(deptIDs))
-		args := make([]any, 0, len(deptIDs))
-		for _, id := range deptIDs {
-			conditions = append(conditions, "departments LIKE ?")
-			args = append(args, "%"+id+"%")
-		}
-		tx = tx.Where("("+joinOr(conditions)+")", args...)
-	}
-
 	var usernames []string
-	if err := tx.Scan(&usernames).Error; err != nil {
+	if err := model.DB.Model(&model.User{}).
+		Select("username").
+		Where("open_id IN ? AND username != ''", openIDs).
+		Scan(&usernames).Error; err != nil {
 		return nil, err
 	}
 	return usernames, nil
-}
-
-func joinOr(conditions []string) string {
-	result := ""
-	for i, c := range conditions {
-		if i > 0 {
-			result += " OR "
-		}
-		result += c
-	}
-	return result
 }

@@ -739,14 +739,16 @@ func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64,
 
 // DepartmentStat holds aggregated statistics for a department.
 type DepartmentStat struct {
-	TotalTokens   int64   `json:"total_tokens"`
-	TotalQuota    int64   `json:"total_quota"`
-	TotalRequests int64   `json:"total_requests"`
-	TotalErrors   int64   `json:"total_errors"`
-	TotalUseTime  int64   `json:"total_use_time"`
-	AvgUseTime    float64 `json:"avg_use_time"`
-	ErrorRate     float64 `json:"error_rate"`
-	AvgPricePerMT float64 `json:"avg_price_per_mt"`
+	TotalTokens       int64   `json:"total_tokens"`
+	TotalQuota        int64   `json:"total_quota"`
+	TotalRequests     int64   `json:"total_requests"`
+	TotalErrors       int64   `json:"total_errors"`
+	TotalUseTime      int64   `json:"total_use_time"`
+	AvgUseTime        float64 `json:"avg_use_time"`
+	ErrorRate         float64 `json:"error_rate"`
+	AvgPricePerMT     float64 `json:"avg_price_per_mt"`
+	RegisteredUsers   int64   `json:"registered_users"`
+	UnregisteredUsers int64   `json:"unregistered_users"`
 }
 
 // GetDepartmentStats aggregates log statistics for a set of usernames within a time range.

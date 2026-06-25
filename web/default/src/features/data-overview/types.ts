@@ -25,4 +25,6 @@ export interface DepartmentStat {
   avg_use_time: number
   error_rate: number
   avg_price_per_mt: number
+  registered_users: number
+  unregistered_users: number
 }
