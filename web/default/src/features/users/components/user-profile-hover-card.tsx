@@ -27,7 +27,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { USER_ROLE, USER_ROLES } from "../constants";
-import type { User } from "../types";
+import { type User, parseCustomFields, CUSTOM_FIELD_KEYS } from "../types";
 
 interface UserProfileHoverCardProps {
   user: User;
@@ -44,31 +44,6 @@ function ProfileField(props: { label: string; value?: string | null }) {
       <span className="min-w-0 break-all text-sm">{props.value}</span>
     </div>
   );
-}
-
-const CUSTOM_FIELD_KEYS = {
-  JOB_LEVEL: "C-7434714811573665793",
-  JOB_DESCRIPTION: "C-7439269744984244227",
-  BIRTHDAY: "C-7613945054108945361",
-  HOMETOWN: "C-7439630416690561028",
-  ETHNICITY: "C-7439269636549230620",
-} as const;
-
-function parseCustomFields(raw?: string): Record<string, string> | undefined {
-  if (!raw) return undefined;
-  try {
-    const parsed = JSON.parse(raw);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      !Array.isArray(parsed)
-    ) {
-      return parsed as Record<string, string>;
-    }
-  } catch {
-    // ignore
-  }
-  return undefined;
 }
 
 const DEFAULT_BANNER =

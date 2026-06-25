@@ -40,7 +40,7 @@ import {
   USER_ROLES,
   isUserDeleted,
 } from '../constants'
-import { type User } from '../types'
+import { type User, parseCustomFields, CUSTOM_FIELD_KEYS } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
 import { UserProfileHoverCard } from './user-profile-hover-card'
 
@@ -205,6 +205,56 @@ export function useUsersColumns(): ColumnDef<User>[] {
         )
       },
       size: 170,
+    },
+    {
+      accessorKey: 'department_name',
+      header: t('Department'),
+      cell: ({ row }) => {
+        const dept = row.getValue('department_name') as string | undefined
+        if (!dept) return <span className='text-muted-foreground text-sm'>-</span>
+        const parts = dept.split('/')
+        const firstLevel = parts[0]
+        const rest = parts.slice(1).join('/')
+        return (
+          <div className='text-sm leading-snug'>
+            <div>{firstLevel}</div>
+            {rest && (
+              <div className='text-muted-foreground !text-xs'>{rest}</div>
+            )}
+          </div>
+        )
+      },
+      size: 180,
+      meta: { mobileHidden: true },
+    },
+    {
+      id: 'job_level',
+      header: t('Job Level'),
+      cell: ({ row }) => {
+        const customFields = parseCustomFields(row.original.custom_field_values)
+        const level = customFields?.[CUSTOM_FIELD_KEYS.JOB_LEVEL]
+        return (
+          <span className='text-muted-foreground text-sm'>
+            {level || '-'}
+          </span>
+        )
+      },
+      size: 120,
+      meta: { mobileHidden: true },
+    },
+    {
+      accessorKey: 'join_date',
+      header: t('Join Date'),
+      cell: ({ row }) => {
+        const date = row.getValue('join_date') as string | undefined
+        return (
+          <span className='text-muted-foreground text-sm'>
+            {date || '-'}
+          </span>
+        )
+      },
+      size: 120,
+      meta: { mobileHidden: true },
     },
     {
       accessorKey: 'last_login_at',

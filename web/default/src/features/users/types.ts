@@ -132,3 +132,34 @@ export interface ManageUserQuotaPayload {
 // ============================================================================
 
 export type UsersDialogType = 'create' | 'update' | 'delete'
+
+// ============================================================================
+// Custom Field Helpers
+// ============================================================================
+
+export const CUSTOM_FIELD_KEYS = {
+  JOB_LEVEL: 'C-7434714811573665793',
+  JOB_DESCRIPTION: 'C-7439269744984244227',
+  BIRTHDAY: 'C-7613945054108945361',
+  HOMETOWN: 'C-7439630416690561028',
+  ETHNICITY: 'C-7439269636549230620',
+} as const
+
+export function parseCustomFields(
+  raw?: string
+): Record<string, string> | undefined {
+  if (!raw) return undefined
+  try {
+    const parsed = JSON.parse(raw)
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      !Array.isArray(parsed)
+    ) {
+      return parsed as Record<string, string>
+    }
+  } catch {
+    // ignore
+  }
+  return undefined
+}
