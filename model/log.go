@@ -736,3 +736,69 @@ func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64,
 
 	return total, nil
 }
+
+// DepartmentStat holds aggregated statistics for a department.
+type DepartmentStat struct {
+	TotalTokens   int64   `json:"total_tokens"`
+	TotalQuota    int64   `json:"total_quota"`
+	TotalRequests int64   `json:"total_requests"`
+	TotalErrors   int64   `json:"total_errors"`
+	TotalUseTime  int64   `json:"total_use_time"`
+	AvgUseTime    float64 `json:"avg_use_time"`
+	ErrorRate     float64 `json:"error_rate"`
+	AvgPricePerMT float64 `json:"avg_price_per_mt"`
+}
+
+// GetDepartmentStats aggregates log statistics for a set of usernames within a time range.
+func GetDepartmentStats(usernames []string, startTimestamp, endTimestamp int64) (*DepartmentStat, error) {
+	if len(usernames) == 0 {
+		return &DepartmentStat{}, nil
+	}
+
+	type statResult struct {
+		TotalTokens  int64 `gorm:"column:total_tokens"`
+		TotalQuota   int64 `gorm:"column:total_quota"`
+		TotalReqs    int64 `gorm:"column:total_reqs"`
+		TotalErrors  int64 `gorm:"column:total_errors"`
+		TotalUseTime int64 `gorm:"column:total_use_time"`
+	}
+
+	var result statResult
+	tx := LOG_DB.Table("logs").
+		Select(`COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_tokens,
+			COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota,
+			COUNT(*) as total_reqs,
+			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as total_errors,
+			COALESCE(SUM(use_time), 0) as total_use_time`, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError).
+		Where("type IN ?", []int{LogTypeConsume, LogTypeError}).
+		Where("username IN ?", usernames)
+
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	if err := tx.Scan(&result).Error; err != nil {
+		return nil, errors.New("查询部门统计数据失败")
+	}
+
+	stat := &DepartmentStat{
+		TotalTokens:   result.TotalTokens,
+		TotalQuota:    result.TotalQuota,
+		TotalRequests: result.TotalReqs,
+		TotalErrors:   result.TotalErrors,
+		TotalUseTime:  result.TotalUseTime,
+	}
+
+	if result.TotalReqs > 0 {
+		stat.ErrorRate = float64(result.TotalErrors) / float64(result.TotalReqs) * 100
+		stat.AvgUseTime = float64(result.TotalUseTime) / float64(result.TotalReqs)
+	}
+	if result.TotalTokens > 0 {
+		quotaInYuan := float64(result.TotalQuota) / 500000.0
+		stat.AvgPricePerMT = quotaInYuan / (float64(result.TotalTokens) / 1000000.0)
+	}
+
+	return stat, nil
+}
