@@ -1,5 +1,9 @@
 import { api } from '@/lib/api'
-import type { DepartmentTreeResponse, DepartmentStat } from './types'
+import type {
+  DepartmentTreeResponse,
+  DepartmentStat,
+  SubDepartmentStat,
+} from './types'
 
 export async function getDepartmentTree(): Promise<{
   success: boolean
@@ -20,5 +24,17 @@ export async function getDepartmentStats(params: {
     '/api/department/stats',
     params
   )
+  return res.data
+}
+
+export async function getSubDepartmentStats(params: {
+  department_id: string
+  start_timestamp: number
+  end_timestamp: number
+}): Promise<{ success: boolean; data: SubDepartmentStat[] }> {
+  const res = await api.post<{
+    success: boolean
+    data: SubDepartmentStat[]
+  }>('/api/department/sub-stats', params)
   return res.data
 }

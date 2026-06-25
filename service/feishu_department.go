@@ -10,6 +10,8 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting/system_setting"
+
+	"golang.org/x/sync/singleflight"
 )
 
 // ── Feishu tenant_access_token cache ──────────────────────────────
@@ -507,21 +509,163 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 		return nil, fmt.Errorf("get department members: %w", err)
 	}
 
-	usernames, err := findUsernamesByOpenIDs(memberOpenIDs)
+	userIds, err := findUserIdsByOpenIDs(memberOpenIDs)
 	if err != nil {
 		return nil, fmt.Errorf("find users by open_id: %w", err)
 	}
 
-	stat, err := model.GetDepartmentStats(usernames, req.StartTimestamp, req.EndTimestamp)
+	stat, err := model.GetDepartmentStats(userIds, req.StartTimestamp, req.EndTimestamp)
 	if err != nil {
 		return nil, err
 	}
-	stat.RegisteredUsers = int64(len(usernames))
+	stat.RegisteredUsers = int64(len(userIds))
 	stat.UnregisteredUsers = int64(len(memberOpenIDs)) - stat.RegisteredUsers
 	return stat, nil
 }
 
 
+
+// SubDepartmentStatItem holds stats for one sub-department.
+type SubDepartmentStatItem struct {
+	DepartmentID    string `json:"department_id"`
+	DepartmentName  string `json:"department_name"`
+	RegisteredUsers int64  `json:"registered_users"`
+	TotalUsers      int64  `json:"total_users"`
+	TotalQuota      int64  `json:"total_quota"`
+	TotalTokens     int64  `json:"total_tokens"`
+	TotalRequests   int64  `json:"total_requests"`
+}
+
+// GetSubDepartmentStats returns per-child-department statistics for the given parent department.
+func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem, error) {
+	if !system_setting.FeishuEnabled() {
+		return nil, fmt.Errorf("feishu integration is not configured")
+	}
+
+	token, err := feishuGetCachedTenantAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get tenant_access_token: %w", err)
+	}
+
+	items, err := getCachedDepartments(token)
+	if err != nil {
+		return nil, fmt.Errorf("get departments: %w", err)
+	}
+
+	children := getDirectChildren(items, req.DepartmentID)
+	if len(children) == 0 {
+		return []SubDepartmentStatItem{}, nil
+	}
+
+	// Collect all members per child department (including sub-descendants)
+	type deptMembers struct {
+		memberOpenIDs []string
+		userIDs       []int
+	}
+	deptData := make([]deptMembers, len(children))
+	errs := make([]error, len(children))
+	var wg sync.WaitGroup
+
+	for i, child := range children {
+		wg.Add(1)
+		go func(idx int, child feishuDeptItem) {
+			defer wg.Done()
+			deptIDs := collectOpenDeptIDsUnder(items, child.OpenDepartmentID)
+			memberOpenIDs, err := getAllMembersUnderDepts(token, deptIDs)
+			if err != nil {
+				errs[idx] = err
+				return
+			}
+			userIDs, err := findUserIdsByOpenIDs(memberOpenIDs)
+			if err != nil {
+				errs[idx] = err
+				return
+			}
+			deptData[idx] = deptMembers{memberOpenIDs: memberOpenIDs, userIDs: userIDs}
+		}(i, child)
+	}
+	wg.Wait()
+
+	for _, e := range errs {
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	// Collect all unique user IDs and map userID → dept index
+	allUserIDs := make([]int, 0)
+	userToDeptIdx := make(map[int]int)
+	for idx, dm := range deptData {
+		for _, uid := range dm.userIDs {
+			if _, exists := userToDeptIdx[uid]; !exists {
+				userToDeptIdx[uid] = idx
+				allUserIDs = append(allUserIDs, uid)
+			}
+		}
+	}
+
+	// Batch query all user stats
+	rows, err := model.GetUserStatsBatch(allUserIDs, req.StartTimestamp, req.EndTimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("get user stats batch: %w", err)
+	}
+
+	// Aggregate per department
+	type aggResult struct {
+		totalTokens   int64
+		totalQuota    int64
+		totalRequests int64
+	}
+	agg := make([]aggResult, len(children))
+	for _, row := range rows {
+		idx, ok := userToDeptIdx[row.UserID]
+		if !ok {
+			continue
+		}
+		agg[idx].totalTokens += row.TotalTokens
+		agg[idx].totalQuota += row.TotalQuota
+		agg[idx].totalRequests += row.TotalReqs
+	}
+
+	results := make([]SubDepartmentStatItem, len(children))
+	for i, child := range children {
+		results[i] = SubDepartmentStatItem{
+			DepartmentID:    child.OpenDepartmentID,
+			DepartmentName:  child.Name,
+			RegisteredUsers: int64(len(deptData[i].userIDs)),
+			TotalUsers:      int64(len(deptData[i].memberOpenIDs)),
+			TotalQuota:      agg[i].totalQuota,
+			TotalTokens:     agg[i].totalTokens,
+			TotalRequests:   agg[i].totalRequests,
+		}
+	}
+
+	return results, nil
+}
+
+// getDirectChildren returns the immediate child departments of the given parent.
+func getDirectChildren(items []feishuDeptItem, parentOpenDeptID string) []feishuDeptItem {
+	if parentOpenDeptID == "__tenant__" {
+		knownIDs := make(map[string]bool, len(items))
+		for _, item := range items {
+			knownIDs[item.OpenDepartmentID] = true
+		}
+		var roots []feishuDeptItem
+		for _, item := range items {
+			if item.ParentDepartmentID == "0" || item.ParentDepartmentID == "" || !knownIDs[item.ParentDepartmentID] {
+				roots = append(roots, item)
+			}
+		}
+		return roots
+	}
+	var children []feishuDeptItem
+	for _, item := range items {
+		if item.ParentDepartmentID == parentOpenDeptID {
+			children = append(children, item)
+		}
+	}
+	return children
+}
 
 // collectOpenDeptIDsUnder returns the open_department_id values for a given open_department_id
 // and all its descendants. If deptOpenID is "__tenant__", returns all open_department_ids.
@@ -562,6 +706,9 @@ type deptMembersCacheEntry struct {
 
 var deptMembersCache sync.Map
 
+// deptMembersSF suppresses duplicate concurrent fetches for the same department.
+var deptMembersSF singleflight.Group
+
 func getCachedDepartmentMembers(token, openDeptID string) ([]string, error) {
 	if v, ok := deptMembersCache.Load(openDeptID); ok {
 		entry := v.(deptMembersCacheEntry)
@@ -569,10 +716,14 @@ func getCachedDepartmentMembers(token, openDeptID string) ([]string, error) {
 			return entry.openIDs, nil
 		}
 	}
-	openIDs, err := fetchDepartmentMembers(token, openDeptID)
+	// singleflight: 相同 deptID 的并发请求只发一次飞书 API，防止缓存击穿
+	v, err, _ := deptMembersSF.Do(openDeptID, func() (any, error) {
+		return fetchDepartmentMembers(token, openDeptID)
+	})
 	if err != nil {
 		return nil, err
 	}
+	openIDs := v.([]string)
 	deptMembersCache.Store(openDeptID, deptMembersCacheEntry{openIDs: openIDs, cachedAt: time.Now()})
 	return openIDs, nil
 }
@@ -620,34 +771,63 @@ func fetchDepartmentMembers(token, openDeptID string) ([]string, error) {
 	return allOpenIDs, nil
 }
 
+// deptMembersFetchConcurrency limits how many departments are fetched
+// from the Feishu API in parallel.
+const deptMembersFetchConcurrency = 5
+
 func getAllMembersUnderDepts(token string, openDeptIDs []string) ([]string, error) {
 	seen := make(map[string]bool)
 	var result []string
+	var mu sync.Mutex
+	var firstErr error
+	var errOnce sync.Once
+
+	sem := make(chan struct{}, deptMembersFetchConcurrency)
+	var wg sync.WaitGroup
+
 	for _, deptID := range openDeptIDs {
-		members, err := getCachedDepartmentMembers(token, deptID)
-		if err != nil {
-			return nil, err
-		}
-		for _, openID := range members {
-			if !seen[openID] {
-				seen[openID] = true
-				result = append(result, openID)
+		wg.Add(1)
+		go func(deptID string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// singleflight in getCachedDepartmentMembers ensures concurrent
+			// calls for the same deptID share one Feishu API fetch
+			members, err := getCachedDepartmentMembers(token, deptID)
+			if err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
 			}
-		}
+
+			mu.Lock()
+			for _, openID := range members {
+				if !seen[openID] {
+					seen[openID] = true
+					result = append(result, openID)
+				}
+			}
+			mu.Unlock()
+		}(deptID)
+	}
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
 	}
 	return result, nil
 }
 
-func findUsernamesByOpenIDs(openIDs []string) ([]string, error) {
+func findUserIdsByOpenIDs(openIDs []string) ([]int, error) {
 	if len(openIDs) == 0 {
 		return nil, nil
 	}
-	var usernames []string
+	var userIds []int
 	if err := model.DB.Model(&model.User{}).
-		Select("username").
-		Where("open_id IN ? AND username != ''", openIDs).
-		Scan(&usernames).Error; err != nil {
+		Select("id").
+		Where("open_id IN ?", openIDs).
+		Scan(&userIds).Error; err != nil {
 		return nil, err
 	}
-	return usernames, nil
+	return userIds, nil
 }

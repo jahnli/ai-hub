@@ -737,6 +737,41 @@ func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64,
 	return total, nil
 }
 
+// UserStatRow holds per-user aggregated log data, used by batch department queries.
+type UserStatRow struct {
+	UserID      int   `gorm:"column:user_id"`
+	TotalTokens int64 `gorm:"column:total_tokens"`
+	TotalQuota  int64 `gorm:"column:total_quota"`
+	TotalReqs   int64 `gorm:"column:total_reqs"`
+}
+
+// GetUserStatsBatch returns per-user aggregated stats for all given user IDs in one query.
+func GetUserStatsBatch(userIds []int, startTimestamp, endTimestamp int64) ([]UserStatRow, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
+	var rows []UserStatRow
+	tx := LOG_DB.Table("logs").
+		Select(`user_id,
+			COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_tokens,
+			COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota,
+			COUNT(*) as total_reqs`, LogTypeConsume, LogTypeConsume, LogTypeConsume).
+		Where("type IN ?", []int{LogTypeConsume, LogTypeError}).
+		Where("user_id IN ?", userIds)
+
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+
+	if err := tx.Group("user_id").Scan(&rows).Error; err != nil {
+		return nil, errors.New("查询用户统计数据失败")
+	}
+	return rows, nil
+}
+
 // DepartmentStat holds aggregated statistics for a department.
 type DepartmentStat struct {
 	TotalTokens       int64   `json:"total_tokens"`
@@ -751,9 +786,9 @@ type DepartmentStat struct {
 	UnregisteredUsers int64   `json:"unregistered_users"`
 }
 
-// GetDepartmentStats aggregates log statistics for a set of usernames within a time range.
-func GetDepartmentStats(usernames []string, startTimestamp, endTimestamp int64) (*DepartmentStat, error) {
-	if len(usernames) == 0 {
+// GetDepartmentStats aggregates log statistics for a set of user IDs within a time range.
+func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64) (*DepartmentStat, error) {
+	if len(userIds) == 0 {
 		return &DepartmentStat{}, nil
 	}
 
@@ -773,7 +808,7 @@ func GetDepartmentStats(usernames []string, startTimestamp, endTimestamp int64) 
 			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as total_errors,
 			COALESCE(SUM(use_time), 0) as total_use_time`, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError).
 		Where("type IN ?", []int{LogTypeConsume, LogTypeError}).
-		Where("username IN ?", usernames)
+		Where("user_id IN ?", userIds)
 
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)

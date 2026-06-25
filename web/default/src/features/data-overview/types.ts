@@ -16,6 +16,16 @@ export interface DepartmentTreeResponse {
   tenant_info: TenantInfo | null
 }
 
+export interface SubDepartmentStat {
+  department_id: string
+  department_name: string
+  registered_users: number
+  total_users: number
+  total_quota: number
+  total_tokens: number
+  total_requests: number
+}
+
 export interface DepartmentStat {
   total_tokens: number
   total_quota: number

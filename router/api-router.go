@@ -272,6 +272,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			departmentRoute.GET("/tree", controller.GetDepartmentTree)
 			departmentRoute.POST("/stats", controller.GetDepartmentStats)
+			departmentRoute.POST("/sub-stats", controller.GetSubDepartmentStats)
 		}
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())

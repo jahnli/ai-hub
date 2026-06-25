@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, Building2, Loader2, Search } from 'lucide-react'
+import { AlertCircle, BarChart3, Building2, Loader2, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -10,8 +10,9 @@ import { SectionPageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
 import { getDefaultTimeRange } from '@/features/usage-logs/lib/utils'
-import { getDepartmentTree, getDepartmentStats } from './api'
+import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
+import { SubDepartmentStats } from './components/sub-department-stats'
 import type { DeptTreeNode, DepartmentStat } from './types'
 
 export function DataOverview() {
@@ -36,6 +37,13 @@ export function DataOverview() {
   const statsQuery = useQuery({
     queryKey: ['department', 'stats', queryParams],
     queryFn: () => getDepartmentStats(queryParams!),
+    enabled: !!queryParams,
+    staleTime: 60 * 1000,
+  })
+
+  const subStatsQuery = useQuery({
+    queryKey: ['department', 'sub-stats', queryParams],
+    queryFn: () => getSubDepartmentStats(queryParams!),
     enabled: !!queryParams,
     staleTime: 60 * 1000,
   })
@@ -131,8 +139,6 @@ export function DataOverview() {
       </SectionPageLayout.Title>
       <SectionPageLayout.Content>
         <FadeIn>
-          {treeQuery.isLoading && <DepartmentTreeSkeleton />}
-
           {treeQuery.isError && (
             <Alert variant='destructive'>
               <AlertCircle className='size-4' />
@@ -167,7 +173,21 @@ export function DataOverview() {
           )}
 
           {statsQuery.data?.data && (
-            <DepartmentStatsCards stat={statsQuery.data.data} />
+            <Card>
+              <CardHeader className='pb-4'>
+                <CardTitle className='flex items-center gap-2 text-base'>
+                  <BarChart3 className='text-primary size-5' />
+                  {t('Data Statistics')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DepartmentStatsCards stat={statsQuery.data.data} />
+              </CardContent>
+            </Card>
+          )}
+
+          {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && (
+            <SubDepartmentStats data={subStatsQuery.data.data} />
           )}
         </FadeIn>
       </SectionPageLayout.Content>
@@ -250,18 +270,6 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
   )
 }
 
-function DepartmentTreeSkeleton() {
-  return (
-    <div className='space-y-3'>
-      <Skeleton className='h-9 w-[200px]' />
-      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className='h-28 rounded-xl' />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function findFirstSelectable(nodes: DeptTreeNode[]): DeptTreeNode | null {
   for (const node of nodes) {
