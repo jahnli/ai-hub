@@ -42,7 +42,9 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
 
   const selectedLabel = useMemo(() => {
     if (!props.value) return null
-    return findLabel(props.treeData, props.value)
+    const path = findNodePath(props.treeData, props.value)
+    if (path.length === 0) return null
+    return path.map((n) => n.label).join(' / ')
   }, [props.value, props.treeData])
 
   const handleHover = useCallback(
@@ -92,7 +94,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
             role='combobox'
             aria-expanded={open}
             disabled={props.disabled}
-            className='h-8 min-w-[200px] max-w-[320px] justify-between gap-2 px-3 font-normal'
+            className='h-8 max-w-[480px] justify-between gap-2 px-3 font-normal'
           />
         }
       >
@@ -285,15 +287,6 @@ function SearchResultList(props: SearchResultListProps) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
-
-function findLabel(nodes: DeptTreeNode[], value: string): string | null {
-  for (const node of nodes) {
-    if (node.value === value) return node.label
-    const found = findLabel(node.children, value)
-    if (found) return found
-  }
-  return null
-}
 
 function findNodePath(
   nodes: DeptTreeNode[],
