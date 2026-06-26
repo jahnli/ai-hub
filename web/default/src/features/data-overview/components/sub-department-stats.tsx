@@ -1,58 +1,56 @@
-import { useMemo, useState } from 'react'
-import { type ColumnDef } from '@tanstack/react-table'
-import { VChart } from '@visactor/react-vchart'
-import { Building2, PieChart, BarChart3 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { DataTableView, useDataTable } from '@/components/data-table'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useChartTheme } from '@/lib/use-chart-theme'
-import { VCHART_OPTION } from '@/lib/vchart'
-import type { SubDepartmentStat } from '../types'
+import { useMemo } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { VChart } from "@visactor/react-vchart";
+import { Building2, PieChart, BarChart3 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { DataTableView, useDataTable } from "@/components/data-table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useChartTheme } from "@/lib/use-chart-theme";
+import { VCHART_OPTION } from "@/lib/vchart";
+import type { SubDepartmentStat } from "../types";
 
 interface SubDepartmentStatsProps {
-  data: SubDepartmentStat[]
+  data: SubDepartmentStat[];
 }
 
 function formatQuota(quota: number): string {
-  if (quota === 0) return '¥0'
-  return '¥' + (quota / 500000).toFixed(2)
+  if (quota === 0) return "¥0";
+  return "¥" + (quota / 500000).toFixed(2);
 }
 
 function formatTokens(tokens: number): string {
-  if (tokens === 0) return '0'
-  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
+  if (tokens === 0) return "0";
+  return (tokens / 1_0000_0000).toFixed(2) + " 亿";
 }
 
 function formatRequests(count: number): string {
-  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + ' 万'
-  return count.toLocaleString()
+  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + " 万";
+  return count.toLocaleString();
 }
 
 function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return useMemo(
     (): ColumnDef<SubDepartmentStat>[] => [
       {
-        accessorKey: 'department_name',
-        header: t('Department'),
+        accessorKey: "department_name",
+        header: t("Department"),
         enableSorting: false,
         cell: ({ row }) => (
-          <span className='font-medium'>{row.original.department_name}</span>
+          <span className="font-medium">{row.original.department_name}</span>
         ),
         size: 200,
       },
       {
-        id: 'users',
+        id: "users",
         accessorFn: (row) => row.registered_users,
-        header: t('Registered/Total'),
+        header: t("Registered/Total"),
         cell: ({ row }) => (
-          <div className='whitespace-nowrap'>
-            <span className='font-medium'>
-              {row.original.registered_users}
-            </span>
-            <span className='text-muted-foreground mx-0.5'>/</span>
-            <span className='text-muted-foreground'>
+          <div className="whitespace-nowrap">
+            <span className="font-medium">{row.original.registered_users}</span>
+            <span className="text-muted-foreground mx-0.5">/</span>
+            <span className="text-muted-foreground">
               {row.original.total_users}
             </span>
           </div>
@@ -60,102 +58,104 @@ function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
         size: 140,
       },
       {
-        accessorKey: 'total_tokens',
-        header: t('Tokens'),
+        accessorKey: "total_tokens",
+        header: t("Tokens"),
         cell: ({ row }) => (
-          <span className='text-muted-foreground font-mono'>
+          <span className="text-muted-foreground font-mono">
             {formatTokens(row.original.total_tokens)}
           </span>
         ),
         size: 120,
       },
       {
-        accessorKey: 'total_quota',
-        header: t('Total Cost'),
+        accessorKey: "total_quota",
+        header: t("Total Cost"),
         cell: ({ row }) => (
-          <span className='font-medium font-mono'>
+          <span className="font-medium font-mono">
             {formatQuota(row.original.total_quota)}
           </span>
         ),
         size: 120,
       },
       {
-        accessorKey: 'total_requests',
-        header: t('Request Count'),
+        accessorKey: "total_requests",
+        header: t("Request Count"),
         cell: ({ row }) => (
-          <span className='text-muted-foreground font-mono'>
+          <span className="text-muted-foreground font-mono">
             {formatRequests(row.original.total_requests)}
           </span>
         ),
         size: 120,
       },
     ],
-    [t]
-  )
+    [t],
+  );
 }
 
 export function SubDepartmentStats(props: SubDepartmentStatsProps) {
-  const { t } = useTranslation()
-  const { resolvedTheme, themeReady } = useChartTheme()
-  const [chartView, setChartView] = useState<'bar' | 'pie'>('bar')
-  const columns = useSubDepartmentColumns()
+  const { t } = useTranslation();
+  const { resolvedTheme, themeReady } = useChartTheme();
+  const columns = useSubDepartmentColumns();
 
   const sortedData = useMemo(
     () => [...props.data].sort((a, b) => b.total_quota - a.total_quota),
-    [props.data]
-  )
+    [props.data],
+  );
 
   const { table } = useDataTable({
     data: sortedData,
     columns,
-    initialSorting: [{ id: 'total_quota', desc: true }],
+    initialSorting: [{ id: "total_quota", desc: true }],
     withPaginationRowModel: false,
     withFilteredRowModel: false,
     withFacetedRowModel: false,
-  })
+  });
+
+  const totalCost = useMemo(
+    () => sortedData.reduce((sum, i) => sum + i.total_quota / 500000, 0),
+    [sortedData],
+  );
 
   const barSpec = useMemo(
     () => ({
-      type: 'bar' as const,
+      type: "bar" as const,
       data: [
         {
           values: sortedData.map((item) => ({
             name: item.department_name,
             tokens: item.total_tokens,
+            cost: item.total_quota / 500000,
           })),
         },
       ],
-      xField: 'name',
-      yField: 'tokens',
+      direction: "horizontal" as const,
+      xField: "tokens",
+      yField: "name",
       label: {
         visible: true,
-        position: 'outside',
-        formatMethod: (value: number) => {
-          return (value / 1_0000_0000).toFixed(1) + ' 亿'
-        },
+        position: "outside",
+        formatMethod: (value: number) => formatTokens(value),
       },
       bar: { style: { cornerRadius: [4, 4, 4, 4] } },
       axes: [
         {
-          orient: 'bottom',
-          type: 'band',
+          orient: "left",
+          type: "band",
           label: {
-            style: {
-              fontSize: 11,
-              angle: -45,
-              textAlign: 'right',
-              textBaseline: 'middle',
-            },
+            style: { fontSize: 11 },
             formatMethod: (v: string) =>
-              v.length > 12 ? v.slice(0, 12) + '…' : v,
+              v.length > 10 ? v.slice(0, 10) + "…" : v,
           },
         },
         {
-          orient: 'left',
-          type: 'linear',
+          orient: "bottom",
+          type: "linear",
           label: {
             formatMethod: (v: number) => {
-              return (v / 1_0000_0000).toFixed(1) + ' 亿'
+              if (v === 0) return "0";
+              if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(0) + " 亿";
+              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + " 万";
+              return v.toLocaleString();
             },
           },
         },
@@ -164,22 +164,28 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
         mark: {
           content: [
             {
-              key: t('Tokens'),
-              value: (d: { tokens?: number }) =>
-                (d.tokens ?? 0).toLocaleString(),
+              key: "Tokens",
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: t("Cost"),
+              value: (d: { cost?: number }) => {
+                const v = d.cost ?? 0;
+                return v === 0 ? "¥0" : "¥" + v.toFixed(2);
+              },
             },
           ],
         },
       },
-      theme: resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
+      theme: resolvedTheme === "dark" ? "dark" : "light",
+      background: "transparent",
     }),
-    [sortedData, resolvedTheme, t]
-  )
+    [sortedData, resolvedTheme, t],
+  );
 
   const pieSpec = useMemo(
     () => ({
-      type: 'pie' as const,
+      type: "pie" as const,
       data: [
         {
           values: sortedData
@@ -190,110 +196,104 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
             })),
         },
       ],
-      valueField: 'value',
-      categoryField: 'name',
+      valueField: "value",
+      categoryField: "name",
       outerRadius: 0.8,
       innerRadius: 0.5,
       label: {
         visible: true,
-        position: 'outside',
-        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? '',
+        position: "outside",
+        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? "",
       },
       tooltip: {
         mark: {
           content: [
             {
-              key: (d: { name?: string }) => d.name ?? '',
+              key: (d: { name?: string }) => d.name ?? "",
               value: (d: { value?: number }) => {
-                const v = d.value ?? 0
-                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
+                const v = d.value ?? 0;
+                return v === 0 ? "¥0" : "¥" + v.toFixed(2);
               },
             },
           ],
         },
       },
       legends: { visible: false },
-      theme: resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
+      theme: resolvedTheme === "dark" ? "dark" : "light",
+      background: "transparent",
     }),
-    [sortedData, resolvedTheme]
-  )
-
-  const chartTabs = [
-    {
-      value: 'bar' as const,
-      icon: BarChart3,
-      label: t('Token Usage by Department'),
-    },
-    { value: 'pie' as const, icon: PieChart, label: t('Cost Distribution') },
-  ]
+    [sortedData, resolvedTheme],
+  );
 
   if (props.data.length === 0) {
-    return null
+    return null;
   }
 
   return (
-    <Card className='mt-4'>
-      <CardHeader className='pb-3'>
-        <CardTitle className='flex items-center gap-2 text-base'>
-          <Building2 className='text-primary size-5' />
-          {t('Sub-department Statistics')}
+    <Card className="mt-4">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Building2 className="text-primary size-5" />
+          {t("Sub-department Statistics")}
         </CardTitle>
       </CardHeader>
-      <CardContent className='p-0'>
+      <CardContent className="p-0">
         {/* Table */}
-        <div className='px-2 pb-4'>
+        <div className="px-2 pb-4">
           <DataTableView
             table={table}
-            containerClassName='border-0 shadow-none'
+            containerClassName="border-0 shadow-none"
             applyHeaderSize
           />
         </div>
 
-        {/* Chart section */}
-        <div className='border-t'>
-          <div className='flex w-full items-center justify-between px-5 py-3'>
-            <div className='flex items-center gap-2'>
-              {chartView === 'bar' ? (
-                <BarChart3 className='text-muted-foreground/60 size-4' />
-              ) : (
-                <PieChart className='text-muted-foreground/60 size-4' />
-              )}
-              <span className='text-sm font-semibold'>
-                {chartView === 'bar'
-                  ? t('Token Usage by Department')
-                  : t('Cost Distribution')}
+        {/* Charts side by side */}
+        <div className="grid grid-cols-1 border-t md:grid-cols-2">
+          {/* Bar chart - consumption ranking */}
+          <div className="md:border-r">
+            <div className="flex items-center gap-2 px-5 py-3">
+              <BarChart3 className="text-muted-foreground/60 size-4" />
+              <span className="text-sm font-semibold">
+                {t("Token Usage by Department")}
               </span>
             </div>
-            <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
-              {chartTabs.map(({ value, icon: Icon, label }) => (
-                <button
-                  key={value}
-                  type='button'
-                  onClick={() => setChartView(value)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
-                    chartView === value
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Icon className='size-3.5' />
-                  {label}
-                </button>
-              ))}
+            <div
+              className="p-2"
+              style={{ height: Math.max(200, sortedData.length * 34) }}
+            >
+              {themeReady && (
+                <VChart
+                  key={`bar-${resolvedTheme}`}
+                  spec={barSpec}
+                  option={VCHART_OPTION}
+                />
+              )}
             </div>
           </div>
-          <div className='h-[300px] p-2'>
-            {themeReady && (
-              <VChart
-                key={`${chartView}-${resolvedTheme}`}
-                spec={chartView === 'bar' ? barSpec : pieSpec}
-                option={VCHART_OPTION}
-              />
-            )}
+          {/* Pie chart - consumption share */}
+          <div>
+            <div className="flex items-center gap-2 border-t px-5 py-3 md:border-t-0">
+              <PieChart className="text-muted-foreground/60 size-4" />
+              <span className="text-sm font-semibold">
+                {t("Department Consumption Share")}
+              </span>
+              <span className="text-muted-foreground ml-auto text-xs">
+                {t("Total")}:{" "}
+                {totalCost === 0 ? "¥0" : "¥" + totalCost.toFixed(2)}
+              </span>
+            </div>
+            <div className="h-[300px] p-2">
+              {themeReady && (
+                <VChart
+                  key={`pie-${resolvedTheme}`}
+                  spec={pieSpec}
+                  option={VCHART_OPTION}
+                />
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

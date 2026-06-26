@@ -1207,7 +1207,7 @@
     "Data Statistics": "数据统计",
     "Sub-department Statistics": "子部门统计",
     "Token Usage by Department": "各部门 Token 用量",
-    "Cost Distribution": "费用分布",
+    "Department Consumption Share": "各部门消耗占比",
     "Usage Analysis": "使用分析",
     "Model Ranking": "模型调用排行",
     "Model Usage Trend": "模型使用趋势",

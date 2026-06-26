@@ -9,6 +9,8 @@
   "Continue with LDAP": "使用 LDAP 继续",
   "Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.": "Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.",
   "Custom label for the LDAP login button": "LDAP 登录按钮的自定义文案",
+  "Token Usage by Department": "Token Usage by Department",
+  "Department Consumption Share": "Department Consumption Share",
   "e.g. AI Hub Console": "e.g. AI Hub Console",
   "Enable LDAP Login": "启用 LDAP 登录",
   "footer.columns.related.links.midjourney": "Midjourney-Proxy",
