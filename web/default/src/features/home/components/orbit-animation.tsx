@@ -26,8 +26,11 @@ interface OrbitIconDef {
 
 const INNER_ICONS: OrbitIconDef[] = [
   { name: 'DeepSeek.Color', angle: 0 },
+  { name: 'Moonshot', angle: 60 },
   { name: 'Zhipu.Color', angle: 120 },
+  { name: 'XiaomiMiMo', angle: 180 },
   { name: 'Minimax.Color', angle: 240 },
+  { name: 'Qwen.Color', angle: 300 },
 ]
 
 const OUTER_ICONS: OrbitIconDef[] = [
