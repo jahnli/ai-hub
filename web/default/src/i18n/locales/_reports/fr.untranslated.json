@@ -1,0 +1,9 @@
+{
+  "Apps using the most tokens through AI Hub": "Apps using the most tokens through AI Hub",
+  "Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.": "Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.",
+  "Format: AccessKey|SecretKey (or just ApiKey if upstream is AI Hub)": "Format: AccessKey|SecretKey (or just ApiKey if upstream is AI Hub)",
+  "How frequently the system checks auto-disabled channels for recovery": "How frequently the system checks auto-disabled channels for recovery",
+  "Sign in with LDAP": "Sign in with LDAP",
+  "Sign in with username or email": "Sign in with username or email",
+  "Username or password is empty": "Username or password is empty"
+}

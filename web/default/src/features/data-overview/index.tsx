@@ -1,7 +1,23 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, BarChart3, Building2, Loader2, Search } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  BarChart3,
+  Building2,
+  Coins,
+  DollarSign,
+  Hash,
+  Layers,
+  Loader2,
+  Search,
+  Timer,
+  UserCheck,
+  UserX,
+  type LucideIcon,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -180,42 +196,20 @@ export function DataOverview() {
           )}
 
           {statsQuery.isFetching && !statsQuery.data && (
-            <Card>
-              <CardHeader className='pb-4'>
-                <CardTitle className='flex items-center gap-2 text-base'>
-                  <BarChart3 className='text-primary size-5' />
-                  {t('Data Statistics')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Card key={i} size='sm'>
-                      <CardHeader>
-                        <Skeleton className='h-4 w-24' />
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className='h-8 w-32' />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className='overflow-hidden rounded-lg border'>
+              <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-4'>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'>
+                    <Skeleton className='h-3.5 w-20' />
+                    <Skeleton className='mt-2 h-7 w-24' />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {statsQuery.data?.data && (
-            <Card>
-              <CardHeader className='pb-4'>
-                <CardTitle className='flex items-center gap-2 text-base'>
-                  <BarChart3 className='text-primary size-5' />
-                  {t('Data Statistics')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DepartmentStatsCards stat={statsQuery.data.data} />
-              </CardContent>
-            </Card>
+            <DepartmentStatsCards stat={statsQuery.data.data} />
           )}
 
           {subStatsQuery.isFetching && !subStatsQuery.data && (
@@ -288,52 +282,53 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
 
   const formatRequests = (count: number): string => {
     if (count >= 1_0000) {
-      return t('{{value}}W requests', {
-        value: (count / 1_0000).toFixed(2),
-      })
+      return (count / 1_0000).toFixed(2) + ' 万'
     }
-    return t('{{value}} requests', { value: count.toLocaleString() })
+    return count.toLocaleString()
   }
 
-  const formatAvgTime = (seconds: number): string => {
-    return seconds.toFixed(1) + 's'
-  }
-
-  const formatErrorRate = (rate: number): string => {
-    return rate.toFixed(1) + '%'
-  }
-
-  const formatAvgPrice = (price: number): string => {
-    return '¥' + price.toFixed(2) + ' / M Tokens'
-  }
-
-  const cards = [
-    { title: t('Total Tokens'), value: formatTokens(stat.total_tokens) },
-    { title: t('Total Cost'), value: formatQuota(stat.total_quota) },
-    { title: t('Avg Price'), value: formatAvgPrice(stat.avg_price_per_mt) },
-    { title: t('Total Requests'), value: formatRequests(stat.total_requests) },
-    { title: t('Avg Response Time'), value: formatAvgTime(stat.avg_use_time) },
-    { title: t('Error Rate'), value: formatErrorRate(stat.error_rate) },
-    { title: t('Registered Users'), value: stat.registered_users.toString() },
-    { title: t('Unregistered Users'), value: stat.unregistered_users.toString() },
+  const items: { title: string; value: string; desc: string; icon: LucideIcon }[] = [
+    { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers },
+    { title: t('Total Cost'), value: formatQuota(stat.total_quota), desc: t('Statistical quota'), icon: Coins },
+    { title: t('Avg Price'), value: '¥' + stat.avg_price_per_mt.toFixed(2) + ' / MT', desc: t('Average price per million tokens'), icon: DollarSign },
+    { title: t('Total Requests'), value: formatRequests(stat.total_requests), desc: t('Statistical count'), icon: Hash },
+    { title: t('Avg Response Time'), value: stat.avg_use_time.toFixed(1) + 's', desc: t('Average response time'), icon: Timer },
+    { title: t('Error Rate'), value: stat.error_rate.toFixed(1) + '%', desc: t('Request error rate'), icon: AlertTriangle },
+    { title: t('Registered Users'), value: stat.registered_users.toLocaleString(), desc: t('Registered user count'), icon: UserCheck },
+    { title: t('Unregistered Users'), value: stat.unregistered_users.toLocaleString(), desc: t('Unregistered user count'), icon: UserX },
   ]
 
   return (
-    <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-      {cards.map((card) => (
-        <Card key={card.title} size='sm'>
-          <CardHeader>
-            <CardTitle className='text-muted-foreground text-sm font-medium'>
-              {card.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className='text-2xl font-semibold tracking-tight'>
-              {card.value}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className='overflow-hidden rounded-lg border'>
+      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-4'>
+        {items.map((it, idx) => {
+          const Icon = it.icon
+          return (
+            <div
+              key={it.title}
+              className={cn(
+                'min-w-0 px-3 py-2.5 sm:px-5 sm:py-4',
+                idx === items.length - 1 &&
+                  items.length % 2 !== 0 &&
+                  'col-span-2 sm:col-span-1'
+              )}
+            >
+              <div className='flex min-w-0 items-center gap-2'>
+                <Icon className='text-muted-foreground/60 size-3.5 shrink-0' />
+                <div className='text-muted-foreground truncate text-xs font-medium tracking-wider uppercase'>
+                  {it.title}
+                </div>
+              </div>
+              <div className='text-foreground mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl'>
+                {it.value}
+              </div>
+              <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
+                {it.desc}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
