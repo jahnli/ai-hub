@@ -40,9 +40,16 @@ export interface DailyStat {
   total_requests: number
 }
 
+export interface ModelDailyStat {
+  date: string
+  model_name: string
+  total_tokens: number
+}
+
 export interface UsageAnalysis {
   model_stats: ModelStat[]
   daily_stats: DailyStat[]
+  model_daily_stats: ModelDailyStat[]
 }
 
 export interface DepartmentStat {

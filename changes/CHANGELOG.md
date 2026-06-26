@@ -47,4 +47,4 @@
 | 040 | 2026-06-24 | 日志筛选日期范围选择器快捷预设从 5 个扩展为 13 个（含季度、半年等），新增 dayjs quarterOfYear 插件及 6 语言翻译 | [详情](details/040-date-picker-presets.md) |
 | 041 | 2026-06-25 | 飞书同步改用 directory/v1/employees/mget 单接口（替代原用户详情/工号/部门 3 个接口）；User 表飞书字段重构：employee_number→job_number，新增 description、gender、leader_id、mobile、job_title、departments、department_name、background_image、custom_field_values、join_date，移除旧部门拆分字段；custom_field_values 扁平化为 {field_key: text_value} 格式存储；修复 background_image 结构体类型错误（应为纯字符串） | `service/feishu_sync.go`、`model/user.go`、`controller/ldap.go` |
 | 042 | 2026-06-25 | 用户管理表格头像悬停资料卡片：飞书风格（背景图 Banner + 大头像 + 姓名角色），展示职级、部门、入职日期、邮箱、工号、职务、职位描述等字段；手机号、出生日期、民族、探亲地仅超级管理员可见；支持 custom_field_values 解析；6 语言翻译 | [详情](details/042-user-profile-hover-card.md) |
-| 043 | 2026-06-26 | 数据总览页增强：新增子部门统计板块与使用分析板块（模型调用排行/费用占比 + 每日用量趋势），后端批量聚合各子部门/模型/每日用量 | [详情](details/043-data-overview.md) |
+| 043 | 2026-06-26 | 数据总览页增强：新增子部门统计与使用分析板块（模型排行/费用占比/每日趋势/模型趋势/均价趋势）；图表改为纵向柱状图；加载骨架屏；侧边栏移至「控制台」分区；Token 格式化使用中文单位 | [详情](details/043-data-overview.md) |

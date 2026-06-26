@@ -853,6 +853,61 @@ func GetDailyStats(userIds []int, startTimestamp, endTimestamp int64) ([]DailySt
 	return rows, nil
 }
 
+// ModelDailyStatRow holds per-model per-day aggregated token stats.
+type ModelDailyStatRow struct {
+	Date        string `json:"date" gorm:"column:date"`
+	ModelName   string `json:"model_name" gorm:"column:model_name"`
+	TotalTokens int64  `json:"total_tokens" gorm:"column:total_tokens"`
+}
+
+// GetModelDailyStats returns per-model per-day token stats for the given user IDs, limited to the top N models.
+func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN int) ([]ModelDailyStatRow, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
+
+	dateExpr := "DATE(FROM_UNIXTIME(created_at))"
+	if common.UsingLogDatabase(common.DatabaseTypeSQLite) {
+		dateExpr = "DATE(created_at, 'unixepoch')"
+	} else if common.UsingLogDatabase(common.DatabaseTypePostgreSQL) {
+		dateExpr = "TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD')"
+	} else if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		dateExpr = "toString(toDate(toDateTime(created_at)))"
+	}
+
+	topModels, err := GetModelStats(userIds, startTimestamp, endTimestamp, topN)
+	if err != nil {
+		return nil, err
+	}
+	if len(topModels) == 0 {
+		return nil, nil
+	}
+	modelNames := make([]string, len(topModels))
+	for i, m := range topModels {
+		modelNames[i] = m.ModelName
+	}
+
+	var rows []ModelDailyStatRow
+	tx := LOG_DB.Table("logs").
+		Select(dateExpr + ` as date, model_name,
+			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens`).
+		Where("type = ?", LogTypeConsume).
+		Where("user_id IN ?", userIds).
+		Where("model_name IN ?", modelNames)
+
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+
+	if err := tx.Group("date, model_name").Order("date ASC").Scan(&rows).Error; err != nil {
+		return nil, errors.New("查询模型每日统计数据失败")
+	}
+	return rows, nil
+}
+
 // DepartmentStat holds aggregated statistics for a department.
 type DepartmentStat struct {
 	TotalTokens       int64   `json:"total_tokens"`

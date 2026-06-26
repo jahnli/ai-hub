@@ -80,6 +80,12 @@ export function useSidebarData(): SidebarData {
             icon: LayoutDashboard,
           },
           {
+            title: t('Data Overview'),
+            url: '/data-overview',
+            icon: BarChart3,
+            requiredRole: ROLE.ADMIN,
+          },
+          {
             title: t('API Keys'),
             url: '/keys',
             icon: Key,
@@ -118,11 +124,6 @@ export function useSidebarData(): SidebarData {
         id: 'admin',
         title: t('Admin'),
         items: [
-          {
-            title: t('Data Overview'),
-            url: '/data-overview',
-            icon: BarChart3,
-          },
           {
             title: t('Channels'),
             url: '/channels',

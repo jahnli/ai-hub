@@ -180,6 +180,31 @@ export function DataOverview() {
             </Alert>
           )}
 
+          {statsQuery.isFetching && !statsQuery.data && (
+            <Card>
+              <CardHeader className='pb-4'>
+                <CardTitle className='flex items-center gap-2 text-base'>
+                  <BarChart3 className='text-primary size-5' />
+                  {t('Data Statistics')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Card key={i} size='sm'>
+                      <CardHeader>
+                        <Skeleton className='h-4 w-24' />
+                      </CardHeader>
+                      <CardContent>
+                        <Skeleton className='h-8 w-32' />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {statsQuery.data?.data && (
             <Card>
               <CardHeader className='pb-4'>
@@ -194,12 +219,48 @@ export function DataOverview() {
             </Card>
           )}
 
+          {subStatsQuery.isFetching && !subStatsQuery.data && (
+            <Card className='mt-4'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='flex items-center gap-2 text-base'>
+                  <Building2 className='text-primary size-5' />
+                  {t('Sub-department Statistics')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className='flex items-center justify-center py-12'>
+                  <Loader2 className='text-muted-foreground size-6 animate-spin' />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && (
             <SubDepartmentStats data={subStatsQuery.data.data} />
           )}
 
-          {usageQuery.data?.data && (
-            <UsageAnalysisSection data={usageQuery.data.data} />
+          {usageQuery.isFetching && !usageQuery.data && (
+            <Card className='mt-4'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='flex items-center gap-2 text-base'>
+                  <BarChart3 className='text-primary size-5' />
+                  {t('Usage Analysis')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className='flex items-center justify-center py-12'>
+                  <Loader2 className='text-muted-foreground size-6 animate-spin' />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {usageQuery.data?.data && queryParams && (
+            <UsageAnalysisSection
+              data={usageQuery.data.data}
+              startTimestamp={queryParams.start_timestamp}
+              endTimestamp={queryParams.end_timestamp}
+            />
           )}
         </FadeIn>
       </SectionPageLayout.Content>
@@ -213,14 +274,10 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
 
   const formatTokens = (tokens: number): string => {
     if (tokens >= 1_0000_0000) {
-      return t('{{value}}B tokens', {
-        value: (tokens / 1_0000_0000).toFixed(2),
-      })
+      return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
     }
     if (tokens >= 1_0000) {
-      return t('{{value}}W tokens', {
-        value: (tokens / 1_0000).toFixed(2),
-      })
+      return (tokens / 1_0000).toFixed(2) + ' 万'
     }
     return tokens.toLocaleString()
   }

@@ -46,9 +46,8 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           })),
         },
       ],
-      direction: 'horizontal' as const,
-      xField: 'tokens',
-      yField: 'name',
+      xField: 'name',
+      yField: 'tokens',
       label: {
         visible: true,
         position: 'outside',
@@ -61,8 +60,31 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       },
       bar: { style: { cornerRadius: [4, 4, 4, 4] } },
       axes: [
-        { orient: 'left', type: 'band', label: { style: { fontSize: 12 } } },
-        { orient: 'bottom', type: 'linear', visible: false },
+        {
+          orient: 'bottom',
+          type: 'band',
+          label: {
+            style: {
+              fontSize: 11,
+              angle: -45,
+              textAlign: 'right',
+              textBaseline: 'middle',
+            },
+            formatMethod: (v: string) =>
+              v.length > 12 ? v.slice(0, 12) + '…' : v,
+          },
+        },
+        {
+          orient: 'left',
+          type: 'linear',
+          label: {
+            formatMethod: (v: number) => {
+              if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(1) + 'B'
+              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + 'W'
+              return v.toLocaleString()
+            },
+          },
+        },
       ],
       tooltip: {
         mark: {
@@ -147,8 +169,8 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
                 <th className='text-muted-foreground py-2.5 text-left font-medium'>
                   {t('Department')}
                 </th>
-                <th className='text-muted-foreground py-2.5 text-right font-medium'>
-                  {t('Users')}
+                <th className='text-muted-foreground py-2.5 text-center font-medium'>
+                  {t('Registered/Total')}
                 </th>
                 <th className='text-muted-foreground py-2.5 text-right font-medium'>
                   {t('Total Cost')}
@@ -170,7 +192,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
                   <td className='py-2.5 font-medium'>
                     {item.department_name}
                   </td>
-                  <td className='whitespace-nowrap py-2.5 pl-6 text-right'>
+                  <td className='whitespace-nowrap py-2.5 text-center'>
                     <span className='text-foreground font-medium'>
                       {item.registered_users}
                     </span>

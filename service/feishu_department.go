@@ -834,8 +834,9 @@ func findUserIdsByOpenIDs(openIDs []string) ([]int, error) {
 
 // UsageAnalysisResponse holds all usage analysis data returned in one response.
 type UsageAnalysisResponse struct {
-	ModelStats []model.ModelStatRow `json:"model_stats"`
-	DailyStats []model.DailyStatRow `json:"daily_stats"`
+	ModelStats      []model.ModelStatRow      `json:"model_stats"`
+	DailyStats      []model.DailyStatRow      `json:"daily_stats"`
+	ModelDailyStats []model.ModelDailyStatRow `json:"model_daily_stats"`
 }
 
 // GetUsageAnalysis fetches model ranking and daily trend for the selected department.
@@ -874,13 +875,15 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 	}
 
 	var (
-		modelStats []model.ModelStatRow
-		dailyStats []model.DailyStatRow
-		modelErr   error
-		dailyErr   error
-		wg         sync.WaitGroup
+		modelStats      []model.ModelStatRow
+		dailyStats      []model.DailyStatRow
+		modelDailyStats []model.ModelDailyStatRow
+		modelErr        error
+		dailyErr        error
+		modelDailyErr   error
+		wg              sync.WaitGroup
 	)
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		modelStats, modelErr = model.GetModelStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
@@ -888,6 +891,10 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 	go func() {
 		defer wg.Done()
 		dailyStats, dailyErr = model.GetDailyStats(userIds, req.StartTimestamp, req.EndTimestamp)
+	}()
+	go func() {
+		defer wg.Done()
+		modelDailyStats, modelDailyErr = model.GetModelDailyStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
 	}()
 	wg.Wait()
 
@@ -897,9 +904,13 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 	if dailyErr != nil {
 		return nil, dailyErr
 	}
+	if modelDailyErr != nil {
+		return nil, modelDailyErr
+	}
 
 	return &UsageAnalysisResponse{
-		ModelStats: modelStats,
-		DailyStats: dailyStats,
+		ModelStats:      modelStats,
+		DailyStats:      dailyStats,
+		ModelDailyStats: modelDailyStats,
 	}, nil
 }
