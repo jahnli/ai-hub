@@ -10,9 +10,10 @@ import { SectionPageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
 import { getDefaultTimeRange } from '@/features/usage-logs/lib/utils'
-import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats } from './api'
+import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
 import { SubDepartmentStats } from './components/sub-department-stats'
+import { UsageAnalysisSection } from './components/usage-analysis'
 import type { DeptTreeNode, DepartmentStat } from './types'
 
 export function DataOverview() {
@@ -44,6 +45,13 @@ export function DataOverview() {
   const subStatsQuery = useQuery({
     queryKey: ['department', 'sub-stats', queryParams],
     queryFn: () => getSubDepartmentStats(queryParams!),
+    enabled: !!queryParams,
+    staleTime: 60 * 1000,
+  })
+
+  const usageQuery = useQuery({
+    queryKey: ['department', 'usage-analysis', queryParams],
+    queryFn: () => getUsageAnalysis(queryParams!),
     enabled: !!queryParams,
     staleTime: 60 * 1000,
   })
@@ -188,6 +196,10 @@ export function DataOverview() {
 
           {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && (
             <SubDepartmentStats data={subStatsQuery.data.data} />
+          )}
+
+          {usageQuery.data?.data && (
+            <UsageAnalysisSection data={usageQuery.data.data} />
           )}
         </FadeIn>
       </SectionPageLayout.Content>

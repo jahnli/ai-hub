@@ -772,6 +772,87 @@ func GetUserStatsBatch(userIds []int, startTimestamp, endTimestamp int64) ([]Use
 	return rows, nil
 }
 
+// ModelStatRow holds per-model aggregated stats.
+type ModelStatRow struct {
+	ModelName   string `json:"model_name" gorm:"column:model_name"`
+	TotalTokens int64  `json:"total_tokens" gorm:"column:total_tokens"`
+	TotalQuota  int64  `json:"total_quota" gorm:"column:total_quota"`
+	TotalReqs   int64  `json:"total_requests" gorm:"column:total_reqs"`
+}
+
+// GetModelStats returns per-model aggregated stats for the given user IDs, ordered by quota desc, limited to top N.
+func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int) ([]ModelStatRow, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
+	var rows []ModelStatRow
+	tx := LOG_DB.Table("logs").
+		Select(`model_name,
+			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens,
+			COALESCE(SUM(quota), 0) as total_quota,
+			COUNT(*) as total_reqs`).
+		Where("type = ?", LogTypeConsume).
+		Where("user_id IN ?", userIds).
+		Where("model_name != ''")
+
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+
+	if err := tx.Group("model_name").Order("total_quota DESC").Limit(limit).Scan(&rows).Error; err != nil {
+		return nil, errors.New("查询模型统计数据失败")
+	}
+	return rows, nil
+}
+
+// DailyStatRow holds per-day aggregated stats.
+type DailyStatRow struct {
+	Date        string `json:"date" gorm:"column:date"`
+	TotalTokens int64  `json:"total_tokens" gorm:"column:total_tokens"`
+	TotalQuota  int64  `json:"total_quota" gorm:"column:total_quota"`
+	TotalReqs   int64  `json:"total_requests" gorm:"column:total_reqs"`
+}
+
+// GetDailyStats returns per-day aggregated stats for the given user IDs.
+func GetDailyStats(userIds []int, startTimestamp, endTimestamp int64) ([]DailyStatRow, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
+
+	dateExpr := "DATE(FROM_UNIXTIME(created_at))"
+	if common.UsingLogDatabase(common.DatabaseTypeSQLite) {
+		dateExpr = "DATE(created_at, 'unixepoch')"
+	} else if common.UsingLogDatabase(common.DatabaseTypePostgreSQL) {
+		dateExpr = "TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD')"
+	} else if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		dateExpr = "toString(toDate(toDateTime(created_at)))"
+	}
+
+	var rows []DailyStatRow
+	tx := LOG_DB.Table("logs").
+		Select(dateExpr+` as date,
+			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens,
+			COALESCE(SUM(quota), 0) as total_quota,
+			COUNT(*) as total_reqs`).
+		Where("type = ?", LogTypeConsume).
+		Where("user_id IN ?", userIds)
+
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+
+	if err := tx.Group("date").Order("date ASC").Scan(&rows).Error; err != nil {
+		return nil, errors.New("查询每日统计数据失败")
+	}
+	return rows, nil
+}
+
 // DepartmentStat holds aggregated statistics for a department.
 type DepartmentStat struct {
 	TotalTokens       int64   `json:"total_tokens"`

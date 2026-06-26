@@ -12,5 +12,6 @@
 - `web/default/src/features/data-overview/types.ts` — 部门树/统计类型；新增 SubDepartmentStat 接口
 - `web/default/src/features/data-overview/index.tsx` — 数据总览页面，查询后展示统计卡片与子部门板块
 - `web/default/src/features/data-overview/components/department-tree-select.tsx` — 级联展开/搜索部门树选择器
-- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：等宽列表（部门/用户/费用/Token/请求）+ 水平条形图（Token 用量对比）+ 环形饼图（费用分布）
+- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：列表与图表合并为单张卡片，共享标题，border-t 分隔后 tab 切换 Token 用量条形图/费用分布饼图
+- `web/default/src/features/data-overview/components/usage-analysis.tsx` — 使用分析组件：单卡片内包含模型调用排行/费用占比（tab 切换条形图/饼图）+ 每日用量趋势面积图（Tokens/请求数切换）
 - `web/default/src/i18n/locales/*.json` — 子部门统计、各部门 Token 用量、费用分布等翻译

@@ -26,6 +26,25 @@ export interface SubDepartmentStat {
   total_requests: number
 }
 
+export interface ModelStat {
+  model_name: string
+  total_tokens: number
+  total_quota: number
+  total_requests: number
+}
+
+export interface DailyStat {
+  date: string
+  total_tokens: number
+  total_quota: number
+  total_requests: number
+}
+
+export interface UsageAnalysis {
+  model_stats: ModelStat[]
+  daily_stats: DailyStat[]
+}
+
 export interface DepartmentStat {
   total_tokens: number
   total_quota: number

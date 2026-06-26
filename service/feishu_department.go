@@ -831,3 +831,75 @@ func findUserIdsByOpenIDs(openIDs []string) ([]int, error) {
 	}
 	return userIds, nil
 }
+
+// UsageAnalysisResponse holds all usage analysis data returned in one response.
+type UsageAnalysisResponse struct {
+	ModelStats []model.ModelStatRow `json:"model_stats"`
+	DailyStats []model.DailyStatRow `json:"daily_stats"`
+}
+
+// GetUsageAnalysis fetches model ranking and daily trend for the selected department.
+func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, error) {
+	if !system_setting.FeishuEnabled() {
+		return nil, fmt.Errorf("feishu integration is not configured")
+	}
+
+	token, err := feishuGetCachedTenantAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get tenant_access_token: %w", err)
+	}
+
+	items, err := getCachedDepartments(token)
+	if err != nil {
+		return nil, fmt.Errorf("get departments: %w", err)
+	}
+
+	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
+	if len(openDeptIDs) == 0 {
+		return &UsageAnalysisResponse{}, nil
+	}
+
+	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get department members: %w", err)
+	}
+
+	userIds, err := findUserIdsByOpenIDs(memberOpenIDs)
+	if err != nil {
+		return nil, fmt.Errorf("find users by open_id: %w", err)
+	}
+
+	if len(userIds) == 0 {
+		return &UsageAnalysisResponse{}, nil
+	}
+
+	var (
+		modelStats []model.ModelStatRow
+		dailyStats []model.DailyStatRow
+		modelErr   error
+		dailyErr   error
+		wg         sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		modelStats, modelErr = model.GetModelStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
+	}()
+	go func() {
+		defer wg.Done()
+		dailyStats, dailyErr = model.GetDailyStats(userIds, req.StartTimestamp, req.EndTimestamp)
+	}()
+	wg.Wait()
+
+	if modelErr != nil {
+		return nil, modelErr
+	}
+	if dailyErr != nil {
+		return nil, dailyErr
+	}
+
+	return &UsageAnalysisResponse{
+		ModelStats: modelStats,
+		DailyStats: dailyStats,
+	}, nil
+}

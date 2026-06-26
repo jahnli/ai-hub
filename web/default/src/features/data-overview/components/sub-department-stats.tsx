@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { VChart } from '@visactor/react-vchart'
 import { Building2, PieChart, BarChart3 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +14,7 @@ interface SubDepartmentStatsProps {
 export function SubDepartmentStats(props: SubDepartmentStatsProps) {
   const { t } = useTranslation()
   const { resolvedTheme, themeReady } = useChartTheme()
+  const [chartView, setChartView] = useState<'bar' | 'pie'>('bar')
 
   const sortedData = useMemo(
     () => [...props.data].sort((a, b) => b.total_quota - a.total_quota),
@@ -23,30 +24,6 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
   if (props.data.length === 0) {
     return null
   }
-
-  return (
-    <div className='mt-4 space-y-4'>
-      <StatsTable data={sortedData} />
-      <div className='grid gap-4 lg:grid-cols-2'>
-        <TokenBarChart
-          data={sortedData}
-          themeReady={themeReady}
-          resolvedTheme={resolvedTheme}
-        />
-        <CostPieChart
-          data={sortedData}
-          themeReady={themeReady}
-          resolvedTheme={resolvedTheme}
-        />
-      </div>
-    </div>
-  )
-}
-
-// ── Stats Table ──
-
-function StatsTable(props: { data: SubDepartmentStat[] }) {
-  const { t } = useTranslation()
 
   const formatQuota = (quota: number): string => {
     return '¥' + (quota / 500000).toFixed(2)
@@ -58,16 +35,112 @@ function StatsTable(props: { data: SubDepartmentStat[] }) {
     return tokens.toLocaleString()
   }
 
+  const barSpec = useMemo(
+    () => ({
+      type: 'bar' as const,
+      data: [
+        {
+          values: sortedData.map((item) => ({
+            name: item.department_name,
+            tokens: item.total_tokens,
+          })),
+        },
+      ],
+      direction: 'horizontal' as const,
+      xField: 'tokens',
+      yField: 'name',
+      label: {
+        visible: true,
+        position: 'outside',
+        formatMethod: (value: number) => {
+          if (value >= 1_0000_0000)
+            return (value / 1_0000_0000).toFixed(1) + 'B'
+          if (value >= 1_0000) return (value / 1_0000).toFixed(1) + 'W'
+          return value.toLocaleString()
+        },
+      },
+      bar: { style: { cornerRadius: [4, 4, 4, 4] } },
+      axes: [
+        { orient: 'left', type: 'band', label: { style: { fontSize: 12 } } },
+        { orient: 'bottom', type: 'linear', visible: false },
+      ],
+      tooltip: {
+        mark: {
+          content: [
+            {
+              key: t('Tokens'),
+              value: (d: { tokens?: number }) =>
+                (d.tokens ?? 0).toLocaleString(),
+            },
+          ],
+        },
+      },
+      theme: resolvedTheme === 'dark' ? 'dark' : 'light',
+      background: 'transparent',
+    }),
+    [sortedData, resolvedTheme, t]
+  )
+
+  const pieSpec = useMemo(
+    () => ({
+      type: 'pie' as const,
+      data: [
+        {
+          values: sortedData
+            .filter((i) => i.total_quota > 0)
+            .map((i) => ({
+              name: i.department_name,
+              value: i.total_quota / 500000,
+            })),
+        },
+      ],
+      valueField: 'value',
+      categoryField: 'name',
+      outerRadius: 0.8,
+      innerRadius: 0.5,
+      label: {
+        visible: true,
+        position: 'outside',
+        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? '',
+      },
+      tooltip: {
+        mark: {
+          content: [
+            {
+              key: (d: { name?: string }) => d.name ?? '',
+              value: (d: { value?: number }) =>
+                '¥' + (d.value ?? 0).toFixed(2),
+            },
+          ],
+        },
+      },
+      legends: { visible: false },
+      theme: resolvedTheme === 'dark' ? 'dark' : 'light',
+      background: 'transparent',
+    }),
+    [sortedData, resolvedTheme]
+  )
+
+  const chartTabs = [
+    {
+      value: 'bar' as const,
+      icon: BarChart3,
+      label: t('Token Usage by Department'),
+    },
+    { value: 'pie' as const, icon: PieChart, label: t('Cost Distribution') },
+  ]
+
   return (
-    <Card>
+    <Card className='mt-4'>
       <CardHeader className='pb-3'>
         <CardTitle className='flex items-center gap-2 text-base'>
           <Building2 className='text-primary size-5' />
           {t('Sub-department Statistics')}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className='overflow-x-auto'>
+      <CardContent className='p-0'>
+        {/* Table */}
+        <div className='overflow-x-auto px-6 pb-4'>
           <table className='w-full table-fixed text-sm'>
             <thead>
               <tr className='border-b'>
@@ -89,7 +162,7 @@ function StatsTable(props: { data: SubDepartmentStat[] }) {
               </tr>
             </thead>
             <tbody>
-              {props.data.map((item) => (
+              {sortedData.map((item) => (
                 <tr
                   key={item.department_id}
                   className='hover:bg-muted/50 border-b last:border-b-0'
@@ -102,7 +175,9 @@ function StatsTable(props: { data: SubDepartmentStat[] }) {
                       {item.registered_users}
                     </span>
                     <span className='text-muted-foreground mx-0.5'>/</span>
-                    <span className='text-muted-foreground'>{item.total_users}</span>
+                    <span className='text-muted-foreground'>
+                      {item.total_users}
+                    </span>
                   </td>
                   <td className='whitespace-nowrap py-2.5 pl-6 text-right font-medium'>
                     {formatQuota(item.total_quota)}
@@ -118,147 +193,49 @@ function StatsTable(props: { data: SubDepartmentStat[] }) {
             </tbody>
           </table>
         </div>
-      </CardContent>
-    </Card>
-  )
-}
 
-// ── Token Bar Chart ──
-
-interface ChartProps {
-  data: SubDepartmentStat[]
-  themeReady: boolean
-  resolvedTheme: string | undefined
-}
-
-function TokenBarChart(props: ChartProps) {
-  const { t } = useTranslation()
-
-  const spec = useMemo(() => {
-    const chartData = props.data.map((item) => ({
-      name: item.department_name,
-      tokens: item.total_tokens,
-    }))
-
-    return {
-      type: 'bar' as const,
-      data: [{ values: chartData }],
-      direction: 'horizontal' as const,
-      xField: 'tokens',
-      yField: 'name',
-      label: {
-        visible: true,
-        position: 'outside',
-        formatMethod: (value: number) => {
-          if (value >= 1_0000_0000) return (value / 1_0000_0000).toFixed(1) + 'B'
-          if (value >= 1_0000) return (value / 1_0000).toFixed(1) + 'W'
-          return value.toLocaleString()
-        },
-      },
-      bar: { style: { cornerRadius: [4, 4, 4, 4] } },
-      axes: [
-        { orient: 'left', type: 'band', label: { style: { fontSize: 12 } } },
-        { orient: 'bottom', type: 'linear', visible: false },
-      ],
-      tooltip: {
-        mark: {
-          content: [
-            {
-              key: t('Tokens'),
-              value: (datum: { tokens?: number }) =>
-                (datum.tokens ?? 0).toLocaleString(),
-            },
-          ],
-        },
-      },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
-    }
-  }, [props.data, props.resolvedTheme, t])
-
-  return (
-    <Card>
-      <CardHeader className='pb-3'>
-        <CardTitle className='flex items-center gap-2 text-sm font-medium'>
-          <BarChart3 className='text-muted-foreground size-4' />
-          {t('Token Usage by Department')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className='h-[280px]'>
-          {props.themeReady && (
-            <VChart
-              key={`bar-${props.resolvedTheme}`}
-              spec={spec}
-              option={VCHART_OPTION}
-            />
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ── Cost Pie Chart ──
-
-function CostPieChart(props: ChartProps) {
-  const { t } = useTranslation()
-
-  const spec = useMemo(() => {
-    const chartData = props.data
-      .filter((item) => item.total_quota > 0)
-      .map((item) => ({
-        name: item.department_name,
-        value: item.total_quota / 500000,
-      }))
-
-    return {
-      type: 'pie' as const,
-      data: [{ values: chartData }],
-      valueField: 'value',
-      categoryField: 'name',
-      outerRadius: 0.8,
-      innerRadius: 0.5,
-      label: {
-        visible: true,
-        position: 'outside',
-        formatMethod: (_: unknown, datum: { name?: string }) =>
-          datum.name ?? '',
-      },
-      tooltip: {
-        mark: {
-          content: [
-            {
-              key: (datum: { name?: string }) => datum.name ?? '',
-              value: (datum: { value?: number }) =>
-                '¥' + (datum.value ?? 0).toFixed(2),
-            },
-          ],
-        },
-      },
-      legends: { visible: false },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
-    }
-  }, [props.data, props.resolvedTheme])
-
-  return (
-    <Card>
-      <CardHeader className='pb-3'>
-        <CardTitle className='flex items-center gap-2 text-sm font-medium'>
-          <PieChart className='text-muted-foreground size-4' />
-          {t('Cost Distribution')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className='h-[280px]'>
-          {props.themeReady && (
-            <VChart
-              key={`pie-${props.resolvedTheme}`}
-              spec={spec}
-              option={VCHART_OPTION}
-            />
-          )}
+        {/* Chart section */}
+        <div className='border-t'>
+          <div className='flex w-full items-center justify-between px-5 py-3'>
+            <div className='flex items-center gap-2'>
+              {chartView === 'bar' ? (
+                <BarChart3 className='text-muted-foreground/60 size-4' />
+              ) : (
+                <PieChart className='text-muted-foreground/60 size-4' />
+              )}
+              <span className='text-sm font-semibold'>
+                {chartView === 'bar'
+                  ? t('Token Usage by Department')
+                  : t('Cost Distribution')}
+              </span>
+            </div>
+            <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
+              {chartTabs.map(({ value, icon: Icon, label }) => (
+                <button
+                  key={value}
+                  type='button'
+                  onClick={() => setChartView(value)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
+                    chartView === value
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className='size-3.5' />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className='h-[300px] p-2'>
+            {themeReady && (
+              <VChart
+                key={`${chartView}-${resolvedTheme}`}
+                spec={chartView === 'bar' ? barSpec : pieSpec}
+                option={VCHART_OPTION}
+              />
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

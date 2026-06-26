@@ -3,6 +3,7 @@ import type {
   DepartmentTreeResponse,
   DepartmentStat,
   SubDepartmentStat,
+  UsageAnalysis,
 } from './types'
 
 export async function getDepartmentTree(): Promise<{
@@ -36,5 +37,17 @@ export async function getSubDepartmentStats(params: {
     success: boolean
     data: SubDepartmentStat[]
   }>('/api/department/sub-stats', params)
+  return res.data
+}
+
+export async function getUsageAnalysis(params: {
+  department_id: string
+  start_timestamp: number
+  end_timestamp: number
+}): Promise<{ success: boolean; data: UsageAnalysis }> {
+  const res = await api.post<{
+    success: boolean
+    data: UsageAnalysis
+  }>('/api/department/usage-analysis', params)
   return res.data
 }
