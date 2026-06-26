@@ -110,7 +110,7 @@ export function DataOverview() {
         <div className='flex items-center gap-3'>
           <span>{t('Data Overview')}</span>
           {treeQuery.isLoading ? (
-            <Skeleton className='h-9 w-[200px]' />
+            <Skeleton className='h-8 w-[200px]' />
           ) : treeData ? (
             <DepartmentTreeSelect
               treeData={displayTreeData}
@@ -125,13 +125,9 @@ export function DataOverview() {
             onChange={setDateRange}
             className='max-w-[280px]'
           />
-          {treeQuery.isFetching && !treeQuery.isLoading && (
-            <Loader2 className='text-muted-foreground size-4 animate-spin' />
-          )}
           {selectedDeptId && (
             <Button
-              size='sm'
-              className='ml-auto gap-1.5'
+              className='gap-1.5'
               onClick={handleSearch}
               disabled={statsQuery.isFetching}
             >
@@ -142,6 +138,9 @@ export function DataOverview() {
               )}
               {t('Search')}
             </Button>
+          )}
+          {treeQuery.isFetching && !treeQuery.isLoading && (
+            <Loader2 className='text-muted-foreground size-4 animate-spin' />
           )}
         </div>
       </SectionPageLayout.Title>

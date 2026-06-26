@@ -92,7 +92,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
             role='combobox'
             aria-expanded={open}
             disabled={props.disabled}
-            className='h-9 min-w-[200px] max-w-[320px] justify-between gap-2 px-3 font-normal'
+            className='h-8 min-w-[200px] max-w-[320px] justify-between gap-2 px-3 font-normal'
           />
         }
       >
