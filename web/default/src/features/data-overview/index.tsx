@@ -263,16 +263,12 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
   const { stat } = props
 
   const formatTokens = (tokens: number): string => {
-    if (tokens >= 1_0000_0000) {
-      return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
-    }
-    if (tokens >= 1_0000) {
-      return (tokens / 1_0000).toFixed(2) + ' 万'
-    }
-    return tokens.toLocaleString()
+    if (tokens === 0) return '0'
+    return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
   }
 
   const formatQuota = (quota: number): string => {
+    if (quota === 0) return '¥0'
     const yuan = quota / 500000
     return '¥' + yuan.toFixed(2)
   }
@@ -287,7 +283,7 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
   const items: { title: string; value: string; desc: string; icon: LucideIcon; valueClassName?: string }[] = [
     { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers },
     { title: t('Total Cost'), value: formatQuota(stat.total_quota), desc: t('Statistical quota'), icon: Coins },
-    { title: t('Avg Price'), value: '¥' + stat.avg_price_per_mt.toFixed(2) + ' / MT', desc: t('Average price per million tokens'), icon: DollarSign },
+    { title: t('Avg Price'), value: (stat.avg_price_per_mt === 0 ? '¥0' : '¥' + stat.avg_price_per_mt.toFixed(2)) + ' / MT', desc: t('Average price per million tokens'), icon: DollarSign },
     { title: t('Total Requests'), value: formatRequests(stat.total_requests), desc: t('Statistical count'), icon: Hash },
     { title: t('Registered Count'), value: stat.registered_users.toLocaleString(), desc: t('Registered people count'), icon: UserCheck, valueClassName: 'text-emerald-600 dark:text-emerald-400' },
     { title: t('Unregistered Count'), value: stat.unregistered_users.toLocaleString(), desc: t('Unregistered people count'), icon: UserX, valueClassName: 'text-amber-600 dark:text-amber-400' },

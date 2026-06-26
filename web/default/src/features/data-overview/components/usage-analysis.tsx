@@ -104,7 +104,7 @@ function ModelCharts(props: ChartProps) {
         visible: true,
         position: 'outside',
         formatMethod: (value: number) => {
-          if (value >= 1_0000) return (value / 1_0000).toFixed(1) + 'W'
+          if (value >= 1_0000) return (value / 1_0000).toFixed(1) + ' 万'
           return value.toLocaleString()
         },
       },
@@ -124,7 +124,7 @@ function ModelCharts(props: ChartProps) {
           type: 'linear',
           label: {
             formatMethod: (v: number) => {
-              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + 'W'
+              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
               return v.toLocaleString()
             },
           },
@@ -174,8 +174,10 @@ function ModelCharts(props: ChartProps) {
           content: [
             {
               key: (d: { name?: string }) => d.name ?? '',
-              value: (d: { value?: number }) =>
-                '¥' + (d.value ?? 0).toFixed(2),
+              value: (d: { value?: number }) => {
+                const v = d.value ?? 0
+                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
+              },
             },
           ],
         },
@@ -270,9 +272,11 @@ function DailyTrendChart(props: ChartProps) {
 
     const formatAxis = (v: number) => {
       if (metric === 'quota') return '¥' + (v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v.toFixed(0))
-      if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(1) + 'B'
-      if (v >= 1_0000) return (v / 1_0000).toFixed(0) + 'W'
-      return v.toLocaleString()
+      if (metric === 'requests') {
+        if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
+        return v.toLocaleString()
+      }
+      return (v / 1_0000_0000).toFixed(1) + ' 亿'
     }
 
     const tooltipKey =
@@ -284,7 +288,7 @@ function DailyTrendChart(props: ChartProps) {
 
     const formatTooltip = (v: number) =>
       metric === 'quota'
-        ? '¥' + v.toFixed(2)
+        ? (v === 0 ? '¥0' : '¥' + v.toFixed(2))
         : v.toLocaleString()
 
     return {
@@ -407,9 +411,7 @@ function ModelUsageTrend(props: ChartProps) {
     if (props.data.length === 0) return null
 
     const formatAxis = (v: number) => {
-      if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(1) + 'B'
-      if (v >= 1_0000) return (v / 1_0000).toFixed(0) + 'W'
-      return v.toLocaleString()
+      return (v / 1_0000_0000).toFixed(1) + ' 亿'
     }
 
     const dayCount = new Set(props.data.map((d: { date: string }) => d.date)).size
@@ -613,7 +615,7 @@ function AvgPriceTrendChart(props: AvgPriceTrendProps) {
           orient: 'left',
           type: 'linear',
           label: {
-            formatMethod: (v: number) => '¥' + v.toFixed(2),
+            formatMethod: (v: number) => v === 0 ? '¥0' : '¥' + v.toFixed(2),
           },
         },
       ],

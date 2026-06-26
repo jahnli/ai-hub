@@ -14,13 +14,18 @@ interface SubDepartmentStatsProps {
 }
 
 function formatQuota(quota: number): string {
+  if (quota === 0) return '¥0'
   return '¥' + (quota / 500000).toFixed(2)
 }
 
 function formatTokens(tokens: number): string {
-  if (tokens >= 1_0000_0000) return (tokens / 1_0000_0000).toFixed(2) + 'B'
-  if (tokens >= 1_0000) return (tokens / 1_0000).toFixed(2) + 'W'
-  return tokens.toLocaleString()
+  if (tokens === 0) return '0'
+  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
+}
+
+function formatRequests(count: number): string {
+  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + ' 万'
+  return count.toLocaleString()
 }
 
 function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
@@ -79,7 +84,7 @@ function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
         header: t('Request Count'),
         cell: ({ row }) => (
           <span className='text-muted-foreground font-mono'>
-            {row.original.total_requests.toLocaleString()}
+            {formatRequests(row.original.total_requests)}
           </span>
         ),
         size: 120,
@@ -126,10 +131,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
         visible: true,
         position: 'outside',
         formatMethod: (value: number) => {
-          if (value >= 1_0000_0000)
-            return (value / 1_0000_0000).toFixed(1) + 'B'
-          if (value >= 1_0000) return (value / 1_0000).toFixed(1) + 'W'
-          return value.toLocaleString()
+          return (value / 1_0000_0000).toFixed(1) + ' 亿'
         },
       },
       bar: { style: { cornerRadius: [4, 4, 4, 4] } },
@@ -153,9 +155,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           type: 'linear',
           label: {
             formatMethod: (v: number) => {
-              if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(1) + 'B'
-              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + 'W'
-              return v.toLocaleString()
+              return (v / 1_0000_0000).toFixed(1) + ' 亿'
             },
           },
         },
@@ -204,8 +204,10 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           content: [
             {
               key: (d: { name?: string }) => d.name ?? '',
-              value: (d: { value?: number }) =>
-                '¥' + (d.value ?? 0).toFixed(2),
+              value: (d: { value?: number }) => {
+                const v = d.value ?? 0
+                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
+              },
             },
           ],
         },
