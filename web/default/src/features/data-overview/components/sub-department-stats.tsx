@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
+import { type ColumnDef } from '@tanstack/react-table'
 import { VChart } from '@visactor/react-vchart'
 import { Building2, PieChart, BarChart3 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { DataTableView, useDataTable } from '@/components/data-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
@@ -11,29 +13,101 @@ interface SubDepartmentStatsProps {
   data: SubDepartmentStat[]
 }
 
+function formatQuota(quota: number): string {
+  return '¥' + (quota / 500000).toFixed(2)
+}
+
+function formatTokens(tokens: number): string {
+  if (tokens >= 1_0000_0000) return (tokens / 1_0000_0000).toFixed(2) + 'B'
+  if (tokens >= 1_0000) return (tokens / 1_0000).toFixed(2) + 'W'
+  return tokens.toLocaleString()
+}
+
+function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
+  const { t } = useTranslation()
+
+  return useMemo(
+    (): ColumnDef<SubDepartmentStat>[] => [
+      {
+        accessorKey: 'department_name',
+        header: t('Department'),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className='font-medium'>{row.original.department_name}</span>
+        ),
+        size: 200,
+      },
+      {
+        id: 'users',
+        accessorFn: (row) => row.registered_users,
+        header: t('Registered/Total'),
+        cell: ({ row }) => (
+          <div className='whitespace-nowrap'>
+            <span className='font-medium'>
+              {row.original.registered_users}
+            </span>
+            <span className='text-muted-foreground mx-0.5'>/</span>
+            <span className='text-muted-foreground'>
+              {row.original.total_users}
+            </span>
+          </div>
+        ),
+        size: 140,
+      },
+      {
+        accessorKey: 'total_tokens',
+        header: t('Tokens'),
+        cell: ({ row }) => (
+          <span className='text-muted-foreground font-mono'>
+            {formatTokens(row.original.total_tokens)}
+          </span>
+        ),
+        size: 120,
+      },
+      {
+        accessorKey: 'total_quota',
+        header: t('Total Cost'),
+        cell: ({ row }) => (
+          <span className='font-medium font-mono'>
+            {formatQuota(row.original.total_quota)}
+          </span>
+        ),
+        size: 120,
+      },
+      {
+        accessorKey: 'total_requests',
+        header: t('Request Count'),
+        cell: ({ row }) => (
+          <span className='text-muted-foreground font-mono'>
+            {row.original.total_requests.toLocaleString()}
+          </span>
+        ),
+        size: 120,
+      },
+    ],
+    [t]
+  )
+}
+
 export function SubDepartmentStats(props: SubDepartmentStatsProps) {
   const { t } = useTranslation()
   const { resolvedTheme, themeReady } = useChartTheme()
   const [chartView, setChartView] = useState<'bar' | 'pie'>('bar')
+  const columns = useSubDepartmentColumns()
 
   const sortedData = useMemo(
     () => [...props.data].sort((a, b) => b.total_quota - a.total_quota),
     [props.data]
   )
 
-  if (props.data.length === 0) {
-    return null
-  }
-
-  const formatQuota = (quota: number): string => {
-    return '¥' + (quota / 500000).toFixed(2)
-  }
-
-  const formatTokens = (tokens: number): string => {
-    if (tokens >= 1_0000_0000) return (tokens / 1_0000_0000).toFixed(2) + 'B'
-    if (tokens >= 1_0000) return (tokens / 1_0000).toFixed(2) + 'W'
-    return tokens.toLocaleString()
-  }
+  const { table } = useDataTable({
+    data: sortedData,
+    columns,
+    initialSorting: [{ id: 'total_quota', desc: true }],
+    withPaginationRowModel: false,
+    withFilteredRowModel: false,
+    withFacetedRowModel: false,
+  })
 
   const barSpec = useMemo(
     () => ({
@@ -152,6 +226,10 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
     { value: 'pie' as const, icon: PieChart, label: t('Cost Distribution') },
   ]
 
+  if (props.data.length === 0) {
+    return null
+  }
+
   return (
     <Card className='mt-4'>
       <CardHeader className='pb-3'>
@@ -162,58 +240,12 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       </CardHeader>
       <CardContent className='p-0'>
         {/* Table */}
-        <div className='overflow-x-auto px-6 pb-4'>
-          <table className='w-full table-fixed text-sm'>
-            <thead>
-              <tr className='border-b'>
-                <th className='text-muted-foreground py-2.5 text-left font-medium'>
-                  {t('Department')}
-                </th>
-                <th className='text-muted-foreground py-2.5 text-center font-medium'>
-                  {t('Registered/Total')}
-                </th>
-                <th className='text-muted-foreground py-2.5 text-right font-medium'>
-                  {t('Total Cost')}
-                </th>
-                <th className='text-muted-foreground py-2.5 text-right font-medium'>
-                  {t('Tokens')}
-                </th>
-                <th className='text-muted-foreground py-2.5 text-right font-medium'>
-                  {t('Requests')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedData.map((item) => (
-                <tr
-                  key={item.department_id}
-                  className='hover:bg-muted/50 border-b last:border-b-0'
-                >
-                  <td className='py-2.5 font-medium'>
-                    {item.department_name}
-                  </td>
-                  <td className='whitespace-nowrap py-2.5 text-center'>
-                    <span className='text-foreground font-medium'>
-                      {item.registered_users}
-                    </span>
-                    <span className='text-muted-foreground mx-0.5'>/</span>
-                    <span className='text-muted-foreground'>
-                      {item.total_users}
-                    </span>
-                  </td>
-                  <td className='whitespace-nowrap py-2.5 pl-6 text-right font-medium'>
-                    {formatQuota(item.total_quota)}
-                  </td>
-                  <td className='text-muted-foreground whitespace-nowrap py-2.5 pl-6 text-right'>
-                    {formatTokens(item.total_tokens)}
-                  </td>
-                  <td className='text-muted-foreground whitespace-nowrap py-2.5 pl-6 text-right'>
-                    {item.total_requests.toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className='px-2 pb-4'>
+          <DataTableView
+            table={table}
+            containerClassName='border-0 shadow-none'
+            applyHeaderSize
+          />
         </div>
 
         {/* Chart section */}

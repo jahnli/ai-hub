@@ -155,9 +155,6 @@ export function DataOverview() {
               {t('Search')}
             </Button>
           )}
-          {treeQuery.isFetching && !treeQuery.isLoading && (
-            <Loader2 className='text-muted-foreground size-4 animate-spin' />
-          )}
         </div>
       </SectionPageLayout.Title>
       <SectionPageLayout.Content>
@@ -287,15 +284,15 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return count.toLocaleString()
   }
 
-  const items: { title: string; value: string; desc: string; icon: LucideIcon }[] = [
+  const items: { title: string; value: string; desc: string; icon: LucideIcon; valueClassName?: string }[] = [
     { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers },
     { title: t('Total Cost'), value: formatQuota(stat.total_quota), desc: t('Statistical quota'), icon: Coins },
     { title: t('Avg Price'), value: '¥' + stat.avg_price_per_mt.toFixed(2) + ' / MT', desc: t('Average price per million tokens'), icon: DollarSign },
     { title: t('Total Requests'), value: formatRequests(stat.total_requests), desc: t('Statistical count'), icon: Hash },
+    { title: t('Registered Count'), value: stat.registered_users.toLocaleString(), desc: t('Registered people count'), icon: UserCheck, valueClassName: 'text-emerald-600 dark:text-emerald-400' },
+    { title: t('Unregistered Count'), value: stat.unregistered_users.toLocaleString(), desc: t('Unregistered people count'), icon: UserX, valueClassName: 'text-amber-600 dark:text-amber-400' },
     { title: t('Avg Response Time'), value: stat.avg_use_time.toFixed(1) + 's', desc: t('Average response time'), icon: Timer },
     { title: t('Error Rate'), value: stat.error_rate.toFixed(1) + '%', desc: t('Request error rate'), icon: AlertTriangle },
-    { title: t('Registered Users'), value: stat.registered_users.toLocaleString(), desc: t('Registered user count'), icon: UserCheck },
-    { title: t('Unregistered Users'), value: stat.unregistered_users.toLocaleString(), desc: t('Unregistered user count'), icon: UserX },
   ]
 
   return (
@@ -319,7 +316,7 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
                   {it.title}
                 </div>
               </div>
-              <div className='text-foreground mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl'>
+              <div className={cn('mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl', it.valueClassName || 'text-foreground')}>
                 {it.value}
               </div>
               <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
