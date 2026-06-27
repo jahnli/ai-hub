@@ -75,18 +75,7 @@ export function DataOverview() {
   const treeData = treeQuery.data?.data
   const displayTreeData = useMemo(() => {
     if (!treeData) return []
-    const tenantName = treeData.tenant_info?.name
-    if (!tenantName || treeData.tree_data[0]?.value === '__tenant__') {
-      return treeData.tree_data
-    }
-    return [
-      {
-        value: '__tenant__',
-        label: tenantName,
-        disabled: false,
-        children: treeData.tree_data,
-      },
-    ]
+    return treeData.tree_data
   }, [treeData])
 
   useEffect(() => {

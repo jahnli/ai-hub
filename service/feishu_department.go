@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -324,28 +325,118 @@ func sortTree(nodes []*DeptTreeNode) {
 // ── Permission trimming ───────────────────────────────────────────
 
 // trimTreeForUser returns the permission-trimmed tree and the list of department IDs the user leads.
-func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string) ([]*DeptTreeNode, []string) {
+func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, departmentName string, isDeptLeader bool) ([]*DeptTreeNode, []string) {
 	// Super admin: full tree, no disabled
 	if userRole >= common.RoleRootUser {
 		return fullTree, collectAllLeaderDepts(fullTree, userOpenID)
 	}
 
-	// Admin: find departments where user is leader
-	leaderDeptIDs := collectAllLeaderDepts(fullTree, userOpenID)
-	if len(leaderDeptIDs) == 0 {
-		// Admin but not a leader of any department → return full tree with all disabled
+	// Admin: leader-based permission trimming
+	if userRole >= common.RoleAdminUser {
+		leaderDeptIDs := collectAllLeaderDepts(fullTree, userOpenID)
+		if len(leaderDeptIDs) == 0 {
+			return markAllDisabled(fullTree), nil
+		}
+		leaderSet := make(map[string]bool, len(leaderDeptIDs))
+		for _, id := range leaderDeptIDs {
+			leaderSet[id] = true
+		}
+		trimmed := trimNodes(fullTree, leaderSet)
+		return trimmed, leaderDeptIDs
+	}
+
+	// BP roles: scope based on user's department_name hierarchy
+	if userRole == common.RoleCenterBP || userRole == common.RoleBUBP {
+		return trimTreeForBP(fullTree, userRole, departmentName)
+	}
+
+	// Dept leader (role=1): sees their own department (last segment) + subtree
+	if isDeptLeader {
+		return trimTreeForDeptLeader(fullTree, departmentName)
+	}
+
+	return markAllDisabled(fullTree), nil
+}
+
+// trimTreeForBP trims the tree for BP users based on their department_name hierarchy.
+// CenterBP sees the center (1st segment) and all sub-departments.
+// BUBP sees the business unit (2nd segment) and all sub-departments.
+func trimTreeForBP(fullTree []*DeptTreeNode, userRole int, departmentName string) ([]*DeptTreeNode, []string) {
+	segments := splitDepartmentName(departmentName)
+
+	var targetName string
+	switch userRole {
+	case common.RoleCenterBP:
+		if len(segments) < 1 {
+			return markAllDisabled(fullTree), nil
+		}
+		targetName = segments[0]
+	case common.RoleBUBP:
+		if len(segments) < 2 {
+			return markAllDisabled(fullTree), nil
+		}
+		targetName = segments[1]
+	default:
 		return markAllDisabled(fullTree), nil
 	}
 
-	leaderSet := make(map[string]bool, len(leaderDeptIDs))
-	for _, id := range leaderDeptIDs {
-		leaderSet[id] = true
+	targetNode := findNodeByLabel(fullTree, targetName)
+	if targetNode == nil {
+		return markAllDisabled(fullTree), nil
 	}
 
-	// Build a trimmed tree: include leader departments + their subtrees (enabled),
-	// plus ancestor path nodes (disabled, for context)
-	trimmed := trimNodes(fullTree, leaderSet)
-	return trimmed, leaderDeptIDs
+	targetSet := map[string]bool{targetNode.Value: true}
+	trimmed := trimNodes(fullTree, targetSet)
+	return trimmed, []string{targetNode.Value}
+}
+
+// trimTreeForDeptLeader trims the tree for dept leaders.
+// A dept leader sees their own department (last segment of department_name) + subtree.
+func trimTreeForDeptLeader(fullTree []*DeptTreeNode, departmentName string) ([]*DeptTreeNode, []string) {
+	segments := splitDepartmentName(departmentName)
+	if len(segments) == 0 {
+		return markAllDisabled(fullTree), nil
+	}
+
+	targetName := segments[len(segments)-1]
+	targetNode := findNodeByLabel(fullTree, targetName)
+	if targetNode == nil {
+		return markAllDisabled(fullTree), nil
+	}
+
+	targetSet := map[string]bool{targetNode.Value: true}
+	trimmed := trimNodes(fullTree, targetSet)
+	return trimmed, []string{targetNode.Value}
+}
+
+// splitDepartmentName splits "数智产品中心 / AI应用技术部 / AI工程效率科" into
+// ["数智产品中心", "AI应用技术部", "AI工程效率科"].
+func splitDepartmentName(name string) []string {
+	if name == "" {
+		return nil
+	}
+	parts := strings.Split(name, " / ")
+	var result []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// findNodeByLabel searches the tree recursively for a node with the given label.
+func findNodeByLabel(nodes []*DeptTreeNode, label string) *DeptTreeNode {
+	for _, node := range nodes {
+		if node.Label == label {
+			return node
+		}
+		if found := findNodeByLabel(node.Children, label); found != nil {
+			return found
+		}
+	}
+	return nil
 }
 
 func collectAllLeaderDepts(nodes []*DeptTreeNode, userOpenID string) []string {
@@ -454,13 +545,13 @@ func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error
 	}
 
 	fullTree := buildDeptTree(items)
-	trimmedTree, leaderDeptIDs := trimTreeForUser(fullTree, userRole, user.OpenId)
+	trimmedTree, leaderDeptIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, user.IsDeptLeader)
 
-	// Wrap with tenant root node so the entire company is selectable
 	if tenantInfo.Name != "" {
 		tenantRoot := &DeptTreeNode{
 			Value:    "__tenant__",
 			Label:    tenantInfo.Name,
+			Disabled: userRole < common.RoleAdminUser,
 			Children: trimmedTree,
 		}
 		trimmedTree = []*DeptTreeNode{tenantRoot}

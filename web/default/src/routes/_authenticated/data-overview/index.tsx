@@ -7,7 +7,10 @@ export const Route = createFileRoute('/_authenticated/data-overview/')({
   beforeLoad: () => {
     const { auth } = useAuthStore.getState()
 
-    if (!auth.user || auth.user.role < ROLE.ADMIN) {
+    if (
+      !auth.user ||
+      (auth.user.role < ROLE.BU_BP && !auth.user.is_dept_leader)
+    ) {
       throw redirect({
         to: '/403',
       })

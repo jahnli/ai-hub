@@ -411,6 +411,7 @@ func GetSelf(c *gin.Context) {
 		"stripe_customer": user.StripeCustomer,
 		"sidebar_modules": userSetting.SidebarModules,
 		"permissions":     permissions,
+		"is_dept_leader":  user.IsDeptLeader,
 	}
 
 	c.JSON(http.StatusOK, gin.H{

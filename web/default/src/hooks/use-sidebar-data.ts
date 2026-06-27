@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ROLE } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 import { type SidebarData } from '@/components/layout/types'
 
 /**
@@ -46,6 +47,9 @@ import { type SidebarData } from '@/components/layout/types'
  */
 export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
+  const user = useAuthStore((s) => s.auth.user)
+  const canAccessDataOverview =
+    (user?.role ?? 0) >= ROLE.BU_BP || user?.is_dept_leader === true
 
   return {
     navGroups: [
@@ -79,12 +83,15 @@ export function useSidebarData(): SidebarData {
             url: '/dashboard/models',
             icon: LayoutDashboard,
           },
-          {
-            title: t('Data Overview'),
-            url: '/data-overview',
-            icon: BarChart3,
-            requiredRole: ROLE.ADMIN,
-          },
+          ...(canAccessDataOverview
+            ? [
+                {
+                  title: t('Data Overview'),
+                  url: '/data-overview' as const,
+                  icon: BarChart3,
+                },
+              ]
+            : []),
           {
             title: t('API Keys'),
             url: '/keys',

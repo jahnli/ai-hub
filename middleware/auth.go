@@ -183,6 +183,36 @@ func UserAuth() func(c *gin.Context) {
 	}
 }
 
+func BPAuth() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		authHelper(c, common.RoleBUBP)
+	}
+}
+
+// DataOverviewAccessCheck verifies the user has data overview access after UserAuth.
+// Allows: admin+, BP roles, or dept leaders (is_dept_leader=true).
+func DataOverviewAccessCheck() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		role := c.GetInt("role")
+		if role >= common.RoleBUBP {
+			c.Next()
+			return
+		}
+
+		userId := c.GetInt("id")
+		user, err := model.GetUserById(userId, false)
+		if err != nil || !user.IsDeptLeader {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": common.TranslateMessage(c, i18n.MsgAuthInsufficientPrivilege),
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func AdminAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		authHelper(c, common.RoleAdminUser)

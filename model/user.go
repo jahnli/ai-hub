@@ -55,7 +55,8 @@ type User struct {
 	JobTitle         string         `json:"job_title" gorm:"type:varchar(128);column:job_title;default:''"`
 	BackgroundImage  string         `json:"background_image" gorm:"type:varchar(512);column:background_image;default:''"`
 	CustomFieldValues string        `json:"custom_field_values" gorm:"type:text;column:custom_field_values;default:'{}'"`
-	JoinDate         string         `json:"join_date" gorm:"type:varchar(16);column:join_date;default:''"`
+	JoinDate          string         `json:"join_date" gorm:"type:varchar(16);column:join_date;default:''"`
+	IsDeptLeader      bool           `json:"is_dept_leader" gorm:"column:is_dept_leader"`
 }
 
 func (user *User) ToBaseUser() *UserBase {

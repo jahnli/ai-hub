@@ -268,7 +268,7 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.POST("/upstream_updates/detect_all", controller.DetectAllChannelUpstreamModelUpdates)
 		}
 		departmentRoute := apiRouter.Group("/department")
-		departmentRoute.Use(middleware.AdminAuth())
+		departmentRoute.Use(middleware.UserAuth(), middleware.DataOverviewAccessCheck())
 		{
 			departmentRoute.GET("/tree", controller.GetDepartmentTree)
 			departmentRoute.POST("/stats", controller.GetDepartmentStats)
