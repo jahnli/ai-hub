@@ -83,14 +83,27 @@ export function DataOverview() {
 
   useEffect(() => {
     if (treeData && !selectedDeptId) {
+      let deptId: string | undefined
       const leaderIds = treeData.leader_dept_ids
       if (leaderIds && leaderIds.length > 0) {
-        setSelectedDeptId(leaderIds[0])
+        deptId = leaderIds[0]
       } else if (displayTreeData.length > 0) {
         const firstSelectable = findFirstSelectable(displayTreeData)
         if (firstSelectable) {
-          setSelectedDeptId(firstSelectable.value)
+          deptId = firstSelectable.value
         }
+      }
+      if (deptId) {
+        setSelectedDeptId(deptId)
+        setQueryParams({
+          department_id: deptId,
+          start_timestamp: dateRange.start
+            ? Math.floor(dateRange.start.getTime() / 1000)
+            : 0,
+          end_timestamp: dateRange.end
+            ? Math.floor(dateRange.end.getTime() / 1000)
+            : 0,
+        })
       }
     }
   }, [displayTreeData, treeData, selectedDeptId])
