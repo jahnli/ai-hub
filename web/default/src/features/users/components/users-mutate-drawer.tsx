@@ -232,45 +232,49 @@ export function UsersMutateDrawer({
                   )}
                 />
 
-                {!isUpdate && (
-                  <FormField
-                    control={form.control}
-                    name='role'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('Role')}</FormLabel>
-                        <Select
-                          items={[
-                            { value: '1', label: t('Common User') },
-                            { value: '10', label: t('Admin') },
-                          ]}
-                          onValueChange={(value) =>
-                            value !== null && field.onChange(parseInt(value))
-                          }
-                          value={String(field.value)}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder={t('Select a role')} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent alignItemWithTrigger={false}>
-                            <SelectGroup>
-                              <SelectItem value='1'>
-                                {t('Common User')}
-                              </SelectItem>
-                              <SelectItem value='10'>{t('Admin')}</SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          {t("Set the user's role (cannot be Root)")}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                <FormField
+                  control={form.control}
+                  name='role'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Role')}</FormLabel>
+                      <Select
+                        items={[
+                          { value: '1', label: t('Common User') },
+                          { value: '2', label: t('BU BP') },
+                          { value: '3', label: t('Center BP') },
+                          { value: '10', label: t('Admin') },
+                        ]}
+                        onValueChange={(value) =>
+                          value !== null && field.onChange(parseInt(value))
+                        }
+                        value={String(field.value)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('Select a role')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectGroup>
+                            <SelectItem value='1'>
+                              {t('Common User')}
+                            </SelectItem>
+                            <SelectItem value='2'>{t('BU BP')}</SelectItem>
+                            <SelectItem value='3'>
+                              {t('Center BP')}
+                            </SelectItem>
+                            <SelectItem value='10'>{t('Admin')}</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t("Set the user's role (cannot be Root)")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
