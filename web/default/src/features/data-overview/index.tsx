@@ -131,7 +131,7 @@ export function DataOverview() {
             start={dateRange.start}
             end={dateRange.end}
             onChange={setDateRange}
-            className='max-w-[280px]'
+            className='max-w-[300px]'
           />
           {selectedDeptId && (
             <Button

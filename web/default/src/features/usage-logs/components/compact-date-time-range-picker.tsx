@@ -37,7 +37,7 @@ interface CompactDateTimeRangePickerProps {
 }
 
 function toInputValue(date?: Date): string {
-  return date ? dayjs(date).format('YYYY-MM-DDTHH:mm') : ''
+  return date ? dayjs(date).format('YYYY-MM-DDTHH:mm:ss') : ''
 }
 
 function fromInputValue(value: string): Date | undefined {
@@ -59,8 +59,8 @@ export function CompactDateTimeRangePicker({
 
   const label = useMemo(() => {
     if (!start && !end) return t('Date Range')
-    const startText = start ? dayjs(start).format('YYYY-MM-DD HH:mm') : '-'
-    const endText = end ? dayjs(end).format('YYYY-MM-DD HH:mm') : '-'
+    const startText = start ? dayjs(start).format('YYYY-MM-DD HH:mm:ss') : '-'
+    const endText = end ? dayjs(end).format('YYYY-MM-DD HH:mm:ss') : '-'
     return `${startText} ~ ${endText}`
   }, [end, start, t])
 
@@ -174,8 +174,8 @@ export function CompactDateTimeRangePicker({
 
   const activePreset = useMemo((): PresetKind | null => {
     if (!start) return null
-    const sMin = dayjs(start).startOf('minute').valueOf()
-    const eMin = end ? dayjs(end).startOf('minute').valueOf() : 0
+    const sMin = dayjs(start).startOf('second').valueOf()
+    const eMin = end ? dayjs(end).startOf('second').valueOf() : 0
     const presets = buildPresetMap(dayjs())
     const skipRelative: PresetKind[] = ['lastHour']
     for (const [kind, range] of Object.entries(presets) as [
@@ -183,8 +183,8 @@ export function CompactDateTimeRangePicker({
       { start: Date; end: Date },
     ][]) {
       if (skipRelative.includes(kind)) continue
-      const ps = dayjs(range.start).startOf('minute').valueOf()
-      const pe = dayjs(range.end).startOf('minute').valueOf()
+      const ps = dayjs(range.start).startOf('second').valueOf()
+      const pe = dayjs(range.end).startOf('second').valueOf()
       if (sMin === ps && eMin === pe) return kind
     }
     return null
@@ -220,6 +220,7 @@ export function CompactDateTimeRangePicker({
               </div>
               <Input
                 type='datetime-local'
+                step='1'
                 value={draftStart}
                 onChange={(e) => setDraftStart(e.target.value)}
                 className='h-8 text-sm leading-5 tabular-nums'
@@ -234,6 +235,7 @@ export function CompactDateTimeRangePicker({
               </div>
               <Input
                 type='datetime-local'
+                step='1'
                 value={draftEnd}
                 onChange={(e) => setDraftEnd(e.target.value)}
                 className='h-8 text-sm leading-5 tabular-nums'
