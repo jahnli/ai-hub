@@ -113,6 +113,7 @@ func GetStatus(c *gin.Context) {
 		"user_agreement_enabled":      legalSetting.UserAgreement != "",
 		"privacy_policy_enabled":      legalSetting.PrivacyPolicy != "",
 		"checkin_enabled":             operation_setting.GetCheckinSetting().Enabled,
+		"feishu_support_open_id":      system_setting.FeishuSupportOpenID(),
 	}
 
 	// 根据启用状态注入可选内容

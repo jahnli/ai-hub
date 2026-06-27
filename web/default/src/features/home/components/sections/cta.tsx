@@ -1,9 +1,18 @@
 import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AnimateInView } from "@/components/animate-in-view";
+import { useStatus } from "@/hooks/use-status";
 
 export function CTA() {
   const { t } = useTranslation();
+  const { status } = useStatus();
+
+  const feishuSupportOpenId = (status?.feishu_support_open_id ??
+    status?.data?.feishu_support_open_id) as string | undefined;
+
+  if (!feishuSupportOpenId) return null;
+
+  const feishuLink = `https://applink.feishu.cn/client/chat/open?openId=${feishuSupportOpenId}`;
 
   return (
     <section className="relative z-10 overflow-hidden px-6 pt-0 pb-8 md:pb-12">
@@ -13,7 +22,7 @@ export function CTA() {
         delay={200}
       >
         <a
-          href="https://www.feishu.cn"
+          href={feishuLink}
           target="_blank"
           rel="noopener noreferrer"
           className="border-border/40 bg-muted/20 hover:border-border/60 hover:bg-muted/40 group flex items-center gap-3 rounded-xl border px-4 py-2.5 shadow-xs transition-all duration-300"
