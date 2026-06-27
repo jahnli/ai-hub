@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AlertCircle,
   AlertTriangle,
-  BarChart3,
   Building2,
   Coins,
   DollarSign,
@@ -235,19 +234,18 @@ export function DataOverview() {
           )}
 
           {usageQuery.isFetching && !usageQuery.data && (
-            <Card className='mt-4'>
-              <CardHeader className='pb-3'>
-                <CardTitle className='flex items-center gap-2 text-base'>
-                  <BarChart3 className='text-primary size-5' />
-                  {t('Usage Analysis')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='flex items-center justify-center py-12'>
-                  <Loader2 className='text-muted-foreground size-6 animate-spin' />
+            <div className='mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2'>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className='overflow-hidden rounded-lg border'>
+                  <div className='px-4 py-2.5'>
+                    <Skeleton className='h-4 w-32' />
+                  </div>
+                  <div className='flex items-center justify-center p-2' style={{ height: 300 }}>
+                    <Loader2 className='text-muted-foreground size-6 animate-spin' />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
           )}
 
           {usageQuery.data?.data && queryParams && (

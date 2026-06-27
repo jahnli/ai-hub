@@ -2,16 +2,17 @@ import { useMemo, useState } from 'react'
 import { VChart } from '@visactor/react-vchart'
 import {
   BarChart3,
+  Coins,
+  DollarSign,
+  Hash,
+  Layers,
   PieChart,
   TrendingUp,
-  Activity,
-  DollarSign,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
-import type { DailyStat, UsageAnalysis } from '../types'
+import type { DailyStat, ModelDailyStat, ModelStat, UsageAnalysis } from '../types'
 
 interface UsageAnalysisProps {
   data: UsageAnalysis
@@ -20,224 +21,92 @@ interface UsageAnalysisProps {
 }
 
 export function UsageAnalysisSection(props: UsageAnalysisProps) {
-  const { t } = useTranslation()
   const { resolvedTheme, themeReady } = useChartTheme()
-  const hasModelData = props.data.model_stats && props.data.model_stats.length > 0
-  const hasDailyData = props.data.daily_stats && props.data.daily_stats.length > 0
+  const hasModelData =
+    props.data.model_stats && props.data.model_stats.length > 0
+  const hasDailyData =
+    props.data.daily_stats && props.data.daily_stats.length > 0
 
   if (!hasModelData && !hasDailyData) {
     return null
   }
 
+  const chartProps = { themeReady, resolvedTheme }
+
   return (
-    <Card className='mt-4'>
-      <CardHeader className='pb-3'>
-        <CardTitle className='flex items-center gap-2 text-base'>
-          <Activity className='text-primary size-5' />
-          {t('Usage Analysis')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className='space-y-0 p-0'>
-        {hasModelData && (
-          <ModelCharts
-            data={props.data.model_stats}
-            themeReady={themeReady}
-            resolvedTheme={resolvedTheme}
-          />
-        )}
-        {hasModelData && (
-          <ModelUsageTrend
-            data={props.data.model_daily_stats ?? []}
-            themeReady={themeReady}
-            resolvedTheme={resolvedTheme}
-          />
-        )}
-        {hasDailyData && (
-          <DailyTrendChart
-            data={props.data.daily_stats}
-            themeReady={themeReady}
-            resolvedTheme={resolvedTheme}
-          />
-        )}
-        {hasDailyData && (
-          <AvgPriceTrendChart
-            data={props.data.daily_stats}
-            startTimestamp={props.startTimestamp}
-            endTimestamp={props.endTimestamp}
-            themeReady={themeReady}
-            resolvedTheme={resolvedTheme}
-          />
-        )}
-      </CardContent>
-    </Card>
+    <div className='mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2'>
+      {hasDailyData && (
+        <QuotaTrendChart data={props.data.daily_stats} {...chartProps} />
+      )}
+      {hasDailyData && (
+        <RequestTrendChart data={props.data.daily_stats} {...chartProps} />
+      )}
+      {hasDailyData && (
+        <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
+      )}
+      {hasModelData && (
+        <ModelUsageTrendChart
+          data={props.data.model_daily_stats ?? []}
+          {...chartProps}
+        />
+      )}
+      {hasModelData && (
+        <ModelCallRankChart data={props.data.model_stats} {...chartProps} />
+      )}
+      {hasModelData && (
+        <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
+      )}
+      {hasDailyData && (
+        <AvgPriceTrendChart
+          data={props.data.daily_stats}
+          startTimestamp={props.startTimestamp}
+          endTimestamp={props.endTimestamp}
+          {...chartProps}
+        />
+      )}
+      {hasModelData && (
+        <ModelTokenDistChart data={props.data.model_stats} {...chartProps} />
+      )}
+    </div>
   )
 }
 
-// ── Model Charts (bar + pie with tab switch) ──
+// ── Shared ──
 
-interface ChartProps {
-  data: any[]
+interface ChartBaseProps {
   themeReady: boolean
   resolvedTheme: string | undefined
 }
 
-function ModelCharts(props: ChartProps) {
-  const { t } = useTranslation()
-  const [view, setView] = useState<'bar' | 'pie'>('bar')
-
-  const barSpec = useMemo(
-    () => ({
-      type: 'bar' as const,
-      data: [
-        {
-          values: props.data.map(
-            (item: { model_name: string; total_requests: number }) => ({
-              name: item.model_name,
-              requests: item.total_requests,
-            })
-          ),
-        },
-      ],
-      xField: 'name',
-      yField: 'requests',
-      label: {
-        visible: true,
-        position: 'outside',
-        formatMethod: (value: number) => {
-          if (value >= 1_0000) return (value / 1_0000).toFixed(1) + ' 万'
-          return value.toLocaleString()
-        },
-      },
-      bar: { style: { cornerRadius: [4, 4, 4, 4] } },
-      axes: [
-        {
-          orient: 'bottom',
-          type: 'band',
-          label: {
-            style: { fontSize: 11 },
-            formatMethod: (v: string) =>
-              v.length > 14 ? v.slice(0, 14) + '…' : v,
-          },
-        },
-        {
-          orient: 'left',
-          type: 'linear',
-          label: {
-            formatMethod: (v: number) => {
-              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
-              return v.toLocaleString()
-            },
-          },
-        },
-      ],
-      tooltip: {
-        mark: {
-          content: [
-            {
-              key: t('Requests'),
-              value: (d: { requests?: number }) =>
-                (d.requests ?? 0).toLocaleString(),
-            },
-          ],
-        },
-      },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
-    }),
-    [props.data, props.resolvedTheme, t]
-  )
-
-  const pieSpec = useMemo(
-    () => ({
-      type: 'pie' as const,
-      data: [
-        {
-          values: props.data
-            .filter((i: { total_quota: number }) => i.total_quota > 0)
-            .map((i: { model_name: string; total_quota: number }) => ({
-              name: i.model_name,
-              value: i.total_quota / 500000,
-            })),
-        },
-      ],
-      valueField: 'value',
-      categoryField: 'name',
-      outerRadius: 0.8,
-      innerRadius: 0.5,
-      label: {
-        visible: true,
-        position: 'outside',
-        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? '',
-      },
-      tooltip: {
-        mark: {
-          content: [
-            {
-              key: (d: { name?: string }) => d.name ?? '',
-              value: (d: { value?: number }) => {
-                const v = d.value ?? 0
-                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
-              },
-            },
-          ],
-        },
-      },
-      legends: { visible: false },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
-    }),
-    [props.data, props.resolvedTheme]
-  )
-
-  const tabs = [
-    {
-      value: 'bar' as const,
-      icon: BarChart3,
-      label: t('Model Ranking'),
-    },
-    {
-      value: 'pie' as const,
-      icon: PieChart,
-      label: t('Model Cost Share'),
-    },
-  ]
-
+function ChartCard(props: {
+  icon: React.ElementType
+  title: string
+  actions?: React.ReactNode
+  themeReady: boolean
+  resolvedTheme: string | undefined
+  chartKey: string
+  spec: object | null
+  height?: string
+}) {
+  const Icon = props.icon
   return (
-    <div className='border-t first:border-t-0'>
-      <div className='flex w-full items-center justify-between px-5 py-3'>
+    <div className='overflow-hidden rounded-lg border'>
+      <div className='flex w-full items-center justify-between px-4 py-2.5'>
         <div className='flex items-center gap-2'>
-          {view === 'bar' ? (
-            <BarChart3 className='text-muted-foreground/60 size-4' />
-          ) : (
-            <PieChart className='text-muted-foreground/60 size-4' />
-          )}
-          <span className='text-sm font-semibold'>
-            {view === 'bar' ? t('Model Ranking') : t('Model Cost Share')}
-          </span>
+          <Icon className='text-muted-foreground/60 size-4' />
+          <span className='text-sm font-semibold'>{props.title}</span>
         </div>
-        <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
-          {tabs.map(({ value, icon: Icon, label }) => (
-            <button
-              key={value}
-              type='button'
-              onClick={() => setView(value)}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
-                view === value
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className='size-3.5' />
-              {label}
-            </button>
-          ))}
-        </div>
+        {props.actions}
       </div>
-      <div className='h-[300px] p-2'>
-        {props.themeReady && (
+      <div className={`${props.height ?? 'h-[300px]'} p-2`}>
+        {props.themeReady && props.spec && (
           <VChart
-            key={`model-${view}-${props.resolvedTheme}`}
-            spec={view === 'bar' ? barSpec : pieSpec}
+            key={props.chartKey}
+            spec={{
+              ...(props.spec as any),
+              theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
+              background: 'transparent',
+            }}
             option={VCHART_OPTION}
           />
         )}
@@ -251,186 +120,171 @@ function formatDateLabel(v: string): string {
   return parts.length === 3 ? parts[1] + '-' + parts[2] : v
 }
 
-// ── Daily Trend Chart ──
+function formatLargeNumber(v: number): string {
+  if (v >= 1_0000) return (v / 1_0000).toFixed(1) + ' 万'
+  return v.toLocaleString()
+}
 
-function DailyTrendChart(props: ChartProps) {
-  const { t } = useTranslation()
-  const [metric, setMetric] = useState<'tokens' | 'requests' | 'quota'>(
-    'tokens'
-  )
-
-  const spec = useMemo(() => {
-    const getValue = (item: {
-      total_tokens: number
-      total_requests: number
-      total_quota: number
-    }) => {
-      if (metric === 'tokens') return item.total_tokens
-      if (metric === 'requests') return item.total_requests
-      return item.total_quota / 500000
-    }
-
-    const formatAxis = (v: number) => {
-      if (metric === 'quota') return '¥' + (v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v.toFixed(0))
-      if (metric === 'requests') {
-        if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
-        return v.toLocaleString()
-      }
-      return (v / 1_0000_0000).toFixed(1) + ' 亿'
-    }
-
-    const tooltipKey =
-      metric === 'tokens'
-        ? 'Tokens'
-        : metric === 'requests'
-          ? t('Requests')
-          : t('Cost')
-
-    const formatTooltip = (v: number) =>
-      metric === 'quota'
-        ? (v === 0 ? '¥0' : '¥' + v.toFixed(2))
-        : v.toLocaleString()
-
-    return {
-      type: 'area' as const,
-      data: [
-        {
-          values: props.data.map(
-            (item: {
-              date: string
-              total_tokens: number
-              total_requests: number
-              total_quota: number
-            }) => ({
-              date: item.date,
-              value: getValue(item),
-            })
-          ),
-        },
-      ],
-      xField: 'date',
-      yField: 'value',
-      point: { visible: props.data.length <= 60, size: 4 },
-      line: { style: { curveType: 'monotone' } },
-      area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
-      axes: [
-        {
-          orient: 'bottom',
-          type: 'band',
-          label: {
-            style: { fontSize: 11 },
-            autoHide: true,
-            autoHideMethod: 'greedy',
-            formatMethod: (v: string) => formatDateLabel(v),
-          },
-        },
-        {
-          orient: 'left',
-          type: 'linear',
-          label: { formatMethod: formatAxis },
-        },
-      ],
-      dataZoom: [
-        {
-          orient: 'bottom',
-          filterMode: 'axis',
-          startText: { formatMethod: (v: string) => v },
-          endText: { formatMethod: (v: string) => v },
-          backgroundChart: {
-            area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
-            line: { style: { lineWidth: 1 } },
-          },
-        },
-      ],
-      tooltip: {
-        mark: {
-          title: { value: (d: { date?: string }) => d.date ?? '' },
-          content: [
-            {
-              key: tooltipKey,
-              value: (d: { value?: number }) => formatTooltip(d.value ?? 0),
-            },
-          ],
+function makeAreaSpec(
+  data: { date: string; value: number }[],
+  yAxisFormat: (v: number) => string,
+  tooltipKey: string,
+  tooltipFormat: (v: number) => string
+) {
+  return {
+    type: 'area' as const,
+    data: [{ values: data }],
+    xField: 'date',
+    yField: 'value',
+    point: { visible: data.length <= 60, size: 4 },
+    line: { style: { curveType: 'monotone' } },
+    area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+    axes: [
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: {
+          style: { fontSize: 11 },
+          autoHide: true,
+          autoHideMethod: 'greedy',
+          formatMethod: (v: string) => formatDateLabel(v),
         },
       },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
-    }
-  }, [props.data, props.resolvedTheme, metric, t])
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: yAxisFormat },
+      },
+    ],
+    tooltip: {
+      mark: {
+        title: { value: (d: { date?: string }) => d.date ?? '' },
+        content: [
+          {
+            key: tooltipKey,
+            value: (d: { value?: number }) => tooltipFormat(d.value ?? 0),
+          },
+        ],
+      },
+    },
+  }
+}
 
-  const tabs = [
-    { value: 'tokens' as const, label: 'Tokens' },
-    { value: 'requests' as const, label: t('Requests') },
-    { value: 'quota' as const, label: t('Cost') },
-  ]
+// ── 1. 额度消耗趋势 ──
+
+function QuotaTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const values = props.data.map((item) => ({
+      date: item.date,
+      value: item.total_quota / 500000,
+    }))
+    return makeAreaSpec(
+      values,
+      (v) => (v === 0 ? '¥0' : v >= 1000 ? '¥' + (v / 1000).toFixed(0) + 'K' : '¥' + v.toFixed(0)),
+      t('Cost'),
+      (v) => (v === 0 ? '¥0' : '¥' + v.toFixed(2))
+    )
+  }, [props.data, t])
 
   return (
-    <div className='border-t'>
-      <div className='flex w-full items-center justify-between px-5 py-3'>
-        <div className='flex items-center gap-2'>
-          <TrendingUp className='text-muted-foreground/60 size-4' />
-          <span className='text-sm font-semibold'>
-            {t('Daily Usage Trend')}
-          </span>
-        </div>
-        <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
-          {tabs.map(({ value, label }) => (
-            <button
-              key={value}
-              type='button'
-              onClick={() => setMetric(value)}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
-                metric === value
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className='h-[340px] p-2'>
-        {props.themeReady && (
-          <VChart
-            key={`daily-${metric}-${props.resolvedTheme}`}
-            spec={spec}
-            option={VCHART_OPTION}
-          />
-        )}
-      </div>
-    </div>
+    <ChartCard
+      icon={Coins}
+      title={t('Quota Consumption Trend')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`quota-trend-${props.resolvedTheme}`}
+      spec={spec}
+    />
   )
 }
 
-// ── Model Usage Trend (per-model daily line chart) ──
+// ── 2. 请求次数趋势 ──
 
-function ModelUsageTrend(props: ChartProps) {
+function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const values = props.data.map((item) => ({
+      date: item.date,
+      value: item.total_requests,
+    }))
+    return makeAreaSpec(
+      values,
+      (v) => formatLargeNumber(v),
+      t('Requests'),
+      (v) => v.toLocaleString()
+    )
+  }, [props.data, t])
+
+  return (
+    <ChartCard
+      icon={Hash}
+      title={t('Request Count Trend')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`request-trend-${props.resolvedTheme}`}
+      spec={spec}
+    />
+  )
+}
+
+// ── 3. 每日 Token 用量趋势 ──
+
+function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const values = props.data.map((item) => ({
+      date: item.date,
+      value: item.total_tokens,
+    }))
+    return makeAreaSpec(
+      values,
+      (v) => {
+        if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(1) + ' 亿'
+        if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
+        return v.toLocaleString()
+      },
+      'Tokens',
+      (v) => v.toLocaleString()
+    )
+  }, [props.data])
+
+  return (
+    <ChartCard
+      icon={Layers}
+      title={t('Daily Token Usage Trend')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`token-trend-${props.resolvedTheme}`}
+      spec={spec}
+    />
+  )
+}
+
+// ── 4. 模型使用趋势 ──
+
+function ModelUsageTrendChart(
+  props: ChartBaseProps & { data: ModelDailyStat[] }
+) {
+  const { t } = useTranslation()
+
   const spec = useMemo(() => {
     if (props.data.length === 0) return null
 
-    const formatAxis = (v: number) => {
-      return (v / 1_0000_0000).toFixed(1) + ' 亿'
-    }
-
-    const dayCount = new Set(props.data.map((d: { date: string }) => d.date)).size
+    const dayCount = new Set(props.data.map((d) => d.date)).size
 
     return {
       type: 'line' as const,
       data: [
         {
-          values: props.data.map(
-            (item: {
-              date: string
-              model_name: string
-              total_tokens: number
-            }) => ({
-              date: item.date,
-              model: item.model_name,
-              tokens: item.total_tokens,
-            })
-          ),
+          values: props.data.map((item) => ({
+            date: item.date,
+            model: item.model_name,
+            tokens: item.total_tokens,
+          })),
         },
       ],
       xField: 'date',
@@ -452,17 +306,13 @@ function ModelUsageTrend(props: ChartProps) {
         {
           orient: 'left',
           type: 'linear',
-          label: { formatMethod: formatAxis },
-        },
-      ],
-      dataZoom: [
-        {
-          orient: 'bottom',
-          filterMode: 'axis',
-          startText: { formatMethod: (v: string) => v },
-          endText: { formatMethod: (v: string) => v },
-          backgroundChart: {
-            line: { style: { lineWidth: 1 } },
+          label: {
+            formatMethod: (v: number) => {
+              if (v >= 1_0000_0000)
+                return (v / 1_0000_0000).toFixed(1) + ' 亿'
+              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
+              return v.toLocaleString()
+            },
           },
         },
       ],
@@ -489,37 +339,179 @@ function ModelUsageTrend(props: ChartProps) {
           ],
         },
       },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
     }
-  }, [props.data, props.resolvedTheme])
+  }, [props.data])
 
   if (props.data.length === 0) return null
 
   return (
-    <div className='border-t'>
-      <div className='flex w-full items-center justify-between px-5 py-3'>
-        <div className='flex items-center gap-2'>
-          <TrendingUp className='text-muted-foreground/60 size-4' />
-          <span className='text-sm font-semibold'>
-            {t('Model Usage Trend')}
-          </span>
-        </div>
-      </div>
-      <div className='h-[390px] p-2'>
-        {props.themeReady && spec && (
-          <VChart
-            key={`model-daily-${props.resolvedTheme}`}
-            spec={spec}
-            option={VCHART_OPTION}
-          />
-        )}
-      </div>
-    </div>
+    <ChartCard
+      icon={TrendingUp}
+      title={t('Model Usage Trend')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`model-usage-trend-${props.resolvedTheme}`}
+      spec={spec}
+      height='h-[340px]'
+    />
   )
 }
 
-// ── Avg Price Trend Chart ──
+// ── 5. 模型调用排行 ──
+
+function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const sorted = [...props.data]
+      .sort((a, b) => a.total_requests - b.total_requests)
+      .slice(-15)
+
+    return {
+      type: 'bar' as const,
+      data: [
+        {
+          values: sorted.map((item) => ({
+            name: item.model_name,
+            value: item.total_requests,
+          })),
+        },
+      ],
+      direction: 'horizontal' as const,
+      xField: 'value',
+      yField: 'name',
+      label: {
+        visible: true,
+        position: 'outside',
+        formatMethod: (value: number) => formatLargeNumber(value),
+      },
+      bar: { style: { cornerRadius: [0, 4, 4, 0] } },
+      axes: [
+        {
+          orient: 'left',
+          type: 'band',
+          label: {
+            style: { fontSize: 11 },
+            formatMethod: (v: string) =>
+              v.length > 20 ? v.slice(0, 20) + '…' : v,
+          },
+        },
+        {
+          orient: 'bottom',
+          type: 'linear',
+          label: {
+            formatMethod: (v: number) => formatLargeNumber(v),
+          },
+        },
+      ],
+      tooltip: {
+        mark: {
+          content: [
+            {
+              key: t('Requests'),
+              value: (d: { value?: number }) =>
+                (d.value ?? 0).toLocaleString(),
+            },
+          ],
+        },
+      },
+    }
+  }, [props.data, t])
+
+  return (
+    <ChartCard
+      icon={BarChart3}
+      title={t('Model Call Ranking')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`model-call-rank-${props.resolvedTheme}`}
+      spec={spec}
+      height='h-[340px]'
+    />
+  )
+}
+
+// ── 6. 模型费用排行 ──
+
+function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const sorted = [...props.data]
+      .sort((a, b) => a.total_quota - b.total_quota)
+      .slice(-15)
+
+    return {
+      type: 'bar' as const,
+      data: [
+        {
+          values: sorted.map((item) => ({
+            name: item.model_name,
+            value: item.total_quota / 500000,
+          })),
+        },
+      ],
+      direction: 'horizontal' as const,
+      xField: 'value',
+      yField: 'name',
+      label: {
+        visible: true,
+        position: 'outside',
+        formatMethod: (value: number) =>
+          value === 0 ? '¥0' : '¥' + value.toFixed(2),
+      },
+      bar: { style: { cornerRadius: [0, 4, 4, 0] } },
+      axes: [
+        {
+          orient: 'left',
+          type: 'band',
+          label: {
+            style: { fontSize: 11 },
+            formatMethod: (v: string) =>
+              v.length > 20 ? v.slice(0, 20) + '…' : v,
+          },
+        },
+        {
+          orient: 'bottom',
+          type: 'linear',
+          label: {
+            formatMethod: (v: number) =>
+              v === 0 ? '¥0' : v >= 1000 ? '¥' + (v / 1000).toFixed(0) + 'K' : '¥' + v.toFixed(0),
+          },
+        },
+      ],
+      tooltip: {
+        mark: {
+          content: [
+            {
+              key: t('Cost'),
+              value: (d: { value?: number }) => {
+                const v = d.value ?? 0
+                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
+              },
+            },
+          ],
+        },
+      },
+    }
+  }, [props.data, t])
+
+  return (
+    <ChartCard
+      icon={DollarSign}
+      title={t('Model Cost Ranking')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`model-cost-rank-${props.resolvedTheme}`}
+      spec={spec}
+      height='h-[340px]'
+    />
+  )
+}
+
+// ── 7. 均价趋势 ──
+
+type PriceGranularity = 'day' | 'week' | 'month'
 
 function getISOWeekLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00')
@@ -534,58 +526,59 @@ function getISOWeekLabel(dateStr: string): string {
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
 }
 
-interface AvgPriceTrendProps {
-  data: DailyStat[]
-  startTimestamp: number
-  endTimestamp: number
-  themeReady: boolean
-  resolvedTheme: string | undefined
+function getMonthLabel(dateStr: string): string {
+  return dateStr.slice(0, 7)
 }
 
-function AvgPriceTrendChart(props: AvgPriceTrendProps) {
+function AvgPriceTrendChart(
+  props: ChartBaseProps & {
+    data: DailyStat[]
+    startTimestamp: number
+    endTimestamp: number
+  }
+) {
   const { t } = useTranslation()
+  const [granularity, setGranularity] = useState<PriceGranularity>('week')
 
   const chartData = useMemo(() => {
-    const rangeDays =
-      (props.endTimestamp - props.startTimestamp) / 86400
-    const useWeekly = rangeDays > 7
-
-    if (!useWeekly) {
+    if (granularity === 'day') {
       return props.data
         .map((item) => {
-          const tokens = item.total_tokens
-          if (tokens <= 0) return null
+          if (item.total_tokens <= 0) return null
           const costYuan = item.total_quota / 500000
-          const pricePerMT = costYuan / (tokens / 1_000_000)
+          const pricePerMT = costYuan / (item.total_tokens / 1_000_000)
           return { label: item.date, value: pricePerMT }
         })
         .filter((v): v is { label: string; value: number } => v !== null)
     }
 
-    const weekBuckets = new Map<
+    const getLabel =
+      granularity === 'week' ? getISOWeekLabel : getMonthLabel
+
+    const buckets = new Map<
       string,
       { totalQuota: number; totalTokens: number }
     >()
     for (const item of props.data) {
-      const weekLabel = getISOWeekLabel(item.date)
-      const bucket = weekBuckets.get(weekLabel) ?? {
+      const bucketLabel = getLabel(item.date)
+      const bucket = buckets.get(bucketLabel) ?? {
         totalQuota: 0,
         totalTokens: 0,
       }
       bucket.totalQuota += item.total_quota
       bucket.totalTokens += item.total_tokens
-      weekBuckets.set(weekLabel, bucket)
+      buckets.set(bucketLabel, bucket)
     }
 
     const result: { label: string; value: number }[] = []
-    for (const [weekLabel, bucket] of weekBuckets) {
+    for (const [bucketLabel, bucket] of buckets) {
       if (bucket.totalTokens <= 0) continue
       const costYuan = bucket.totalQuota / 500000
       const pricePerMT = costYuan / (bucket.totalTokens / 1_000_000)
-      result.push({ label: weekLabel, value: pricePerMT })
+      result.push({ label: bucketLabel, value: pricePerMT })
     }
     return result
-  }, [props.data, props.startTimestamp, props.endTimestamp])
+  }, [props.data, granularity])
 
   const spec = useMemo(() => {
     if (chartData.length === 0) return null
@@ -606,7 +599,7 @@ function AvgPriceTrendChart(props: AvgPriceTrendProps) {
             autoHide: true,
             autoHideMethod: 'greedy',
             formatMethod: (v: string) => {
-              if (v.includes('-W')) return v
+              if (v.includes('-W') || v.length === 7) return v
               return formatDateLabel(v)
             },
           },
@@ -615,7 +608,8 @@ function AvgPriceTrendChart(props: AvgPriceTrendProps) {
           orient: 'left',
           type: 'linear',
           label: {
-            formatMethod: (v: number) => v === 0 ? '¥0' : '¥' + v.toFixed(2),
+            formatMethod: (v: number) =>
+              v === 0 ? '¥0' : '¥' + v.toFixed(2),
           },
         },
       ],
@@ -631,32 +625,103 @@ function AvgPriceTrendChart(props: AvgPriceTrendProps) {
           ],
         },
       },
-      theme: props.resolvedTheme === 'dark' ? 'dark' : 'light',
-      background: 'transparent',
     }
-  }, [chartData, props.resolvedTheme, t])
+  }, [chartData, t])
+
+  const granularityTabs: { value: PriceGranularity; label: string }[] = [
+    { value: 'day', label: t('Day') },
+    { value: 'week', label: t('Week') },
+    { value: 'month', label: t('Month') },
+  ]
+
+  return (
+    <ChartCard
+      icon={DollarSign}
+      title={t('Avg Price Trend')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`avg-price-${granularity}-${props.resolvedTheme}`}
+      spec={spec}
+      actions={
+        <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
+          {granularityTabs.map(({ value, label }) => (
+            <button
+              key={value}
+              type='button'
+              onClick={() => setGranularity(value)}
+              className={`shrink-0 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                granularity === value
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      }
+    />
+  )
+}
+
+// ── 8. 模型 Token 分布 ──
+
+function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const filtered = props.data.filter((i) => i.total_tokens > 0)
+    if (filtered.length === 0) return null
+
+    return {
+      type: 'pie' as const,
+      data: [
+        {
+          values: filtered.map((i) => ({
+            name: i.model_name,
+            value: i.total_tokens,
+          })),
+        },
+      ],
+      valueField: 'value',
+      categoryField: 'name',
+      outerRadius: 0.8,
+      innerRadius: 0.5,
+      label: {
+        visible: true,
+        position: 'outside',
+        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? '',
+      },
+      tooltip: {
+        mark: {
+          content: [
+            {
+              key: (d: { name?: string }) => d.name ?? '',
+              value: (d: { value?: number }) => {
+                const v = d.value ?? 0
+                if (v >= 1_0000_0000)
+                  return (v / 1_0000_0000).toFixed(2) + ' 亿'
+                if (v >= 1_0000) return (v / 1_0000).toFixed(1) + ' 万'
+                return v.toLocaleString()
+              },
+            },
+          ],
+        },
+      },
+      legends: { visible: false },
+    }
+  }, [props.data])
 
   if (!spec) return null
 
   return (
-    <div className='border-t'>
-      <div className='flex w-full items-center justify-between px-5 py-3'>
-        <div className='flex items-center gap-2'>
-          <DollarSign className='text-muted-foreground/60 size-4' />
-          <span className='text-sm font-semibold'>
-            {t('Avg Price Trend')}
-          </span>
-        </div>
-      </div>
-      <div className='h-[340px] p-2'>
-        {props.themeReady && (
-          <VChart
-            key={`avg-price-${props.resolvedTheme}`}
-            spec={spec}
-            option={VCHART_OPTION}
-          />
-        )}
-      </div>
-    </div>
+    <ChartCard
+      icon={PieChart}
+      title={t('Model Token Distribution')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`model-token-dist-${props.resolvedTheme}`}
+      spec={spec}
+    />
   )
 }
