@@ -23,7 +23,11 @@ import { useTranslation } from 'react-i18next'
 import dayjs from '@/lib/dayjs'
 import { useAuthStore } from '@/stores/auth-store'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
-import { formatNumber, formatQuota } from '@/lib/format'
+import {
+  formatDashboardQuota,
+  formatQuota,
+  formatRequestCount,
+} from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useStatus } from '@/hooks/use-status'
@@ -206,8 +210,8 @@ export function SummaryCards() {
 
   const summaryValues = useMemo(() => {
     return {
-      usedDisplay: formatQuota(usedQuota),
-      requestCountDisplay: formatNumber(requestCount),
+      usedDisplay: formatDashboardQuota(usedQuota),
+      requestCountDisplay: formatRequestCount(requestCount),
     }
   }, [requestCount, usedQuota])
 
@@ -247,7 +251,7 @@ export function SummaryCards() {
     [usageTrendQuery.data?.data]
   )
 
-  const todayUsageDisplay = formatQuota(recentUsage)
+  const todayUsageDisplay = formatDashboardQuota(recentUsage)
 
   const items = useSummaryCardsConfig({
     ...summaryValues,

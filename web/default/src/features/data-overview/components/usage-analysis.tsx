@@ -626,7 +626,7 @@ function AvgPriceTrendChart(props: AvgPriceTrendProps) {
             {
               key: t('Avg Price'),
               value: (d: { value?: number }) =>
-                '¥' + (d.value ?? 0).toFixed(4) + ' / M Tokens',
+                '¥' + (d.value ?? 0).toFixed(2) + ' / M Tokens',
             },
           ],
         },

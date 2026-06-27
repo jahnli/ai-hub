@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import dayjs from '@/lib/dayjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,7 +26,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SectionPageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
-import { getDefaultTimeRange } from '@/features/usage-logs/lib/utils'
 import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
 import { SubDepartmentStats } from './components/sub-department-stats'
@@ -36,7 +36,10 @@ export function DataOverview() {
   const { t } = useTranslation()
   const [selectedDeptId, setSelectedDeptId] = useState<string>()
   const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>(
-    getDefaultTimeRange
+    () => ({
+      start: dayjs().startOf('month').toDate(),
+      end: dayjs().endOf('month').toDate(),
+    })
   )
   const [queryParams, setQueryParams] = useState<{
     department_id: string

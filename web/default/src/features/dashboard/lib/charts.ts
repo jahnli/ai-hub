@@ -49,7 +49,7 @@ export function getDashboardChartColors(domainLength: number): string[] {
   )
 }
 
-function renderQuotaCompat(rawQuota: number, digits = 4): string {
+function renderQuotaCompat(rawQuota: number, digits = 2): string {
   const { config, meta } = getCurrencyDisplay()
   if (meta.kind === 'tokens') return rawQuota.toLocaleString()
   const usd = rawQuota / config.quotaPerUnit
@@ -77,7 +77,7 @@ export function processChartData(
 
   const formatInt = (value: number) =>
     Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
-  const formatQuotaValue = (value: number) => renderQuotaCompat(value, 4)
+  const formatQuotaValue = (value: number) => renderQuotaCompat(value, 2)
   const formatQuotaTotal = (value: number) => renderQuotaCompat(value, 2)
 
   const MAX_TOOLTIP_MODELS = 15
@@ -326,7 +326,7 @@ export function processChartData(
       const rawQuota = Number(stats?.quota) || 0
       const usd = rawQuota ? rawQuota / quotaPerUnit : 0
       // Match legacy frontend getQuotaWithUnit(..., 4)
-      const usage = usd ? Number(usd.toFixed(4)) : 0
+      const usage = usd ? Number(usd.toFixed(2)) : 0
       return {
         Time: time,
         Model: model,
@@ -364,13 +364,13 @@ export function processChartData(
       const stats = modelMap?.get(model)
       const rawQuota = Number(stats?.quota) || 0
       const usd = rawQuota ? rawQuota / quotaPerUnit : 0
-      const usage = usd ? Number(usd.toFixed(4)) : 0
+      const usage = usd ? Number(usd.toFixed(2)) : 0
       timeSum += rawQuota
       const key = topAreaModels.has(model) ? model : otherLabel
       const prev = buckets.get(key) || { rawQuota: 0, usage: 0 }
       buckets.set(key, {
         rawQuota: prev.rawQuota + rawQuota,
-        usage: Number((prev.usage + usage).toFixed(4)),
+        usage: Number((prev.usage + usage).toFixed(2)),
       })
     })
     for (const [model, vals] of buckets) {
@@ -766,7 +766,7 @@ export function processUserChartData(
   const rankValues = sorted.slice(0, limit).map(([username, quota]) => ({
     User: username,
     rawQuota: quota,
-    Usage: Number((quota / quotaPerUnit).toFixed(4)),
+    Usage: Number((quota / quotaPerUnit).toFixed(2)),
   }))
 
   const userColorMap = topUsers.reduce<Record<string, string>>(
@@ -806,7 +806,7 @@ export function processUserChartData(
         Time: time,
         User: user,
         rawQuota: q,
-        Usage: Number((q / quotaPerUnit).toFixed(4)),
+        Usage: Number((q / quotaPerUnit).toFixed(2)),
       })
     })
   })

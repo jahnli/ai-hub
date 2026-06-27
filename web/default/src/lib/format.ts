@@ -223,6 +223,50 @@ export function formatTokens(tokens: number): string {
 }
 
 /**
+ * Format token count for dashboard display:
+ * > 1,000,000 → xx 亿, otherwise raw number
+ */
+export function formatTokenCount(tokens: number): string {
+  if (tokens === 0) return '0'
+  if (tokens > 1_000_000) {
+    const yi = tokens / 100_000_000
+    return yi.toFixed(2).replace(/\.?0+$/, '') + ' 亿'
+  }
+  return Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
+    tokens
+  )
+}
+
+/**
+ * Format request count for dashboard display:
+ * > 10000 → xx 万, ≤ 10000 → raw number
+ */
+export function formatRequestCount(count: number): string {
+  if (count === 0) return '0'
+  if (count > 10000) {
+    const wan = count / 10000
+    return wan.toFixed(2).replace(/\.?0+$/, '') + ' 万'
+  }
+  return Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
+    count
+  )
+}
+
+/**
+ * Format quota for dashboard display:
+ * - 2 decimal places, no abbreviation
+ * - Zero displays as "0"
+ */
+export function formatDashboardQuota(quota: number): string {
+  if (quota === 0) return '0'
+  return formatQuotaWithCurrency(quota, {
+    digitsLarge: 2,
+    digitsSmall: 2,
+    abbreviate: false,
+  })
+}
+
+/**
  * Format use time in seconds with appropriate unit
  */
 export function formatUseTime(seconds: number): string {

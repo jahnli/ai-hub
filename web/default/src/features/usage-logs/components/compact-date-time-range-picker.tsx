@@ -59,10 +59,6 @@ export function CompactDateTimeRangePicker({
 
   const label = useMemo(() => {
     if (!start && !end) return t('Date Range')
-    // The popover's <input type="datetime-local"> only supports minute
-    // precision, so seconds are always 00 (manual pick) or 59 (preset
-    // end-of-day). Hide them in the trigger label to keep the button
-    // width compact while still showing the meaningful timestamp.
     const startText = start ? dayjs(start).format('YYYY-MM-DD HH:mm') : '-'
     const endText = end ? dayjs(end).format('YYYY-MM-DD HH:mm') : '-'
     return `${startText} ~ ${endText}`
@@ -99,80 +95,100 @@ export function CompactDateTimeRangePicker({
     | 'thisYear'
     | 'lastYear'
 
+  const buildPresetMap = (
+    now: dayjs.Dayjs
+  ): Record<PresetKind, { start: Date; end: Date }> => ({
+    lastHour: {
+      start: now.subtract(1, 'hour').toDate(),
+      end: now.toDate(),
+    },
+    today: {
+      start: now.startOf('day').toDate(),
+      end: now.endOf('day').toDate(),
+    },
+    yesterday: {
+      start: now.subtract(1, 'day').startOf('day').toDate(),
+      end: now.subtract(1, 'day').endOf('day').toDate(),
+    },
+    thisWeek: {
+      start: now.startOf('week').toDate(),
+      end: now.endOf('week').toDate(),
+    },
+    lastWeek: {
+      start: now.subtract(1, 'week').startOf('week').toDate(),
+      end: now.subtract(1, 'week').endOf('week').toDate(),
+    },
+    thisMonth: {
+      start: now.startOf('month').toDate(),
+      end: now.endOf('month').toDate(),
+    },
+    lastMonth: {
+      start: now.subtract(1, 'month').startOf('month').toDate(),
+      end: now.subtract(1, 'month').endOf('month').toDate(),
+    },
+    thisQuarter: {
+      start: now.startOf('quarter').toDate(),
+      end: now.endOf('quarter').toDate(),
+    },
+    lastQuarter: {
+      start: now.subtract(1, 'quarter').startOf('quarter').toDate(),
+      end: now.subtract(1, 'quarter').endOf('quarter').toDate(),
+    },
+    thisHalfYear: {
+      start: (now.month() < 6
+        ? now.startOf('year')
+        : now.startOf('year').add(6, 'month')
+      ).toDate(),
+      end: (now.month() < 6
+        ? now.startOf('year').add(5, 'month').endOf('month')
+        : now.endOf('year')
+      ).toDate(),
+    },
+    lastHalfYear: {
+      start: (now.month() < 6
+        ? now.subtract(1, 'year').startOf('year').add(6, 'month')
+        : now.startOf('year')
+      ).toDate(),
+      end: (now.month() < 6
+        ? now.subtract(1, 'year').endOf('year')
+        : now.startOf('year').add(5, 'month').endOf('month')
+      ).toDate(),
+    },
+    thisYear: {
+      start: now.startOf('year').toDate(),
+      end: now.endOf('year').toDate(),
+    },
+    lastYear: {
+      start: now.subtract(1, 'year').startOf('year').toDate(),
+      end: now.subtract(1, 'year').endOf('year').toDate(),
+    },
+  })
+
   const applyPreset = (kind: PresetKind) => {
-    const now = dayjs()
-    const presetMap: Record<PresetKind, { start: Date; end: Date }> = {
-      lastHour: {
-        start: now.subtract(1, 'hour').toDate(),
-        end: now.toDate(),
-      },
-      today: {
-        start: now.startOf('day').toDate(),
-        end: now.endOf('day').toDate(),
-      },
-      yesterday: {
-        start: now.subtract(1, 'day').startOf('day').toDate(),
-        end: now.subtract(1, 'day').endOf('day').toDate(),
-      },
-      thisWeek: {
-        start: now.startOf('week').toDate(),
-        end: now.endOf('week').toDate(),
-      },
-      lastWeek: {
-        start: now.subtract(1, 'week').startOf('week').toDate(),
-        end: now.subtract(1, 'week').endOf('week').toDate(),
-      },
-      thisMonth: {
-        start: now.startOf('month').toDate(),
-        end: now.endOf('month').toDate(),
-      },
-      lastMonth: {
-        start: now.subtract(1, 'month').startOf('month').toDate(),
-        end: now.subtract(1, 'month').endOf('month').toDate(),
-      },
-      thisQuarter: {
-        start: now.startOf('quarter').toDate(),
-        end: now.endOf('quarter').toDate(),
-      },
-      lastQuarter: {
-        start: now.subtract(1, 'quarter').startOf('quarter').toDate(),
-        end: now.subtract(1, 'quarter').endOf('quarter').toDate(),
-      },
-      thisHalfYear: {
-        start: (now.month() < 6
-          ? now.startOf('year')
-          : now.startOf('year').add(6, 'month')
-        ).toDate(),
-        end: (now.month() < 6
-          ? now.startOf('year').add(5, 'month').endOf('month')
-          : now.endOf('year')
-        ).toDate(),
-      },
-      lastHalfYear: {
-        start: (now.month() < 6
-          ? now.subtract(1, 'year').startOf('year').add(6, 'month')
-          : now.startOf('year')
-        ).toDate(),
-        end: (now.month() < 6
-          ? now.subtract(1, 'year').endOf('year')
-          : now.startOf('year').add(5, 'month').endOf('month')
-        ).toDate(),
-      },
-      thisYear: {
-        start: now.startOf('year').toDate(),
-        end: now.endOf('year').toDate(),
-      },
-      lastYear: {
-        start: now.subtract(1, 'year').startOf('year').toDate(),
-        end: now.subtract(1, 'year').endOf('year').toDate(),
-      },
-    }
-    const range = presetMap[kind]
+    const range = buildPresetMap(dayjs())[kind]
     setDraftStart(toInputValue(range.start))
     setDraftEnd(toInputValue(range.end))
     onChange(range)
     setOpen(false)
   }
+
+  const activePreset = useMemo((): PresetKind | null => {
+    if (!start) return null
+    const sMin = dayjs(start).startOf('minute').valueOf()
+    const eMin = end ? dayjs(end).startOf('minute').valueOf() : 0
+    const presets = buildPresetMap(dayjs())
+    const skipRelative: PresetKind[] = ['lastHour']
+    for (const [kind, range] of Object.entries(presets) as [
+      PresetKind,
+      { start: Date; end: Date },
+    ][]) {
+      if (skipRelative.includes(kind)) continue
+      const ps = dayjs(range.start).startOf('minute').valueOf()
+      const pe = dayjs(range.end).startOf('minute').valueOf()
+      if (sMin === ps && eMin === pe) return kind
+    }
+    return null
+  }, [start, end])
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -246,7 +262,7 @@ export function CompactDateTimeRangePicker({
               <Button
                 key={kind}
                 type='button'
-                variant='secondary'
+                variant={activePreset === kind ? 'default' : 'secondary'}
                 size='sm'
                 className='h-7 flex-1 px-2 text-xs'
                 onClick={() => applyPreset(kind)}

@@ -19,7 +19,13 @@ For commercial licensing, please contact support@quantumnous.com
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth-store'
-import { formatCompactNumber, formatNumber, formatQuota } from '@/lib/format'
+import {
+  formatCompactNumber,
+  formatDashboardQuota,
+  formatNumber,
+  formatRequestCount,
+  formatTokenCount,
+} from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -121,13 +127,23 @@ export function LogStatCards(props: LogStatCardsProps) {
   const items = statCardsConfig.map((config) => {
     const rawValue = config.getValue(adaptedStats, timeRangeMinutes)
     const locale = i18n.resolvedLanguage || i18n.language
-    const formatted =
-      config.key === 'quota'
-        ? {
-            displayValue: formatQuota(rawValue),
-            fullValue: formatQuota(rawValue),
-          }
-        : formatStatNumber(rawValue, locale)
+    let formatted: { displayValue: string; fullValue: string }
+    if (config.key === 'quota') {
+      const display = formatDashboardQuota(rawValue)
+      formatted = { displayValue: display, fullValue: display }
+    } else if (config.key === 'tokens') {
+      formatted = {
+        displayValue: formatTokenCount(rawValue),
+        fullValue: formatNumber(rawValue),
+      }
+    } else if (config.key === 'count') {
+      formatted = {
+        displayValue: formatRequestCount(rawValue),
+        fullValue: formatNumber(rawValue),
+      }
+    } else {
+      formatted = formatStatNumber(rawValue, locale)
+    }
 
     return {
       title: config.title,
