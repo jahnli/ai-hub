@@ -18,19 +18,23 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
-import { ArrowRight, Flame, ShieldCheck, TrendingDown } from 'lucide-react'
+import { CalendarClock, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import dayjs from '@/lib/dayjs'
 import { useAuthStore } from '@/stores/auth-store'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
 import { formatNumber, formatQuota } from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useStatus } from '@/hooks/use-status'
-import { Button } from '@/components/ui/button'
 import { StaggerContainer, StaggerItem } from '@/components/page-transition'
 import { getUserQuotaDates } from '@/features/dashboard/api'
 import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
+import {
+  getSelfSubscriptionFull,
+  getPublicPlans,
+} from '@/features/subscriptions/api'
+import type { SubscriptionPlan } from '@/features/subscriptions/types'
 import type { QuotaDataItem } from '@/features/dashboard/types'
 import { StatCard } from '../ui/stat-card'
 
@@ -97,41 +101,43 @@ function getSummarySparkline(
   return undefined
 }
 
-function getRunwayDays(
-  remainQuota: number,
-  recentUsage: number
-): number | null {
-  if (remainQuota <= 0 || recentUsage <= 0) return null
-  const days = remainQuota / recentUsage
-  if (!Number.isFinite(days)) return null
-  return days
-}
+function calcNextResetTime(
+  plan: SubscriptionPlan,
+  baseSec: number,
+  endSec: number
+): number {
+  const period = plan.quota_reset_period
+  if (!period || period === 'never') return 0
 
-type HealthLevel = 'healthy' | 'caution' | 'critical'
+  const base = dayjs(baseSec * 1000)
+  let next: dayjs.Dayjs
 
-function getHealthLevel(remainQuota: number, recentUsage: number): HealthLevel {
-  if (remainQuota <= 0) return 'critical'
-  const days = getRunwayDays(remainQuota, recentUsage)
-  if (days !== null && days < 3) return 'caution'
-  return 'healthy'
-}
+  switch (period) {
+    case 'daily':
+      next = base.startOf('day').add(1, 'day')
+      break
+    case 'weekly': {
+      const weekday = base.day() // 0=Sun
+      const daysUntil = weekday === 0 ? 1 : 8 - weekday
+      next = base.startOf('day').add(daysUntil, 'day')
+      break
+    }
+    case 'monthly':
+      next = base.startOf('month').add(1, 'month')
+      break
+    case 'custom': {
+      const secs = plan.quota_reset_custom_seconds ?? 0
+      if (secs <= 0) return 0
+      next = base.add(secs, 'second')
+      break
+    }
+    default:
+      return 0
+  }
 
-const HEALTH_CONFIG: Record<
-  HealthLevel,
-  { dotClass: string; labelKey: string }
-> = {
-  healthy: {
-    dotClass: 'bg-success',
-    labelKey: 'Healthy',
-  },
-  caution: {
-    dotClass: 'bg-warning',
-    labelKey: 'Low balance',
-  },
-  critical: {
-    dotClass: 'bg-destructive',
-    labelKey: 'Balance depleted',
-  },
+  const nextSec = Math.floor(next.valueOf() / 1000)
+  if (endSec > 0 && nextSec > endSec) return 0
+  return nextSec
 }
 
 export function SummaryCards() {
@@ -160,6 +166,43 @@ export function SummaryCards() {
       }),
     staleTime: 60 * 1000,
   })
+
+  const subscriptionQuery = useQuery({
+    queryKey: ['dashboard', 'overview', 'subscription-self'],
+    queryFn: getSelfSubscriptionFull,
+    staleTime: 60 * 1000,
+  })
+
+  const plansQuery = useQuery({
+    queryKey: ['dashboard', 'overview', 'public-plans'],
+    queryFn: getPublicPlans,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const planMap = useMemo(() => {
+    const map = new Map<number, SubscriptionPlan>()
+    for (const record of plansQuery.data?.data ?? []) {
+      map.set(record.plan.id, record.plan)
+    }
+    return map
+  }, [plansQuery.data?.data])
+
+  const activeSub = useMemo(() => {
+    const subs = subscriptionQuery.data?.data?.subscriptions ?? []
+    if (subs.length === 0) return null
+    return subs[0].subscription
+  }, [subscriptionQuery.data?.data?.subscriptions])
+
+  const nextResetTime = useMemo(() => {
+    if (!activeSub) return 0
+    if (activeSub.next_reset_time && activeSub.next_reset_time > 0) {
+      return activeSub.next_reset_time
+    }
+    const plan = planMap.get(activeSub.plan_id)
+    if (!plan) return 0
+    const baseSec = activeSub.start_time || Math.floor(Date.now() / 1000)
+    return calcNextResetTime(plan, baseSec, activeSub.end_time)
+  }, [activeSub, planMap])
 
   const summaryValues = useMemo(() => {
     return {
@@ -204,10 +247,6 @@ export function SummaryCards() {
     [usageTrendQuery.data?.data]
   )
 
-  const healthLevel = getHealthLevel(remainQuota, recentUsage)
-  const healthCfg = HEALTH_CONFIG[healthLevel]
-  const runwayDays = getRunwayDays(remainQuota, recentUsage)
-
   const todayUsageDisplay = formatQuota(recentUsage)
 
   const items = useSummaryCardsConfig({
@@ -232,6 +271,14 @@ export function SummaryCards() {
       sparklineVariant: 'line' as const,
     }
   })
+
+  const subAmountTotal = Number(activeSub?.amount_total ?? 0)
+  const subAmountUsed = Number(activeSub?.amount_used ?? 0)
+  const isUnlimited = subAmountTotal === 0 && activeSub !== null
+  const usagePercent =
+    isUnlimited || subAmountTotal === 0
+      ? 0
+      : Math.min(100, (subAmountUsed / subAmountTotal) * 100)
 
   return (
     <div className='bg-card overflow-hidden rounded-2xl border shadow-xs'>
@@ -268,77 +315,60 @@ export function SummaryCards() {
           </StaggerContainer>
         </div>
 
-        <div className='bg-warning/10 flex flex-col justify-between gap-4 border-t p-4 sm:p-5 xl:border-t-0 xl:border-l'>
-          <div className='flex flex-col gap-3'>
-            <div className='flex items-center justify-between'>
+        <div className='bg-muted/40 flex flex-col justify-center gap-4 border-t p-4 sm:p-5 xl:border-t-0 xl:border-l'>
+          {activeSub ? (
+            <div className='flex flex-col gap-3'>
               <span className='text-muted-foreground text-xs font-medium'>
-                {t('Credit remaining')}
+                {t('Current Subscription')}
               </span>
-              <span className='flex items-center gap-1.5'>
-                <span
-                  className={cn('size-1.5 rounded-full', healthCfg.dotClass)}
-                  aria-hidden='true'
-                />
-                <span className='text-muted-foreground text-[11px] font-medium'>
-                  {t(healthCfg.labelKey)}
-                </span>
+
+              <div className='flex flex-col gap-1.5'>
+                <div className='flex items-baseline gap-1'>
+                  <span className='font-mono text-2xl font-semibold tracking-tight'>
+                    {formatQuota(subAmountUsed)}
+                  </span>
+                  <span className='text-muted-foreground text-2xl font-semibold tracking-tight'>
+                    / {isUnlimited ? t('Unlimited') : formatQuota(subAmountTotal)}
+                  </span>
+                </div>
+                {!isUnlimited && (
+                  <div className='bg-muted h-2 w-full overflow-hidden rounded-full'>
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-all duration-500',
+                        usagePercent >= 90
+                          ? 'bg-destructive'
+                          : usagePercent >= 70
+                            ? 'bg-warning'
+                            : 'bg-primary'
+                      )}
+                      style={{ width: `${usagePercent}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {nextResetTime > 0 && (
+                <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
+                  <CalendarClock className='size-3.5 shrink-0' aria-hidden='true' />
+                  <span>
+                    {t('Next reset')}:{' '}
+                    {dayjs(nextResetTime * 1000).format('YYYY/M/D HH:mm:ss')}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className='flex flex-1 flex-col items-center justify-center gap-2'>
+              <Package
+                className='text-muted-foreground/50 size-8'
+                aria-hidden='true'
+              />
+              <span className='text-muted-foreground text-sm'>
+                {t('No subscription records')}
               </span>
             </div>
-
-            <div className='font-mono text-2xl font-semibold tracking-tight'>
-              {formatQuota(remainQuota)}
-            </div>
-
-            <div className='grid grid-cols-2 gap-2'>
-              <div className='bg-background/60 rounded-lg px-2.5 py-2'>
-                <div className='text-muted-foreground flex items-center gap-1 text-[11px] leading-none font-medium'>
-                  <Flame className='size-3 shrink-0' aria-hidden='true' />
-                  <span className='truncate'>{t('Last 24h usage')}</span>
-                </div>
-                <div className='text-foreground mt-1.5 truncate text-xs font-semibold tabular-nums'>
-                  {formatQuota(recentUsage)}
-                </div>
-              </div>
-              <div className='bg-background/60 rounded-lg px-2.5 py-2'>
-                <div className='text-muted-foreground flex items-center gap-1 text-[11px] leading-none font-medium'>
-                  {runwayDays !== null && runwayDays < 3 ? (
-                    <TrendingDown
-                      className='size-3 shrink-0'
-                      aria-hidden='true'
-                    />
-                  ) : (
-                    <ShieldCheck
-                      className='size-3 shrink-0'
-                      aria-hidden='true'
-                    />
-                  )}
-                  <span className='truncate'>{t('Runway')}</span>
-                </div>
-                <div
-                  className={cn(
-                    'mt-1.5 truncate text-xs font-semibold tabular-nums',
-                    healthLevel === 'critical' && 'text-destructive',
-                    healthLevel === 'caution' && 'text-warning'
-                  )}
-                >
-                  {runwayDays !== null
-                    ? runwayDays < 1
-                      ? t('Less than 1 day left')
-                      : runwayDays > 999
-                        ? `999+ ${t('days')}`
-                        : `~${formatNumber(Math.floor(runwayDays))} ${t('days')}`
-                    : remainQuota <= 0
-                      ? t('Balance depleted')
-                      : t('No recent usage')}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Button className='justify-between' render={<Link to='/wallet' />}>
-            <span>{t('Wallet')}</span>
-            <ArrowRight data-icon='inline-end' />
-          </Button>
+          )}
         </div>
       </div>
     </div>
