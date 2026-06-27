@@ -125,6 +125,35 @@ function formatLargeNumber(v: number): string {
   return v.toLocaleString()
 }
 
+const DATA_ZOOM_THRESHOLD = 14
+
+function makeDataZoom(chartType: 'area' | 'line') {
+  const backgroundChart =
+    chartType === 'area'
+      ? {
+          area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+          line: { style: { lineWidth: 1 } },
+        }
+      : { line: { style: { lineWidth: 1 } } }
+
+  return [
+    {
+      orient: 'bottom' as const,
+      filterMode: 'axis' as const,
+      startText: { formatMethod: (v: string) => v },
+      endText: { formatMethod: (v: string) => v },
+      backgroundChart,
+    },
+  ]
+}
+
+const APPEAR_ANIMATION = {
+  animationAppear: {
+    duration: 800,
+    easing: 'cubicOut',
+  },
+}
+
 function makeAreaSpec(
   data: { date: string; value: number }[],
   yAxisFormat: (v: number) => string,
@@ -139,6 +168,10 @@ function makeAreaSpec(
     point: { visible: data.length <= 60, size: 4 },
     line: { style: { curveType: 'monotone' } },
     area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+    ...APPEAR_ANIMATION,
+    ...(data.length > DATA_ZOOM_THRESHOLD
+      ? { dataZoom: makeDataZoom('area') }
+      : {}),
     axes: [
       {
         orient: 'bottom',
@@ -260,6 +293,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
       resolvedTheme={props.resolvedTheme}
       chartKey={`token-trend-${props.resolvedTheme}`}
       spec={spec}
+      height='h-[340px]'
     />
   )
 }
@@ -292,6 +326,10 @@ function ModelUsageTrendChart(
       seriesField: 'model',
       point: { visible: dayCount <= 60, size: 3 },
       line: { style: { curveType: 'monotone' } },
+      ...APPEAR_ANIMATION,
+      ...(dayCount > DATA_ZOOM_THRESHOLD
+        ? { dataZoom: makeDataZoom('line') }
+        : {}),
       axes: [
         {
           orient: 'bottom',
@@ -380,6 +418,7 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
       direction: 'horizontal' as const,
       xField: 'value',
       yField: 'name',
+      ...APPEAR_ANIMATION,
       label: {
         visible: true,
         position: 'outside',
@@ -454,6 +493,7 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
       direction: 'horizontal' as const,
       xField: 'value',
       yField: 'name',
+      ...APPEAR_ANIMATION,
       label: {
         visible: true,
         position: 'outside',
@@ -590,6 +630,10 @@ function AvgPriceTrendChart(
       yField: 'value',
       point: { visible: chartData.length <= 60, size: 4 },
       line: { style: { curveType: 'monotone' } },
+      ...APPEAR_ANIMATION,
+      ...(chartData.length > DATA_ZOOM_THRESHOLD
+        ? { dataZoom: makeDataZoom('line') }
+        : {}),
       axes: [
         {
           orient: 'bottom',
@@ -687,6 +731,7 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
       categoryField: 'name',
       outerRadius: 0.8,
       innerRadius: 0.5,
+      ...APPEAR_ANIMATION,
       label: {
         visible: true,
         position: 'outside',
