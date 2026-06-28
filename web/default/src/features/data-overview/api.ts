@@ -4,6 +4,7 @@ import type {
   DepartmentStat,
   SubDepartmentStat,
   UsageAnalysis,
+  ReportNotifySetting,
 } from './types'
 
 export async function getDepartmentTree(): Promise<{
@@ -49,5 +50,26 @@ export async function getUsageAnalysis(params: {
     success: boolean
     data: UsageAnalysis
   }>('/api/department/usage-analysis', params)
+  return res.data
+}
+
+export async function getReportNotifySetting(): Promise<{
+  success: boolean
+  data: ReportNotifySetting
+}> {
+  const res = await api.get<{
+    success: boolean
+    data: ReportNotifySetting
+  }>('/api/report-notify-setting/self')
+  return res.data
+}
+
+export async function updateReportNotifySetting(
+  params: ReportNotifySetting
+): Promise<{ success: boolean; message: string }> {
+  const res = await api.put<{ success: boolean; message: string }>(
+    '/api/report-notify-setting/self',
+    params
+  )
   return res.data
 }

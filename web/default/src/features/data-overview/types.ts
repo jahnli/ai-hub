@@ -64,3 +64,9 @@ export interface DepartmentStat {
   registered_users: number
   unregistered_users: number
 }
+
+export interface ReportNotifySetting {
+  frequency: number
+  quota: number
+  quota_leave: number
+}

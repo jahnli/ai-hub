@@ -27,6 +27,7 @@ import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
 import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
+import { NotifySettingsDialog } from './components/notify-settings-dialog'
 import { SubDepartmentStats } from './components/sub-department-stats'
 import { UsageAnalysisSection } from './components/usage-analysis'
 import type { DeptTreeNode, DepartmentStat } from './types'
@@ -159,6 +160,7 @@ export function DataOverview() {
               {t('Search')}
             </Button>
           )}
+          <NotifySettingsDialog />
         </div>
       </SectionPageLayout.Title>
       <SectionPageLayout.Content>
