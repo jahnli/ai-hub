@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { VChart } from '@visactor/react-vchart'
 import {
   BarChart3,
+  ChartLine,
   Coins,
   DollarSign,
   Hash,
@@ -10,6 +11,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
 import type { DailyStat, ModelDailyStat, ModelStat, UsageAnalysis } from '../types'
@@ -21,6 +23,7 @@ interface UsageAnalysisProps {
 }
 
 export function UsageAnalysisSection(props: UsageAnalysisProps) {
+  const { t } = useTranslation()
   const { resolvedTheme, themeReady } = useChartTheme()
   const hasModelData =
     props.data.model_stats && props.data.model_stats.length > 0
@@ -34,40 +37,50 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
   const chartProps = { themeReady, resolvedTheme }
 
   return (
-    <div className='mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2'>
-      {hasDailyData && (
-        <QuotaTrendChart data={props.data.daily_stats} {...chartProps} />
-      )}
-      {hasDailyData && (
-        <RequestTrendChart data={props.data.daily_stats} {...chartProps} />
-      )}
-      {hasDailyData && (
-        <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
-      )}
-      {hasModelData && (
-        <ModelUsageTrendChart
-          data={props.data.model_daily_stats ?? []}
-          {...chartProps}
-        />
-      )}
-      {hasModelData && (
-        <ModelCallRankChart data={props.data.model_stats} {...chartProps} />
-      )}
-      {hasModelData && (
-        <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
-      )}
-      {hasDailyData && (
-        <AvgPriceTrendChart
-          data={props.data.daily_stats}
-          startTimestamp={props.startTimestamp}
-          endTimestamp={props.endTimestamp}
-          {...chartProps}
-        />
-      )}
-      {hasModelData && (
-        <ModelTokenDistChart data={props.data.model_stats} {...chartProps} />
-      )}
-    </div>
+    <Card className='mt-4'>
+      <CardHeader className='pb-3'>
+        <CardTitle className='flex items-center gap-2 text-base'>
+          <ChartLine className='text-primary size-5' />
+          {t('Usage Analysis')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className='p-0'>
+        <div className='grid grid-cols-1 lg:grid-cols-2'>
+          {hasDailyData && (
+            <QuotaTrendChart data={props.data.daily_stats} {...chartProps} />
+          )}
+          {hasDailyData && (
+            <RequestTrendChart data={props.data.daily_stats} {...chartProps} />
+          )}
+          {hasDailyData && (
+            <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
+          )}
+          {hasModelData && (
+            <ModelUsageTrendChart
+              data={props.data.model_daily_stats ?? []}
+              {...chartProps}
+            />
+          )}
+          {hasModelData && (
+            <ModelCallRankChart data={props.data.model_stats} {...chartProps} />
+          )}
+          {hasModelData && (
+            <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
+          )}
+          {hasDailyData && (
+            <AvgPriceTrendChart
+              data={props.data.daily_stats}
+              startTimestamp={props.startTimestamp}
+              endTimestamp={props.endTimestamp}
+              {...chartProps}
+            />
+          )}
+          {hasModelData && (
+            <ModelTokenDistChart data={props.data.model_stats} {...chartProps} />
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -90,8 +103,8 @@ function ChartCard(props: {
 }) {
   const Icon = props.icon
   return (
-    <div className='overflow-hidden rounded-lg border'>
-      <div className='flex w-full items-center justify-between px-4 py-2.5'>
+    <div className='border-border/60 border-b last:border-b-0 lg:odd:border-r [&:nth-last-child(2)]:lg:border-b-0'>
+      <div className='flex w-full items-center justify-between px-5 py-3'>
         <div className='flex items-center gap-2'>
           <Icon className='text-muted-foreground/60 size-4' />
           <span className='text-sm font-semibold'>{props.title}</span>

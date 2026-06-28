@@ -274,7 +274,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
         </div>
 
         {/* Charts side by side */}
-        <div className="grid grid-cols-1 border-t md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Bar chart - consumption ranking */}
           <div className="md:border-r">
             <div className="flex items-center gap-2 px-5 py-3">

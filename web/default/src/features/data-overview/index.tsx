@@ -240,18 +240,28 @@ export function DataOverview() {
           )}
 
           {usageQuery.isFetching && !usageQuery.data && (
-            <div className='mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2'>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className='overflow-hidden rounded-lg border'>
-                  <div className='px-4 py-2.5'>
-                    <Skeleton className='h-4 w-32' />
-                  </div>
-                  <div className='flex items-center justify-center p-2' style={{ height: 300 }}>
-                    <Loader2 className='text-muted-foreground size-6 animate-spin' />
-                  </div>
+            <Card className='mt-4'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='flex items-center gap-2 text-base'>
+                  <Skeleton className='size-5' />
+                  <Skeleton className='h-4 w-24' />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='p-0'>
+                <div className='grid grid-cols-1 lg:grid-cols-2'>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className='border-border/60 border-b lg:odd:border-r'>
+                      <div className='px-5 py-3'>
+                        <Skeleton className='h-4 w-32' />
+                      </div>
+                      <div className='flex items-center justify-center p-2' style={{ height: 300 }}>
+                        <Loader2 className='text-muted-foreground size-6 animate-spin' />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </CardContent>
+            </Card>
           )}
 
           {usageQuery.data?.data && queryParams && (
