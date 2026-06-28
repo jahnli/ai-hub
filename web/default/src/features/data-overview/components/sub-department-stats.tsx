@@ -153,9 +153,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           label: {
             formatMethod: (v: number) => {
               if (v === 0) return "0";
-              if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(0) + " 亿";
-              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + " 万";
-              return v.toLocaleString();
+              return (v / 1_0000_0000).toFixed(2) + " 亿";
             },
           },
         },

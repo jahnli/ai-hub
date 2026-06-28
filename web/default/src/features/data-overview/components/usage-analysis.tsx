@@ -140,9 +140,8 @@ function formatLargeNumber(v: number): string {
 }
 
 function formatTokenValue(v: number): string {
-  if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(2) + ' 亿'
-  if (v >= 1_0000) return (v / 1_0000).toFixed(2) + ' 万'
-  return v.toLocaleString()
+  if (v === 0) return '0'
+  return (v / 1_0000_0000).toFixed(2) + ' 亿'
 }
 
 const DATA_ZOOM_THRESHOLD = 14
