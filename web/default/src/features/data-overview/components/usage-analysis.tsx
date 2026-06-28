@@ -134,7 +134,14 @@ function formatDateLabel(v: string): string {
 }
 
 function formatLargeNumber(v: number): string {
-  if (v >= 1_0000) return (v / 1_0000).toFixed(1) + ' 万'
+  if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(2) + ' 亿'
+  if (v >= 1_0000) return (v / 1_0000).toFixed(2) + ' 万'
+  return v.toLocaleString()
+}
+
+function formatTokenValue(v: number): string {
+  if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(2) + ' 亿'
+  if (v >= 1_0000) return (v / 1_0000).toFixed(2) + ' 万'
   return v.toLocaleString()
 }
 
@@ -203,6 +210,14 @@ function makeAreaSpec(
       },
     ],
     tooltip: {
+      dimension: {
+        content: [
+          {
+            key: tooltipKey,
+            value: (d: { value?: number }) => tooltipFormat(d.value ?? 0),
+          },
+        ],
+      },
       mark: {
         title: { value: (d: { date?: string }) => d.date ?? '' },
         content: [
@@ -258,9 +273,9 @@ function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     }))
     return makeAreaSpec(
       values,
-      (v) => formatLargeNumber(v),
+      (v) => formatLargeNumber(v) + ' ' + t('times'),
       t('Requests'),
-      (v) => v.toLocaleString()
+      (v) => formatLargeNumber(v) + ' ' + t('times')
     )
   }, [props.data, t])
 
@@ -288,13 +303,9 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     }))
     return makeAreaSpec(
       values,
-      (v) => {
-        if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(1) + ' 亿'
-        if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
-        return v.toLocaleString()
-      },
+      (v) => formatTokenValue(v),
       'Tokens',
-      (v) => v.toLocaleString()
+      (v) => formatTokenValue(v)
     )
   }, [props.data])
 
@@ -358,12 +369,7 @@ function ModelUsageTrendChart(
           orient: 'left',
           type: 'linear',
           label: {
-            formatMethod: (v: number) => {
-              if (v >= 1_0000_0000)
-                return (v / 1_0000_0000).toFixed(1) + ' 亿'
-              if (v >= 1_0000) return (v / 1_0000).toFixed(0) + ' 万'
-              return v.toLocaleString()
-            },
+            formatMethod: (v: number) => formatTokenValue(v),
           },
         },
       ],
@@ -379,13 +385,22 @@ function ModelUsageTrendChart(
         },
       },
       tooltip: {
+        dimension: {
+          content: [
+            {
+              key: (d: { model?: string }) => d.model ?? '',
+              value: (d: { tokens?: number }) =>
+                formatTokenValue(d.tokens ?? 0),
+            },
+          ],
+        },
         mark: {
           title: { value: (d: { date?: string }) => d.date ?? '' },
           content: [
             {
               key: (d: { model?: string }) => d.model ?? '',
               value: (d: { tokens?: number }) =>
-                (d.tokens ?? 0).toLocaleString(),
+                formatTokenValue(d.tokens ?? 0),
             },
           ],
         },
@@ -435,7 +450,7 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
       label: {
         visible: true,
         position: 'outside',
-        formatMethod: (value: number) => formatLargeNumber(value),
+        formatMethod: (value: number) => formatLargeNumber(value) + ' ' + t('times'),
       },
       bar: { style: { cornerRadius: [0, 4, 4, 0] } },
       axes: [
@@ -457,12 +472,21 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         },
       ],
       tooltip: {
+        dimension: {
+          content: [
+            {
+              key: t('Requests'),
+              value: (d: { value?: number }) =>
+                formatLargeNumber(d.value ?? 0) + ' ' + t('times'),
+            },
+          ],
+        },
         mark: {
           content: [
             {
               key: t('Requests'),
               value: (d: { value?: number }) =>
-                (d.value ?? 0).toLocaleString(),
+                formatLargeNumber(d.value ?? 0) + ' ' + t('times'),
             },
           ],
         },
@@ -534,6 +558,17 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         },
       ],
       tooltip: {
+        dimension: {
+          content: [
+            {
+              key: t('Cost'),
+              value: (d: { value?: number }) => {
+                const v = d.value ?? 0
+                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
+              },
+            },
+          ],
+        },
         mark: {
           content: [
             {
@@ -671,6 +706,15 @@ function AvgPriceTrendChart(
         },
       ],
       tooltip: {
+        dimension: {
+          content: [
+            {
+              key: t('Avg Price'),
+              value: (d: { value?: number }) =>
+                '¥' + (d.value ?? 0).toFixed(2) + ' / M Tokens',
+            },
+          ],
+        },
         mark: {
           title: { value: (d: { label?: string }) => d.label ?? '' },
           content: [
@@ -730,6 +774,8 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
     const filtered = props.data.filter((i) => i.total_tokens > 0)
     if (filtered.length === 0) return null
 
+    const totalTokens = filtered.reduce((sum, i) => sum + i.total_tokens, 0)
+
     return {
       type: 'pie' as const,
       data: [
@@ -761,7 +807,14 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
       label: {
         visible: true,
         position: 'outside',
-        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? '',
+        formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
+          const name = d.name ?? ''
+          const pct =
+            totalTokens > 0
+              ? ((d.value ?? 0) / totalTokens * 100).toFixed(2) + '%'
+              : ''
+          return pct ? `${name} ${pct}` : name
+        },
       },
       tooltip: {
         mark: {
@@ -770,10 +823,12 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
               key: (d: { name?: string }) => d.name ?? '',
               value: (d: { value?: number }) => {
                 const v = d.value ?? 0
-                if (v >= 1_0000_0000)
-                  return (v / 1_0000_0000).toFixed(2) + ' 亿'
-                if (v >= 1_0000) return (v / 1_0000).toFixed(1) + ' 万'
-                return v.toLocaleString()
+                const formatted = formatTokenValue(v)
+                const pct =
+                  totalTokens > 0
+                    ? ((v / totalTokens) * 100).toFixed(2) + '%'
+                    : ''
+                return pct ? `${formatted} (${pct})` : formatted
               },
             },
           ],
