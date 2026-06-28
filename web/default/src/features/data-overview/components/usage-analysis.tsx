@@ -731,7 +731,20 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
       categoryField: 'name',
       outerRadius: 0.8,
       innerRadius: 0.5,
-      ...APPEAR_ANIMATION,
+      pie: {
+        state: {
+          hover: {
+            outerRadius: 0.88,
+            stroke: '#fff',
+            lineWidth: 2,
+          },
+        },
+      },
+      animationAppear: {
+        duration: 800,
+        easing: 'cubicOut',
+        preset: 'growRadiusIn',
+      },
       label: {
         visible: true,
         position: 'outside',
@@ -753,7 +766,21 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
           ],
         },
       },
-      legends: { visible: false },
+      legends: {
+        visible: true,
+        orient: 'right',
+        type: 'discrete',
+        item: {
+          width: 120,
+          label: {
+            style: { fontSize: 11 },
+            formatMethod: (label: string) =>
+              label.length > 12 ? label.slice(0, 12) + '…' : label,
+          },
+        },
+        maxRow: 8,
+        autoPage: true,
+      },
     }
   }, [props.data])
 
