@@ -778,7 +778,7 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
               label.length > 12 ? label.slice(0, 12) + '…' : label,
           },
         },
-        maxRow: 8,
+        maxRow: 12,
         autoPage: true,
       },
     }
@@ -794,6 +794,7 @@ function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
       resolvedTheme={props.resolvedTheme}
       chartKey={`model-token-dist-${props.resolvedTheme}`}
       spec={spec}
+      height='h-[360px]'
     />
   )
 }
