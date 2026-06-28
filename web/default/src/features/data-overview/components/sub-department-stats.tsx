@@ -308,7 +308,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
                 {totalCost === 0 ? "¥0" : "¥" + totalCost.toFixed(2)}
               </span>
             </div>
-            <div className="h-[300px] p-2">
+            <div className="p-2" style={{ height: Math.max(300, sortedData.length * 34) }}>
               {themeReady && (
                 <VChart
                   key={`pie-${resolvedTheme}`}
