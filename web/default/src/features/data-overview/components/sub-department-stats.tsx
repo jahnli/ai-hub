@@ -311,7 +311,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
               <span className="text-sm font-semibold">
                 {t("Department Consumption Share")}
               </span>
-              <span className="text-muted-foreground ml-auto text-xs">
+              <span className="text-muted-foreground ml-auto text-sm">
                 {t("Total")}:{" "}
                 {totalCost === 0 ? "¥0" : "¥" + totalCost.toFixed(2)}
               </span>
