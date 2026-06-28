@@ -200,6 +200,20 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       categoryField: "name",
       outerRadius: 0.8,
       innerRadius: 0.5,
+      pie: {
+        state: {
+          hover: {
+            outerRadius: 0.88,
+            stroke: "#fff",
+            lineWidth: 2,
+          },
+        },
+      },
+      animationAppear: {
+        duration: 800,
+        easing: "cubicOut",
+        preset: "growRadiusIn",
+      },
       label: {
         visible: true,
         position: "outside",
@@ -218,7 +232,19 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           ],
         },
       },
-      legends: { visible: false },
+      legends: {
+        visible: true,
+        orient: "bottom",
+        type: "discrete",
+        item: {
+          label: {
+            style: { fontSize: 11 },
+            formatMethod: (label: string) =>
+              label.length > 14 ? label.slice(0, 14) + "…" : label,
+          },
+        },
+        autoPage: true,
+      },
       theme: resolvedTheme === "dark" ? "dark" : "light",
       background: "transparent",
     }),
@@ -282,7 +308,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
                 {totalCost === 0 ? "¥0" : "¥" + totalCost.toFixed(2)}
               </span>
             </div>
-            <div className="h-[300px] p-2">
+            <div className="p-2" style={{ height: Math.max(300, sortedData.length * 34) }}>
               {themeReady && (
                 <VChart
                   key={`pie-${resolvedTheme}`}
