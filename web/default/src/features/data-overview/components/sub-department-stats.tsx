@@ -217,7 +217,14 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       label: {
         visible: true,
         position: "outside",
-        formatMethod: (_: unknown, d: { name?: string }) => d.name ?? "",
+        formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
+          const name = d.name ?? "";
+          const pct =
+            totalCost > 0
+              ? ((d.value ?? 0) / totalCost * 100).toFixed(1) + "%"
+              : "";
+          return pct ? `${name} ${pct}` : name;
+        },
       },
       tooltip: {
         mark: {
@@ -226,7 +233,10 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
               key: (d: { name?: string }) => d.name ?? "",
               value: (d: { value?: number }) => {
                 const v = d.value ?? 0;
-                return v === 0 ? "¥0" : "¥" + v.toFixed(2);
+                const cost = v === 0 ? "¥0" : "¥" + v.toFixed(2);
+                const pct =
+                  totalCost > 0 ? (v / totalCost * 100).toFixed(1) + "%" : "";
+                return pct ? `${cost} (${pct})` : cost;
               },
             },
           ],
@@ -248,7 +258,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       theme: resolvedTheme === "dark" ? "dark" : "light",
       background: "transparent",
     }),
-    [sortedData, resolvedTheme],
+    [sortedData, resolvedTheme, totalCost],
   );
 
   if (props.data.length === 0) {
