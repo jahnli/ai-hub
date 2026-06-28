@@ -160,9 +160,13 @@ export function DataOverview() {
               {t('Search')}
             </Button>
           )}
-          <NotifySettingsDialog />
         </div>
       </SectionPageLayout.Title>
+      <SectionPageLayout.Actions>
+        <div className='mr-3'>
+          <NotifySettingsDialog />
+        </div>
+      </SectionPageLayout.Actions>
       <SectionPageLayout.Content>
         <FadeIn>
           {treeQuery.isError && (
