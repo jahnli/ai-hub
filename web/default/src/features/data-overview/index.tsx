@@ -28,6 +28,7 @@ import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/com
 import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
 import { DepartmentUsersTable } from './components/department-users-table'
+import { ExportDialog } from './components/export-dialog'
 import { NotifySettingsDialog } from './components/notify-settings-dialog'
 import { SubDepartmentStats } from './components/sub-department-stats'
 import { UsageAnalysisSection } from './components/usage-analysis'
@@ -129,7 +130,7 @@ export function DataOverview() {
   return (
     <SectionPageLayout>
       <SectionPageLayout.Title>
-        <div className='flex items-center gap-3'>
+        <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
           <span>{t('Data Overview')}</span>
           {treeQuery.isLoading ? (
             <Skeleton className='h-8 w-[200px]' />
@@ -148,28 +149,30 @@ export function DataOverview() {
             className='max-w-[300px]'
           />
           {selectedDeptId && (
-            <Button
-              className='gap-1.5'
-              onClick={handleSearch}
-              disabled={statsQuery.isFetching}
-            >
-              {statsQuery.isFetching ? (
-                <Loader2 className='size-3.5 animate-spin' />
-              ) : (
-                <Search className='size-3.5' />
-              )}
-              {t('Search')}
-            </Button>
+            <div className='ml-auto flex items-center gap-2'>
+              <Button
+                className='gap-1.5'
+                onClick={handleSearch}
+                disabled={statsQuery.isFetching}
+              >
+                {statsQuery.isFetching ? (
+                  <Loader2 className='size-3.5 animate-spin' />
+                ) : (
+                  <Search className='size-3.5' />
+                )}
+                {t('Search')}
+              </Button>
+              <ExportDialog
+                queryParams={queryParams}
+                treeData={displayTreeData}
+                stats={statsQuery.data?.data}
+                subStats={subStatsQuery.data?.data ?? []}
+              />
+              <NotifySettingsDialog />
+            </div>
           )}
         </div>
       </SectionPageLayout.Title>
-      {selectedDeptId && (
-        <SectionPageLayout.Actions>
-          <div className='mr-3'>
-            <NotifySettingsDialog />
-          </div>
-        </SectionPageLayout.Actions>
-      )}
       <SectionPageLayout.Content>
         <FadeIn>
           {treeQuery.isError && (
