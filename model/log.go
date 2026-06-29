@@ -811,6 +811,44 @@ type ModelStatRow struct {
 	TotalReqs   int64  `json:"total_requests" gorm:"column:total_reqs"`
 }
 
+// UserModelStatRow holds per-user per-model aggregated stats.
+type UserModelStatRow struct {
+	UserID      int    `gorm:"column:user_id"`
+	ModelName   string `gorm:"column:model_name"`
+	TotalQuota  int64  `gorm:"column:total_quota"`
+	TotalTokens int64  `gorm:"column:total_tokens"`
+	TotalReqs   int64  `gorm:"column:total_reqs"`
+}
+
+// GetUserModelStatsBatch returns per-user per-model stats for all given user IDs.
+func GetUserModelStatsBatch(userIds []int, startTimestamp, endTimestamp int64) ([]UserModelStatRow, error) {
+	if len(userIds) == 0 {
+		return nil, nil
+	}
+	var rows []UserModelStatRow
+	tx := LOG_DB.Table("logs").
+		Select(`user_id,
+			model_name,
+			COALESCE(SUM(quota), 0) as total_quota,
+			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens,
+			COUNT(*) as total_reqs`).
+		Where("type = ?", LogTypeConsume).
+		Where("user_id IN ?", userIds).
+		Where("model_name != ''")
+
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+
+	if err := tx.Group("user_id, model_name").Order("total_quota DESC").Scan(&rows).Error; err != nil {
+		return nil, errors.New("查询用户模型统计数据失败")
+	}
+	return rows, nil
+}
+
 // GetModelStats returns per-model aggregated stats for the given user IDs, ordered by quota desc, limited to top N.
 func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int) ([]ModelStatRow, error) {
 	if len(userIds) == 0 {
@@ -920,7 +958,7 @@ func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN 
 
 	var rows []ModelDailyStatRow
 	tx := LOG_DB.Table("logs").
-		Select(dateExpr + ` as date, model_name,
+		Select(dateExpr+` as date, model_name,
 			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens`).
 		Where("type = ?", LogTypeConsume).
 		Where("user_id IN ?", userIds).

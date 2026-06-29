@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 import { formatQuota, formatTimestamp } from '@/lib/format'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
@@ -44,10 +44,42 @@ import { type User, parseCustomFields, CUSTOM_FIELD_KEYS } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
 import { UserProfileHoverCard } from './user-profile-hover-card'
 
-function getQuotaProgressColor(percentage: number): string {
-  if (percentage <= 10) return '[&_[data-slot=progress-indicator]]:bg-rose-500'
-  if (percentage <= 30) return '[&_[data-slot=progress-indicator]]:bg-amber-500'
+function getQuotaProgressColor(usedPercentage: number): string {
+  if (usedPercentage >= 90) return '[&_[data-slot=progress-indicator]]:bg-rose-500'
+  if (usedPercentage >= 70) return '[&_[data-slot=progress-indicator]]:bg-amber-500'
   return '[&_[data-slot=progress-indicator]]:bg-emerald-500'
+}
+
+function formatMonthlyAmountCny(value: number | undefined): string {
+  const amount = value ?? 0
+  return `¥${Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)}`
+}
+
+function formatMonthlyTokens(tokens: number | undefined): string {
+  const value = tokens ?? 0
+  if (value <= 0) return '-'
+  if (value >= 100_000_000) {
+    return `${Intl.NumberFormat(undefined, {
+      maximumFractionDigits: 2,
+    }).format(value / 100_000_000)}亿`
+  }
+  return `${Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 2,
+  }).format(value / 1_000_000)}M`
+}
+
+function formatMonthlyRequests(requests: number | undefined): string {
+  const value = requests ?? 0
+  if (value <= 0) return '-'
+  if (value >= 10_000) {
+    return `${Intl.NumberFormat(undefined, {
+      maximumFractionDigits: 2,
+    }).format(value / 10_000)}万次`
+  }
+  return Intl.NumberFormat().format(value)
 }
 
 export function useUsersColumns(): ColumnDef<User>[] {
@@ -148,24 +180,20 @@ export function useUsersColumns(): ColumnDef<User>[] {
     {
       id: 'quota',
       accessorKey: 'quota',
-      header: t('Quota'),
+      header: t('Used Quota / Total Quota'),
       cell: ({ row }) => {
         const user = row.original
-        const used = user.used_quota
-        const remaining = user.quota
-        const total = used + remaining
-        const percentage = total > 0 ? (remaining / total) * 100 : 0
+        const used = user.sub_quota_used ?? 0
+        const total = user.sub_quota_total ?? 0
+        const remaining = total - used
 
         if (total === 0) {
           return (
-            <StatusBadge
-              label={t('No Quota')}
-              variant='neutral'
-              copyable={false}
-              className='-ml-1.5'
-            />
+            <span className='text-muted-foreground text-sm'>-</span>
           )
         }
+
+        const usedPercentage = Math.min((used / total) * 100, 100)
 
         return (
           <Tooltip>
@@ -174,15 +202,15 @@ export function useUsersColumns(): ColumnDef<User>[] {
             >
               <div className='flex justify-between text-xs'>
                 <span className='font-medium tabular-nums'>
-                  {formatQuota(remaining)}
+                  {formatQuota(used)}
                 </span>
                 <span className='text-muted-foreground tabular-nums'>
                   {formatQuota(total)}
                 </span>
               </div>
               <Progress
-                value={percentage}
-                className={cn('h-1.5', getQuotaProgressColor(percentage))}
+                value={usedPercentage}
+                className={cn('h-1.5', getQuotaProgressColor(usedPercentage))}
               />
             </TooltipTrigger>
             <TooltipContent>
@@ -197,7 +225,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
                   {t('Total:')} {formatQuota(total)}
                 </div>
                 <div>
-                  {t('Percentage:')} {percentage.toFixed(1)}%
+                  {t('Percentage:')} {usedPercentage.toFixed(1)}%
                 </div>
               </div>
             </TooltipContent>
@@ -205,6 +233,67 @@ export function useUsersColumns(): ColumnDef<User>[] {
         )
       },
       size: 170,
+    },
+    {
+      accessorKey: 'monthly_total_amount_cny',
+      header: t('Monthly Total Cost'),
+      cell: ({ row }) => {
+        return (
+          <span className='text-sm font-medium tabular-nums'>
+            {formatMonthlyAmountCny(row.original.monthly_total_amount_cny)}
+          </span>
+        )
+      },
+      size: 140,
+      meta: { mobileHidden: true },
+    },
+    {
+      accessorKey: 'monthly_total_tokens',
+      header: t('Monthly Tokens'),
+      cell: ({ row }) => {
+        return (
+          <span className='text-muted-foreground text-sm tabular-nums'>
+            {formatMonthlyTokens(row.original.monthly_total_tokens)}
+          </span>
+        )
+      },
+      size: 120,
+      meta: { mobileHidden: true },
+    },
+    {
+      accessorKey: 'monthly_total_requests',
+      header: t('Monthly Requests'),
+      cell: ({ row }) => {
+        return (
+          <span className='text-muted-foreground text-sm tabular-nums'>
+            {formatMonthlyRequests(row.original.monthly_total_requests)}
+          </span>
+        )
+      },
+      size: 120,
+      meta: { mobileHidden: true },
+    },
+    {
+      accessorKey: 'monthly_common_model',
+      header: t('Monthly Common Model'),
+      cell: ({ row }) => {
+        const modelName = row.original.monthly_common_model
+        if (!modelName) {
+          return <span className='text-muted-foreground text-sm'>-</span>
+        }
+        return (
+          <Tooltip>
+            <TooltipTrigger render={<div className='max-w-[180px] cursor-help' />}>
+              <LongText className='text-sm'>{modelName}</LongText>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className='text-xs'>{modelName}</p>
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
+      size: 190,
+      meta: { mobileHidden: true },
     },
     {
       accessorKey: 'department_name',
@@ -315,7 +404,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
       header: t('Status'),
       cell: ({ row }) => {
         const user = row.original
-        const requestCount = user.request_count
+        const requestCount = user.monthly_total_requests ?? 0
 
         const statusConfig = isUserDeleted(user)
           ? USER_STATUSES[USER_STATUS.DELETED]

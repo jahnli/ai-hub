@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
@@ -17,6 +18,7 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/QuantumNous/new-api/constant"
 
@@ -280,7 +282,7 @@ func GetAllUsers(c *gin.Context) {
 	}
 
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(users)
+	pageInfo.SetItems(attachSubscriptionQuota(users))
 
 	common.ApiSuccess(c, pageInfo)
 	return
@@ -309,13 +311,86 @@ func SearchUsers(c *gin.Context) {
 	}
 
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(users)
+	pageInfo.SetItems(attachSubscriptionQuota(users))
 	common.ApiSuccess(c, pageInfo)
 	return
 }
 
 func canManageTargetRole(myRole int, targetRole int) bool {
 	return myRole == common.RoleRootUser || myRole > targetRole
+}
+
+type userWithSubQuota struct {
+	*model.User
+	SubQuotaUsed          int64   `json:"sub_quota_used"`
+	SubQuotaTotal         int64   `json:"sub_quota_total"`
+	MonthlyTotalAmountCNY float64 `json:"monthly_total_amount_cny"`
+	MonthlyTotalTokens    int64   `json:"monthly_total_tokens"`
+	MonthlyTotalRequests  int64   `json:"monthly_total_requests"`
+	MonthlyCommonModel    string  `json:"monthly_common_model"`
+}
+
+func attachSubscriptionQuota(users []*model.User) []userWithSubQuota {
+	ids := make([]int, len(users))
+	for i, u := range users {
+		ids[i] = u.Id
+	}
+	subMap, err := model.GetActiveSubscriptionQuotaByUserIds(ids)
+	if err != nil {
+		common.SysLog("failed to fetch subscription quota: " + err.Error())
+		subMap = make(map[int]*model.UserSubscriptionQuotaSummary)
+	}
+
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Unix()
+	monthEnd := now.Unix()
+	userStats := make(map[int]model.UserStatRow)
+	statRows, err := model.GetUserStatsBatch(ids, monthStart, monthEnd)
+	if err != nil {
+		common.SysLog("failed to fetch monthly user stats: " + err.Error())
+	} else {
+		for _, row := range statRows {
+			userStats[row.UserID] = row
+		}
+	}
+
+	commonModels := make(map[int]string)
+	modelRows, err := model.GetUserModelStatsBatch(ids, monthStart, monthEnd)
+	if err != nil {
+		common.SysLog("failed to fetch monthly user model stats: " + err.Error())
+	} else {
+		for _, row := range modelRows {
+			if _, ok := commonModels[row.UserID]; !ok {
+				commonModels[row.UserID] = row.ModelName
+			}
+		}
+	}
+
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+
+	result := make([]userWithSubQuota, len(users))
+	for i, u := range users {
+		item := userWithSubQuota{User: u}
+		if s, ok := subMap[u.Id]; ok {
+			item.SubQuotaUsed = s.AmountUsed
+			item.SubQuotaTotal = s.AmountTotal
+		}
+		if stat, ok := userStats[u.Id]; ok {
+			item.MonthlyTotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
+			item.MonthlyTotalTokens = stat.TotalTokens
+			item.MonthlyTotalRequests = stat.TotalReqs
+		}
+		item.MonthlyCommonModel = commonModels[u.Id]
+		result[i] = item
+	}
+	return result
 }
 
 func GetUser(c *gin.Context) {
@@ -486,20 +561,20 @@ func generateDefaultSidebarConfig(userRole int) string {
 	if userRole == common.RoleAdminUser {
 		// 管理员可以访问管理员区域，但不能访问系统设置
 		defaultConfig["admin"] = map[string]interface{}{
-			"enabled":    true,
-			"channel":    true,
-			"models":     true,
-			"user":       true,
-			"setting":    false, // 管理员不能访问系统设置
+			"enabled": true,
+			"channel": true,
+			"models":  true,
+			"user":    true,
+			"setting": false, // 管理员不能访问系统设置
 		}
 	} else if userRole == common.RoleRootUser {
 		// 超级管理员可以访问所有功能
 		defaultConfig["admin"] = map[string]interface{}{
-			"enabled":    true,
-			"channel":    true,
-			"models":     true,
-			"user":       true,
-			"setting":    true,
+			"enabled": true,
+			"channel": true,
+			"models":  true,
+			"user":    true,
+			"setting": true,
 		}
 	}
 	// 普通用户不包含admin区域
@@ -579,15 +654,22 @@ func UpdateUser(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	if updatedUser.Role != common.RoleGuestUser && updatedUser.Role != originUser.Role {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
-		return
-	}
-	updatedUser.Role = originUser.Role
 	myRole := c.GetInt("role")
 	if !canManageTargetRole(myRole, originUser.Role) {
 		common.ApiErrorI18n(c, i18n.MsgUserNoPermissionHigherLevel)
 		return
+	}
+	if updatedUser.Role == common.RoleGuestUser {
+		updatedUser.Role = originUser.Role
+	} else if updatedUser.Role != originUser.Role {
+		if !common.IsValidateRole(updatedUser.Role) || updatedUser.Role >= common.RoleRootUser {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return
+		}
+		if !canManageTargetRole(myRole, updatedUser.Role) {
+			common.ApiErrorI18n(c, i18n.MsgUserNoPermissionHigherLevel)
+			return
+		}
 	}
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be

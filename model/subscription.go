@@ -1468,3 +1468,29 @@ func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error
 		return tx.Save(&sub).Error
 	})
 }
+
+type UserSubscriptionQuotaSummary struct {
+	UserId      int   `json:"user_id"`
+	AmountTotal int64 `json:"amount_total"`
+	AmountUsed  int64 `json:"amount_used"`
+}
+
+func GetActiveSubscriptionQuotaByUserIds(userIds []int) (map[int]*UserSubscriptionQuotaSummary, error) {
+	if len(userIds) == 0 {
+		return make(map[int]*UserSubscriptionQuotaSummary), nil
+	}
+	var results []UserSubscriptionQuotaSummary
+	err := DB.Model(&UserSubscription{}).
+		Select("user_id, SUM(amount_total) as amount_total, SUM(amount_used) as amount_used").
+		Where("user_id IN ? AND status = ?", userIds, "active").
+		Group("user_id").
+		Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int]*UserSubscriptionQuotaSummary, len(results))
+	for i := range results {
+		m[results[i].UserId] = &results[i]
+	}
+	return m, nil
+}
