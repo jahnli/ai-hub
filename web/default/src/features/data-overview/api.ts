@@ -5,6 +5,8 @@ import type {
   SubDepartmentStat,
   UsageAnalysis,
   ReportNotifySetting,
+  DepartmentUsersResponse,
+  UserRankingItem,
 } from './types'
 
 export async function getDepartmentTree(): Promise<{
@@ -71,5 +73,31 @@ export async function updateReportNotifySetting(
     '/api/report-notify-setting/self',
     params
   )
+  return res.data
+}
+
+export async function getDepartmentUsers(params: {
+  department_id: string
+  start_timestamp: number
+  end_timestamp: number
+  page: number
+  page_size: number
+}): Promise<{ success: boolean; data: DepartmentUsersResponse }> {
+  const res = await api.post<{
+    success: boolean
+    data: DepartmentUsersResponse
+  }>('/api/department/users', params)
+  return res.data
+}
+
+export async function getDepartmentUserRankings(params: {
+  department_id: string
+  start_timestamp: number
+  end_timestamp: number
+}): Promise<{ success: boolean; data: UserRankingItem[] }> {
+  const res = await api.post<{
+    success: boolean
+    data: UserRankingItem[]
+  }>('/api/department/user-rankings', params)
   return res.data
 }

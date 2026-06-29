@@ -70,3 +70,50 @@ export interface ReportNotifySetting {
   quota: number
   quota_leave: number
 }
+
+export interface DepartmentUser {
+  id: number
+  username: string
+  display_name: string
+  email?: string
+  quota: number
+  used_quota: number
+  sub_quota_used: number
+  sub_quota_total: number
+  total_amount_cny: number
+  total_tokens: number
+  total_requests: number
+  common_model?: string
+  request_count: number
+  group: string
+  status: number
+  role: number
+  created_at?: number
+  last_login_at?: number
+  DeletedAt?: unknown | null
+  remark?: string
+  avatar_url?: string
+  department_name?: string
+  job_title?: string
+  job_number?: string
+  mobile?: string
+  gender?: number
+  description?: string
+  background_image?: string
+  custom_field_values?: string
+  join_date?: string
+}
+
+export interface DepartmentUsersResponse {
+  items: DepartmentUser[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface UserRankingItem {
+  username: string
+  display_name: string
+  total_cost: number
+  total_tokens: number
+}

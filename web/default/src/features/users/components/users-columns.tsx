@@ -132,7 +132,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
         const avatarFallbackStyle = getUserAvatarStyle(primaryName)
 
         return (
-          <div className='flex min-w-[160px] items-center gap-3'>
+          <div className='flex w-[150px] min-w-0 items-center gap-2'>
             <UserProfileHoverCard user={row.original}>
               <Avatar size='sm' className='shrink-0'>
                 {avatarUrl && (
@@ -146,35 +146,35 @@ export function useUsersColumns(): ColumnDef<User>[] {
                 </AvatarFallback>
               </Avatar>
             </UserProfileHoverCard>
-            <div className='flex flex-col gap-1'>
-              <div className='flex items-center gap-2'>
-                <LongText className='max-w-[140px] font-medium'>
-                  {primaryName}
-                </LongText>
-                {remark && (
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={<StatusBadge variant='success' copyable={false} />}
-                    >
-                      <LongText className='max-w-[80px]'>{remark}</LongText>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className='text-xs'>{remark}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-              {displayName && displayName !== username && (
-                <LongText className='text-muted-foreground max-w-[180px] text-xs'>
-                  {username}
-                </LongText>
-              )}
+            <div className='flex min-w-0 flex-1 flex-col gap-1'>
+              <LongText className='max-w-full font-medium'>
+                {primaryName}
+              </LongText>
+              {(displayName && displayName !== username) || remark ? (
+                <div className='text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs'>
+                  {displayName && displayName !== username ? (
+                    <LongText className='min-w-0 flex-1'>
+                      {username}
+                    </LongText>
+                  ) : null}
+                  {remark ? (
+                    <Tooltip>
+                      <TooltipTrigger render={<span className='min-w-0 shrink-0' />}>
+                        <LongText className='max-w-[60px]'>{remark}</LongText>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className='text-xs'>{remark}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         )
       },
       enableHiding: false,
-      size: 260,
+      size: 190,
       meta: { mobileTitle: true },
     },
     {

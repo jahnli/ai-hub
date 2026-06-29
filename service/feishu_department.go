@@ -10,6 +10,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"golang.org/x/sync/singleflight"
@@ -1004,4 +1005,238 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 		DailyStats:      dailyStats,
 		ModelDailyStats: modelDailyStats,
 	}, nil
+}
+
+// DepartmentUsersRequest holds the request params for fetching department user list.
+type DepartmentUsersRequest struct {
+	DepartmentID   string `json:"department_id"`
+	StartTimestamp int64  `json:"start_timestamp"`
+	EndTimestamp   int64  `json:"end_timestamp"`
+	Page           int    `json:"page"`
+	PageSize       int    `json:"page_size"`
+}
+
+// DepartmentUserItem holds user info with stats for a specific time range.
+type DepartmentUserItem struct {
+	*model.User
+	TotalAmountCNY   float64 `json:"total_amount_cny"`
+	TotalTokens      int64   `json:"total_tokens"`
+	TotalRequests    int64   `json:"total_requests"`
+	CommonModel      string  `json:"common_model"`
+	SubQuotaUsed     int64   `json:"sub_quota_used"`
+	SubQuotaTotal    int64   `json:"sub_quota_total"`
+}
+
+// DepartmentUsersResponse holds paginated department user list.
+type DepartmentUsersResponse struct {
+	Items []DepartmentUserItem `json:"items"`
+	Total int64                `json:"total"`
+	Page  int                  `json:"page"`
+	Size  int                  `json:"page_size"`
+}
+
+// GetDepartmentUsers returns paginated user list for a department with stats in the given time range.
+func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, error) {
+	if !system_setting.FeishuEnabled() {
+		return nil, fmt.Errorf("feishu integration is not configured")
+	}
+
+	token, err := feishuGetCachedTenantAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get tenant_access_token: %w", err)
+	}
+
+	items, err := getCachedDepartments(token)
+	if err != nil {
+		return nil, fmt.Errorf("get departments: %w", err)
+	}
+
+	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
+	if len(openDeptIDs) == 0 {
+		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Page: req.Page, Size: req.PageSize}, nil
+	}
+
+	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get department members: %w", err)
+	}
+
+	if len(memberOpenIDs) == 0 {
+		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Page: req.Page, Size: req.PageSize}, nil
+	}
+
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	startIdx := (page - 1) * pageSize
+
+	users, total, err := model.GetUsersByOpenIDs(memberOpenIDs, startIdx, pageSize)
+	if err != nil {
+		return nil, fmt.Errorf("get users by open_ids: %w", err)
+	}
+
+	if len(users) == 0 {
+		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Total: total, Page: page, Size: pageSize}, nil
+	}
+
+	ids := make([]int, len(users))
+	for i, u := range users {
+		ids[i] = u.Id
+	}
+
+	subMap, err := model.GetActiveSubscriptionQuotaByUserIds(ids)
+	if err != nil {
+		subMap = make(map[int]*model.UserSubscriptionQuotaSummary)
+	}
+
+	userStats := make(map[int]model.UserStatRow)
+	statRows, err := model.GetUserStatsBatch(ids, req.StartTimestamp, req.EndTimestamp)
+	if err == nil {
+		for _, row := range statRows {
+			userStats[row.UserID] = row
+		}
+	}
+
+	commonModels := make(map[int]string)
+	modelRows, err := model.GetUserModelStatsBatch(ids, req.StartTimestamp, req.EndTimestamp)
+	if err == nil {
+		for _, row := range modelRows {
+			if _, ok := commonModels[row.UserID]; !ok {
+				commonModels[row.UserID] = row.ModelName
+			}
+		}
+	}
+
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+
+	result := make([]DepartmentUserItem, len(users))
+	for i, u := range users {
+		item := DepartmentUserItem{User: u}
+		if s, ok := subMap[u.Id]; ok {
+			item.SubQuotaUsed = s.AmountUsed
+			item.SubQuotaTotal = s.AmountTotal
+		}
+		if stat, ok := userStats[u.Id]; ok {
+			item.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
+			item.TotalTokens = stat.TotalTokens
+			item.TotalRequests = stat.TotalReqs
+		}
+		item.CommonModel = commonModels[u.Id]
+		result[i] = item
+	}
+
+	return &DepartmentUsersResponse{
+		Items: result,
+		Total: total,
+		Page:  page,
+		Size:  pageSize,
+	}, nil
+}
+
+// UserRankingItem holds a single user's ranking info for charts.
+type UserRankingItem struct {
+	Username    string  `json:"username"`
+	DisplayName string  `json:"display_name"`
+	TotalCost   float64 `json:"total_cost"`
+	TotalTokens int64   `json:"total_tokens"`
+}
+
+// GetDepartmentUserRankings returns top 10 users by consumption for the given department and time range.
+func GetDepartmentUserRankings(req *DepartmentUsersRequest) ([]UserRankingItem, error) {
+	if !system_setting.FeishuEnabled() {
+		return nil, fmt.Errorf("feishu integration is not configured")
+	}
+
+	token, err := feishuGetCachedTenantAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get tenant_access_token: %w", err)
+	}
+
+	items, err := getCachedDepartments(token)
+	if err != nil {
+		return nil, fmt.Errorf("get departments: %w", err)
+	}
+
+	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
+	if len(openDeptIDs) == 0 {
+		return []UserRankingItem{}, nil
+	}
+
+	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get department members: %w", err)
+	}
+
+	if len(memberOpenIDs) == 0 {
+		return []UserRankingItem{}, nil
+	}
+
+	userInfos, err := model.GetUserIDAndNamesByOpenIDs(memberOpenIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get user ids: %w", err)
+	}
+	if len(userInfos) == 0 {
+		return []UserRankingItem{}, nil
+	}
+
+	ids := make([]int, len(userInfos))
+	nameMap := make(map[int][2]string, len(userInfos))
+	for i, u := range userInfos {
+		ids[i] = u.Id
+		nameMap[u.Id] = [2]string{u.Username, u.DisplayName}
+	}
+
+	statRows, err := model.GetUserStatsBatch(ids, req.StartTimestamp, req.EndTimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("get user stats: %w", err)
+	}
+
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+
+	sort.Slice(statRows, func(i, j int) bool {
+		return statRows[i].TotalQuota > statRows[j].TotalQuota
+	})
+
+	limit := 10
+	if len(statRows) < limit {
+		limit = len(statRows)
+	}
+
+	result := make([]UserRankingItem, 0, limit)
+	for _, row := range statRows[:limit] {
+		if row.TotalQuota <= 0 {
+			continue
+		}
+		names := nameMap[row.UserID]
+		result = append(result, UserRankingItem{
+			Username:    names[0],
+			DisplayName: names[1],
+			TotalCost:   float64(row.TotalQuota) / float64(quotaPerUnit) * usdExchangeRate,
+			TotalTokens: row.TotalTokens,
+		})
+	}
+
+	return result, nil
 }

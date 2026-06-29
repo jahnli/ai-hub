@@ -5133,6 +5133,9 @@
     "Zero retention": "データ保持なし",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V 4",
-    "Zoom": "ズーム"
+    "Zoom": "ズーム",
+    "Common Model": "よく使うモデル",
+    "Department Users": "部門ユーザー",
+    "No users in this department.": "この部門にユーザーがいません。"
   }
 }

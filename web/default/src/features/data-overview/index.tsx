@@ -27,6 +27,7 @@ import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
 import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
+import { DepartmentUsersTable } from './components/department-users-table'
 import { NotifySettingsDialog } from './components/notify-settings-dialog'
 import { SubDepartmentStats } from './components/sub-department-stats'
 import { UsageAnalysisSection } from './components/usage-analysis'
@@ -162,11 +163,13 @@ export function DataOverview() {
           )}
         </div>
       </SectionPageLayout.Title>
-      <SectionPageLayout.Actions>
-        <div className='mr-3'>
-          <NotifySettingsDialog />
-        </div>
-      </SectionPageLayout.Actions>
+      {selectedDeptId && (
+        <SectionPageLayout.Actions>
+          <div className='mr-3'>
+            <NotifySettingsDialog />
+          </div>
+        </SectionPageLayout.Actions>
+      )}
       <SectionPageLayout.Content>
         <FadeIn>
           {treeQuery.isError && (
@@ -237,6 +240,14 @@ export function DataOverview() {
 
           {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && (
             <SubDepartmentStats data={subStatsQuery.data.data} />
+          )}
+
+          {queryParams && (
+            <DepartmentUsersTable
+              departmentId={queryParams.department_id}
+              startTimestamp={queryParams.start_timestamp}
+              endTimestamp={queryParams.end_timestamp}
+            />
           )}
 
           {usageQuery.isFetching && !usageQuery.data && (

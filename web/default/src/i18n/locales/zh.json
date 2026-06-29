@@ -5139,6 +5139,11 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "Common Model": "常用模型",
+    "Department Users": "部门用户",
+    "No users in this department.": "该部门暂无用户。",
+    "User Consumption Ranking Top 10": "用户消耗排行 Top 10",
+    "User Consumption Share Top 10": "用户消耗占比 Top 10"
   }
 }

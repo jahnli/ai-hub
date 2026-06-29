@@ -102,3 +102,55 @@ func GetUsageAnalysis(c *gin.Context) {
 		"data":    data,
 	})
 }
+
+func GetDepartmentUsers(c *gin.Context) {
+	var req service.DepartmentUsersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if req.DepartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "department_id is required",
+		})
+		return
+	}
+
+	data, err := service.GetDepartmentUsers(&req)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func GetDepartmentUserRankings(c *gin.Context) {
+	var req service.DepartmentUsersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if req.DepartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "department_id is required",
+		})
+		return
+	}
+
+	data, err := service.GetDepartmentUserRankings(&req)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}

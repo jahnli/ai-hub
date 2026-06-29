@@ -960,3 +960,52 @@ func RootUserExists() bool {
 	}
 	return true
 }
+
+func GetUsersByOpenIDs(openIDs []string, startIdx, pageSize int) ([]*User, int64, error) {
+	if len(openIDs) == 0 {
+		return nil, 0, nil
+	}
+
+	var total int64
+	err := DB.Model(&User{}).Where("open_id IN ?", openIDs).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var users []*User
+	err = DB.Where("open_id IN ?", openIDs).
+		Order("id desc").
+		Limit(pageSize).
+		Offset(startIdx).
+		Omit("password").
+		Find(&users).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+// GetUserIDAndNamesByOpenIDs returns id, username, display_name for all users matching given open_ids.
+func GetUserIDAndNamesByOpenIDs(openIDs []string) ([]struct {
+	Id          int    `gorm:"column:id"`
+	Username    string `gorm:"column:username"`
+	DisplayName string `gorm:"column:display_name"`
+}, error) {
+	if len(openIDs) == 0 {
+		return nil, nil
+	}
+	var results []struct {
+		Id          int    `gorm:"column:id"`
+		Username    string `gorm:"column:username"`
+		DisplayName string `gorm:"column:display_name"`
+	}
+	err := DB.Model(&User{}).
+		Select("id, username, display_name").
+		Where("open_id IN ?", openIDs).
+		Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
