@@ -168,7 +168,7 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
     [t('Total Tokens'), fmtTokens(stat.total_tokens)],
     [t('Total Cost'), fmtCny(quotaToCny(stat.total_quota))],
     [
-      t('Avg Price') + ' / MT',
+      t('Avg Price') + '/MT',
       stat.avg_price_per_mt === 0
         ? '¥0.00'
         : fmtCny(stat.avg_price_per_mt),

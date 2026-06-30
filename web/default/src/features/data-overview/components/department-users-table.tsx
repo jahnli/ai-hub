@@ -27,6 +27,7 @@ import {
   USER_ROLES,
 } from '@/features/users/constants'
 import { parseCustomFields, CUSTOM_FIELD_KEYS } from '@/features/users/types'
+import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
 import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
 import { UserConsumptionCharts } from './user-consumption-charts'
@@ -160,7 +161,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
           return (
             <Tooltip>
               <TooltipTrigger
-                render={<div className='w-[150px] cursor-help space-y-1' />}
+                render={<div className='w-[160px] cursor-help space-y-1' />}
               >
                 <div className='flex justify-between text-xs'>
                   <span className='font-medium tabular-nums'>
@@ -194,7 +195,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
             </Tooltip>
           )
         },
-        size: 170,
+        size: 200,
       },
       {
         accessorKey: 'total_amount_cny',
@@ -211,7 +212,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
         accessorKey: 'total_tokens',
         header: t('Tokens'),
         cell: ({ row }) => (
-          <span className='text-muted-foreground text-sm tabular-nums'>
+          <span className='text-sm tabular-nums'>
             {formatTokens(row.original.total_tokens)}
           </span>
         ),
@@ -222,7 +223,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
         accessorKey: 'total_requests',
         header: t('Requests'),
         cell: ({ row }) => (
-          <span className='text-muted-foreground text-sm tabular-nums'>
+          <span className='text-sm tabular-nums'>
             {formatRequests(row.original.total_requests)}
           </span>
         ),
@@ -237,16 +238,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
           if (!modelName) {
             return <span className='text-muted-foreground text-sm'>-</span>
           }
-          return (
-            <Tooltip>
-              <TooltipTrigger render={<div className='max-w-[180px] cursor-help' />}>
-                <LongText className='text-sm'>{modelName}</LongText>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className='text-xs'>{modelName}</p>
-              </TooltipContent>
-            </Tooltip>
-          )
+          return <ModelBadge modelName={modelName} />
         },
         size: 190,
         meta: { mobileHidden: true },
@@ -279,7 +271,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
           const customFields = parseCustomFields(row.original.custom_field_values)
           const level = customFields?.[CUSTOM_FIELD_KEYS.JOB_LEVEL]
           return (
-            <span className='text-muted-foreground text-sm'>
+            <span className='text-sm'>
               {level || '-'}
             </span>
           )
@@ -293,7 +285,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
         cell: ({ row }) => {
           const date = row.getValue('join_date') as string | undefined
           return (
-            <span className='text-muted-foreground text-sm'>
+            <span className='text-sm'>
               {date || '-'}
             </span>
           )
@@ -307,7 +299,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
         cell: ({ row }) => {
           const ts = row.getValue('last_login_at') as number | undefined
           return (
-            <span className='text-muted-foreground text-sm'>
+            <span className='text-sm'>
               {ts ? formatTimestamp(ts) : '-'}
             </span>
           )
@@ -321,7 +313,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
         cell: ({ row }) => {
           const ts = row.getValue('created_at') as number | undefined
           return (
-            <span className='text-muted-foreground text-sm'>
+            <span className='text-sm'>
               {ts ? formatTimestamp(ts) : '-'}
             </span>
           )
