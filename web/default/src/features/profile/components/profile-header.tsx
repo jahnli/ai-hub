@@ -20,7 +20,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Activity, BarChart3, Crown, WalletCards } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
-import { formatCompactNumber, formatQuota } from '@/lib/format'
+import { formatQuota, formatRequestCount } from '@/lib/format'
 import { getRoleLabel } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -333,7 +333,7 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
     },
     {
       label: t('API Requests'),
-      value: formatCompactNumber(profile.request_count),
+      value: formatRequestCount(profile.request_count ?? 0),
       description: t('Total requests made'),
       icon: Activity,
     },
@@ -371,7 +371,7 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
               />
               <StatusBadge
                 label={`${t('User ID')} ${profile.id}`}
-                variant='info'
+                variant='neutral'
                 copyText={String(profile.id)}
               />
             </div>
@@ -382,12 +382,6 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
                 <>
                   <span>•</span>
                   <span className='truncate'>{profile.email}</span>
-                </>
-              )}
-              {profile.group && (
-                <>
-                  <span>•</span>
-                  <span className='truncate'>{profile.group}</span>
                 </>
               )}
             </div>
