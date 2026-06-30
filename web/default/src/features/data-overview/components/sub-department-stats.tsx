@@ -5,6 +5,11 @@ import { Building2, PieChart, BarChart3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTableView, useDataTable } from "@/components/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useChartTheme } from "@/lib/use-chart-theme";
 import { VCHART_OPTION } from "@/lib/vchart";
 import type { SubDepartmentStat } from "../types";
@@ -21,6 +26,11 @@ function formatQuota(quota: number): string {
 function formatTokens(tokens: number): string {
   if (tokens === 0) return "0";
   return (tokens / 1_0000_0000).toFixed(2) + " 亿";
+}
+
+function formatTokensDetail(tokens: number): string {
+  if (tokens === 0) return "0";
+  return tokens.toLocaleString();
 }
 
 function formatRequests(count: number): string {
@@ -60,11 +70,24 @@ function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
       {
         accessorKey: "total_tokens",
         header: t("Tokens"),
-        cell: ({ row }) => (
-          <span className="text-muted-foreground font-mono">
-            {formatTokens(row.original.total_tokens)}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const tokens = row.original.total_tokens;
+          const display = formatTokens(tokens);
+          const detail = formatTokensDetail(tokens);
+          if (detail && detail !== display) {
+            return (
+              <Tooltip>
+                <TooltipTrigger render={<span className="text-muted-foreground font-mono cursor-default" />}>
+                  {display}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span className="font-mono text-xs">{detail}</span>
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          return <span className="text-muted-foreground font-mono">{display}</span>;
+        },
         size: 120,
       },
       {
@@ -163,7 +186,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           content: [
             {
               key: "Tokens",
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: t("Cost"),

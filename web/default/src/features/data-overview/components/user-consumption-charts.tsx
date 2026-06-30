@@ -17,10 +17,12 @@ function formatCost(value: number): string {
 
 function formatTokens(tokens: number): string {
   if (tokens <= 0) return '-'
-  if (tokens >= 100_000_000) {
-    return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 100_000_000)}亿`
-  }
-  return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 1_000_000)}M`
+  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
+}
+
+function formatTokensDetail(tokens: number): string {
+  if (tokens <= 0) return '-'
+  return tokens.toLocaleString()
 }
 
 function formatUnitPrice(cost: number, tokens: number): string {
@@ -100,7 +102,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             },
             {
               key: () => t('Tokens Used'),
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Unit Price'),
@@ -173,7 +175,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             },
             {
               key: () => t('Tokens Used'),
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Percentage'),

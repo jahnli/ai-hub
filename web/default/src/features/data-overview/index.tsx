@@ -17,6 +17,11 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import dayjs from '@/lib/dayjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -300,6 +305,11 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
   }
 
+  const formatTokensDetail = (tokens: number): string => {
+    if (tokens === 0) return '0'
+    return tokens.toLocaleString()
+  }
+
   const formatQuota = (quota: number): string => {
     if (quota === 0) return '¥0'
     const yuan = quota / 500000
@@ -313,8 +323,8 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return count.toLocaleString()
   }
 
-  const items: { title: string; value: string; desc: string; icon: LucideIcon; valueClassName?: string }[] = [
-    { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers },
+  const items: { title: string; value: string; desc: string; icon: LucideIcon; valueClassName?: string; tooltip?: string }[] = [
+    { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers, tooltip: formatTokensDetail(stat.total_tokens) },
     { title: t('Total Cost'), value: formatQuota(stat.total_quota), desc: t('Statistical quota'), icon: Coins },
     { title: t('Avg Price'), value: (stat.avg_price_per_mt === 0 ? '¥0' : '¥' + stat.avg_price_per_mt.toFixed(2)) + '/MT', desc: t('Average price per million tokens'), icon: DollarSign },
     { title: t('Total Requests'), value: formatRequests(stat.total_requests), desc: t('Statistical count'), icon: Hash },
@@ -345,9 +355,20 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
                   {it.title}
                 </div>
               </div>
-              <div className={cn('mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl', it.valueClassName || 'text-foreground')}>
-                {it.value}
-              </div>
+              {it.tooltip ? (
+                <Tooltip>
+                  <TooltipTrigger render={<div className={cn('mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl', it.valueClassName || 'text-foreground')} />}>
+                    {it.value}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <span className='font-mono text-xs'>{it.tooltip}</span>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <div className={cn('mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl', it.valueClassName || 'text-foreground')}>
+                  {it.value}
+                </div>
+              )}
               <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
                 {it.desc}
               </div>

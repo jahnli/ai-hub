@@ -50,14 +50,13 @@ function formatAmountCny(value: number | undefined): string {
 function formatTokens(tokens: number | undefined): string {
   const value = tokens ?? 0
   if (value <= 0) return '-'
-  if (value >= 100_000_000) {
-    return `${Intl.NumberFormat(undefined, {
-      maximumFractionDigits: 2,
-    }).format(value / 100_000_000)}亿`
-  }
-  return `${Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 2,
-  }).format(value / 1_000_000)}M`
+  return (value / 1_0000_0000).toFixed(2) + ' 亿'
+}
+
+function formatTokensDetail(tokens: number | undefined): string {
+  const value = tokens ?? 0
+  if (value <= 0) return '-'
+  return value.toLocaleString()
 }
 
 function formatRequests(requests: number | undefined): string {
@@ -211,11 +210,24 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
       {
         accessorKey: 'total_tokens',
         header: t('Tokens'),
-        cell: ({ row }) => (
-          <span className='text-sm tabular-nums'>
-            {formatTokens(row.original.total_tokens)}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const tokens = row.original.total_tokens;
+          const display = formatTokens(tokens);
+          const detail = formatTokensDetail(tokens);
+          if (detail && detail !== display) {
+            return (
+              <Tooltip>
+                <TooltipTrigger render={<span className='text-sm tabular-nums cursor-default' />}>
+                  {display}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span className='font-mono text-xs'>{detail}</span>
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          return <span className='text-sm tabular-nums'>{display}</span>;
+        },
         size: 120,
         meta: { mobileHidden: true },
       },

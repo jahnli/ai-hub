@@ -140,6 +140,11 @@ function formatTokenValue(v: number): string {
   return (v / 1_0000_0000).toFixed(2) + ' 亿'
 }
 
+function formatTokensDetail(tokens: number): string {
+  if (tokens <= 0) return '-'
+  return tokens.toLocaleString()
+}
+
 const DATA_ZOOM_THRESHOLD = 14
 
 function makeDataZoom(chartType: 'area' | 'line') {
@@ -233,10 +238,7 @@ function formatCost(value: number): string {
 
 function formatTokens(tokens: number): string {
   if (tokens <= 0) return '-'
-  if (tokens >= 100_000_000) {
-    return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 100_000_000)}亿`
-  }
-  return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 1_000_000)}M`
+  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
 }
 
 function formatUnitPrice(cost: number, tokens: number): string {
@@ -290,7 +292,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     const tooltipContent = [
       {
         key: () => 'Token',
-        value: (d: { value?: number }) => formatTokens(d.value ?? 0),
+        value: (d: { value?: number }) => formatTokensDetail(d.value ?? 0),
       },
       {
         key: () => t('Total Cost'),
@@ -518,7 +520,7 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Total Cost'),
@@ -540,7 +542,7 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Total Cost'),
@@ -631,7 +633,7 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
@@ -653,7 +655,7 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
