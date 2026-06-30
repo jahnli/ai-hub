@@ -81,8 +81,8 @@ export const EMPTY_LANE_PRICES: Record<LaneKey, string> = {
 }
 
 export const EMPTY_LANE_ENABLED: Record<LaneKey, boolean> = {
-  completion: false,
-  cache: false,
+  completion: true,
+  cache: true,
   createCache: false,
   image: false,
   audioInput: false,
