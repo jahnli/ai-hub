@@ -1014,6 +1014,8 @@ type DepartmentUsersRequest struct {
 	EndTimestamp   int64  `json:"end_timestamp"`
 	Page           int    `json:"page"`
 	PageSize       int    `json:"page_size"`
+	SortBy         string `json:"sort_by"`
+	SortOrder      string `json:"sort_order"`
 }
 
 // DepartmentUserItem holds user info with stats for a specific time range.
@@ -1025,6 +1027,29 @@ type DepartmentUserItem struct {
 	CommonModel      string  `json:"common_model"`
 	SubQuotaUsed     int64   `json:"sub_quota_used"`
 	SubQuotaTotal    int64   `json:"sub_quota_total"`
+}
+
+func sortDepartmentUserItems(items []DepartmentUserItem, sortBy string, sortOrder string) {
+	desc := sortOrder == "desc"
+	sort.Slice(items, func(i, j int) bool {
+		var less bool
+		switch sortBy {
+		case "sub_quota_used":
+			less = items[i].SubQuotaUsed < items[j].SubQuotaUsed
+		case "total_amount_cny":
+			less = items[i].TotalAmountCNY < items[j].TotalAmountCNY
+		case "total_tokens":
+			less = items[i].TotalTokens < items[j].TotalTokens
+		case "total_requests":
+			less = items[i].TotalRequests < items[j].TotalRequests
+		default:
+			less = items[i].User.Id < items[j].User.Id
+		}
+		if desc {
+			return !less
+		}
+		return less
+	})
 }
 
 // DepartmentUsersResponse holds paginated department user list.
@@ -1078,7 +1103,80 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 	}
 	startIdx := (page - 1) * pageSize
 
-	users, total, err := model.GetUsersByOpenIDs(memberOpenIDs, startIdx, pageSize)
+	sortByComputed := common.IsComputedSortColumn(req.SortBy)
+	if sortByComputed {
+		users, total, err := model.GetUsersByOpenIDs(memberOpenIDs, 0, len(memberOpenIDs), "", "")
+		if err != nil {
+			return nil, fmt.Errorf("get users by open_ids: %w", err)
+		}
+		if len(users) == 0 {
+			return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Total: total, Page: page, Size: pageSize}, nil
+		}
+		ids := make([]int, len(users))
+		for i, u := range users {
+			ids[i] = u.Id
+		}
+		subMap, _ := model.GetActiveSubscriptionQuotaByUserIds(ids)
+		if subMap == nil {
+			subMap = make(map[int]*model.UserSubscriptionQuotaSummary)
+		}
+		userStats := make(map[int]model.UserStatRow)
+		statRows, err := model.GetUserStatsBatch(ids, req.StartTimestamp, req.EndTimestamp)
+		if err == nil {
+			for _, row := range statRows {
+				userStats[row.UserID] = row
+			}
+		}
+		commonModels := make(map[int]string)
+		modelRows, err := model.GetUserModelStatsBatch(ids, req.StartTimestamp, req.EndTimestamp)
+		if err == nil {
+			for _, row := range modelRows {
+				if _, ok := commonModels[row.UserID]; !ok {
+					commonModels[row.UserID] = row.ModelName
+				}
+			}
+		}
+		quotaPerUnit := common.QuotaPerUnit
+		if quotaPerUnit <= 0 {
+			quotaPerUnit = 500000
+		}
+		usdExchangeRate := operation_setting.USDExchangeRate
+		if usdExchangeRate <= 0 {
+			usdExchangeRate = 1
+		}
+		allItems := make([]DepartmentUserItem, len(users))
+		for i, u := range users {
+			item := DepartmentUserItem{User: u}
+			if s, ok := subMap[u.Id]; ok {
+				item.SubQuotaUsed = s.AmountUsed
+				item.SubQuotaTotal = s.AmountTotal
+			}
+			if stat, ok := userStats[u.Id]; ok {
+				item.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
+				item.TotalTokens = stat.TotalTokens
+				item.TotalRequests = stat.TotalReqs
+			}
+			item.CommonModel = commonModels[u.Id]
+			allItems[i] = item
+		}
+		sortDepartmentUserItems(allItems, req.SortBy, req.SortOrder)
+		start := startIdx
+		end := start + pageSize
+		if start > len(allItems) {
+			start = len(allItems)
+		}
+		if end > len(allItems) {
+			end = len(allItems)
+		}
+		return &DepartmentUsersResponse{
+			Items: allItems[start:end],
+			Total: total,
+			Page:  page,
+			Size:  pageSize,
+		}, nil
+	}
+
+	users, total, err := model.GetUsersByOpenIDs(memberOpenIDs, startIdx, pageSize, req.SortBy, req.SortOrder)
 	if err != nil {
 		return nil, fmt.Errorf("get users by open_ids: %w", err)
 	}

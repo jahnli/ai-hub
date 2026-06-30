@@ -213,8 +213,10 @@ func GetAllUsers(pageInfo *common.PageInfo) (users []*User, total int64, err err
 		return nil, 0, err
 	}
 
+	orderClause := pageInfo.GetOrderClause("id desc", nil)
+
 	// Get paginated users within same transaction
-	err = tx.Unscoped().Order("id desc").Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password").Find(&users).Error
+	err = tx.Unscoped().Order(orderClause).Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password").Find(&users).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
@@ -228,7 +230,7 @@ func GetAllUsers(pageInfo *common.PageInfo) (users []*User, total int64, err err
 	return users, total, nil
 }
 
-func SearchUsers(keyword string, group string, role *int, status *int, startIdx int, num int) ([]*User, int64, error) {
+func SearchUsers(keyword string, group string, role *int, status *int, startIdx int, num int, sortBy string, sortOrder string) ([]*User, int64, error) {
 	var users []*User
 	var total int64
 	var err error
@@ -282,7 +284,12 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 	}
 
 	// 获取分页数据
-	err = query.Omit("password").Order("id desc").Limit(num).Offset(startIdx).Find(&users).Error
+	orderClause := "id desc"
+	if sortBy != "" {
+		pi := &common.PageInfo{SortBy: sortBy, SortOrder: sortOrder}
+		orderClause = pi.GetOrderClause("id desc", nil)
+	}
+	err = query.Omit("password").Order(orderClause).Limit(num).Offset(startIdx).Find(&users).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
@@ -961,7 +968,7 @@ func RootUserExists() bool {
 	return true
 }
 
-func GetUsersByOpenIDs(openIDs []string, startIdx, pageSize int) ([]*User, int64, error) {
+func GetUsersByOpenIDs(openIDs []string, startIdx, pageSize int, sortBy, sortOrder string) ([]*User, int64, error) {
 	if len(openIDs) == 0 {
 		return nil, 0, nil
 	}
@@ -972,9 +979,15 @@ func GetUsersByOpenIDs(openIDs []string, startIdx, pageSize int) ([]*User, int64
 		return nil, 0, err
 	}
 
+	orderClause := "id desc"
+	if sortBy != "" {
+		pi := &common.PageInfo{SortBy: sortBy, SortOrder: sortOrder}
+		orderClause = pi.GetOrderClause("id desc", nil)
+	}
+
 	var users []*User
 	err = DB.Where("open_id IN ?", openIDs).
-		Order("id desc").
+		Order(orderClause).
 		Limit(pageSize).
 		Offset(startIdx).
 		Omit("password").

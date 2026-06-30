@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react'
-import type { ColumnDef, PaginationState, OnChangeFn } from '@tanstack/react-table'
+import type { ColumnDef, PaginationState, OnChangeFn, SortingState } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
 import { Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -397,6 +397,19 @@ interface DepartmentUsersTableProps {
   endTimestamp: number
 }
 
+const DEPT_COLUMN_SORT_MAP: Record<string, string> = {
+  quota: 'sub_quota_used',
+  total_amount_cny: 'total_amount_cny',
+  total_tokens: 'total_tokens',
+  total_requests: 'total_requests',
+  id: 'id',
+  username: 'username',
+  used_quota: 'used_quota',
+  created_at: 'created_at',
+  role: 'role',
+  status: 'status',
+}
+
 export function DepartmentUsersTable({
   departmentId,
   startTimestamp,
@@ -406,6 +419,11 @@ export function DepartmentUsersTable({
   const columns = useDepartmentUsersColumns()
 
   const [pagination, setPagination] = usePagination()
+  const [sorting, setSorting] = useState<SortingState>([])
+
+  const sortParam = sorting[0]
+  const sortBy = sortParam ? (DEPT_COLUMN_SORT_MAP[sortParam.id] ?? '') : ''
+  const sortOrder = sortParam ? (sortParam.desc ? 'desc' : 'asc') : ''
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
@@ -416,6 +434,8 @@ export function DepartmentUsersTable({
       endTimestamp,
       pagination.pageIndex,
       pagination.pageSize,
+      sortBy,
+      sortOrder,
     ],
     queryFn: () =>
       getDepartmentUsers({
@@ -424,6 +444,8 @@ export function DepartmentUsersTable({
         end_timestamp: endTimestamp,
         page: pagination.pageIndex + 1,
         page_size: pagination.pageSize,
+        sort_by: sortBy || undefined,
+        sort_order: sortOrder || undefined,
       }),
     enabled: !!departmentId,
     staleTime: 60 * 1000,
@@ -438,8 +460,14 @@ export function DepartmentUsersTable({
     enableRowSelection: false,
     pagination,
     onPaginationChange: setPagination,
+    sorting,
+    onSortingChange: (updater) => {
+      setSorting(updater)
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+    },
     manualPagination: true,
     manualFiltering: true,
+    manualSorting: true,
     totalCount: total,
   })
 

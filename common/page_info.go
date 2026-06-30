@@ -12,6 +12,9 @@ type PageInfo struct {
 
 	Total int `json:"total"` // 总条数，后设置
 	Items any `json:"items"` // 数据，后设置
+
+	SortBy    string `json:"-"`
+	SortOrder string `json:"-"`
 }
 
 func (p *PageInfo) GetStartIdx() int {
@@ -36,6 +39,50 @@ func (p *PageInfo) SetTotal(total int) {
 
 func (p *PageInfo) SetItems(items any) {
 	p.Items = items
+}
+
+// validSortColumns defines the allowed sort columns to prevent SQL injection.
+var validSortColumns = map[string]bool{
+	"id":         true,
+	"username":   true,
+	"quota":      true,
+	"used_quota": true,
+	"role":       true,
+	"status":     true,
+	"created_at": true,
+}
+
+// ComputedSortColumns are columns computed in Go after DB fetch (not real DB columns).
+var ComputedSortColumns = map[string]bool{
+	"sub_quota_used":             true,
+	"monthly_total_amount_cny":   true,
+	"monthly_total_tokens":       true,
+	"monthly_total_requests":     true,
+	"total_amount_cny":           true,
+	"total_tokens":               true,
+	"total_requests":             true,
+}
+
+// IsComputedSortColumn returns true if the sort column is a computed column.
+func IsComputedSortColumn(col string) bool {
+	return ComputedSortColumns[col]
+}
+
+// GetOrderClause returns a safe ORDER BY clause based on SortBy and SortOrder.
+// If SortBy is empty or invalid, it returns the provided defaultOrder.
+func (p *PageInfo) GetOrderClause(defaultOrder string, allowedColumns map[string]bool) string {
+	cols := allowedColumns
+	if cols == nil {
+		cols = validSortColumns
+	}
+	if p.SortBy == "" || !cols[p.SortBy] {
+		return defaultOrder
+	}
+	direction := "asc"
+	if p.SortOrder == "desc" {
+		direction = "desc"
+	}
+	return p.SortBy + " " + direction
 }
 
 func GetPageQuery(c *gin.Context) *PageInfo {
@@ -76,6 +123,12 @@ func GetPageQuery(c *gin.Context) *PageInfo {
 
 	if pageInfo.PageSize > 100 {
 		pageInfo.PageSize = 100
+	}
+
+	pageInfo.SortBy = c.Query("sort_by")
+	sortOrder := c.Query("sort_order")
+	if sortOrder == "asc" || sortOrder == "desc" {
+		pageInfo.SortOrder = sortOrder
 	}
 
 	return pageInfo

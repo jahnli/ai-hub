@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -275,6 +276,32 @@ func Register(c *gin.Context) {
 
 func GetAllUsers(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
+
+	if common.IsComputedSortColumn(pageInfo.SortBy) {
+		sortBy := pageInfo.SortBy
+		sortOrder := pageInfo.SortOrder
+		allPageInfo := &common.PageInfo{Page: 1, PageSize: 10000}
+		users, total, err := model.GetAllUsers(allPageInfo)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		enriched := attachSubscriptionQuota(users)
+		sortUserWithSubQuota(enriched, sortBy, sortOrder)
+		start := pageInfo.GetStartIdx()
+		end := start + pageInfo.GetPageSize()
+		if start > len(enriched) {
+			start = len(enriched)
+		}
+		if end > len(enriched) {
+			end = len(enriched)
+		}
+		pageInfo.SetTotal(int(total))
+		pageInfo.SetItems(enriched[start:end])
+		common.ApiSuccess(c, pageInfo)
+		return
+	}
+
 	users, total, err := model.GetAllUsers(pageInfo)
 	if err != nil {
 		common.ApiError(c, err)
@@ -304,7 +331,32 @@ func SearchUsers(c *gin.Context) {
 		}
 	}
 	pageInfo := common.GetPageQuery(c)
-	users, total, err := model.SearchUsers(keyword, group, role, status, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
+
+	if common.IsComputedSortColumn(pageInfo.SortBy) {
+		sortBy := pageInfo.SortBy
+		sortOrder := pageInfo.SortOrder
+		users, total, err := model.SearchUsers(keyword, group, role, status, 0, 10000, "", "")
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		enriched := attachSubscriptionQuota(users)
+		sortUserWithSubQuota(enriched, sortBy, sortOrder)
+		start := pageInfo.GetStartIdx()
+		end := start + pageInfo.GetPageSize()
+		if start > len(enriched) {
+			start = len(enriched)
+		}
+		if end > len(enriched) {
+			end = len(enriched)
+		}
+		pageInfo.SetTotal(int(total))
+		pageInfo.SetItems(enriched[start:end])
+		common.ApiSuccess(c, pageInfo)
+		return
+	}
+
+	users, total, err := model.SearchUsers(keyword, group, role, status, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), pageInfo.SortBy, pageInfo.SortOrder)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -318,6 +370,29 @@ func SearchUsers(c *gin.Context) {
 
 func canManageTargetRole(myRole int, targetRole int) bool {
 	return myRole == common.RoleRootUser || myRole > targetRole
+}
+
+func sortUserWithSubQuota(items []userWithSubQuota, sortBy string, sortOrder string) {
+	desc := sortOrder == "desc"
+	sort.Slice(items, func(i, j int) bool {
+		var less bool
+		switch sortBy {
+		case "sub_quota_used":
+			less = items[i].SubQuotaUsed < items[j].SubQuotaUsed
+		case "monthly_total_amount_cny":
+			less = items[i].MonthlyTotalAmountCNY < items[j].MonthlyTotalAmountCNY
+		case "monthly_total_tokens":
+			less = items[i].MonthlyTotalTokens < items[j].MonthlyTotalTokens
+		case "monthly_total_requests":
+			less = items[i].MonthlyTotalRequests < items[j].MonthlyTotalRequests
+		default:
+			less = items[i].User.Id < items[j].User.Id
+		}
+		if desc {
+			return !less
+		}
+		return less
+	})
 }
 
 type userWithSubQuota struct {
