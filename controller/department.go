@@ -609,6 +609,7 @@ func GetDepartmentUsers(c *gin.Context) {
 		"data":    result,
 	})
 }
+
 // queryLocalUserIdsByDeptIds returns user IDs whose department_ids JSON array
 // contains at least one of the given target department IDs.
 func queryLocalUserIdsByDeptIds(targetDeptIds []string) []int {
@@ -679,7 +680,6 @@ func queryLocalUsersByDeptIds(targetDeptIds []string, excludeOpenIds map[string]
 	}
 	return result
 }
-
 
 func parseUserDeptPath(raw string) (ids []string, names []string, err error) {
 	entries, err := parseUserDeptPathEntries(raw)
@@ -835,26 +835,34 @@ func getDeptRegisteredUserIds(c *gin.Context, deptId string) ([]int, error) {
 	}
 
 	feishuOpenIds := make([]string, 0, len(feishuUsers))
+	feishuOpenIdSet := make(map[string]bool, len(feishuUsers))
 	for _, fu := range feishuUsers {
 		feishuOpenIds = append(feishuOpenIds, fu.OpenId)
+		feishuOpenIdSet[fu.OpenId] = true
 	}
 
 	var userIds []int
 	if len(feishuOpenIds) > 0 {
 		var localUsers []model.User
 		model.DB.Model(&model.User{}).
-			Select("id").
+			Select("id, open_id").
 			Where("open_id IN ?", feishuOpenIds).
 			Find(&localUsers)
-		for _, lu := range localUsers {
+
+		localUserMap := make(map[string]*model.User, len(localUsers))
+		for i := range localUsers {
+			localUserMap[localUsers[i].OpenId] = &localUsers[i]
+		}
+		for _, lu := range localUserMap {
 			userIds = append(userIds, lu.Id)
 		}
 	}
 
-	// Also include local users (non-Feishu accounts) assigned to these departments via department_ids
-	extraUserIds := queryLocalUserIdsByDeptIds(targetDeptIds)
-	for _, uid := range extraUserIds {
-		userIds = append(userIds, uid)
+	// Also include local users (non-Feishu accounts) assigned to these departments via department_ids.
+	// Keep this in sync with GetDepartmentUsers so overview totals match the visible user list.
+	extraUsers := queryLocalUsersByDeptIds(targetDeptIds, feishuOpenIdSet)
+	for i := range extraUsers {
+		userIds = append(userIds, extraUsers[i].Id)
 	}
 
 	return userIds, nil
@@ -1046,7 +1054,11 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 	}
 
 	childFeishuUsers := make(map[string][]string, len(directChildren))
+	allFeishuOpenIdSet := make(map[string]bool)
 	for _, fu := range allFeishuUsers {
+		if fu.OpenId != "" {
+			allFeishuOpenIdSet[fu.OpenId] = true
+		}
 		for _, child := range directChildren {
 			matched := false
 			for _, dId := range fu.DepartmentIds {
@@ -1063,8 +1075,9 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 	}
 
 	// Also assign locally-assigned users (non-Feishu accounts) to child departments
-	extraAllLocalUsers := queryLocalUsersByDeptIds(allDeptIds, nil)
+	extraAllLocalUsers := queryLocalUsersByDeptIds(allDeptIds, allFeishuOpenIdSet)
 	childLocalUserIds := make(map[string][]int, len(directChildren))
+	childLocalUserIdSets := make(map[string]map[int]bool, len(directChildren))
 	for _, lu := range extraAllLocalUsers {
 		if lu.DepartmentIds == "" {
 			continue
@@ -1082,7 +1095,13 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 				}
 			}
 			if matched {
-				childLocalUserIds[child.DepartmentId] = append(childLocalUserIds[child.DepartmentId], lu.Id)
+				if childLocalUserIdSets[child.DepartmentId] == nil {
+					childLocalUserIdSets[child.DepartmentId] = make(map[int]bool)
+				}
+				if !childLocalUserIdSets[child.DepartmentId][lu.Id] {
+					childLocalUserIdSets[child.DepartmentId][lu.Id] = true
+					childLocalUserIds[child.DepartmentId] = append(childLocalUserIds[child.DepartmentId], lu.Id)
+				}
 				break
 			}
 		}
@@ -1138,14 +1157,21 @@ func GetDepartmentChildrenStats(c *gin.Context) {
 		}
 
 		userIds := make([]int, 0)
+		userIdSet := make(map[int]bool)
 		for _, oid := range openIds {
 			if uid, ok := allLocalUserMap[oid]; ok {
-				userIds = append(userIds, uid)
+				if !userIdSet[uid] {
+					userIdSet[uid] = true
+					userIds = append(userIds, uid)
+				}
 			}
 		}
 		// Add locally-assigned user IDs directly
 		for _, uid := range localIds {
-			userIds = append(userIds, uid)
+			if !userIdSet[uid] {
+				userIdSet[uid] = true
+				userIds = append(userIds, uid)
+			}
 		}
 		stat.RegisteredCount = len(userIds)
 
