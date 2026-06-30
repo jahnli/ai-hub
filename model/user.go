@@ -56,8 +56,31 @@ type User struct {
 	BackgroundImage  string         `json:"background_image" gorm:"type:varchar(512);column:background_image;default:''"`
 	CustomFieldValues string        `json:"custom_field_values" gorm:"type:text;column:custom_field_values;default:'{}'"`
 	JoinDate          string         `json:"join_date" gorm:"type:varchar(16);column:join_date;default:''"`
-	IsDeptLeader      bool           `json:"is_dept_leader" gorm:"column:is_dept_leader"`
 	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
+}
+
+// ComputeIsDeptLeader checks whether the user's OpenId appears as a leader_id
+// in any of their departments (stored as JSON in the Departments field).
+func (user *User) ComputeIsDeptLeader() bool {
+	if user.OpenId == "" || user.Departments == "" || user.Departments == "[]" {
+		return false
+	}
+	var depts []struct {
+		Leaders []struct {
+			LeaderId string `json:"leader_id"`
+		} `json:"leaders"`
+	}
+	if err := common.UnmarshalJsonStr(user.Departments, &depts); err != nil {
+		return false
+	}
+	for _, d := range depts {
+		for _, l := range d.Leaders {
+			if l.LeaderId == user.OpenId {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (user *User) ToBaseUser() *UserBase {

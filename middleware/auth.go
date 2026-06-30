@@ -191,7 +191,7 @@ func BPAuth() func(c *gin.Context) {
 }
 
 // DataOverviewAccessCheck verifies the user has data overview access after UserAuth.
-// Allows: admin+, BP roles, or dept leaders (is_dept_leader=true).
+// Allows: admin+, BP roles, or dept leaders (open_id matches a leader_id in departments).
 func DataOverviewAccessCheck() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		role := c.GetInt("role")
@@ -202,7 +202,7 @@ func DataOverviewAccessCheck() func(c *gin.Context) {
 
 		userId := c.GetInt("id")
 		user, err := model.GetUserById(userId, false)
-		if err != nil || !user.IsDeptLeader {
+		if err != nil || !user.ComputeIsDeptLeader() {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": common.TranslateMessage(c, i18n.MsgAuthInsufficientPrivilege),

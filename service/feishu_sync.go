@@ -197,20 +197,6 @@ func SyncFeishuUser(user *model.User) error {
 		}
 	}
 
-	// is_dept_leader: check if the user leads any of their departments
-	isDeptLeader := false
-	for _, d := range base.Departments {
-		for _, l := range d.Leaders {
-			if l.LeaderId == openId {
-				isDeptLeader = true
-				break
-			}
-		}
-		if isDeptLeader {
-			break
-		}
-	}
-
 	updates := map[string]any{
 		"avatar_url":          base.Avatar.Avatar240,
 		"background_image":    base.BackgroundImage,
@@ -226,7 +212,6 @@ func SyncFeishuUser(user *model.User) error {
 		"departments":         string(deptsJSON),
 		"department_name":     departmentName,
 		"custom_field_values": customFieldValuesStr,
-		"is_dept_leader":      isDeptLeader,
 	}
 	if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(updates).Error; err != nil {
 		return err

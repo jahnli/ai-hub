@@ -546,7 +546,7 @@ func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error
 	}
 
 	fullTree := buildDeptTree(items)
-	trimmedTree, leaderDeptIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, user.IsDeptLeader)
+	trimmedTree, leaderDeptIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, user.ComputeIsDeptLeader())
 
 	if tenantInfo.Name != "" {
 		tenantRoot := &DeptTreeNode{
