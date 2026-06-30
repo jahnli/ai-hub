@@ -3,7 +3,6 @@ import { VChart } from '@visactor/react-vchart'
 import {
   BarChart3,
   ChartLine,
-  Coins,
   DollarSign,
   Hash,
   Layers,
@@ -47,13 +46,10 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
       <CardContent className='p-0'>
         <div className='grid grid-cols-1 lg:grid-cols-2'>
           {hasDailyData && (
-            <QuotaTrendChart data={props.data.daily_stats} {...chartProps} />
+            <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
           {hasDailyData && (
             <RequestTrendChart data={props.data.daily_stats} {...chartProps} />
-          )}
-          {hasDailyData && (
-            <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
           {hasModelData && (
             <ModelUsageTrendChart
@@ -249,91 +245,7 @@ function formatUnitPrice(cost: number, tokens: number): string {
   return `¥${pricePerMT.toFixed(2)}/MT`
 }
 
-// ── 1. 额度消耗趋势 ──
-
-function QuotaTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
-  const { t } = useTranslation()
-
-  const spec = useMemo(() => {
-    const values = props.data.map((item) => ({
-      date: item.date,
-      value: item.total_quota / 500000,
-      tokens: item.total_tokens,
-    }))
-
-    const tooltipContent = [
-      {
-        key: () => t('Total Cost'),
-        value: (d: { value?: number }) => formatCost(d.value ?? 0),
-      },
-      {
-        key: () => 'Token',
-        value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
-      },
-      {
-        key: () => t('Unit Price'),
-        value: (d: { value?: number; tokens?: number }) =>
-          formatUnitPrice(d.value ?? 0, d.tokens ?? 0),
-      },
-    ]
-
-    return {
-      type: 'area' as const,
-      data: [{ values }],
-      xField: 'date',
-      yField: 'value',
-      point: { visible: values.length <= 60, size: 4 },
-      line: { style: { curveType: 'monotone' } },
-      area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
-      ...APPEAR_ANIMATION,
-      ...(values.length > DATA_ZOOM_THRESHOLD
-        ? { dataZoom: makeDataZoom('area') }
-        : {}),
-      axes: [
-        {
-          orient: 'bottom',
-          type: 'band',
-          label: {
-            style: { fontSize: 11 },
-            autoHide: true,
-            autoHideMethod: 'greedy',
-            formatMethod: (v: string) => formatDateLabel(v),
-          },
-        },
-        {
-          orient: 'left',
-          type: 'linear',
-          label: {
-            formatMethod: (v: number) =>
-              v === 0 ? '¥0' : v >= 1000 ? '¥' + (v / 1000).toFixed(0) + 'K' : '¥' + v.toFixed(0),
-          },
-        },
-      ],
-      tooltip: {
-        dimension: {
-          content: tooltipContent,
-        },
-        mark: {
-          title: { value: (d: { date?: string }) => d.date ?? '' },
-          content: tooltipContent,
-        },
-      },
-    }
-  }, [props.data, t])
-
-  return (
-    <ChartCard
-      icon={Coins}
-      title={t('Quota Consumption Trend')}
-      themeReady={props.themeReady}
-      resolvedTheme={props.resolvedTheme}
-      chartKey={`quota-trend-${props.resolvedTheme}`}
-      spec={spec}
-    />
-  )
-}
-
-// ── 2. 请求次数趋势 ──
+// ── 1. 请求次数趋势 ──
 
 function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   const { t } = useTranslation()
@@ -363,7 +275,7 @@ function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   )
 }
 
-// ── 3. 每日 Token 用量趋势 ──
+// ── 2. Token 用量趋势 ──
 
 function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   const { t } = useTranslation()
@@ -435,7 +347,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   return (
     <ChartCard
       icon={Layers}
-      title={t('Daily Token Usage Trend')}
+      title={t('Token Usage Trend')}
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
       chartKey={`token-trend-${props.resolvedTheme}`}
@@ -445,7 +357,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   )
 }
 
-// ── 4. 模型使用趋势 ──
+// ── 3. 模型使用趋势 ──
 
 function ModelUsageTrendChart(
   props: ChartBaseProps & { data: ModelDailyStat[] }
@@ -546,15 +458,15 @@ function ModelUsageTrendChart(
   )
 }
 
-// ── 5. 模型调用排行 ──
+// ── 4. 模型调用排行 ──
 
 function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
   const { t } = useTranslation()
 
   const spec = useMemo(() => {
     const sorted = [...props.data]
-      .sort((a, b) => a.total_requests - b.total_requests)
-      .slice(-15)
+      .sort((a, b) => b.total_requests - a.total_requests)
+      .slice(0, 15)
 
     return {
       type: 'bar' as const,
@@ -563,6 +475,8 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
           values: sorted.map((item) => ({
             name: item.model_name,
             value: item.total_requests,
+            cost: item.total_quota / 500000,
+            tokens: item.total_tokens,
           })),
         },
       ],
@@ -598,18 +512,44 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         dimension: {
           content: [
             {
-              key: t('Requests'),
+              key: () => t('Requests'),
               value: (d: { value?: number }) =>
                 formatLargeNumber(d.value ?? 0) + ' ' + t('times'),
+            },
+            {
+              key: () => 'Token',
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: () => t('Total Cost'),
+              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (d: { cost?: number; tokens?: number }) =>
+                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0),
             },
           ],
         },
         mark: {
           content: [
             {
-              key: t('Requests'),
+              key: () => t('Requests'),
               value: (d: { value?: number }) =>
                 formatLargeNumber(d.value ?? 0) + ' ' + t('times'),
+            },
+            {
+              key: () => 'Token',
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: () => t('Total Cost'),
+              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (d: { cost?: number; tokens?: number }) =>
+                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0),
             },
           ],
         },
@@ -630,15 +570,15 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
   )
 }
 
-// ── 6. 模型费用排行 ──
+// ── 5. 模型费用排行 ──
 
 function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
   const { t } = useTranslation()
 
   const spec = useMemo(() => {
     const sorted = [...props.data]
-      .sort((a, b) => a.total_quota - b.total_quota)
-      .slice(-15)
+      .sort((a, b) => b.total_quota - a.total_quota)
+      .slice(0, 15)
 
     return {
       type: 'bar' as const,
@@ -647,6 +587,8 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
           values: sorted.map((item) => ({
             name: item.model_name,
             value: item.total_quota / 500000,
+            tokens: item.total_tokens,
+            requests: item.total_requests,
           })),
         },
       ],
@@ -684,22 +626,44 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         dimension: {
           content: [
             {
-              key: t('Cost'),
-              value: (d: { value?: number }) => {
-                const v = d.value ?? 0
-                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
-              },
+              key: () => t('Total Cost'),
+              value: (d: { value?: number }) => formatCost(d.value ?? 0),
+            },
+            {
+              key: () => 'Token',
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: () => t('Requests'),
+              value: (d: { requests?: number }) =>
+                formatLargeNumber(d.requests ?? 0) + ' ' + t('times'),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (d: { value?: number; tokens?: number }) =>
+                formatUnitPrice(d.value ?? 0, d.tokens ?? 0),
             },
           ],
         },
         mark: {
           content: [
             {
-              key: t('Cost'),
-              value: (d: { value?: number }) => {
-                const v = d.value ?? 0
-                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
-              },
+              key: () => t('Total Cost'),
+              value: (d: { value?: number }) => formatCost(d.value ?? 0),
+            },
+            {
+              key: () => 'Token',
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: () => t('Requests'),
+              value: (d: { requests?: number }) =>
+                formatLargeNumber(d.requests ?? 0) + ' ' + t('times'),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (d: { value?: number; tokens?: number }) =>
+                formatUnitPrice(d.value ?? 0, d.tokens ?? 0),
             },
           ],
         },
@@ -720,7 +684,7 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
   )
 }
 
-// ── 7. 均价趋势 ──
+// ── 6. 均价趋势 ──
 
 type PriceGranularity = 'day' | 'week' | 'month'
 
@@ -888,7 +852,7 @@ function AvgPriceTrendChart(
   )
 }
 
-// ── 8. 模型 Token 分布 ──
+// ── 7. 模型 Token 分布 ──
 
 function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
   const { t } = useTranslation()

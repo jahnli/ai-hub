@@ -186,31 +186,27 @@ export function ExportDialog(props: ExportDialogProps) {
         </DialogHeader>
 
         <div className='space-y-3 py-2'>
-          <label className='flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50'>
-            <Checkbox
-              checked={includeSubDepts}
-              onCheckedChange={(checked) =>
-                setIncludeSubDepts(checked === true)
-              }
-              disabled={!hasSubDepts}
-              className='mt-0.5'
-            />
-            <div className='space-y-1'>
-              <div className='text-sm font-medium'>
-                {t('Include sub-department detail sheets')}
-              </div>
-              <div className='text-muted-foreground text-xs leading-relaxed'>
-                {t(
-                  'When checked, a separate Sheet will be generated for each sub-department, containing detailed statistics and charts'
-                )}
-              </div>
-              {!hasSubDepts && (
-                <div className='text-muted-foreground text-xs italic'>
-                  {t('No sub-departments available')}
+          {hasSubDepts && (
+            <label className='flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50'>
+              <Checkbox
+                checked={includeSubDepts}
+                onCheckedChange={(checked) =>
+                  setIncludeSubDepts(checked === true)
+                }
+                className='mt-0.5'
+              />
+              <div className='space-y-1'>
+                <div className='text-sm font-medium'>
+                  {t('Include sub-department detail sheets')}
                 </div>
-              )}
-            </div>
-          </label>
+                <div className='text-muted-foreground text-xs leading-relaxed'>
+                  {t(
+                    'When checked, a separate Sheet will be generated for each sub-department, containing detailed statistics and charts'
+                  )}
+                </div>
+              </div>
+            </label>
+          )}
 
           <label className='flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50'>
             <Checkbox
