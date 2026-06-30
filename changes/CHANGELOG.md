@@ -24,7 +24,7 @@
 | 018 | 2026-06-20 | 修复侧边栏选中项悬停时文字颜色被覆盖的问题，保持主题色 | `web/default/src/components/ui/sidebar.tsx` |
 | 019 | 2026-06-20 | 移除邀请人/邀请码功能（后端模型/控制器/路由、前端组件/类型/i18n、数据库迁移、计费设置默认值残留字段修复） | [详情](details/020-remove-invitation.md) |
 | 020 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
-| 021 | 2026-06-20 | 个人资料页内联展示订阅详情（计划名、状态、剩余天数、配额进度条等），皇冠图标改为金色 | `web/default/src/features/profile/components/profile-header.tsx` |
+| 021 | 2026-07-01 | 个人资料页订阅列表重构：从 ProfileHeader 内嵌改为独立卡片组件，横向网格布局（sm:2列 lg:3列），每个订阅独立圆角卡片展示状态、剩余天数、配额进度 | `web/default/src/features/profile/components/subscription-card.tsx`、`web/default/src/features/profile/components/profile-header.tsx`、`web/default/src/features/profile/index.tsx` |
 | 022 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
 | 023 | 2026-06-22 | 新增 LDAP 登录与用户同步（飞书同步）：后端 LDAP 认证/绑定/解绑、飞书用户同步服务、前端登录弹窗与系统设置、6 语言翻译 | [详情](details/024-ldap-login.md) |
 | 024 | 2026-06-23 | 登录页默认使用 LDAP 登录：LDAP 表单内联展示替代弹窗，视图切换（LDAP/密码/OAuth）布局；用户名输入框下添加示例提示；删除未使用的 LDAPLoginDialog 组件 | [详情](details/025-ldap-default-login.md) |
