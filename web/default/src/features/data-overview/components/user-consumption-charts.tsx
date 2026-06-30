@@ -15,6 +15,20 @@ function formatCost(value: number): string {
   return '¥' + value.toFixed(2)
 }
 
+function formatTokens(tokens: number): string {
+  if (tokens <= 0) return '-'
+  if (tokens >= 100_000_000) {
+    return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 100_000_000)}亿`
+  }
+  return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 1_000_000)}M`
+}
+
+function formatUnitPrice(cost: number, tokens: number): string {
+  if (tokens <= 0) return '-'
+  const pricePerMT = (cost / tokens) * 1_000_000
+  return `¥${pricePerMT.toFixed(2)}/MT`
+}
+
 export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
   const { t } = useTranslation()
   const { resolvedTheme, themeReady } = useChartTheme()
@@ -33,6 +47,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
     const values = sortedData.map((item) => ({
       name: item.display_name || item.username,
       cost: item.total_cost,
+      tokens: item.total_tokens,
     }))
 
     return {
@@ -67,10 +82,22 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
       ],
       tooltip: {
         mark: {
+          title: {
+            value: (d: { name?: string }) => d.name ?? '',
+          },
           content: [
             {
-              key: (d: { name?: string }) => d.name ?? '',
+              key: () => t('Total Cost'),
               value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
+            },
+            {
+              key: () => t('Tokens Used'),
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (d: { cost?: number; tokens?: number }) =>
+                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0),
             },
           ],
         },
@@ -90,6 +117,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
       .map((i) => ({
         name: i.display_name || i.username,
         value: i.total_cost,
+        tokens: i.total_tokens,
       }))
 
     return {
@@ -127,17 +155,25 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
       },
       tooltip: {
         mark: {
+          title: {
+            value: (d: { name?: string }) => d.name ?? '',
+          },
           content: [
             {
-              key: (d: { name?: string }) => d.name ?? '',
+              key: () => t('Total Cost'),
+              value: (d: { value?: number }) => formatCost(d.value ?? 0),
+            },
+            {
+              key: () => t('Tokens Used'),
+              value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+            },
+            {
+              key: () => t('Percentage'),
               value: (d: { value?: number }) => {
                 const v = d.value ?? 0
-                const cost = formatCost(v)
-                const pct =
-                  totalCost > 0
-                    ? ((v / totalCost) * 100).toFixed(1) + '%'
-                    : ''
-                return pct ? `${cost} (${pct})` : cost
+                return totalCost > 0
+                  ? ((v / totalCost) * 100).toFixed(1) + '%'
+                  : '-'
               },
             },
           ],
