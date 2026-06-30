@@ -112,7 +112,7 @@ export function NotifySettingsDialog() {
           </Button>
         }
       />
-      <DialogContent className='sm:max-w-md'>
+      <DialogContent className='sm:max-w-xl'>
         <DialogHeader>
           <DialogTitle>{t('Notification Settings')}</DialogTitle>
           <DialogDescription>
@@ -126,111 +126,111 @@ export function NotifySettingsDialog() {
           </div>
         ) : (
           <div className='space-y-5'>
-            <div className='space-y-3'>
-              <div className='flex items-center justify-between'>
-                <div className='space-y-0.5'>
-                  <div className='text-sm font-medium'>
-                    {t('Data Report')}
-                  </div>
-                  <div className='text-muted-foreground text-xs'>
-                    {t(
-                      'Push data overview report at the selected frequency'
-                    )}
-                  </div>
+            <div className='flex items-center justify-between gap-4'>
+              <div className='min-w-0 space-y-0.5'>
+                <div className='text-sm font-medium'>
+                  {t('Data Report')}
                 </div>
+                <div className='text-muted-foreground text-xs'>
+                  {t(
+                    'Push data overview report at the selected frequency'
+                  )}
+                </div>
+              </div>
+              <div className='flex shrink-0 items-center gap-3'>
+                {reportEnabled && (
+                  <Select value={frequency} onValueChange={setFrequency}>
+                    <SelectTrigger className='w-36'>
+                      <SelectValue>
+                        {t(getFrequencyLabel(frequency))}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FREQUENCY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {t(opt.label)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Switch
                   checked={reportEnabled}
                   onCheckedChange={setReportEnabled}
                 />
               </div>
-              {reportEnabled && (
-                <Select value={frequency} onValueChange={setFrequency}>
-                  <SelectTrigger className='w-full'>
-                    <SelectValue>
-                      {t(getFrequencyLabel(frequency))}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FREQUENCY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {t(opt.label)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
             </div>
 
             {isDeptLeader && (
               <>
                 <div className='bg-border h-px' />
-                <div className='space-y-3'>
-                  <div className='flex items-center justify-between'>
-                    <div className='space-y-0.5'>
-                      <div className='text-sm font-medium'>
-                        {t('Department Over-Quota Alert')}
-                      </div>
-                      <div className='text-muted-foreground text-xs'>
-                        {t(
-                          'Notify when department members daily consumption exceeds the threshold'
-                        )}
-                      </div>
+                <div className='flex items-center justify-between gap-4'>
+                  <div className='min-w-0 space-y-0.5'>
+                    <div className='text-sm font-medium'>
+                      {t('Department Over-Quota Alert')}
                     </div>
+                    <div className='text-muted-foreground text-xs'>
+                      {t(
+                        'Notify when department members daily consumption exceeds the threshold'
+                      )}
+                    </div>
+                  </div>
+                  <div className='flex shrink-0 items-center gap-3'>
+                    {quotaEnabled && (
+                      <div className='relative w-36'>
+                        <Input
+                          type='number'
+                          min={1}
+                          value={quotaValue}
+                          onChange={(e) => setQuotaValue(e.target.value)}
+                          className='w-full pr-8'
+                          placeholder='0'
+                        />
+                        <span className='text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm'>
+                          {t('CNY')}
+                        </span>
+                      </div>
+                    )}
                     <Switch
                       checked={quotaEnabled}
                       onCheckedChange={setQuotaEnabled}
                     />
                   </div>
-                  {quotaEnabled && (
-                    <div className='flex items-center gap-2'>
-                      <Input
-                        type='number'
-                        min={1}
-                        value={quotaValue}
-                        onChange={(e) => setQuotaValue(e.target.value)}
-                        className='flex-1'
-                        placeholder='0'
-                      />
-                      <span className='text-muted-foreground shrink-0 text-sm'>
-                        {t('CNY')}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 <div className='bg-border h-px' />
-                <div className='space-y-3'>
-                  <div className='flex items-center justify-between'>
-                    <div className='space-y-0.5'>
-                      <div className='text-sm font-medium'>
-                        {t('Leave Over-Quota Alert')}
-                      </div>
-                      <div className='text-muted-foreground text-xs'>
-                        {t(
-                          'Notify when members on leave daily consumption exceeds the threshold'
-                        )}
-                      </div>
+                <div className='flex items-center justify-between gap-4'>
+                  <div className='min-w-0 space-y-0.5'>
+                    <div className='text-sm font-medium'>
+                      {t('Leave Over-Quota Alert')}
                     </div>
+                    <div className='text-muted-foreground text-xs'>
+                      {t(
+                        'Notify when members on leave daily consumption exceeds the threshold'
+                      )}
+                    </div>
+                  </div>
+                  <div className='flex shrink-0 items-center gap-3'>
+                    {quotaLeaveEnabled && (
+                      <div className='relative w-36'>
+                        <Input
+                          type='number'
+                          min={1}
+                          value={quotaLeaveValue}
+                          onChange={(e) => setQuotaLeaveValue(e.target.value)}
+                          className='w-full pr-8'
+                          placeholder='0'
+                        />
+                        <span className='text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm'>
+                          {t('CNY')}
+                        </span>
+                      </div>
+                    )}
                     <Switch
                       checked={quotaLeaveEnabled}
                       onCheckedChange={setQuotaLeaveEnabled}
                     />
                   </div>
-                  {quotaLeaveEnabled && (
-                    <div className='flex items-center gap-2'>
-                      <Input
-                        type='number'
-                        min={1}
-                        value={quotaLeaveValue}
-                        onChange={(e) => setQuotaLeaveValue(e.target.value)}
-                        className='flex-1'
-                        placeholder='0'
-                      />
-                      <span className='text-muted-foreground shrink-0 text-sm'>
-                        {t('CNY')}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </>
             )}
