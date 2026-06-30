@@ -56,7 +56,6 @@ type User struct {
 	BackgroundImage  string         `json:"background_image" gorm:"type:varchar(512);column:background_image;default:''"`
 	CustomFieldValues string        `json:"custom_field_values" gorm:"type:text;column:custom_field_values;default:'{}'"`
 	JoinDate          string         `json:"join_date" gorm:"type:varchar(16);column:join_date;default:''"`
-	IsDeptLeader      bool           `json:"is_dept_leader" gorm:"column:is_dept_leader"`
 	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
 }
 
