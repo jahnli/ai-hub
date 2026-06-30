@@ -16,7 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useTranslation } from "react-i18next";
 import { formatQuota, formatTimestamp } from "@/lib/format";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
@@ -540,4 +542,68 @@ export function userGroupColumn<T extends UserColumnRow>(
     size: opts?.withBadgeCell ? 140 : 100,
     meta: { mobileHidden: true },
   };
+}
+
+// ============================================================================
+// Shared User Columns Hook
+// ============================================================================
+
+export interface SharedUserColumnsOptions {
+  costAccessor: string;
+  tokensAccessor: string;
+  requestsAccessor: string;
+  modelAccessor: string;
+  requestCountAccessor: string;
+  withGroupBadgeCell?: boolean;
+}
+
+export function useSharedUserColumns<T extends UserColumnRow>(
+  opts: SharedUserColumnsOptions,
+): ColumnDef<T>[] {
+  const { t } = useTranslation();
+
+  return useMemo(
+    () => [
+      userIdColumn<T>(t),
+      userNameColumn<T>(t),
+      userQuotaColumn<T>(t),
+      userCostColumn<T>(t, { accessor: opts.costAccessor }),
+      userTokensColumn<T>(t, { accessor: opts.tokensAccessor }),
+      userRequestsColumn<T>(t, { accessor: opts.requestsAccessor }),
+      userModelColumn<T>(t, { accessor: opts.modelAccessor, variant: "badge" }),
+      userDepartmentColumn<T>(t),
+      userJobLevelColumn<T>(t),
+      userJoinDateColumn<T>(t),
+      userLastLoginColumn<T>(t),
+      userCreatedAtColumn<T>(t),
+      {
+        ...userRoleColumn<T>(t),
+        filterFn: (row: { getValue: (id: string) => unknown }, id: string, value: string[]) => {
+          return value.includes(String(row.getValue(id)));
+        },
+      },
+      {
+        ...userStatusColumn<T>(t, {
+          showRequestCount: true,
+          requestCountAccessor: opts.requestCountAccessor as keyof T,
+        }),
+        filterFn: (row: { getValue: (id: string) => unknown }, id: string, value: string[]) => {
+          return value.includes(String(row.getValue(id)));
+        },
+      },
+      {
+        ...userGroupColumn<T>(t, {
+          withBadgeCell: opts.withGroupBadgeCell ?? true,
+        }),
+        filterFn: (row: { getValue: (id: string) => unknown }, id: string, value: string) => {
+          const group = String(
+            row.getValue(id) || t("User Group"),
+          ).toLowerCase();
+          const searchValue = String(value).toLowerCase();
+          return group.includes(searchValue);
+        },
+      },
+    ],
+    [t, opts.costAccessor, opts.tokensAccessor, opts.requestsAccessor, opts.modelAccessor, opts.requestCountAccessor, opts.withGroupBadgeCell],
+  );
 }

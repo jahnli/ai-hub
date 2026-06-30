@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback } from 'react'
-import type { ColumnDef, PaginationState, OnChangeFn, SortingState } from '@tanstack/react-table'
+import { useState, useCallback } from 'react'
+import type { PaginationState, OnChangeFn, SortingState } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
 import { Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -8,50 +8,10 @@ import {
   DataTablePage,
   useDataTable,
 } from '@/components/data-table'
-import {
-  userIdColumn,
-  userNameColumn,
-  userQuotaColumn,
-  userCostColumn,
-  userTokensColumn,
-  userRequestsColumn,
-  userModelColumn,
-  userDepartmentColumn,
-  userJobLevelColumn,
-  userJoinDateColumn,
-  userLastLoginColumn,
-  userCreatedAtColumn,
-  userRoleColumn,
-  userStatusColumn,
-  userGroupColumn,
-} from '@/features/users/components/shared-user-columns'
+import { useSharedUserColumns } from '@/features/users/components/shared-user-columns'
 import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
 import { UserConsumptionCharts } from './user-consumption-charts'
 import type { DepartmentUser } from '../types'
-
-function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
-  const { t } = useTranslation()
-  return useMemo(
-    () => [
-      userIdColumn<DepartmentUser>(t),
-      userNameColumn<DepartmentUser>(t),
-      userQuotaColumn<DepartmentUser>(t),
-      userCostColumn<DepartmentUser>(t, { accessor: 'total_amount_cny' }),
-      userTokensColumn<DepartmentUser>(t, { accessor: 'total_tokens' }),
-      userRequestsColumn<DepartmentUser>(t, { accessor: 'total_requests' }),
-      userModelColumn<DepartmentUser>(t, { accessor: 'common_model', variant: 'badge' }),
-      userDepartmentColumn<DepartmentUser>(t),
-      userJobLevelColumn<DepartmentUser>(t),
-      userJoinDateColumn<DepartmentUser>(t),
-      userLastLoginColumn<DepartmentUser>(t),
-      userCreatedAtColumn<DepartmentUser>(t),
-      userRoleColumn<DepartmentUser>(t),
-      userStatusColumn<DepartmentUser>(t, { showRequestCount: true, requestCountAccessor: 'total_requests' as keyof DepartmentUser }),
-      userGroupColumn<DepartmentUser>(t, { withBadgeCell: true }),
-    ],
-    [t]
-  )
-}
 
 interface DepartmentUsersTableProps {
   departmentId: string
@@ -78,7 +38,13 @@ export function DepartmentUsersTable({
   endTimestamp,
 }: DepartmentUsersTableProps) {
   const { t } = useTranslation()
-  const columns = useDepartmentUsersColumns()
+  const columns = useSharedUserColumns<DepartmentUser>({
+    costAccessor: 'total_amount_cny',
+    tokensAccessor: 'total_tokens',
+    requestsAccessor: 'total_requests',
+    modelAccessor: 'common_model',
+    requestCountAccessor: 'total_requests',
+  })
 
   const [pagination, setPagination] = usePagination()
   const [sorting, setSorting] = useState<SortingState>([])
