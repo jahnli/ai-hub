@@ -147,6 +147,38 @@ export interface ManageUserQuotaPayload {
 export type UsersDialogType = 'create' | 'update' | 'delete'
 
 // ============================================================================
+// Shared Column Row Interface
+// ============================================================================
+
+export interface UserColumnRow {
+  id: number
+  username: string
+  display_name: string
+  email?: string
+  avatar_url?: string
+  remark?: string
+  quota: number
+  used_quota: number
+  sub_quota_used: number
+  sub_quota_total: number
+  request_count: number
+  group: string
+  status: number
+  role: number
+  created_at?: number
+  last_login_at?: number
+  DeletedAt?: unknown | null
+  department_name?: string
+  custom_field_values?: string
+  join_date?: string
+  job_number?: string
+  job_title?: string
+  description?: string
+  background_image?: string
+  mobile?: string
+}
+
+// ============================================================================
 // Custom Field Helpers
 // ============================================================================
 

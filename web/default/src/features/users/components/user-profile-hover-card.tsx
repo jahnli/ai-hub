@@ -27,10 +27,10 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { USER_ROLE, USER_ROLES } from "../constants";
-import { type User, parseCustomFields, CUSTOM_FIELD_KEYS } from "../types";
+import { type UserColumnRow, parseCustomFields, CUSTOM_FIELD_KEYS } from "../types";
 
 interface UserProfileHoverCardProps {
-  user: User;
+  user: UserColumnRow;
   children: React.ReactNode;
 }
 
