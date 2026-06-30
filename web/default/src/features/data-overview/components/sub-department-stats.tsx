@@ -18,9 +18,9 @@ interface SubDepartmentStatsProps {
   data: SubDepartmentStat[];
 }
 
-function formatQuota(quota: number): string {
-  if (quota === 0) return "¥0";
-  return "¥" + (quota / 500000).toFixed(2);
+function formatCNY(amount: number): string {
+  if (amount === 0) return "¥0";
+  return "¥" + amount.toFixed(2);
 }
 
 function formatTokens(tokens: number): string {
@@ -91,11 +91,11 @@ function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
         size: 120,
       },
       {
-        accessorKey: "total_quota",
+        accessorKey: "total_amount_cny",
         header: t("Total Cost"),
         cell: ({ row }) => (
           <span className="font-medium font-mono">
-            {formatQuota(row.original.total_quota)}
+            {formatCNY(row.original.total_amount_cny)}
           </span>
         ),
         size: 120,
@@ -121,21 +121,21 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
   const columns = useSubDepartmentColumns();
 
   const sortedData = useMemo(
-    () => [...props.data].sort((a, b) => b.total_quota - a.total_quota),
+    () => [...props.data].sort((a, b) => b.total_amount_cny - a.total_amount_cny),
     [props.data],
   );
 
   const { table } = useDataTable({
     data: sortedData,
     columns,
-    initialSorting: [{ id: "total_quota", desc: true }],
+    initialSorting: [{ id: "total_amount_cny", desc: true }],
     withPaginationRowModel: false,
     withFilteredRowModel: false,
     withFacetedRowModel: false,
   });
 
   const totalCost = useMemo(
-    () => sortedData.reduce((sum, i) => sum + i.total_quota / 500000, 0),
+    () => sortedData.reduce((sum, i) => sum + i.total_amount_cny, 0),
     [sortedData],
   );
 
@@ -147,7 +147,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           values: sortedData.map((item) => ({
             name: item.department_name,
             tokens: item.total_tokens,
-            cost: item.total_quota / 500000,
+            cost: item.total_amount_cny,
           })),
         },
       ],
@@ -210,10 +210,10 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       data: [
         {
           values: sortedData
-            .filter((i) => i.total_quota > 0)
+            .filter((i) => i.total_amount_cny > 0)
             .map((i) => ({
               name: i.department_name,
-              value: i.total_quota / 500000,
+              value: i.total_amount_cny,
             })),
         },
       ],

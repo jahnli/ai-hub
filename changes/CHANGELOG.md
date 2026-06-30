@@ -47,10 +47,10 @@
 | 040 | 2026-06-24 | 日志筛选日期范围选择器快捷预设从 5 个扩展为 13 个（含季度、半年等），新增 dayjs quarterOfYear 插件及 6 语言翻译 | [详情](details/040-date-picker-presets.md) |
 | 041 | 2026-06-25 | 飞书同步改用 directory/v1/employees/mget 单接口（替代原用户详情/工号/部门 3 个接口）；User 表飞书字段重构：employee_number→job_number，新增 description、gender、leader_id、mobile、job_title、departments、department_name、background_image、custom_field_values、join_date，移除旧部门拆分字段；custom_field_values 扁平化为 {field_key: text_value} 格式存储；修复 background_image 结构体类型错误（应为纯字符串） | `service/feishu_sync.go`、`model/user.go`、`controller/ldap.go` |
 | 042 | 2026-06-25 | 用户管理表格头像悬停资料卡片：飞书风格（背景图 Banner + 大头像 + 姓名角色），展示职级、部门、入职日期、邮箱、工号、职务、职位描述等字段；手机号、出生日期、民族、探亲地仅超级管理员可见；支持 custom_field_values 解析；6 语言翻译 | [详情](details/042-user-profile-hover-card.md) |
-| 043 | 2026-06-30 | 数据总览页增强：新增子部门统计与使用分析板块（模型排行/费用占比/每日趋势/模型趋势/均价趋势）；图表改为纵向柱状图；加载骨架屏；侧边栏移至「控制台」分区；Token 格式化使用中文单位；统计卡片改为分割式紧凑布局（参照数据看板风格）；部门用户板块新增用户消耗排行 Top 10 柱状图和用户消耗占比 Top 10 饼图；部门用户表格支持服务端排序 | [详情](details/043-data-overview.md) |
+| 043 | 2026-06-30 | 数据总览页增强：新增子部门统计与使用分析板块（模型排行/费用占比/每日趋势/模型趋势/均价趋势）；图表改为纵向柱状图；加载骨架屏；侧边栏移至「控制台」分区；Token 格式化使用中文单位；统计卡片改为分割式紧凑布局（参照数据看板风格）；部门用户板块新增用户消耗排行 Top 10 柱状图和用户消耗占比 Top 10 饼图；部门用户表格支持服务端排序；统计聚合改用 quota_data 并按系统汇率换算人民币费用 | [详情](details/043-data-overview.md) |
 | 044 | 2026-06-27 | 新增「事业部 BP」（role=2）和「中心 BP」（role=3）两个用户角色，用户编辑界面支持角色修改，6 语言翻译 | [详情](details/044-add-bp-roles.md) |
 | 045 | 2026-06-30 | 数据总览权限开放：BP 角色和部门负责人可访问数据总览，部门树按角色层级自动裁剪；部门负责人判定改为动态计算（open_id 匹配 departments 中 leader_id），不再依赖 is_dept_leader 字段 | [详情](details/045-data-overview-access.md) |
 | 046 | 2026-06-27 | 概览页汇总卡片右侧面板改为订阅详情：展示当前订阅用量与总额、用量进度条（按百分比变色）、下次重置时间；无订阅时显示空状态；移除余额健康状态和续航天数 | `web/default/src/features/dashboard/components/overview/summary-cards.tsx` |
 | 047 | 2026-06-28 | 数据总览新增通知设置：支持数据报告周期推送（按周/按月/每周每月）、部门超额提醒和请假超额提醒（仅部门负责人可见）；含后端 CRUD 接口与前端弹窗组件，6 语言翻译 | [详情](details/047-notify-settings.md) |
-| 048 | 2026-06-29 | 数据总览新增导出功能：支持导出当前部门统计数据和图表为 Excel（含子部门详情页和用户列表页两个可选项），图表通过 VChart 离屏渲染嵌入，6 语言翻译 | [详情](details/048-data-overview-export.md) |
+| 048 | 2026-06-30 | 数据总览新增导出功能：支持导出当前部门统计数据和图表为 Excel（含子部门详情页和用户列表页两个可选项），图表通过 VChart 离屏渲染嵌入，导出费用按系统汇率换算人民币，6 语言翻译 | [详情](details/048-data-overview-export.md) |
 | 049 | 2026-06-30 | 模型定价编辑器支持本地货币输入：可切换以本地货币（如 ¥）输入价格，按系统汇率自动换算，保存时转回 USD；浮点精度优化 | [详情](details/049-model-pricing-local-currency.md) |

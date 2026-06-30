@@ -310,10 +310,9 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return tokens.toLocaleString()
   }
 
-  const formatQuota = (quota: number): string => {
-    if (quota === 0) return '¥0'
-    const yuan = quota / 500000
-    return '¥' + yuan.toFixed(2)
+  const formatCNY = (amount: number): string => {
+    if (amount === 0) return '¥0'
+    return '¥' + amount.toFixed(2)
   }
 
   const formatRequests = (count: number): string => {
@@ -325,7 +324,7 @@ function DepartmentStatsCards(props: { stat: DepartmentStat }) {
 
   const items: { title: string; value: string; desc: string; icon: LucideIcon; valueClassName?: string; tooltip?: string }[] = [
     { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers, tooltip: formatTokensDetail(stat.total_tokens) },
-    { title: t('Total Cost'), value: formatQuota(stat.total_quota), desc: t('Statistical quota'), icon: Coins },
+    { title: t('Total Cost'), value: formatCNY(stat.total_amount_cny), desc: t('Statistical quota'), icon: Coins },
     { title: t('Avg Price'), value: (stat.avg_price_per_mt === 0 ? '¥0' : '¥' + stat.avg_price_per_mt.toFixed(2)) + '/MT', desc: t('Average price per million tokens'), icon: DollarSign },
     { title: t('Total Requests'), value: formatRequests(stat.total_requests), desc: t('Statistical count'), icon: Hash },
     { title: t('Registered Count'), value: stat.registered_users.toLocaleString(), desc: t('Registered people count'), icon: UserCheck, valueClassName: 'text-emerald-600 dark:text-emerald-400' },

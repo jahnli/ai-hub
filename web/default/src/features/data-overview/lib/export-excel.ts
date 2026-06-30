@@ -166,7 +166,7 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
 
   const rows: [string, string][] = [
     [t('Total Tokens'), fmtTokens(stat.total_tokens)],
-    [t('Total Cost'), fmtCny(quotaToCny(stat.total_quota))],
+    [t('Total Cost'), fmtCny(stat.total_amount_cny)],
     [
       t('Avg Price') + '/MT',
       stat.avg_price_per_mt === 0
@@ -218,14 +218,14 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
     styleHeaderRow(hdr)
 
     ;[...p.subStats]
-      .sort((a, b) => b.total_quota - a.total_quota)
+      .sort((a, b) => b.total_amount_cny - a.total_amount_cny)
       .forEach((sub, i) => {
         const r = ws.addRow([
           sub.department_name,
           sub.registered_users,
           sub.total_users,
           fmtTokens(sub.total_tokens),
-          fmtCny(quotaToCny(sub.total_quota)),
+          fmtCny(sub.total_amount_cny),
           fmtRequests(sub.total_requests),
         ])
         styleDataRow(r, i % 2 === 1)
@@ -275,14 +275,14 @@ function buildSubDeptSheet(
     styleHeaderRow(hdr)
 
     ;[...detail.subStats]
-      .sort((a, b) => b.total_quota - a.total_quota)
+      .sort((a, b) => b.total_amount_cny - a.total_amount_cny)
       .forEach((sub, i) => {
         const r = ws.addRow([
           sub.department_name,
           sub.registered_users,
           sub.total_users,
           fmtTokens(sub.total_tokens),
-          fmtCny(quotaToCny(sub.total_quota)),
+          fmtCny(sub.total_amount_cny),
           fmtRequests(sub.total_requests),
         ])
         styleDataRow(r, i % 2 === 1)
@@ -509,7 +509,8 @@ async function embedUsageAnalysisCharts(
   const modelDailyStats = usage.model_daily_stats ?? []
 
   if (dailyStats.length > 0) {
-    const img1 = await renderChartToBase64(buildQuotaTrendSpec(dailyStats), W, H)
+    const rate = usage.quota_to_cny || (1 / 500000)
+    const img1 = await renderChartToBase64(buildQuotaTrendSpec(dailyStats, rate), W, H)
     addImageToSheet(wb, ws, img1, row, 0, W, H)
     const img2 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), W, H)
     addImageToSheet(wb, ws, img2, row, 4, W, H)
@@ -530,7 +531,7 @@ async function embedUsageAnalysisCharts(
     const barH = Math.max(240, Math.min(modelStats.length, 15) * 30)
     const img5 = await renderChartToBase64(buildModelCallRankSpec(modelStats), W, barH)
     addImageToSheet(wb, ws, img5, row, 0, W, barH)
-    const img6 = await renderChartToBase64(buildModelCostRankSpec(modelStats), W, barH)
+    const img6 = await renderChartToBase64(buildModelCostRankSpec(modelStats, rate), W, barH)
     addImageToSheet(wb, ws, img6, row, 4, W, barH)
     row += Math.ceil(barH / 15) + 2
 

@@ -22,6 +22,7 @@ export interface SubDepartmentStat {
   registered_users: number
   total_users: number
   total_quota: number
+  total_amount_cny: number
   total_tokens: number
   total_requests: number
 }
@@ -50,11 +51,13 @@ export interface UsageAnalysis {
   model_stats: ModelStat[]
   daily_stats: DailyStat[]
   model_daily_stats: ModelDailyStat[]
+  quota_to_cny: number
 }
 
 export interface DepartmentStat {
   total_tokens: number
   total_quota: number
+  total_amount_cny: number
   total_requests: number
   total_errors: number
   total_use_time: number

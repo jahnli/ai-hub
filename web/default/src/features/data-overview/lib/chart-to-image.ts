@@ -75,11 +75,11 @@ export function buildSubDeptBarSpec(subStats: SubDepartmentStat[]): ISpec {
 }
 
 export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
-  const sorted = [...subStats].sort((a, b) => b.total_quota - a.total_quota)
-  const total = sorted.reduce((s, i) => s + i.total_quota / 500000, 0)
+  const sorted = [...subStats].sort((a, b) => b.total_amount_cny - a.total_amount_cny)
+  const total = sorted.reduce((s, i) => s + i.total_amount_cny, 0)
   return {
     type: 'pie',
-    data: [{ values: sorted.filter((i) => i.total_quota > 0).map((i) => ({ name: i.department_name, value: i.total_quota / 500000 })) }],
+    data: [{ values: sorted.filter((i) => i.total_amount_cny > 0).map((i) => ({ name: i.department_name, value: i.total_amount_cny })) }],
     valueField: 'value',
     categoryField: 'name',
     outerRadius: 0.75,
@@ -91,8 +91,8 @@ export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
   } as unknown as ISpec
 }
 
-export function buildQuotaTrendSpec(dailyStats: DailyStat[]): ISpec {
-  const values = dailyStats.map((d) => ({ date: d.date, value: d.total_quota / 500000 }))
+export function buildQuotaTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: number): ISpec {
+  const values = dailyStats.map((d) => ({ date: d.date, value: d.total_quota * quotaToCnyRate }))
   return {
     type: 'area',
     data: [{ values }],
@@ -182,11 +182,11 @@ export function buildModelCallRankSpec(modelStats: ModelStat[]): ISpec {
   } as unknown as ISpec
 }
 
-export function buildModelCostRankSpec(modelStats: ModelStat[]): ISpec {
+export function buildModelCostRankSpec(modelStats: ModelStat[], quotaToCnyRate: number): ISpec {
   const sorted = [...modelStats].sort((a, b) => a.total_quota - b.total_quota).slice(-15)
   return {
     type: 'bar',
-    data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_quota / 500000 })) }],
+    data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_quota * quotaToCnyRate })) }],
     direction: 'horizontal',
     xField: 'value',
     yField: 'name',
