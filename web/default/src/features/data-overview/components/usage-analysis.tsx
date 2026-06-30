@@ -230,6 +230,25 @@ function makeAreaSpec(
   }
 }
 
+function formatCost(value: number): string {
+  if (value === 0) return '¥0'
+  return '¥' + value.toFixed(2)
+}
+
+function formatTokens(tokens: number): string {
+  if (tokens <= 0) return '-'
+  if (tokens >= 100_000_000) {
+    return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 100_000_000)}亿`
+  }
+  return `${Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(tokens / 1_000_000)}M`
+}
+
+function formatUnitPrice(cost: number, tokens: number): string {
+  if (tokens <= 0) return '-'
+  const pricePerMT = (cost / tokens) * 1_000_000
+  return `¥${pricePerMT.toFixed(2)}/MT`
+}
+
 // ── 1. 额度消耗趋势 ──
 
 function QuotaTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
@@ -239,13 +258,67 @@ function QuotaTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     const values = props.data.map((item) => ({
       date: item.date,
       value: item.total_quota / 500000,
+      tokens: item.total_tokens,
     }))
-    return makeAreaSpec(
-      values,
-      (v) => (v === 0 ? '¥0' : v >= 1000 ? '¥' + (v / 1000).toFixed(0) + 'K' : '¥' + v.toFixed(0)),
-      t('Cost'),
-      (v) => (v === 0 ? '¥0' : '¥' + v.toFixed(2))
-    )
+
+    const tooltipContent = [
+      {
+        key: () => t('Total Cost'),
+        value: (d: { value?: number }) => formatCost(d.value ?? 0),
+      },
+      {
+        key: () => 'Token',
+        value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+      },
+      {
+        key: () => t('Unit Price'),
+        value: (d: { value?: number; tokens?: number }) =>
+          formatUnitPrice(d.value ?? 0, d.tokens ?? 0),
+      },
+    ]
+
+    return {
+      type: 'area' as const,
+      data: [{ values }],
+      xField: 'date',
+      yField: 'value',
+      point: { visible: values.length <= 60, size: 4 },
+      line: { style: { curveType: 'monotone' } },
+      area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+      ...APPEAR_ANIMATION,
+      ...(values.length > DATA_ZOOM_THRESHOLD
+        ? { dataZoom: makeDataZoom('area') }
+        : {}),
+      axes: [
+        {
+          orient: 'bottom',
+          type: 'band',
+          label: {
+            style: { fontSize: 11 },
+            autoHide: true,
+            autoHideMethod: 'greedy',
+            formatMethod: (v: string) => formatDateLabel(v),
+          },
+        },
+        {
+          orient: 'left',
+          type: 'linear',
+          label: {
+            formatMethod: (v: number) =>
+              v === 0 ? '¥0' : v >= 1000 ? '¥' + (v / 1000).toFixed(0) + 'K' : '¥' + v.toFixed(0),
+          },
+        },
+      ],
+      tooltip: {
+        dimension: {
+          content: tooltipContent,
+        },
+        mark: {
+          title: { value: (d: { date?: string }) => d.date ?? '' },
+          content: tooltipContent,
+        },
+      },
+    }
   }, [props.data, t])
 
   return (
@@ -299,14 +372,65 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     const values = props.data.map((item) => ({
       date: item.date,
       value: item.total_tokens,
+      cost: item.total_quota / 500000,
     }))
-    return makeAreaSpec(
-      values,
-      (v) => formatTokenValue(v),
-      'Tokens',
-      (v) => formatTokenValue(v)
-    )
-  }, [props.data])
+
+    const tooltipContent = [
+      {
+        key: () => 'Token',
+        value: (d: { value?: number }) => formatTokens(d.value ?? 0),
+      },
+      {
+        key: () => t('Total Cost'),
+        value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
+      },
+      {
+        key: () => t('Unit Price'),
+        value: (d: { cost?: number; value?: number }) =>
+          formatUnitPrice(d.cost ?? 0, d.value ?? 0),
+      },
+    ]
+
+    return {
+      type: 'area' as const,
+      data: [{ values }],
+      xField: 'date',
+      yField: 'value',
+      point: { visible: values.length <= 60, size: 4 },
+      line: { style: { curveType: 'monotone' } },
+      area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+      ...APPEAR_ANIMATION,
+      ...(values.length > DATA_ZOOM_THRESHOLD
+        ? { dataZoom: makeDataZoom('area') }
+        : {}),
+      axes: [
+        {
+          orient: 'bottom',
+          type: 'band',
+          label: {
+            style: { fontSize: 11 },
+            autoHide: true,
+            autoHideMethod: 'greedy',
+            formatMethod: (v: string) => formatDateLabel(v),
+          },
+        },
+        {
+          orient: 'left',
+          type: 'linear',
+          label: { formatMethod: (v: number) => formatTokenValue(v) },
+        },
+      ],
+      tooltip: {
+        dimension: {
+          content: tooltipContent,
+        },
+        mark: {
+          title: { value: (d: { date?: string }) => d.date ?? '' },
+          content: tooltipContent,
+        },
+      },
+    }
+  }, [props.data, t])
 
   return (
     <ChartCard
