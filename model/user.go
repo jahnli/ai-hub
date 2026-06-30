@@ -60,6 +60,30 @@ type User struct {
 	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
 }
 
+// ComputeIsDeptLeader checks whether the user's OpenId appears as a leader_id
+// in any of their departments (stored as JSON in the Departments field).
+func (user *User) ComputeIsDeptLeader() bool {
+	if user.OpenId == "" || user.Departments == "" || user.Departments == "[]" {
+		return false
+	}
+	var depts []struct {
+		Leaders []struct {
+			LeaderId string `json:"leader_id"`
+		} `json:"leaders"`
+	}
+	if err := common.UnmarshalJsonStr(user.Departments, &depts); err != nil {
+		return false
+	}
+	for _, d := range depts {
+		for _, l := range d.Leaders {
+			if l.LeaderId == user.OpenId {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (user *User) ToBaseUser() *UserBase {
 	cache := &UserBase{
 		Id:       user.Id,
