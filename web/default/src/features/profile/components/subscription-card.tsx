@@ -255,7 +255,19 @@ function SubscriptionItem({
               {usagePercent}%
             </span>
           </div>
-          {isActive && <Progress value={usagePercent} className='mt-2 h-1.5' />}
+          {isActive && (
+            <Progress
+              value={usagePercent}
+              className={cn(
+                'mt-2 h-1.5',
+                usagePercent < 50
+                  ? '[&_[data-slot=progress-indicator]]:bg-emerald-500'
+                  : usagePercent < 80
+                    ? '[&_[data-slot=progress-indicator]]:bg-amber-500'
+                    : '[&_[data-slot=progress-indicator]]:bg-red-500'
+              )}
+            />
+          )}
         </div>
       )}
     </div>

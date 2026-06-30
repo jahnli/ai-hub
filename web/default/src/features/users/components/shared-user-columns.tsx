@@ -48,9 +48,9 @@ import { UserProfileHoverCard } from "./user-profile-hover-card";
 // ============================================================================
 
 export function getQuotaProgressColor(usedPercentage: number): string {
-  if (usedPercentage >= 90)
-    return "[&_[data-slot=progress-indicator]]:bg-rose-500";
-  if (usedPercentage >= 70)
+  if (usedPercentage >= 80)
+    return "[&_[data-slot=progress-indicator]]:bg-red-500";
+  if (usedPercentage >= 50)
     return "[&_[data-slot=progress-indicator]]:bg-amber-500";
   return "[&_[data-slot=progress-indicator]]:bg-emerald-500";
 }

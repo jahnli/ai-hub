@@ -347,11 +347,11 @@ export function SummaryCards() {
                     <div
                       className={cn(
                         'h-full rounded-full transition-all duration-500',
-                        usagePercent >= 90
-                          ? 'bg-destructive'
-                          : usagePercent >= 70
-                            ? 'bg-warning'
-                            : 'bg-primary'
+                        usagePercent >= 80
+                          ? 'bg-red-500'
+                          : usagePercent >= 50
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
                       )}
                       style={{ width: `${usagePercent}%` }}
                     />

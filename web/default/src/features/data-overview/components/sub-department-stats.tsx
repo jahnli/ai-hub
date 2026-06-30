@@ -19,12 +19,12 @@ interface SubDepartmentStatsProps {
 }
 
 function formatCNY(amount: number): string {
-  if (amount === 0) return "¥0";
+  if (!amount) return "¥0";
   return "¥" + amount.toFixed(2);
 }
 
 function formatTokens(tokens: number): string {
-  if (tokens === 0) return "0";
+  if (!tokens) return "0";
   return (tokens / 1_0000_0000).toFixed(2) + " 亿";
 }
 
