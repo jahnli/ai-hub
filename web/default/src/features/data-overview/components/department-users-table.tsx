@@ -463,7 +463,7 @@ export function DepartmentUsersTable({
           {t('Department Users')}
         </CardTitle>
       </CardHeader>
-      <CardContent className='p-0'>
+      <CardContent className='px-4 pb-4 pt-0'>
         <DataTablePage
           table={table}
           columns={columns}
@@ -476,6 +476,7 @@ export function DepartmentUsersTable({
           toolbarProps={null}
           fixedHeight={false}
           paginationInFooter={false}
+          tableClassName='border-0 rounded-none'
         />
         {rankingsQuery.data?.data && rankingsQuery.data.data.length > 0 && (
           <div className='pt-8'>
