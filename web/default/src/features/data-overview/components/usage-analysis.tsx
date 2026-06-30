@@ -275,6 +275,7 @@ function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
       resolvedTheme={props.resolvedTheme}
       chartKey={`request-trend-${props.resolvedTheme}`}
       spec={spec}
+      height='h-[340px]'
     />
   )
 }

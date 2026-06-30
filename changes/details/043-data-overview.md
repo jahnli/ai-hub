@@ -1,6 +1,6 @@
 # 数据总览页：飞书部门树筛选、统计卡片、子部门统计与使用分析
 
-**日期**: 2026-06-25 ~ 06-30
+**日期**: 2026-06-25 ~ 06-30（最后更新 06-30）
 
 ## 涉及文件
 
@@ -16,7 +16,10 @@
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 部门用户表格，内嵌用户消耗排行图表；启用手动服务端排序，排序变化时重置到第一页
 - `web/default/src/features/data-overview/components/user-consumption-charts.tsx` — 用户消耗排行 Top 10（水平柱状图）和用户消耗占比 Top 10（环形饼图），并排展示
 - `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：柱状图改为纵向、坐标轴格式化大数值；表头「用户数」改为「已注册/总人数」居中对齐；费用列、排序和图表改用后端返回的人民币金额
-- `web/default/src/features/data-overview/components/usage-analysis.tsx` — 使用分析组件：模型排行/费用占比（tab 切换条形图/饼图）改为纵向柱状图；新增模型使用趋势折线图（ModelUsageTrend，按 Top N 模型展示每日 Token 量）；每日用量趋势新增「费用」指标切换；新增均价趋势折线图（AvgPriceTrendChart，计算每日平均单价并补全无数据日期）；费用和均价计算改用后端返回的 quota_to_cny 换算率
+- `web/default/src/features/data-overview/components/usage-analysis.tsx` — 使用分析组件：模型排行/费用占比（tab 切换条形图/饼图）改为纵向柱状图；新增模型使用趋势折线图（ModelUsageTrend，按 Top N 模型展示每日 Token 量）；每日用量趋势新增「费用」指标切换；新增均价趋势折线图（AvgPriceTrendChart，计算每日平均单价并补全无数据日期）；费用和均价计算改用后端返回的 quota_to_cny 换算率；请求趋势图高度调整
 - `web/default/src/hooks/use-sidebar-config.ts` — 侧边栏配置新增 data_overview 模块及 URL 映射
 - `web/default/src/hooks/use-sidebar-data.ts` — 「数据总览」菜单从管理员分区移至控制台分区，添加 requiredRole ADMIN
+- `web/default/src/features/data-overview/components/department-users-table.tsx` — 请求次数格式化统一
+- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 请求次数格式化统一
+- `web/default/src/features/data-overview/components/user-consumption-charts.tsx` — Token 详情支持 tooltip 展示
 - `web/default/src/i18n/locales/*.json` — 新增 Model Usage Trend、Avg Price Trend、Registered/Total、Total Requests、User Consumption Ranking Top 10、User Consumption Share Top 10 等翻译（6 语言）

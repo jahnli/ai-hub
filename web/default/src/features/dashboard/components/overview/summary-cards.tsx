@@ -322,9 +322,16 @@ export function SummaryCards() {
         <div className='bg-muted/40 flex flex-col justify-center gap-4 border-t p-4 sm:p-5 xl:border-t-0 xl:border-l'>
           {activeSub ? (
             <div className='flex flex-col gap-3'>
-              <span className='text-muted-foreground text-xs font-medium'>
-                {t('Current Subscription')}
-              </span>
+              <div className='flex items-center justify-between gap-2'>
+                <span className='text-muted-foreground text-xs font-medium'>
+                  {t('Current Subscription')}
+                </span>
+                {planMap.get(activeSub.plan_id)?.title && (
+                  <span className='bg-primary/10 text-primary truncate rounded-md px-2 py-0.5 text-xs font-medium'>
+                    {planMap.get(activeSub.plan_id)!.title}
+                  </span>
+                )}
+              </div>
 
               <div className='flex flex-col gap-1.5'>
                 <div className='flex items-baseline gap-1'>

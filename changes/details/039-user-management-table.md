@@ -14,6 +14,7 @@
 - `web/default/src/features/users/components/users-table.tsx` — 用户管理表格启用手动服务端排序，排序变化时重置到第一页。
 - `web/default/src/features/users/types.ts` — 用户列表查询参数补充 sort_by/sort_order。
 - `web/default/src/features/users/components/users-columns.tsx` — 用户管理表格新增月度总消耗、Token、请求次数、常用模型列，并将请求数提示改为使用 `logs` 聚合结果。
+- `web/default/src/features/users/components/shared-user-columns.tsx` — 请求次数格式化统一（与数据总览保持一致）
 - `web/default/src/features/users/types.ts` — 用户类型补充订阅额度与月度统计字段。
 - `web/default/src/i18n/locales/en.json` — 补充用户管理新增统计列英文文案。
 - `web/default/src/i18n/locales/fr.json` — 补充用户管理新增统计列法文文案。
