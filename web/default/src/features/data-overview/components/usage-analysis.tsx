@@ -33,7 +33,8 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
     return null
   }
 
-  const chartProps = { themeReady, resolvedTheme }
+  const quotaToCnyRate = props.data.quota_to_cny || (1 / 500000)
+  const chartProps = { themeReady, resolvedTheme, quotaToCnyRate }
 
   return (
     <Card className='mt-4'>
@@ -85,6 +86,7 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
 interface ChartBaseProps {
   themeReady: boolean
   resolvedTheme: string | undefined
+  quotaToCnyRate: number
 }
 
 function ChartCard(props: {
@@ -287,7 +289,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     const values = props.data.map((item) => ({
       date: item.date,
       value: item.total_tokens,
-      cost: item.total_quota / 500000,
+      cost: item.total_quota * props.quotaToCnyRate,
     }))
 
     const tooltipContent = [
@@ -478,7 +480,7 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
           values: sorted.map((item) => ({
             name: item.model_name,
             value: item.total_requests,
-            cost: item.total_quota / 500000,
+            cost: item.total_quota * props.quotaToCnyRate,
             tokens: item.total_tokens,
           })),
         },
@@ -589,7 +591,7 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         {
           values: sorted.map((item) => ({
             name: item.model_name,
-            value: item.total_quota / 500000,
+            value: item.total_quota * props.quotaToCnyRate,
             tokens: item.total_tokens,
             requests: item.total_requests,
           })),
@@ -723,7 +725,7 @@ function AvgPriceTrendChart(
       return props.data
         .map((item) => {
           if (item.total_tokens <= 0) return null
-          const costYuan = item.total_quota / 500000
+          const costYuan = item.total_quota * props.quotaToCnyRate
           const pricePerMT = costYuan / (item.total_tokens / 1_000_000)
           return { label: item.date, value: pricePerMT }
         })
@@ -751,7 +753,7 @@ function AvgPriceTrendChart(
     const result: { label: string; value: number }[] = []
     for (const [bucketLabel, bucket] of buckets) {
       if (bucket.totalTokens <= 0) continue
-      const costYuan = bucket.totalQuota / 500000
+      const costYuan = bucket.totalQuota * props.quotaToCnyRate
       const pricePerMT = costYuan / (bucket.totalTokens / 1_000_000)
       result.push({ label: bucketLabel, value: pricePerMT })
     }

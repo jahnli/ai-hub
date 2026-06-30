@@ -782,12 +782,11 @@ func GetUserStatsBatch(userIds []int, startTimestamp, endTimestamp int64) ([]Use
 		return nil, nil
 	}
 	var rows []UserStatRow
-	tx := LOG_DB.Table("logs").
+	tx := DB.Table("quota_data").
 		Select(`user_id,
-			COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_tokens,
-			COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota,
-			COUNT(*) as total_reqs`, LogTypeConsume, LogTypeConsume, LogTypeConsume).
-		Where("type IN ?", []int{LogTypeConsume, LogTypeError}).
+			COALESCE(SUM(token_used), 0) as total_tokens,
+			COALESCE(SUM(quota), 0) as total_quota,
+			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
 
 	if startTimestamp != 0 {
@@ -826,13 +825,12 @@ func GetUserModelStatsBatch(userIds []int, startTimestamp, endTimestamp int64) (
 		return nil, nil
 	}
 	var rows []UserModelStatRow
-	tx := LOG_DB.Table("logs").
+	tx := DB.Table("quota_data").
 		Select(`user_id,
 			model_name,
 			COALESCE(SUM(quota), 0) as total_quota,
-			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens,
-			COUNT(*) as total_reqs`).
-		Where("type = ?", LogTypeConsume).
+			COALESCE(SUM(token_used), 0) as total_tokens,
+			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds).
 		Where("model_name != ''")
 
@@ -855,12 +853,11 @@ func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int)
 		return nil, nil
 	}
 	var rows []ModelStatRow
-	tx := LOG_DB.Table("logs").
+	tx := DB.Table("quota_data").
 		Select(`model_name,
-			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens,
+			COALESCE(SUM(token_used), 0) as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
-			COUNT(*) as total_reqs`).
-		Where("type = ?", LogTypeConsume).
+			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds).
 		Where("model_name != ''")
 
@@ -892,21 +889,18 @@ func GetDailyStats(userIds []int, startTimestamp, endTimestamp int64) ([]DailySt
 	}
 
 	dateExpr := "DATE(FROM_UNIXTIME(created_at))"
-	if common.UsingLogDatabase(common.DatabaseTypeSQLite) {
+	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
 		dateExpr = "DATE(created_at, 'unixepoch')"
-	} else if common.UsingLogDatabase(common.DatabaseTypePostgreSQL) {
+	} else if common.UsingMainDatabase(common.DatabaseTypePostgreSQL) {
 		dateExpr = "TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD')"
-	} else if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		dateExpr = "toString(toDate(toDateTime(created_at)))"
 	}
 
 	var rows []DailyStatRow
-	tx := LOG_DB.Table("logs").
+	tx := DB.Table("quota_data").
 		Select(dateExpr+` as date,
-			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens,
+			COALESCE(SUM(token_used), 0) as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
-			COUNT(*) as total_reqs`).
-		Where("type = ?", LogTypeConsume).
+			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
 
 	if startTimestamp != 0 {
@@ -936,12 +930,10 @@ func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN 
 	}
 
 	dateExpr := "DATE(FROM_UNIXTIME(created_at))"
-	if common.UsingLogDatabase(common.DatabaseTypeSQLite) {
+	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
 		dateExpr = "DATE(created_at, 'unixepoch')"
-	} else if common.UsingLogDatabase(common.DatabaseTypePostgreSQL) {
+	} else if common.UsingMainDatabase(common.DatabaseTypePostgreSQL) {
 		dateExpr = "TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD')"
-	} else if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		dateExpr = "toString(toDate(toDateTime(created_at)))"
 	}
 
 	topModels, err := GetModelStats(userIds, startTimestamp, endTimestamp, topN)
@@ -957,10 +949,9 @@ func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN 
 	}
 
 	var rows []ModelDailyStatRow
-	tx := LOG_DB.Table("logs").
+	tx := DB.Table("quota_data").
 		Select(dateExpr+` as date, model_name,
-			COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total_tokens`).
-		Where("type = ?", LogTypeConsume).
+			COALESCE(SUM(token_used), 0) as total_tokens`).
 		Where("user_id IN ?", userIds).
 		Where("model_name IN ?", modelNames)
 
@@ -981,6 +972,7 @@ func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN 
 type DepartmentStat struct {
 	TotalTokens       int64   `json:"total_tokens"`
 	TotalQuota        int64   `json:"total_quota"`
+	TotalAmountCNY    float64 `json:"total_amount_cny"`
 	TotalRequests     int64   `json:"total_requests"`
 	TotalErrors       int64   `json:"total_errors"`
 	TotalUseTime      int64   `json:"total_use_time"`
@@ -991,28 +983,24 @@ type DepartmentStat struct {
 	UnregisteredUsers int64   `json:"unregistered_users"`
 }
 
-// GetDepartmentStats aggregates log statistics for a set of user IDs within a time range.
+// GetDepartmentStats aggregates statistics for a set of user IDs within a time range.
+// Main metrics (tokens, quota, requests) come from quota_data; error count and use_time come from logs.
 func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64) (*DepartmentStat, error) {
 	if len(userIds) == 0 {
 		return &DepartmentStat{}, nil
 	}
 
-	type statResult struct {
-		TotalTokens  int64 `gorm:"column:total_tokens"`
-		TotalQuota   int64 `gorm:"column:total_quota"`
-		TotalReqs    int64 `gorm:"column:total_reqs"`
-		TotalErrors  int64 `gorm:"column:total_errors"`
-		TotalUseTime int64 `gorm:"column:total_use_time"`
+	type quotaResult struct {
+		TotalTokens int64 `gorm:"column:total_tokens"`
+		TotalQuota  int64 `gorm:"column:total_quota"`
+		TotalReqs   int64 `gorm:"column:total_reqs"`
 	}
 
-	var result statResult
-	tx := LOG_DB.Table("logs").
-		Select(`COALESCE(SUM(CASE WHEN type = ? THEN prompt_tokens ELSE 0 END), 0) + COALESCE(SUM(CASE WHEN type = ? THEN completion_tokens ELSE 0 END), 0) as total_tokens,
-			COALESCE(SUM(CASE WHEN type = ? THEN quota ELSE 0 END), 0) as total_quota,
-			COUNT(*) as total_reqs,
-			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as total_errors,
-			COALESCE(SUM(use_time), 0) as total_use_time`, LogTypeConsume, LogTypeConsume, LogTypeConsume, LogTypeError).
-		Where("type IN ?", []int{LogTypeConsume, LogTypeError}).
+	var qr quotaResult
+	tx := DB.Table("quota_data").
+		Select(`COALESCE(SUM(token_used), 0) as total_tokens,
+			COALESCE(SUM(quota), 0) as total_quota,
+			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
 
 	if startTimestamp != 0 {
@@ -1021,25 +1009,47 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64) (*Dep
 	if endTimestamp != 0 {
 		tx = tx.Where("created_at <= ?", endTimestamp)
 	}
-	if err := tx.Scan(&result).Error; err != nil {
+	if err := tx.Scan(&qr).Error; err != nil {
 		return nil, errors.New("查询部门统计数据失败")
 	}
 
-	stat := &DepartmentStat{
-		TotalTokens:   result.TotalTokens,
-		TotalQuota:    result.TotalQuota,
-		TotalRequests: result.TotalReqs,
-		TotalErrors:   result.TotalErrors,
-		TotalUseTime:  result.TotalUseTime,
+	type errorResult struct {
+		TotalErrors  int64 `gorm:"column:total_errors"`
+		TotalUseTime int64 `gorm:"column:total_use_time"`
 	}
 
-	if result.TotalReqs > 0 {
-		stat.ErrorRate = float64(result.TotalErrors) / float64(result.TotalReqs) * 100
-		stat.AvgUseTime = float64(result.TotalUseTime) / float64(result.TotalReqs)
+	var er errorResult
+	logTx := LOG_DB.Table("logs").
+		Select(`COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as total_errors,
+			COALESCE(SUM(use_time), 0) as total_use_time`, LogTypeError).
+		Where("type IN ?", []int{LogTypeConsume, LogTypeError}).
+		Where("user_id IN ?", userIds)
+
+	if startTimestamp != 0 {
+		logTx = logTx.Where("created_at >= ?", startTimestamp)
 	}
-	if result.TotalTokens > 0 {
-		quotaInYuan := float64(result.TotalQuota) / 500000.0
-		stat.AvgPricePerMT = quotaInYuan / (float64(result.TotalTokens) / 1000000.0)
+	if endTimestamp != 0 {
+		logTx = logTx.Where("created_at <= ?", endTimestamp)
+	}
+	if err := logTx.Scan(&er).Error; err != nil {
+		return nil, errors.New("查询部门错误统计数据失败")
+	}
+
+	stat := &DepartmentStat{
+		TotalTokens:   qr.TotalTokens,
+		TotalQuota:    qr.TotalQuota,
+		TotalRequests: qr.TotalReqs,
+		TotalErrors:   er.TotalErrors,
+		TotalUseTime:  er.TotalUseTime,
+	}
+
+	if qr.TotalReqs > 0 {
+		stat.ErrorRate = float64(er.TotalErrors) / float64(qr.TotalReqs) * 100
+		stat.AvgUseTime = float64(er.TotalUseTime) / float64(qr.TotalReqs)
+	}
+	if qr.TotalTokens > 0 {
+		quotaInYuan := float64(qr.TotalQuota) / 500000.0
+		stat.AvgPricePerMT = quotaInYuan / (float64(qr.TotalTokens) / 1000000.0)
 	}
 
 	return stat, nil

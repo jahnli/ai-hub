@@ -612,6 +612,17 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 	}
 	stat.RegisteredUsers = int64(len(userIds))
 	stat.UnregisteredUsers = int64(len(memberOpenIDs)) - stat.RegisteredUsers
+
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+	stat.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
+
 	return stat, nil
 }
 
@@ -619,13 +630,14 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 
 // SubDepartmentStatItem holds stats for one sub-department.
 type SubDepartmentStatItem struct {
-	DepartmentID    string `json:"department_id"`
-	DepartmentName  string `json:"department_name"`
-	RegisteredUsers int64  `json:"registered_users"`
-	TotalUsers      int64  `json:"total_users"`
-	TotalQuota      int64  `json:"total_quota"`
-	TotalTokens     int64  `json:"total_tokens"`
-	TotalRequests   int64  `json:"total_requests"`
+	DepartmentID    string  `json:"department_id"`
+	DepartmentName  string  `json:"department_name"`
+	RegisteredUsers int64   `json:"registered_users"`
+	TotalUsers      int64   `json:"total_users"`
+	TotalQuota      int64   `json:"total_quota"`
+	TotalAmountCNY  float64 `json:"total_amount_cny"`
+	TotalTokens     int64   `json:"total_tokens"`
+	TotalRequests   int64   `json:"total_requests"`
 }
 
 // GetSubDepartmentStats returns per-child-department statistics for the given parent department.
@@ -719,6 +731,15 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 		agg[idx].totalRequests += row.TotalReqs
 	}
 
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+
 	results := make([]SubDepartmentStatItem, len(children))
 	for i, child := range children {
 		results[i] = SubDepartmentStatItem{
@@ -727,6 +748,7 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 			RegisteredUsers: int64(len(deptData[i].userIDs)),
 			TotalUsers:      int64(len(deptData[i].memberOpenIDs)),
 			TotalQuota:      agg[i].totalQuota,
+			TotalAmountCNY:  float64(agg[i].totalQuota) / quotaPerUnit * usdExchangeRate,
 			TotalTokens:     agg[i].totalTokens,
 			TotalRequests:   agg[i].totalRequests,
 		}
@@ -929,6 +951,7 @@ type UsageAnalysisResponse struct {
 	ModelStats      []model.ModelStatRow      `json:"model_stats"`
 	DailyStats      []model.DailyStatRow      `json:"daily_stats"`
 	ModelDailyStats []model.ModelDailyStatRow `json:"model_daily_stats"`
+	QuotaToCNY      float64                   `json:"quota_to_cny"`
 }
 
 // GetUsageAnalysis fetches model ranking and daily trend for the selected department.
@@ -1000,10 +1023,21 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 		return nil, modelDailyErr
 	}
 
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+	quotaToCNY := usdExchangeRate / quotaPerUnit
+
 	return &UsageAnalysisResponse{
 		ModelStats:      modelStats,
 		DailyStats:      dailyStats,
 		ModelDailyStats: modelDailyStats,
+		QuotaToCNY:      quotaToCNY,
 	}, nil
 }
 
