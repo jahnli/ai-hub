@@ -32,11 +32,13 @@ export function PriceInput(props: {
   value: string
   placeholder?: string
   disabled?: boolean
+  currencySymbol?: string
   onChange: (value: string) => void
 }) {
+  const symbol = props.currencySymbol || '$'
   return (
     <InputGroup>
-      <InputGroupAddon>$</InputGroupAddon>
+      <InputGroupAddon>{symbol}</InputGroupAddon>
       <InputGroupInput
         inputMode='decimal'
         value={props.value}
@@ -44,7 +46,9 @@ export function PriceInput(props: {
         disabled={props.disabled}
         onChange={(event) => props.onChange(event.target.value)}
       />
-      <InputGroupAddon align='inline-end'>$/1M</InputGroupAddon>
+      <InputGroupAddon align='inline-end'>
+        {symbol}/1M
+      </InputGroupAddon>
     </InputGroup>
   )
 }
@@ -56,11 +60,13 @@ export function PriceLane(props: {
   value: string
   enabled: boolean
   disabled?: boolean
+  currencySymbol?: string
   onEnabledChange: (checked: boolean) => void
   onChange: (value: string) => void
 }) {
   const { t } = useTranslation()
   const effectiveDisabled = props.disabled || !props.enabled
+  const symbol = props.currencySymbol || '$'
 
   return (
     <SettingsControlGroup
@@ -79,11 +85,12 @@ export function PriceLane(props: {
         value={props.value}
         placeholder={props.placeholder}
         disabled={effectiveDisabled}
+        currencySymbol={symbol}
         onChange={props.onChange}
       />
       <p className='text-muted-foreground text-xs'>
         {props.enabled
-          ? t('USD price per 1M tokens.')
+          ? t('Price per 1M tokens in {{currency}}.', { currency: symbol })
           : t('Disabled lanes are omitted on save.')}
       </p>
     </SettingsControlGroup>

@@ -83,6 +83,8 @@ type ModelRatioVisualEditorProps = {
   audioCompletionRatio: string
   billingMode: string
   billingExpr: string
+  inputInLocalCurrency: boolean
+  onInputInLocalCurrencyChange: (value: boolean) => void
   onChange: (field: string, value: string) => void
   onSave: () => void | Promise<void>
   isSaving: boolean
@@ -119,6 +121,8 @@ const ModelRatioVisualEditorComponent = forwardRef<
     audioCompletionRatio,
     billingMode,
     billingExpr,
+    inputInLocalCurrency,
+    onInputInLocalCurrencyChange,
     onChange,
     onSave,
     isSaving,
@@ -729,6 +733,8 @@ const ModelRatioVisualEditorComponent = forwardRef<
               editData={editData}
               onSave={onSave}
               isSaving={isSaving}
+              inputInLocalCurrency={inputInLocalCurrency}
+              onInputInLocalCurrencyChange={onInputInLocalCurrencyChange}
               className='h-full min-h-0'
             />
           ) : (
@@ -767,6 +773,8 @@ const ModelRatioVisualEditorComponent = forwardRef<
           editData={editData}
           onSave={onSave}
           isSaving={isSaving}
+          inputInLocalCurrency={inputInLocalCurrency}
+          onInputInLocalCurrencyChange={onInputInLocalCurrencyChange}
         />
       )}
     </div>
@@ -788,6 +796,9 @@ export const ModelRatioVisualEditor = memo(
       prevProps.audioCompletionRatio === nextProps.audioCompletionRatio &&
       prevProps.billingMode === nextProps.billingMode &&
       prevProps.billingExpr === nextProps.billingExpr &&
+      prevProps.inputInLocalCurrency === nextProps.inputInLocalCurrency &&
+      prevProps.onInputInLocalCurrencyChange ===
+        nextProps.onInputInLocalCurrencyChange &&
       prevProps.onChange === nextProps.onChange &&
       prevProps.onSave === nextProps.onSave &&
       prevProps.isSaving === nextProps.isSaving

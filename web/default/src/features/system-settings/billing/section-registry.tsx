@@ -35,6 +35,7 @@ const getModelDefaults = (settings: BillingSettings) => ({
   AudioRatio: settings.AudioRatio,
   AudioCompletionRatio: settings.AudioCompletionRatio,
   ExposeRatioEnabled: settings.ExposeRatioEnabled,
+  ModelPricingInputInLocalCurrency: settings.ModelPricingInputInLocalCurrency,
   BillingMode: settings['billing_setting.billing_mode'],
   BillingExpr: settings['billing_setting.billing_expr'],
 })

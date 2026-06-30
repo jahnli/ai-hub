@@ -63,6 +63,8 @@ type ModelRatioFormProps = {
   onReset: () => void
   isSaving: boolean
   isResetting: boolean
+  inputInLocalCurrency: boolean
+  onInputInLocalCurrencyChange: (value: boolean) => void
 }
 
 type ModelJsonFieldName =
@@ -162,6 +164,8 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   onReset,
   isSaving,
   isResetting,
+  inputInLocalCurrency,
+  onInputInLocalCurrencyChange,
 }: ModelRatioFormProps) {
   const { t } = useTranslation()
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
@@ -254,6 +258,8 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               audioCompletionRatio={form.watch('AudioCompletionRatio')}
               billingMode={form.watch('BillingMode')}
               billingExpr={form.watch('BillingExpr')}
+              inputInLocalCurrency={inputInLocalCurrency}
+              onInputInLocalCurrencyChange={onInputInLocalCurrencyChange}
               onSave={handleSave}
               isSaving={isSaving}
               onChange={(field, value) => {

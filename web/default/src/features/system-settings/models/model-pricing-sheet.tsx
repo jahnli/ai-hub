@@ -59,8 +59,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { sideDrawerContentClassName } from '@/components/drawer-layout'
+import { useSystemConfigStore } from '@/stores/system-config-store'
 import {
   EMPTY_LANE_ENABLED,
   EMPTY_LANE_PRICES,
@@ -81,6 +83,20 @@ import { PriceInput, PriceLane } from './model-pricing-inputs'
 import { formatPricingNumber } from './pricing-format'
 import { TieredPricingEditor } from './tiered-pricing-editor'
 
+function multiplyByRate(value: string, rate: number): string {
+  if (!value || value === '') return ''
+  const num = parseFloat(value)
+  if (!Number.isFinite(num)) return value
+  return formatPricingNumber(num * rate)
+}
+
+function divideByRate(value: string, rate: number): string {
+  if (!value || value === '') return ''
+  const num = parseFloat(value)
+  if (!Number.isFinite(num)) return value
+  return (num / rate).toString()
+}
+
 export type { ModelRatioData } from './model-pricing-core'
 
 type ModelPricingSheetProps = {
@@ -89,6 +105,8 @@ type ModelPricingSheetProps = {
   editData?: ModelRatioData | null
   onSave?: () => void | Promise<void>
   isSaving?: boolean
+  inputInLocalCurrency?: boolean
+  onInputInLocalCurrencyChange?: (value: boolean) => void
 }
 
 type ModelPricingEditorPanelProps = Omit<
@@ -106,7 +124,7 @@ export const ModelPricingSheet = forwardRef<
   ModelPricingEditorPanelHandle,
   ModelPricingSheetProps
 >(function ModelPricingSheet(
-  { open, onOpenChange, editData, onSave, isSaving },
+  { open, onOpenChange, editData, onSave, isSaving, inputInLocalCurrency, onInputInLocalCurrencyChange },
   ref
 ) {
   const { t } = useTranslation()
@@ -128,6 +146,8 @@ export const ModelPricingSheet = forwardRef<
           editData={editData}
           onSave={onSave}
           isSaving={isSaving}
+          inputInLocalCurrency={inputInLocalCurrency}
+          onInputInLocalCurrencyChange={onInputInLocalCurrencyChange}
           className='h-full rounded-none border-0'
         />
       </SheetContent>
@@ -139,7 +159,7 @@ export const ModelPricingEditorPanel = forwardRef<
   ModelPricingEditorPanelHandle,
   ModelPricingEditorPanelProps
 >(function ModelPricingEditorPanel(
-  { editData, className, onSave, isSaving },
+  { editData, className, onSave, isSaving, inputInLocalCurrency, onInputInLocalCurrencyChange },
   ref
 ) {
   const { t } = useTranslation()
@@ -155,6 +175,18 @@ export const ModelPricingEditorPanel = forwardRef<
   const [requestRuleExpr, setRequestRuleExpr] = useState('')
   const [editorReloadToken, setEditorReloadToken] = useState(0)
   const isEditMode = !!editData
+
+  const currencyConfig = useSystemConfigStore((state) => state.config.currency)
+  const exchangeRate = currencyConfig.usdExchangeRate || 1
+  const showLocalCurrencyToggle =
+    currencyConfig.quotaDisplayType !== 'USD' && exchangeRate !== 1
+  const currencySymbol = inputInLocalCurrency
+    ? currencyConfig.quotaDisplayType === 'CNY'
+      ? '¥'
+      : currencyConfig.customCurrencySymbol || '$'
+    : '$'
+
+  const effectiveRate = inputInLocalCurrency ? exchangeRate : 1
 
   const form = useForm<ModelPricingFormValues>({
     resolver: zodResolver(createModelPricingSchema(t)),
@@ -172,12 +204,35 @@ export const ModelPricingEditorPanel = forwardRef<
   })
 
   useEffect(() => {
-    const nextLaneState = createInitialLaneState(editData)
+    const baseLaneState = createInitialLaneState(editData)
+
+    // Convert absolute prices to local currency when toggle is on
+    const rate = effectiveRate
+    const nextLaneState = {
+      promptPrice:
+        rate > 1
+          ? multiplyByRate(baseLaneState.promptPrice, rate)
+          : baseLaneState.promptPrice,
+      prices: { ...baseLaneState.prices },
+      enabled: { ...baseLaneState.enabled },
+    }
+    if (rate > 1) {
+      for (const key of Object.keys(nextLaneState.prices) as LaneKey[]) {
+        nextLaneState.prices[key] = multiplyByRate(
+          baseLaneState.prices[key],
+          rate
+        )
+      }
+    }
 
     if (editData) {
+      const localPrice =
+        rate > 1
+          ? multiplyByRate(editData.price || '', rate)
+          : editData.price || ''
       form.reset({
         name: editData.name,
-        price: editData.price || '',
+        price: localPrice,
         ratio: editData.ratio || '',
         cacheRatio: editData.cacheRatio || '',
         createCacheRatio: editData.createCacheRatio || '',
@@ -216,7 +271,7 @@ export const ModelPricingEditorPanel = forwardRef<
     setLanePrices(nextLaneState.prices)
     setLaneEnabled(nextLaneState.enabled)
     setEditorReloadToken((token) => token + 1)
-  }, [editData, form])
+  }, [editData, form, effectiveRate])
 
   const setFormValue = (field: keyof ModelPricingFormValues, value: string) => {
     form.setValue(field, value, {
@@ -349,10 +404,12 @@ export const ModelPricingEditorPanel = forwardRef<
         promptPrice,
         lanePrices,
         laneEnabled,
-        t
+        t,
+        currencySymbol
       ),
     [
       billingExpr,
+      currencySymbol,
       laneEnabled,
       lanePrices,
       pricingMode,
@@ -438,11 +495,18 @@ export const ModelPricingEditorPanel = forwardRef<
 
   const buildSubmitData = useCallback(
     (values: ModelPricingFormValues) => {
+      const rate = effectiveRate
       const data: ModelRatioData = {
         name: values.name.trim(),
         billingMode: pricingMode,
-        price: values.price || '',
-        ratio: values.ratio || '',
+        price:
+          rate > 1
+            ? divideByRate(values.price || '', rate)
+            : values.price || '',
+        ratio:
+          rate > 1
+            ? divideByRate(values.ratio || '', rate)
+            : values.ratio || '',
         cacheRatio: values.cacheRatio || '',
         createCacheRatio: values.createCacheRatio || '',
         completionRatio: values.completionRatio || '',
@@ -458,7 +522,7 @@ export const ModelPricingEditorPanel = forwardRef<
 
       return data
     },
-    [billingExpr, pricingMode, requestRuleExpr]
+    [billingExpr, pricingMode, requestRuleExpr, effectiveRate]
   )
 
   useImperativeHandle(
@@ -483,12 +547,26 @@ export const ModelPricingEditorPanel = forwardRef<
       )}
     >
       <div className='border-b p-4'>
-        <div className='flex flex-wrap items-start justify-between gap-3'>
+        <div className='flex flex-wrap items-center justify-between gap-3'>
           <div className='min-w-0'>
             <h3 className='truncate text-base font-medium'>
               {isEditMode ? t('Edit model pricing') : t('Add model pricing')}
             </h3>
           </div>
+          {showLocalCurrencyToggle && pricingMode !== 'tiered_expr' && (
+            <div className='flex items-center gap-2'>
+              <span className='text-muted-foreground text-xs'>
+                {t('Input in {{currency}} (rate {{rate}})', {
+                  currency: currencySymbol,
+                  rate: exchangeRate,
+                })}
+              </span>
+              <Switch
+                checked={inputInLocalCurrency}
+                onCheckedChange={onInputInLocalCurrencyChange}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -561,10 +639,13 @@ export const ModelPricingEditorPanel = forwardRef<
                         <PriceInput
                           value={promptPrice}
                           placeholder='3'
+                          currencySymbol={currencySymbol}
                           onChange={handlePromptPriceChange}
                         />
                         <FieldDescription>
-                          {t('USD price per 1M input tokens.')}
+                          {t('Price per 1M input tokens in {{currency}}.', {
+                            currency: currencySymbol,
+                          })}
                         </FieldDescription>
                       </Field>
 
@@ -583,6 +664,7 @@ export const ModelPricingEditorPanel = forwardRef<
                               value={lanePrices[lane.key]}
                               enabled={laneEnabled[lane.key]}
                               disabled={disabled}
+                              currencySymbol={currencySymbol}
                               onEnabledChange={(checked) =>
                                 handleLaneToggle(lane.key, checked)
                               }
@@ -607,7 +689,7 @@ export const ModelPricingEditorPanel = forwardRef<
                               <FieldLabel>{t('Fixed price')}</FieldLabel>
                               <FormControl>
                                 <InputGroup>
-                                  <InputGroupAddon>$</InputGroupAddon>
+                                  <InputGroupAddon>{currencySymbol}</InputGroupAddon>
                                   <InputGroupInput
                                     inputMode='decimal'
                                     placeholder='0.01'
@@ -626,7 +708,8 @@ export const ModelPricingEditorPanel = forwardRef<
                               </FormControl>
                               <FieldDescription>
                                 {t(
-                                  'Cost in USD per request, regardless of tokens used.'
+                                  'Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.',
+                                  { currency: currencySymbol }
                                 )}
                               </FieldDescription>
                               <FormMessage />
