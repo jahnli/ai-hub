@@ -81,6 +81,14 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
         },
       ],
       tooltip: {
+        dimension: {
+          content: [
+            {
+              key: (d: { name?: string }) => d.name ?? '',
+              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
+            },
+          ],
+        },
         mark: {
           title: {
             value: (d: { name?: string }) => d.name ?? '',
