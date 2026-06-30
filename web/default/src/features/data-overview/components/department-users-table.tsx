@@ -65,7 +65,7 @@ function formatRequests(requests: number | undefined): string {
   if (value >= 10_000) {
     return `${Intl.NumberFormat(undefined, {
       maximumFractionDigits: 2,
-    }).format(value / 10_000)}万次`
+    }).format(value / 10_000)} 万次`
   }
   return Intl.NumberFormat().format(value)
 }
@@ -233,7 +233,7 @@ function useDepartmentUsersColumns(): ColumnDef<DepartmentUser>[] {
       },
       {
         accessorKey: 'total_requests',
-        header: t('Requests'),
+        header: t('Request Count'),
         cell: ({ row }) => (
           <span className='text-sm tabular-nums'>
             {formatRequests(row.original.total_requests)}

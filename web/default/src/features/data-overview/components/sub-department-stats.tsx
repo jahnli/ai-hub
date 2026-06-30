@@ -34,7 +34,7 @@ function formatTokensDetail(tokens: number): string {
 }
 
 function formatRequests(count: number): string {
-  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + " 万";
+  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + " 万次";
   return count.toLocaleString();
 }
 
