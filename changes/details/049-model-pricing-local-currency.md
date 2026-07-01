@@ -1,6 +1,6 @@
 # 模型定价编辑器支持本地货币输入
 
-**日期**: 2026-06-30
+**日期**: 2026-07-01
 
 ## 涉及文件
 
@@ -8,7 +8,8 @@
 - `web/default/src/features/system-settings/types.ts` — ModelSettings/BillingSettings 类型新增 ModelPricingInputInLocalCurrency 字段
 - `web/default/src/features/system-settings/billing/index.tsx` — 计费设置默认值补充新字段
 - `web/default/src/features/system-settings/billing/section-registry.tsx` — 模型设置区块注册新字段
-- `web/default/src/features/system-settings/models/model-pricing-sheet.tsx` — 定价面板核心逻辑：读取系统汇率配置，本地货币/USD 切换开关，输入值按汇率自动转换，保存时除以汇率还原为 USD
+- `web/default/src/features/system-settings/models/model-pricing-sheet.tsx` — 定价面板核心逻辑：读取系统汇率配置，本地货币/USD 切换开关，输入值按汇率自动转换，保存时除以汇率还原为 USD；表达式模式下显示货币切换并透传 currencySymbol/exchangeRate 给 TieredPricingEditor
+- `web/default/src/features/system-settings/models/tiered-pricing-editor.tsx` — 表达式阶梯定价编辑器支持本地货币：VisualTierCard 价格输入/显示按汇率换算，价格后缀徽章跟随货币符号，CostEstimator 输出本地货币金额
 - `web/default/src/features/system-settings/models/model-pricing-core.ts` — 预览行价格符号参数化（$ → 动态货币符号）
 - `web/default/src/features/system-settings/models/model-pricing-inputs.tsx` — PriceInput/PriceLane 组件支持 currencySymbol 属性，描述文本参数化
 - `web/default/src/features/system-settings/models/model-ratio-form.tsx` — 表单透传 inputInLocalCurrency 属性
