@@ -1047,10 +1047,7 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64) (*Dep
 		stat.ErrorRate = float64(er.TotalErrors) / float64(qr.TotalReqs) * 100
 		stat.AvgUseTime = float64(er.TotalUseTime) / float64(qr.TotalReqs)
 	}
-	if qr.TotalTokens > 0 {
-		quotaInYuan := float64(qr.TotalQuota) / 500000.0
-		stat.AvgPricePerMT = quotaInYuan / (float64(qr.TotalTokens) / 1000000.0)
-	}
+
 
 	return stat, nil
 }

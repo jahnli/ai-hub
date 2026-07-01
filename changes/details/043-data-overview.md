@@ -5,8 +5,8 @@
 ## 涉及文件
 
 - `controller/department.go` — 部门树、部门统计、子部门统计、用户排行接口控制器
-- `service/feishu_department.go` — 飞书部门树拉取/缓存/权限裁剪；部门统计聚合；新增 GetSubDepartmentStats 按直接子部门并发拉取成员并批量聚合用量、getDirectChildren 辅助函数；部门与子部门统计新增按系统汇率换算的人民币费用；UsageAnalysisResponse 新增 ModelDailyStats 与 QuotaToCNY 字段，并发查询模型每日统计并下发配额到人民币换算率；新增 GetDepartmentUserRankings 返回部门内用户消耗 Top 10 排行；部门用户列表支持按数据库字段和计算用量列排序
-- `model/log.go` — 部门统计聚合查询改用主库 quota_data 表，按 token_used、quota、count 聚合 Token/费用/请求数；新增 GetUserStatsBatch 按 user_id 分组批量聚合 Token/费用/请求数；新增 ModelDailyStatRow 与 GetModelDailyStats 按模型按天聚合 Token 统计（支持 MySQL/SQLite/PostgreSQL）
+- `service/feishu_department.go` — 飞书部门树拉取/缓存/权限裁剪；部门统计聚合；新增 GetSubDepartmentStats 按直接子部门并发拉取成员并批量聚合用量、getDirectChildren 辅助函数；部门与子部门统计新增按系统汇率换算的人民币费用；部门均价改为在人民币金额换算后计算；UsageAnalysisResponse 新增 ModelDailyStats 与 QuotaToCNY 字段，并发查询模型每日统计并下发配额到人民币换算率；新增 GetDepartmentUserRankings 返回部门内用户消耗 Top 10 排行；部门用户列表支持按数据库字段和计算用量列排序
+- `model/log.go` — 部门统计聚合查询改用主库 quota_data 表，按 token_used、quota、count 聚合 Token/费用/请求数，并移除模型层按固定 quota 比例计算部门均价的逻辑；新增 GetUserStatsBatch 按 user_id 分组批量聚合 Token/费用/请求数；新增 ModelDailyStatRow 与 GetModelDailyStats 按模型按天聚合 Token 统计（支持 MySQL/SQLite/PostgreSQL）
 - `model/user.go` — 新增 GetUserIDAndNamesByOpenIDs 按 open_id 批量查询用户 ID 和姓名
 - `router/api-router.go` — 新增 `/api/department/tree`、`/stats`、`/sub-stats`、`/user-rankings` 路由
 - `web/default/src/features/data-overview/api.ts` — 部门树、统计、子部门统计、用户排行 API 封装；部门用户列表 API 透传排序字段和方向
