@@ -16,57 +16,59 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useState, useRef, useCallback } from "react";
-import { type ColumnDef } from "@tanstack/react-table";
-import { CircleAlert, GitBranch, Sparkles, KeyRound } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
-import { formatBillingCurrencyFromUSD } from "@/lib/currency";
-import {
-  formatUseTime,
-  formatLogQuota,
-  formatTimestampToDate,
-} from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { type ColumnDef } from '@tanstack/react-table'
+import { CircleAlert, GitBranch, KeyRound, Sparkles } from 'lucide-react'
+import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { LongText } from '@/components/long-text'
+import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from '@/components/ui/popover'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { StatusBadge, type StatusBadgeProps } from "@/components/status-badge";
-import { LOG_TYPE_ALL_VALUE } from "../../constants";
-import type { UsageLog } from "../../data/schema";
+} from '@/components/ui/tooltip'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
+import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+import {
+  formatLogQuota,
+  formatTimestampToDate,
+  formatUseTime,
+} from '@/lib/format'
+import { cn } from '@/lib/utils'
+
+import { getUserInfo } from '../../api'
+import { LOG_TYPE_ALL_VALUE } from '../../constants'
+import type { UsageLog } from '../../data/schema'
 import {
   formatModelName,
   getFirstResponseTimeColor,
   getResponseTimeColor,
   getTieredBillingSummary,
   hasAnyCacheTokens,
-  parseLogOther,
   isViolationFeeLog,
+  parseLogOther,
   renderAuditContent,
-} from "../../lib/format";
+} from '../../lib/format'
 import {
-  isDisplayableLogType,
-  isTimingLogType,
   getLogTypeConfig,
+  isDisplayableLogType,
   isPerCallBilling,
-} from "../../lib/utils";
-import type { LogOtherData } from "../../types";
-import { UserProfileHoverCard } from "@/features/users/components/user-profile-hover-card";
-import type { UserColumnRow } from "@/features/users/types";
-import { getUserInfo } from "../../api";
-import { LongText } from "@/components/long-text";
-import { DetailsDialog } from "../dialogs/details-dialog";
-import { ModelBadge } from "../model-badge";
-import { useUsageLogsContext } from "../usage-logs-provider";
+  isTimingLogType,
+} from '../../lib/utils'
+import type { LogOtherData } from '../../types'
+import { DetailsDialog } from '../dialogs/details-dialog'
+import { ModelBadge } from '../model-badge'
+import { useUsageLogsContext } from '../usage-logs-provider'
 
 interface DetailSegment {
   text: string;

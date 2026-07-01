@@ -15,11 +15,6 @@ function formatCost(value: number): string {
   return '¥' + value.toFixed(2)
 }
 
-function formatTokens(tokens: number): string {
-  if (tokens <= 0) return '-'
-  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
-}
-
 function formatTokensDetail(tokens: number): string {
   if (tokens <= 0) return '-'
   return tokens.toLocaleString()
@@ -119,7 +114,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
       theme: resolvedTheme === 'dark' ? 'dark' : 'light',
       background: 'transparent',
     }
-  }, [sortedData, resolvedTheme])
+  }, [sortedData, resolvedTheme, t])
 
   const pieSpec = useMemo(() => {
     const values = sortedData
@@ -205,7 +200,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
       theme: resolvedTheme === 'dark' ? 'dark' : 'light',
       background: 'transparent',
     }
-  }, [sortedData, resolvedTheme, totalCost])
+  }, [sortedData, resolvedTheme, totalCost, t])
 
   if (sortedData.length === 0) {
     return null

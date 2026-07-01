@@ -24,10 +24,6 @@ import type {
   UserRankingItem,
 } from '../types'
 
-function quotaToCny(quota: number): number {
-  return quota / 500000
-}
-
 function fmtCny(value: number): string {
   if (value === 0) return '¥0.00'
   return '¥' + value.toFixed(2)

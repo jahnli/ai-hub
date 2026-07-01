@@ -18,8 +18,9 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import { getRoleIcon, getRoleLabel } from '@/lib/roles'
 import type { AuthUser } from '@/stores/auth-store'
-import { getRoleLabel, getRoleIcon } from '@/lib/roles'
 
 /**
  * Custom hook to format user display information

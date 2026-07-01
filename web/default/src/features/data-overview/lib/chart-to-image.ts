@@ -1,5 +1,4 @@
-import VChart from '@visactor/vchart'
-import type { ISpec } from '@visactor/vchart'
+import VChart, { type ISpec } from '@visactor/vchart'
 import type { DailyStat, ModelDailyStat, ModelStat, SubDepartmentStat, UserRankingItem } from '../types'
 
 const CHART_WIDTH = 600
@@ -21,8 +20,12 @@ export async function renderChartToBase64(
   document.body.appendChild(container)
 
   try {
+    const chartSpec = {
+      ...spec,
+      background: 'white',
+    } as ISpec
     const chart = new VChart(
-      { ...spec, animation: false, background: 'white' },
+      chartSpec,
       { dom: container, mode: 'desktop-browser' }
     )
     await chart.renderAsync()

@@ -139,7 +139,12 @@ export function NotifySettingsDialog() {
               </div>
               <div className='flex shrink-0 items-center gap-3'>
                 {reportEnabled && (
-                  <Select value={frequency} onValueChange={setFrequency}>
+                  <Select
+                    value={frequency}
+                    onValueChange={(value) => {
+                      setFrequency(value ?? '1')
+                    }}
+                  >
                     <SelectTrigger className='w-36'>
                       <SelectValue>
                         {t(getFrequencyLabel(frequency))}

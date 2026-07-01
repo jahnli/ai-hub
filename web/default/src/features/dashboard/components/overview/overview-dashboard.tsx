@@ -16,16 +16,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useAuthStore } from '@/stores/auth-store'
-import { ROLE } from '@/lib/roles'
-import { cn } from '@/lib/utils'
 import {
   CardStaggerContainer,
   CardStaggerItem,
 } from '@/components/page-transition'
-import {
-  useDashboardContentVisibility,
-} from '../../hooks/use-status-data'
+import { ROLE } from '@/lib/roles'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
+
+import { useDashboardContentVisibility } from '../../hooks/use-status-data'
 import { AnnouncementsPanel } from './announcements-panel'
 import { ApiInfoPanel } from './api-info-panel'
 import { FAQPanel } from './faq-panel'

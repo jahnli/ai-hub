@@ -16,13 +16,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ArrowRight, HelpCircle, MessageCircleQuestion } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useFAQ } from "@/features/dashboard/hooks/use-status-data";
-import { PanelWrapper } from "../ui/panel-wrapper";
+import { ArrowRight, HelpCircle, MessageCircleQuestion } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+
+import { useFAQ } from '@/features/dashboard/hooks/use-status-data'
+
+import { PanelWrapper } from '../ui/panel-wrapper'
 
 const FAQ_URL =
-  "https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c#share-PWiQdlsbnoqtqqx2U3UcC8iunTh";
+  'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c#share-PWiQdlsbnoqtqqx2U3UcC8iunTh'
 
 export function FAQPanel() {
   const { t } = useTranslation();

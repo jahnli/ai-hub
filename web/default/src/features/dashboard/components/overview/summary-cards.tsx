@@ -16,12 +16,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, Package } from 'lucide-react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import dayjs from '@/lib/dayjs'
-import { useAuthStore } from '@/stores/auth-store'
+
+import { StaggerContainer, StaggerItem } from '@/components/page-transition'
+import { getUserQuotaDates } from '@/features/dashboard/api'
+import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
+import type { QuotaDataItem } from '@/features/dashboard/types'
+import {
+  getPublicPlans,
+  getSelfSubscriptionFull,
+} from '@/features/subscriptions/api'
+import type { SubscriptionPlan } from '@/features/subscriptions/types'
+import { useStatus } from '@/hooks/use-status'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
 import {
   formatDashboardQuota,
@@ -30,16 +39,8 @@ import {
 } from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
-import { useStatus } from '@/hooks/use-status'
-import { StaggerContainer, StaggerItem } from '@/components/page-transition'
-import { getUserQuotaDates } from '@/features/dashboard/api'
-import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
-import {
-  getSelfSubscriptionFull,
-  getPublicPlans,
-} from '@/features/subscriptions/api'
-import type { SubscriptionPlan } from '@/features/subscriptions/types'
-import type { QuotaDataItem } from '@/features/dashboard/types'
+import dayjs from '@/lib/dayjs'
+import { useAuthStore } from '@/stores/auth-store'
 import { StatCard } from '../ui/stat-card'
 
 const SUMMARY_SPARKLINE_BUCKETS = 12

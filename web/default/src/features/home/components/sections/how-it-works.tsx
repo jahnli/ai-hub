@@ -16,11 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Fragment } from 'react'
-import { Settings, Zap, BarChart3 } from 'lucide-react'
-import { useTranslation, Trans } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
+import { BarChart3, Settings, Zap } from 'lucide-react'
+import { Fragment } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
+
 import { AnimateInView } from '@/components/animate-in-view'
+
 import { StepConnectionLine } from '../step-connection-line'
 
 export function HowItWorks() {

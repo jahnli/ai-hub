@@ -16,19 +16,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Mail, Shield, Link2, Unlink } from 'lucide-react'
+import { Link2, Mail, Shield, Unlink } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SiWechat } from 'react-icons/si'
 import { toast } from 'sonner'
-import { handleOIDCOAuth } from '@/lib/oauth'
-import { useDialogs } from '@/hooks/use-dialog'
-import { useStatus } from '@/hooks/use-status'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { StatusBadge } from '@/components/status-badge'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { OAUTH_BIND_STORAGE_KEY } from '@/features/auth/constants'
+import { useDialogs } from '@/hooks/use-dialog'
+import { useStatus } from '@/hooks/use-status'
+import { handleOIDCOAuth } from '@/lib/oauth'
 import {
   getSelfOAuthBindings,
   unbindCustomOAuth,
