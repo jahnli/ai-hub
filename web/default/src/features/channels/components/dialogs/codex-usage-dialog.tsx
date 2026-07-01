@@ -404,6 +404,7 @@ const percentTextClassName: Record<
   NonNullable<StatusBadgeProps['variant']>,
   string
 > = {
+  primary: 'text-primary',
   success: 'text-success',
   warning: 'text-warning',
   danger: 'text-destructive',

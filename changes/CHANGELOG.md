@@ -59,3 +59,4 @@
 | 052 | 2026-07-01 | 全站进度条分阶段变色统一：阈值统一为 50%/80%（绿→橙→红），涉及概览订阅、用户表格、数据总览；修复子部门统计 formatCNY 传入 undefined 导致崩溃 | [详情](details/052-progress-bar-color-unify.md) |
 | 053 | 2026-07-01 | 新增模型定价时补全价格和缓存读取价格默认开启 | `web/default/src/features/system-settings/models/model-pricing-core.ts` |
 | 054 | 2026-07-01 | 模型广场与模型定价编辑器默认分页大小从 20 改为 100 | `web/default/src/features/pricing/constants.ts`、`web/default/src/features/system-settings/models/model-ratio-visual-editor.tsx` |
+| 055 | 2026-07-01 | 模型广场「动态计费」标签颜色从橙色改为主题色；StatusBadge 新增 primary variant | `web/default/src/features/pricing/components/model-card.tsx`、`web/default/src/components/status-badge.tsx` |
