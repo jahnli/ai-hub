@@ -634,44 +634,33 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         const other = parseLogOther(log.other)
         const isSubscription = other?.billing_source === 'subscription'
 
+        const quotaStr = formatLogQuota(quota)
+        const quotaDisplay = splitQuotaDisplay(quotaStr)
+        const quotaNode = (
+          <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 [font-family:var(--font-body)] text-sm leading-none font-semibold tabular-nums'>
+            {quotaDisplay.prefix && (
+              <span className='mr-1'>{quotaDisplay.prefix}</span>
+            )}
+            <span>{quotaDisplay.amount}</span>
+          </span>
+        )
+
         if (isSubscription) {
           return (
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <StatusBadge
-                      label={t('Subscription')}
-                      variant='success'
-                      size='sm'
-                      copyable={false}
-                      className='cursor-help'
-                    />
-                  }
-                />
+                <TooltipTrigger render={<div className='w-fit cursor-help' />}>
+                  {quotaNode}
+                </TooltipTrigger>
                 <TooltipContent>
-                  <span>
-                    {t('Deducted by subscription')}: {formatLogQuota(quota)}
-                  </span>
+                  <span>{t('Subscription')}</span>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )
         }
 
-        const quotaStr = formatLogQuota(quota)
-        const quotaDisplay = splitQuotaDisplay(quotaStr)
-
-        return (
-          <div className='flex flex-col gap-0.5'>
-            <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 [font-family:var(--font-body)] text-sm leading-none font-semibold tabular-nums'>
-              {quotaDisplay.prefix && (
-                <span className='mr-1'>{quotaDisplay.prefix}</span>
-              )}
-              <span>{quotaDisplay.amount}</span>
-            </span>
-          </div>
-        )
+        return <div className='flex flex-col gap-0.5'>{quotaNode}</div>
       },
     }
   )
