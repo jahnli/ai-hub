@@ -141,7 +141,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
   const editorPanelRef = useRef<ModelPricingEditorPanelHandle>(null)
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 100,
   })
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     () => {
