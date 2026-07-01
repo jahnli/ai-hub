@@ -44,6 +44,7 @@ export function DepartmentUsersTable({
     requestsAccessor: 'total_requests',
     modelAccessor: 'common_model',
     requestCountAccessor: 'total_requests',
+    quotaHeaderDescription: t('Used quota and total quota data are fixed to the current calendar month and are not affected by the selected time range.'),
   })
 
   const [pagination, setPagination] = usePagination()
