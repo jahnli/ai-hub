@@ -376,4 +376,16 @@ export interface UserInfo {
   request_count: number
   group?: string
   remark?: string
+  email?: string
+  avatar_url?: string
+  role?: number
+  status?: number
+  department_name?: string
+  custom_field_values?: string
+  join_date?: string
+  job_number?: string
+  job_title?: string
+  description?: string
+  background_image?: string
+  mobile?: string
 }

@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { CircleAlert, GitBranch, Sparkles, KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -28,7 +28,13 @@ import {
   formatTimestampToDate,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useAuthStore } from '@/stores/auth-store'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 import {
   Popover,
   PopoverContent,
@@ -60,6 +66,11 @@ import {
   isPerCallBilling,
 } from '../../lib/utils'
 import type { LogOtherData } from '../../types'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
+import { getUserInfo } from '../../api'
+import type { UserInfo } from '../../types'
+import { LongText } from '@/components/long-text'
 import { DetailsDialog } from '../dialogs/details-dialog'
 import { ModelBadge } from '../model-badge'
 import { useUsageLogsContext } from '../usage-logs-provider'
@@ -309,274 +320,132 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
   ]
 
   if (isAdmin) {
-    columns.push(
-      {
-        id: 'channel',
-        header: t('Channel'),
-        accessorFn: (row) => row.channel,
-        cell: function ChannelCell({ row }) {
-          const { sensitiveVisible, setAffinityTarget, setAffinityDialogOpen } =
-            useUsageLogsContext()
-          const log = row.original
+    columns.push({
+      id: 'user',
+      header: t('User'),
+      accessorFn: (row) => row.username,
+      cell: function UserCell({ row }) {
+        const { sensitiveVisible, setSelectedUserId, setUserInfoDialogOpen } =
+          useUsageLogsContext()
+        const log = row.original
+        const [userData, setUserData] = useState<UserColumnRow | null>(null)
+        const fetchedRef = useRef(false)
 
-          if (!isDisplayableLogType(log.type)) return null
+        if (!log.username) return null
 
-          const other = parseLogOther(log.other)
-          const affinity = other?.admin_info?.channel_affinity
-          const rawUseChannel = other?.admin_info?.use_channel ?? []
-          const useChannel = Array.isArray(rawUseChannel)
-            ? rawUseChannel.map(String).filter(Boolean)
-            : []
-          const hasRetryChain = useChannel.length > 1
-          const channelChain =
-            hasRetryChain ? useChannel.join(' → ') : undefined
-          const channelDisplay = log.channel_name
-            ? `${log.channel_name} #${log.channel}`
-            : `#${log.channel}`
-          const channelIdDisplay = `#${log.channel}`
-          const channelName = sensitiveVisible ? log.channel_name : '••••'
-          const multiKeyIndex = other?.admin_info?.multi_key_index
-          const showMultiKeyIndex =
-            other?.admin_info?.is_multi_key === true &&
-            typeof multiKeyIndex === 'number' &&
-            Number.isFinite(multiKeyIndex)
+        const handleFetchUser = useCallback(() => {
+          if (fetchedRef.current || !sensitiveVisible) return
+          fetchedRef.current = true
+          getUserInfo(log.user_id).then((res) => {
+            if (res.success && res.data) {
+              const info = res.data
+              setUserData({
+                id: info.id,
+                username: info.username,
+                display_name: info.display_name || info.username,
+                email: info.email,
+                avatar_url: info.avatar_url,
+                remark: info.remark,
+                quota: info.quota,
+                used_quota: info.used_quota,
+                sub_quota_used: 0,
+                sub_quota_total: 0,
+                request_count: info.request_count,
+                group: info.group || '',
+                status: info.status ?? 1,
+                role: info.role ?? 1,
+                department_name: info.department_name,
+                custom_field_values: info.custom_field_values,
+                join_date: info.join_date,
+                job_number: info.job_number,
+                job_title: info.job_title,
+                description: info.description,
+                background_image: info.background_image,
+                mobile: info.mobile,
+              })
+            }
+          })
+        }, [log.user_id, sensitiveVisible])
 
+        const handleClick = (e: React.MouseEvent) => {
+          e.stopPropagation()
+          setSelectedUserId(log.user_id)
+          setUserInfoDialogOpen(true)
+        }
+
+        if (!sensitiveVisible) {
           return (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <div className='flex max-w-[160px] flex-col gap-0.5' />
-                  }
-                >
-                  <div className='relative inline-flex w-fit items-center gap-1'>
-                    <StatusBadge
-                      label={channelIdDisplay}
-                      autoColor={String(log.channel)}
-                      copyText={String(log.channel)}
-                      size='sm'
-                      showDot={false}
-                      className='font-mono'
-                    />
-                    {showMultiKeyIndex && (
-                      <StatusBadge
-                        label={String(multiKeyIndex)}
-                        size='sm'
-                        showDot={false}
-                        copyable={false}
-                        variant='neutral'
-                        className='h-5 min-w-5 justify-center rounded-full px-1 font-mono text-xs'
-                        aria-label={`${t('Key')} ${multiKeyIndex}`}
-                      />
-                    )}
-                    {hasRetryChain && (
-                      <Popover>
-                        <PopoverTrigger
-                          render={
-                            <button
-                              type='button'
-                              className='text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-5 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none'
-                              aria-label={t('Retry Chain')}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          }
-                        >
-                          <GitBranch
-                            className='size-3.5 text-amber-500'
-                            aria-hidden='true'
-                          />
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side='top'
-                          align='start'
-                          className='w-64 text-xs'
-                        >
-                          <div className='flex flex-col gap-1'>
-                            <p className='font-medium'>{t('Retry Chain')}</p>
-                            <p className='text-muted-foreground font-mono break-all'>
-                              {channelChain}
-                            </p>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                    {affinity && (
-                      <button
-                        type='button'
-                        className='absolute -top-1 -right-1 leading-none text-amber-500'
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setAffinityTarget({
-                            rule_name: affinity.rule_name || '',
-                            using_group:
-                              affinity.using_group ||
-                              affinity.selected_group ||
-                              '',
-                            key_hint: affinity.key_hint || '',
-                            key_fp: affinity.key_fp || '',
-                          })
-                          setAffinityDialogOpen(true)
-                        }}
-                      >
-                        <Sparkles className='size-3 fill-current' />
-                      </button>
-                    )}
-                  </div>
-                  {log.channel_name && (
-                    <span className='text-muted-foreground/70 truncate [font-family:var(--font-body)] !text-xs'>
-                      {channelName}
-                    </span>
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className='space-y-1'>
-                    <p>
-                      {sensitiveVisible ? channelDisplay : channelIdDisplay}
-                    </p>
-                    {channelChain && (
-                      <p className='text-muted-foreground text-xs'>
-                        {t('Chain')}: {channelChain}
-                      </p>
-                    )}
-                    {showMultiKeyIndex && (
-                      <p className='text-muted-foreground text-xs'>
-                        {t('Key')}: {multiKeyIndex}
-                      </p>
-                    )}
-                    {affinity && (
-                      <div className='border-t pt-1 text-xs'>
-                        <p className='font-medium'>{t('Channel Affinity')}</p>
-                        <p>
-                          {t('Rule')}: {affinity.rule_name || '-'}
-                        </p>
-                        <p>
-                          {t('Group')}:{' '}
-                          {sensitiveVisible
-                            ? affinity.using_group ||
-                              affinity.selected_group ||
-                              '-'
-                            : '••••'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )
-        },
-      },
-      {
-        id: 'user',
-        header: t('User'),
-        accessorFn: (row) => row.username,
-        cell: function UserCell({ row }) {
-          const { sensitiveVisible, setSelectedUserId, setUserInfoDialogOpen } =
-            useUsageLogsContext()
-          const log = row.original
-
-          if (!log.username) return null
-
-          return (
-            <button
-              type='button'
-              className='flex items-center gap-1.5 text-left'
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedUserId(log.user_id)
-                setUserInfoDialogOpen(true)
-              }}
-            >
-              <Avatar className='ring-border/60 size-6 ring-1 max-sm:hidden'>
-                <AvatarFallback
-                  className={cn(
-                    'text-[11px] font-semibold',
-                    !sensitiveVisible && 'bg-muted text-muted-foreground'
-                  )}
-                  style={
-                    sensitiveVisible
-                      ? getUserAvatarStyle(log.username)
-                      : undefined
-                  }
-                >
-                  {sensitiveVisible ? getUserAvatarFallback(log.username) : '•'}
+            <div className='flex min-w-0 items-center gap-2'>
+              <Avatar size='sm' className='shrink-0'>
+                <AvatarFallback className='bg-muted text-muted-foreground text-xs font-medium'>
+                  •
                 </AvatarFallback>
               </Avatar>
-              <TooltipProvider delay={300}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span className='text-muted-foreground max-w-[100px] truncate text-sm hover:underline' />
-                    }
-                  >
-                    {sensitiveVisible ? log.username : '••••'}
-                  </TooltipTrigger>
-                  {sensitiveVisible && log.username.length > 12 && (
-                    <TooltipContent side='top'>{log.username}</TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </button>
+              <div className='flex min-w-0 flex-1 flex-col gap-1'>
+                <LongText className='max-w-full font-medium'>••••</LongText>
+              </div>
+            </div>
           )
-        },
-      }
-    )
+        }
+
+        const primaryName = log.display_name || log.username
+        const avatarFallback = getUserAvatarFallback(primaryName)
+        const avatarFallbackStyle = getUserAvatarStyle(primaryName)
+
+        const baseUser: UserColumnRow = userData ?? {
+          id: log.user_id,
+          username: log.username,
+          display_name: log.display_name || log.username,
+          avatar_url: log.avatar_url || undefined,
+          quota: 0,
+          used_quota: 0,
+          sub_quota_used: 0,
+          sub_quota_total: 0,
+          request_count: 0,
+          group: '',
+          status: 1,
+          role: 1,
+        }
+
+        const avatarEl = (
+          <Avatar size='sm' className='shrink-0'>
+            {log.avatar_url && (
+              <AvatarImage src={log.avatar_url} alt={primaryName} />
+            )}
+            <AvatarFallback
+              className='text-xs font-medium text-white'
+              style={avatarFallbackStyle}
+            >
+              {avatarFallback}
+            </AvatarFallback>
+          </Avatar>
+        )
+
+        return (
+          <div
+            className='flex w-[150px] min-w-0 cursor-pointer items-center gap-2'
+            onMouseEnter={handleFetchUser}
+            onClick={handleClick}
+          >
+            <UserProfileHoverCard user={baseUser}>
+              {avatarEl}
+            </UserProfileHoverCard>
+            <div className='flex min-w-0 flex-1 flex-col gap-1'>
+              <LongText className='max-w-full font-medium'>
+                {primaryName}
+              </LongText>
+              {log.display_name && log.display_name !== log.username ? (
+                <div className='text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs'>
+                  <LongText className='min-w-0 flex-1'>{log.username}</LongText>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )
+      },
+    })
   }
 
-  columns.push({
-    accessorKey: 'token_name',
-    header: t('Token'),
-    cell: function TokenNameCell({ row }) {
-      const { sensitiveVisible } = useUsageLogsContext()
-      const log = row.original
-      if (!isDisplayableLogType(log.type)) return null
-
-      const tokenName = log.token_name
-      if (!tokenName) return null
-
-      const other = parseLogOther(log.other)
-      const displayName = sensitiveVisible ? tokenName : '••••'
-      let group = log.group
-      if (!group) group = other?.group || ''
-
-      const metaParts: string[] = []
-      const groupRatioText = getGroupRatioText(other)
-      if (group) {
-        metaParts.push(sensitiveVisible ? group : '••••')
-      }
-      if (groupRatioText) metaParts.push(groupRatioText)
-
-      return (
-        <div className='flex max-w-[200px] flex-col gap-0.5'>
-          <TooltipProvider delay={300}>
-            <Tooltip>
-              <TooltipTrigger render={<div className='max-w-full' />}>
-                <StatusBadge
-                  label={displayName}
-                  icon={KeyRound}
-                  copyText={sensitiveVisible ? tokenName : undefined}
-                  size='sm'
-                  showDot={false}
-                  className='border-border/60 bg-muted/30 text-foreground h-6 max-w-full gap-1.5 overflow-hidden rounded-md border px-2 py-0.5 [font-family:var(--font-body)]'
-                />
-              </TooltipTrigger>
-              {sensitiveVisible && tokenName.length > 16 && (
-                <TooltipContent side='top' className='max-w-xs break-all'>
-                  {tokenName}
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-          {metaParts.length > 0 && (
-            <span className='text-muted-foreground/60 truncate [font-family:var(--font-body)] !text-xs'>
-              {metaParts.join(' · ')}
-            </span>
-          )}
-        </div>
-      )
-    },
-    size: 160,
-  })
   columns.push(
     {
       accessorKey: 'model_name',
@@ -600,7 +469,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
     },
     {
       accessorKey: 'use_time',
-      header: t('Timing'),
+      header: t('Timing / First Token'),
       cell: ({ row }) => {
         const log = row.original
         if (!isTimingLogType(log.type)) return null
@@ -804,8 +673,129 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           </div>
         )
       },
-    },
+    }
+  )
 
+  if (isAdmin) {
+    columns.push({
+      id: 'channel',
+      header: t('Channel'),
+      accessorFn: (row) => row.channel,
+      cell: function ChannelCell({ row }) {
+        const { sensitiveVisible, setAffinityTarget, setAffinityDialogOpen } =
+          useUsageLogsContext()
+        const log = row.original
+        if (!isDisplayableLogType(log.type)) return null
+        const other = parseLogOther(log.other)
+        const affinity = other?.admin_info?.channel_affinity
+        const rawUseChannel = other?.admin_info?.use_channel ?? []
+        const useChannel = Array.isArray(rawUseChannel)
+          ? rawUseChannel.map(String).filter(Boolean)
+          : []
+        const hasRetryChain = useChannel.length > 1
+        const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
+        const channelDisplay = log.channel_name
+          ? `${log.channel_name} #${log.channel}`
+          : `#${log.channel}`
+        const channelIdDisplay = `#${log.channel}`
+        const channelName = sensitiveVisible ? log.channel_name : '••••'
+        const multiKeyIndex = other?.admin_info?.multi_key_index
+        const showMultiKeyIndex =
+          other?.admin_info?.is_multi_key === true &&
+          typeof multiKeyIndex === 'number' &&
+          Number.isFinite(multiKeyIndex)
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger render={<div className='flex max-w-[160px] flex-col gap-0.5' />}>
+                <div className='relative inline-flex w-fit items-center gap-1'>
+                  <StatusBadge label={channelIdDisplay} autoColor={String(log.channel)} copyText={String(log.channel)} size='sm' showDot={false} className='font-mono' />
+                  {showMultiKeyIndex && (
+                    <StatusBadge label={String(multiKeyIndex)} size='sm' showDot={false} copyable={false} variant='neutral' className='h-5 min-w-5 justify-center rounded-full px-1 font-mono text-xs' aria-label={`${t('Key')} ${multiKeyIndex}`} />
+                  )}
+                  {hasRetryChain && (
+                    <Popover>
+                      <PopoverTrigger render={<button type='button' className='text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-5 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none' aria-label={t('Retry Chain')} onClick={(e) => e.stopPropagation()} />}>
+                        <GitBranch className='size-3.5 text-amber-500' aria-hidden='true' />
+                      </PopoverTrigger>
+                      <PopoverContent side='top' align='start' className='w-64 text-xs'>
+                        <div className='flex flex-col gap-1'>
+                          <p className='font-medium'>{t('Retry Chain')}</p>
+                          <p className='text-muted-foreground font-mono break-all'>{channelChain}</p>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  {affinity && (
+                    <button type='button' className='absolute -top-1 -right-1 leading-none text-amber-500'
+                      onClick={(e) => { e.stopPropagation(); setAffinityTarget({ rule_name: affinity.rule_name || '', using_group: affinity.using_group || affinity.selected_group || '', key_hint: affinity.key_hint || '', key_fp: affinity.key_fp || '' }); setAffinityDialogOpen(true) }}>
+                      <Sparkles className='size-3 fill-current' />
+                    </button>
+                  )}
+                </div>
+                {log.channel_name && (
+                  <span className='text-muted-foreground/70 truncate [font-family:var(--font-body)] !text-xs'>{channelName}</span>
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className='space-y-1'>
+                  <p>{sensitiveVisible ? channelDisplay : channelIdDisplay}</p>
+                  {channelChain && (<p className='text-muted-foreground text-xs'>{t('Chain')}: {channelChain}</p>)}
+                  {showMultiKeyIndex && (<p className='text-muted-foreground text-xs'>{t('Key')}: {multiKeyIndex}</p>)}
+                  {affinity && (
+                    <div className='border-t pt-1 text-xs'>
+                      <p className='font-medium'>{t('Channel Affinity')}</p>
+                      <p>{t('Rule')}: {affinity.rule_name || '-'}</p>
+                      <p>{t('Group')}: {sensitiveVisible ? affinity.using_group || affinity.selected_group || '-' : '••••'}</p>
+                    </div>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )
+      },
+    })
+  }
+
+  columns.push(
+    {
+      accessorKey: 'token_name',
+      header: t('Token'),
+      cell: function TokenNameCell({ row }) {
+        const { sensitiveVisible } = useUsageLogsContext()
+        const log = row.original
+        if (!isDisplayableLogType(log.type)) return null
+        const tokenName = log.token_name
+        if (!tokenName) return null
+        const other = parseLogOther(log.other)
+        const displayName = sensitiveVisible ? tokenName : '••••'
+        let group = log.group
+        if (!group) group = other?.group || ''
+        const metaParts: string[] = []
+        const groupRatioText = getGroupRatioText(other)
+        if (group) { metaParts.push(sensitiveVisible ? group : '••••') }
+        if (groupRatioText) metaParts.push(groupRatioText)
+        return (
+          <div className='flex max-w-[200px] flex-col gap-0.5'>
+            <TooltipProvider delay={300}>
+              <Tooltip>
+                <TooltipTrigger render={<div className='max-w-full' />}>
+                  <StatusBadge label={displayName} icon={KeyRound} copyText={sensitiveVisible ? tokenName : undefined} size='sm' showDot={false} className='border-border/60 bg-muted/30 text-foreground h-6 max-w-full gap-1.5 overflow-hidden rounded-md border px-2 py-0.5 [font-family:var(--font-body)]' />
+                </TooltipTrigger>
+                {sensitiveVisible && tokenName.length > 16 && (
+                  <TooltipContent side='top' className='max-w-xs break-all'>{tokenName}</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+            {metaParts.length > 0 && (
+              <span className='text-muted-foreground/60 truncate [font-family:var(--font-body)] !text-xs'>{metaParts.join(' · ')}</span>
+            )}
+          </div>
+        )
+      },
+      size: 160,
+    },
     {
       accessorKey: 'content',
       header: t('Details'),

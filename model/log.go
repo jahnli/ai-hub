@@ -73,6 +73,8 @@ type Log struct {
 	IsStream          bool   `json:"is_stream"`
 	ChannelId         int    `json:"channel" gorm:"index"`
 	ChannelName       string `json:"channel_name" gorm:"->"`
+	DisplayName       string `json:"display_name" gorm:"->"`
+	AvatarUrl         string `json:"avatar_url" gorm:"->"`
 	TokenId           int    `json:"token_id" gorm:"default:0;index"`
 	Group             string `json:"group" gorm:"index"`
 	Ip                string `json:"ip" gorm:"index;default:''"`
@@ -558,6 +560,39 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 		}
 		for i := range logs {
 			logs[i].ChannelName = channelMap[logs[i].ChannelId]
+		}
+	}
+
+	userIds := types.NewSet[int]()
+	for _, log := range logs {
+		if log.UserId != 0 {
+			userIds.Add(log.UserId)
+		}
+	}
+	if userIds.Len() > 0 {
+		var users []struct {
+			Id          int    `gorm:"column:id"`
+			DisplayName string `gorm:"column:display_name"`
+			AvatarUrl   string `gorm:"column:avatar_url"`
+		}
+		if err = DB.Table("users").Select("id, display_name, avatar_url").Where("id IN ?", userIds.Items()).Find(&users).Error; err != nil {
+			return logs, total, err
+		}
+		userMap := make(map[int]struct {
+			DisplayName string
+			AvatarUrl   string
+		}, len(users))
+		for _, u := range users {
+			userMap[u.Id] = struct {
+				DisplayName string
+				AvatarUrl   string
+			}{u.DisplayName, u.AvatarUrl}
+		}
+		for i := range logs {
+			if info, ok := userMap[logs[i].UserId]; ok {
+				logs[i].DisplayName = info.DisplayName
+				logs[i].AvatarUrl = info.AvatarUrl
+			}
 		}
 	}
 
@@ -1047,7 +1082,6 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64) (*Dep
 		stat.ErrorRate = float64(er.TotalErrors) / float64(qr.TotalReqs) * 100
 		stat.AvgUseTime = float64(er.TotalUseTime) / float64(qr.TotalReqs)
 	}
-
 
 	return stat, nil
 }
