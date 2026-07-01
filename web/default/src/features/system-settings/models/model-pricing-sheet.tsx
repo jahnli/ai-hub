@@ -553,7 +553,7 @@ export const ModelPricingEditorPanel = forwardRef<
               {isEditMode ? t('Edit model pricing') : t('Add model pricing')}
             </h3>
           </div>
-          {showLocalCurrencyToggle && pricingMode !== 'tiered_expr' && (
+          {showLocalCurrencyToggle && (
             <div className='flex items-center gap-2'>
               <span className='text-muted-foreground text-xs'>
                 {t('Input in {{currency}} (rate {{rate}})', {
@@ -729,6 +729,8 @@ export const ModelPricingEditorPanel = forwardRef<
                         requestRuleExpr={requestRuleExpr}
                         onBillingExprChange={setBillingExpr}
                         onRequestRuleExprChange={setRequestRuleExpr}
+                        currencySymbol={currencySymbol}
+                        exchangeRate={effectiveRate}
                       />
                     </FieldGroup>
                   </TabsContent>

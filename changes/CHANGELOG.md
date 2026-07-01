@@ -53,8 +53,10 @@
 | 046 | 2026-06-30 | 概览页汇总卡片右侧面板改为订阅详情：展示当前订阅用量与总额、用量进度条（按百分比变色）、下次重置时间；无订阅时显示空状态；移除余额健康状态和续航天数；订阅计划名称以标签形式展示在标题右侧 | `web/default/src/features/dashboard/components/overview/summary-cards.tsx` |
 | 047 | 2026-06-28 | 数据总览新增通知设置：支持数据报告周期推送（按周/按月/每周每月）、部门超额提醒和请假超额提醒（仅部门负责人可见）；含后端 CRUD 接口与前端弹窗组件，6 语言翻译 | [详情](details/047-notify-settings.md) |
 | 048 | 2026-07-01 | 数据总览新增导出功能：支持导出当前部门统计数据和图表为 Excel（含子部门详情页和用户列表页两个可选项），图表通过 VChart 离屏渲染嵌入；导出费用按系统汇率换算人民币；导出弹窗与使用分析组件重构，6 语言翻译；修复使用分析图表费用换算变量作用域导致导出失败，并将子部门详情导出改为逐部门加载以避免并发查询错误 | [详情](details/048-data-overview-export.md) |
-| 049 | 2026-06-30 | 模型定价编辑器支持本地货币输入：可切换以本地货币（如 ¥）输入价格，按系统汇率自动换算，保存时转回 USD；浮点精度优化 | [详情](details/049-model-pricing-local-currency.md) |
+| 049 | 2026-07-01 | 模型定价编辑器支持本地货币输入：可切换以本地货币（如 ¥）输入价格，按系统汇率自动换算，保存时转回 USD；浮点精度优化；表达式阶梯定价模式同步支持本地货币输入与显示 | [详情](details/049-model-pricing-local-currency.md) |
 | 050 | 2026-07-01 | 渠道表格移除「已使用 / 剩余」列及卡片视图中的余额展示，清理相关翻译 | [详情](details/050-remove-channel-balance-column.md) |
 | 051 | 2026-07-01 | 个人资料页微调：移除邮箱旁分组显示、用户 ID 徽章改为默认色、API 请求数万前加空格 | `web/default/src/features/profile/components/profile-header.tsx` |
 | 052 | 2026-07-01 | 全站进度条分阶段变色统一：阈值统一为 50%/80%（绿→橙→红），涉及概览订阅、用户表格、数据总览；修复子部门统计 formatCNY 传入 undefined 导致崩溃 | [详情](details/052-progress-bar-color-unify.md) |
 | 053 | 2026-07-01 | 新增模型定价时补全价格和缓存读取价格默认开启 | `web/default/src/features/system-settings/models/model-pricing-core.ts` |
+| 054 | 2026-07-01 | 模型广场与模型定价编辑器默认分页大小从 20 改为 100 | `web/default/src/features/pricing/constants.ts`、`web/default/src/features/system-settings/models/model-ratio-visual-editor.tsx` |
+| 055 | 2026-07-01 | 模型广场「动态计费」标签颜色从橙色改为主题色；StatusBadge 新增 primary variant | `web/default/src/features/pricing/components/model-card.tsx`、`web/default/src/components/status-badge.tsx` |

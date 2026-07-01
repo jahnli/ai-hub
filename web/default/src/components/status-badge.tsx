@@ -25,6 +25,7 @@ import { stringToColor } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 
 export const dotColorMap = {
+  primary: 'bg-primary',
   success: 'bg-success',
   warning: 'bg-warning',
   danger: 'bg-destructive',
@@ -49,6 +50,7 @@ export const dotColorMap = {
 } as const
 
 export const textColorMap = {
+  primary: 'text-primary',
   success: 'text-success',
   warning: 'text-warning',
   danger: 'text-destructive',
