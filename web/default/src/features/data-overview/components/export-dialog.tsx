@@ -94,34 +94,35 @@ export function ExportDialog(props: ExportDialogProps) {
 
       let subDepartmentDetails: SubDepartmentDetail[] = []
       if (includeSubDepts && props.subStats.length > 0) {
-        subDepartmentDetails = await Promise.all(
-          props.subStats.map(async (sub) => {
-            const [statsRes, subStatsRes, usageRes] = await Promise.all([
-              getDepartmentStats({
-                department_id: sub.department_id,
-                start_timestamp,
-                end_timestamp,
-              }),
-              getSubDepartmentStats({
-                department_id: sub.department_id,
-                start_timestamp,
-                end_timestamp,
-              }),
-              getUsageAnalysis({
-                department_id: sub.department_id,
-                start_timestamp,
-                end_timestamp,
-              }),
-            ])
-            return {
-              departmentId: sub.department_id,
-              departmentName: sub.department_name,
-              stats: statsRes.data,
-              subStats: subStatsRes.data ?? [],
-              usage: usageRes.data ?? { model_stats: [], daily_stats: [], model_daily_stats: [] },
-            }
+        for (const sub of props.subStats) {
+          const [statsRes, subStatsRes, usageRes] = await Promise.all([
+            getDepartmentStats({
+              department_id: sub.department_id,
+              start_timestamp,
+              end_timestamp,
+            }),
+            getSubDepartmentStats({
+              department_id: sub.department_id,
+              start_timestamp,
+              end_timestamp,
+            }),
+            getUsageAnalysis({
+              department_id: sub.department_id,
+              start_timestamp,
+              end_timestamp,
+            }),
+          ])
+          if (!statsRes.data) {
+            throw new Error('Failed to fetch department stats')
+          }
+          subDepartmentDetails.push({
+            departmentId: sub.department_id,
+            departmentName: sub.department_name,
+            stats: statsRes.data,
+            subStats: subStatsRes.data ?? [],
+            usage: usageRes.data ?? { model_stats: [], daily_stats: [], model_daily_stats: [], quota_to_cny: 0 },
           })
-        )
+        }
       }
 
       let users: DepartmentUser[] = []

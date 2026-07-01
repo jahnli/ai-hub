@@ -504,12 +504,12 @@ async function embedUsageAnalysisCharts(
   const W = 560
   const H = 300
   let row = ws.rowCount + 2
+  const rate = usage.quota_to_cny || (1 / 500000)
   const dailyStats = usage.daily_stats ?? []
   const modelStats = usage.model_stats ?? []
   const modelDailyStats = usage.model_daily_stats ?? []
 
   if (dailyStats.length > 0) {
-    const rate = usage.quota_to_cny || (1 / 500000)
     const img1 = await renderChartToBase64(buildQuotaTrendSpec(dailyStats, rate), W, H)
     addImageToSheet(wb, ws, img1, row, 0, W, H)
     const img2 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), W, H)
