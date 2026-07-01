@@ -835,6 +835,7 @@ function AvgPriceTrendChart(
       resolvedTheme={props.resolvedTheme}
       chartKey={`avg-price-${granularity}-${props.resolvedTheme}`}
       spec={spec}
+      height='h-[340px]'
       actions={
         <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
           {granularityTabs.map(({ value, label }) => (
