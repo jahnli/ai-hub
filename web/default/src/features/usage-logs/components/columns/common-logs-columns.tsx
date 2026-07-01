@@ -401,24 +401,29 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         };
 
         const avatarEl = (
-          <Avatar size="sm" className="shrink-0">
-            {log.avatar_url && (
-              <AvatarImage src={log.avatar_url} alt={primaryName} />
-            )}
-            <AvatarFallback
-              className="text-xs font-medium text-white"
-              style={avatarFallbackStyle}
-            >
-              {avatarFallback}
-            </AvatarFallback>
-          </Avatar>
+          <button
+            type="button"
+            className="focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
+            onClick={handleClick}
+          >
+            <Avatar size="sm" className="shrink-0">
+              {log.avatar_url && (
+                <AvatarImage src={log.avatar_url} alt={primaryName} />
+              )}
+              <AvatarFallback
+                className="text-xs font-medium text-white"
+                style={avatarFallbackStyle}
+              >
+                {avatarFallback}
+              </AvatarFallback>
+            </Avatar>
+          </button>
         );
 
         return (
           <div
-            className="flex w-[150px] min-w-0 cursor-pointer items-center gap-2"
+            className="flex w-[150px] min-w-0 items-center gap-2"
             onMouseEnter={handleFetchUser}
-            onClick={handleClick}
           >
             <UserProfileHoverCard user={baseUser}>
               {avatarEl}
