@@ -623,6 +623,10 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 	}
 	stat.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
 
+	if stat.TotalTokens > 0 {
+		stat.AvgPricePerMT = stat.TotalAmountCNY / (float64(stat.TotalTokens) / 1000000.0)
+	}
+
 	return stat, nil
 }
 
