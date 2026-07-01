@@ -1099,6 +1099,7 @@
     "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.": "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.",
     "Cost in USD per request, regardless of tokens used.": "Coût en USD par requête, quel que soit le nombre de jetons utilisés.",
     "Cost Tracking": "Suivi des coûts",
+    "Cost Trend": "Tendance des coûts",
     "Count must be between {{min}} and {{max}}": "Le nombre doit être compris entre {{min}} et {{max}}",
     "Coze": "Coze",
     "CPU": "Processeur",

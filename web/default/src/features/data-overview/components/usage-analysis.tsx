@@ -50,25 +50,28 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
             <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
           {hasDailyData && (
+            <CostTrendChart data={props.data.daily_stats} {...chartProps} />
+          )}
+          {hasDailyData && (
             <RequestTrendChart data={props.data.daily_stats} {...chartProps} />
-          )}
-          {hasModelData && (
-            <ModelUsageTrendChart
-              data={props.data.model_daily_stats ?? []}
-              {...chartProps}
-            />
-          )}
-          {hasModelData && (
-            <ModelCallRankChart data={props.data.model_stats} {...chartProps} />
-          )}
-          {hasModelData && (
-            <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
           )}
           {hasDailyData && (
             <AvgPriceTrendChart
               data={props.data.daily_stats}
               startTimestamp={props.startTimestamp}
               endTimestamp={props.endTimestamp}
+              {...chartProps}
+            />
+          )}
+          {hasModelData && (
+            <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
+          )}
+          {hasModelData && (
+            <ModelCallRankChart data={props.data.model_stats} {...chartProps} />
+          )}
+          {hasModelData && (
+            <ModelUsageTrendChart
+              data={props.data.model_daily_stats ?? []}
               {...chartProps}
             />
           )}
@@ -235,12 +238,13 @@ function makeAreaSpec(
 
 function formatCost(value: number): string {
   if (value === 0) return '¥0'
-  return '¥' + value.toFixed(2)
+  return `¥${value.toFixed(2)}`
 }
 
-function formatTokens(tokens: number): string {
-  if (tokens <= 0) return '-'
-  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
+function formatCompactCost(value: number): string {
+  if (value === 0) return '¥0'
+  if (value >= 1000) return `¥${(value / 1000).toFixed(0)}K`
+  return `¥${value.toFixed(0)}`
 }
 
 function formatUnitPrice(cost: number, tokens: number): string {
@@ -622,8 +626,7 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
           orient: 'bottom',
           type: 'linear',
           label: {
-            formatMethod: (v: number) =>
-              v === 0 ? '¥0' : v >= 1000 ? '¥' + (v / 1000).toFixed(0) + 'K' : '¥' + v.toFixed(0),
+            formatMethod: (v: number) => formatCompactCost(v),
           },
         },
       ],
@@ -689,7 +692,118 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
   )
 }
 
-// ── 6. 均价趋势 ──
+// ── 6. 费用趋势 ──
+
+function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const values = props.data.map((item) => ({
+      date: item.date,
+      value: item.total_quota * props.quotaToCnyRate,
+      tokens: item.total_tokens,
+      requests: item.total_requests,
+    }))
+
+    return {
+      type: 'area' as const,
+      data: [{ values }],
+      xField: 'date',
+      yField: 'value',
+      point: { visible: values.length <= 60, size: 4 },
+      line: { style: { curveType: 'monotone' } },
+      area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+      ...APPEAR_ANIMATION,
+      ...(values.length > DATA_ZOOM_THRESHOLD
+        ? { dataZoom: makeDataZoom('area') }
+        : {}),
+      axes: [
+        {
+          orient: 'bottom',
+          type: 'band',
+          label: {
+            style: { fontSize: 11 },
+            autoHide: true,
+            autoHideMethod: 'greedy',
+            formatMethod: (value: string) => formatDateLabel(value),
+          },
+        },
+        {
+          orient: 'left',
+          type: 'linear',
+          label: {
+            formatMethod: (value: number) => formatCompactCost(value),
+          },
+        },
+      ],
+      tooltip: {
+        dimension: {
+          content: [
+            {
+              key: () => t('Total Cost'),
+              value: (datum: { value?: number }) =>
+                formatCost(datum.value ?? 0),
+            },
+            {
+              key: () => 'Token',
+              value: (datum: { tokens?: number }) =>
+                formatTokensDetail(datum.tokens ?? 0),
+            },
+            {
+              key: () => t('Requests'),
+              value: (datum: { requests?: number }) =>
+                formatLargeNumber(datum.requests ?? 0) + ' ' + t('times'),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (datum: { value?: number; tokens?: number }) =>
+                formatUnitPrice(datum.value ?? 0, datum.tokens ?? 0),
+            },
+          ],
+        },
+        mark: {
+          title: { value: (datum: { date?: string }) => datum.date ?? '' },
+          content: [
+            {
+              key: () => t('Total Cost'),
+              value: (datum: { value?: number }) =>
+                formatCost(datum.value ?? 0),
+            },
+            {
+              key: () => 'Token',
+              value: (datum: { tokens?: number }) =>
+                formatTokensDetail(datum.tokens ?? 0),
+            },
+            {
+              key: () => t('Requests'),
+              value: (datum: { requests?: number }) =>
+                formatLargeNumber(datum.requests ?? 0) + ' ' + t('times'),
+            },
+            {
+              key: () => t('Unit Price'),
+              value: (datum: { value?: number; tokens?: number }) =>
+                formatUnitPrice(datum.value ?? 0, datum.tokens ?? 0),
+            },
+          ],
+        },
+      },
+    }
+  }, [props.data, props.quotaToCnyRate, t])
+
+  return (
+    <ChartCard
+      icon={DollarSign}
+      title={t('Cost Trend')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`cost-trend-${props.resolvedTheme}`}
+      spec={spec}
+      height='h-[340px]'
+    />
+  )
+}
+
+// ── 7. 均价趋势 ──
 
 type PriceGranularity = 'day' | 'week' | 'month'
 

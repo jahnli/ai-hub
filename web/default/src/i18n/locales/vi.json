@@ -1099,6 +1099,7 @@
     "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.": "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.",
     "Cost in USD per request, regardless of tokens used.": "Chi phí bằng USD cho mỗi yêu cầu, bất kể số lượng token được sử dụng.",
     "Cost Tracking": "Theo dõi chi phí",
+    "Cost Trend": "Xu hướng chi phí",
     "Count must be between {{min}} and {{max}}": "Số lượng phải nằm trong khoảng từ {{min}} đến {{max}}.",
     "Coze": "Coze",
     "CPU": "CPU",

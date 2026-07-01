@@ -1099,6 +1099,7 @@
     "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.": "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.",
     "Cost in USD per request, regardless of tokens used.": "Cost in USD per request, regardless of tokens used.",
     "Cost Tracking": "Cost Tracking",
+    "Cost Trend": "Cost Trend",
     "Count must be between {{min}} and {{max}}": "Count must be between {{min}} and {{max}}",
     "Coze": "Coze",
     "CPU": "CPU",

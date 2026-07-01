@@ -1099,6 +1099,7 @@
     "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.": "每次请求的{{currency}}成本，与 token 用量无关。保存时将自动转换为美元。",
     "Cost in USD per request, regardless of tokens used.": "每请求的美元费用，不考虑使用的令牌数。",
     "Cost Tracking": "成本跟踪",
+    "Cost Trend": "费用趋势",
     "Count must be between {{min}} and {{max}}": "计数必须介于{{min}}和{{max}}之间",
     "Coze": "Coze",
     "CPU": "CPU",
