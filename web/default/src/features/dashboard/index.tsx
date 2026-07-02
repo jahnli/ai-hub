@@ -304,7 +304,7 @@ export function Dashboard() {
         start={draftModelFilters.start_timestamp}
         end={draftModelFilters.end_timestamp}
         onChange={handleDashboardTimeRangeChange}
-        className='h-8 max-w-[320px]'
+        className='h-8 w-[320px] max-w-[320px] shrink-0'
       />
       {isSuperAdmin && (
         <Input
@@ -396,15 +396,19 @@ export function Dashboard() {
       <SectionPageLayout.Content>
         <div className='space-y-3 sm:space-y-4'>
           {activeSection !== 'overview' && (
-            <div className='flex flex-wrap items-center justify-between gap-1.5 sm:gap-2'>
+            <div className='flex items-center justify-between gap-1.5 sm:gap-2'>
               {sectionActions != null && (
-                <div className='flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2'>
+                <div className='flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto sm:gap-2'>
                   {sectionActions}
                 </div>
               )}
               {showSectionTabs ? (
-                <Tabs value={activeSection} onValueChange={handleSectionChange}>
-                  <TabsList className='max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto'>
+                <Tabs
+                  value={activeSection}
+                  onValueChange={handleSectionChange}
+                  className='shrink-0'
+                >
+                  <TabsList className='max-w-full flex-nowrap justify-start'>
                     {visibleSections.map((section) => (
                       <TabsTrigger key={section} value={section}>
                         {t(SECTION_META[section].titleKey)}
