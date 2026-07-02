@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
-import { Search, Eye, EyeOff } from 'lucide-react'
+import { RotateCcw, Search, Eye, EyeOff } from 'lucide-react'
 import {
   type ChangeEvent,
   useState,
@@ -52,15 +52,16 @@ import { ROLE } from '@/lib/roles'
 import type { TimeGranularity } from '@/lib/time'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { ModelsChartPreferences } from './components/models/models-chart-preferences'
 import { OverviewDashboard } from './components/overview/overview-dashboard'
-import { DEFAULT_TIME_GRANULARITY, TIME_GRANULARITY_OPTIONS } from './constants'
+import {
+  DEFAULT_DASHBOARD_CHART_PREFERENCES,
+  DEFAULT_TIME_GRANULARITY,
+  TIME_GRANULARITY_OPTIONS,
+} from './constants'
 import {
   buildDefaultDashboardFilters,
   getDefaultDays,
-  getSavedChartPreferences,
   getSavedGranularity,
-  saveChartPreferences,
 } from './lib'
 import {
   type DashboardSectionId,
@@ -68,7 +69,6 @@ import {
   DASHBOARD_SECTION_IDS,
 } from './section-registry'
 import type {
-  DashboardChartPreferences,
   DashboardFilters,
   QuotaDataItem,
   UserChartsFilters,
@@ -206,13 +206,11 @@ export function Dashboard() {
 
   const [modelData, setModelData] = useState<QuotaDataItem[]>([])
   const [dataLoading, setDataLoading] = useState(false)
-  const [chartPreferences, setChartPreferences] =
-    useState<DashboardChartPreferences>(() => getSavedChartPreferences())
   const [modelFilters, setModelFilters] = useState<DashboardFilters>(() =>
-    buildDefaultDashboardFilters(getSavedChartPreferences())
+    buildDefaultDashboardFilters(DEFAULT_DASHBOARD_CHART_PREFERENCES)
   )
   const [draftModelFilters, setDraftModelFilters] = useState<DashboardFilters>(
-    () => buildDefaultDashboardFilters(getSavedChartPreferences())
+    () => buildDefaultDashboardFilters(DEFAULT_DASHBOARD_CHART_PREFERENCES)
   )
   const [userChartsFilters, setUserChartsFilters] = useState<UserChartsFilters>(
     () => {
@@ -263,21 +261,18 @@ export function Dashboard() {
     setModelFilters(draftModelFilters)
   }, [draftModelFilters])
 
+  const handleDashboardReset = useCallback(() => {
+    const defaultFilters = buildDefaultDashboardFilters(
+      DEFAULT_DASHBOARD_CHART_PREFERENCES
+    )
+    setDraftModelFilters(defaultFilters)
+    setModelFilters(defaultFilters)
+  }, [])
+
   const handleDataUpdate = useCallback(
     (data: QuotaDataItem[], loading: boolean) => {
       setModelData(data)
       setDataLoading(loading)
-    },
-    []
-  )
-
-  const handleChartPreferencesChange = useCallback(
-    (preferences: DashboardChartPreferences) => {
-      const defaultFilters = buildDefaultDashboardFilters(preferences)
-      setChartPreferences(preferences)
-      setDraftModelFilters(defaultFilters)
-      setModelFilters(defaultFilters)
-      saveChartPreferences(preferences)
     },
     []
   )
@@ -347,6 +342,14 @@ export function Dashboard() {
           </SelectGroup>
         </SelectContent>
       </Select>
+      <Button
+        variant='outline'
+        className='h-8 gap-1.5'
+        onClick={handleDashboardReset}
+      >
+        <RotateCcw className='size-3.5' />
+        {t('Reset')}
+      </Button>
       <Button className='h-8 gap-1.5' onClick={handleDashboardSearch}>
         <Search className='size-3.5' />
         {t('Search')}
@@ -354,15 +357,7 @@ export function Dashboard() {
     </>
   )
   const modelActions =
-    activeSection === 'models' ? (
-      <>
-        {dashboardFilterControls}
-        <ModelsChartPreferences
-          preferences={chartPreferences}
-          onPreferencesChange={handleChartPreferencesChange}
-        />
-      </>
-    ) : null
+    activeSection === 'models' ? dashboardFilterControls : null
   const flowActions =
     activeSection === 'flow' ? (
       <>
@@ -446,7 +441,7 @@ export function Dashboard() {
                     data={modelData}
                     loading={dataLoading}
                     defaultChartType={
-                      chartPreferences.consumptionDistributionChart
+                      DEFAULT_DASHBOARD_CHART_PREFERENCES.consumptionDistributionChart
                     }
                     timeGranularity={
                       modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
@@ -459,7 +454,9 @@ export function Dashboard() {
                   <LazyModelCharts
                     data={modelData}
                     loading={dataLoading}
-                    defaultChartTab={chartPreferences.modelAnalyticsChart}
+                    defaultChartTab={
+                      DEFAULT_DASHBOARD_CHART_PREFERENCES.modelAnalyticsChart
+                    }
                     timeGranularity={
                       modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
                     }

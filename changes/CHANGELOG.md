@@ -61,4 +61,4 @@
 | 054 | 2026-07-01 | 模型广场与模型定价编辑器默认分页大小从 20 改为 100 | `web/default/src/features/pricing/constants.ts`、`web/default/src/features/system-settings/models/model-ratio-visual-editor.tsx` |
 | 055 | 2026-07-01 | 模型广场「动态计费」标签颜色从橙色改为主题色；StatusBadge 新增 primary variant | `web/default/src/features/pricing/components/model-card.tsx`、`web/default/src/components/status-badge.tsx` |
 | 056 | 2026-07-01 | 使用日志表格用户列增强：API 直接返回头像和显示名、头像悬停资料卡片、「耗时」列标题改为「耗时 / 首字」、列顺序优化；时间、渠道、令牌和详情列宽度微调；费用列订阅抵扣记录改为直接显示费用金额，悬停提示订阅来源 | [详情](details/056-usage-logs-user-column.md) |
-| 057 | 2026-07-02 | 数据看板筛选优化：顶部前置时间范围、时间粒度、超级管理员用户名筛选和搜索按钮，模型分析与 Flow 共用筛选条件且避免选择时间立即请求 | `web/default/src/features/dashboard/index.tsx`、`web/default/src/features/dashboard/components/models/models-filter-dialog.tsx`、`web/default/src/components/ui/select.tsx` |
+| 057 | 2026-07-02 | 数据看板筛选优化：顶部前置时间范围、时间粒度、超级管理员用户名筛选和搜索/重置按钮，模型分析与 Flow 共用筛选条件，用户名筛选支持匹配 display_name，移除模型偏好设置按钮并清理相关翻译 | [详情](details/057-dashboard-filters.md) |

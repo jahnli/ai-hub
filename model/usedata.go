@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,12 +139,51 @@ func increaseQuotaData(quotaData *QuotaData) {
 	}
 }
 
+func applyQuotaDataUsernameFilter(query *gorm.DB, keyword string) (*gorm.DB, error) {
+	trimmedKeyword := strings.TrimSpace(keyword)
+	if trimmedKeyword == "" {
+		return query, nil
+	}
+
+	matchedUsers := make([]User, 0)
+	likeKeyword := "%" + trimmedKeyword + "%"
+	err := DB.Model(&User{}).
+		Select("username").
+		Where("username = ? OR display_name = ? OR username LIKE ? OR display_name LIKE ?", trimmedKeyword, trimmedKeyword, likeKeyword, likeKeyword).
+		Find(&matchedUsers).Error
+	if err != nil {
+		return query, err
+	}
+
+	usernameSet := map[string]struct{}{
+		trimmedKeyword: {},
+	}
+	usernames := []string{trimmedKeyword}
+	for _, user := range matchedUsers {
+		if user.Username == "" {
+			continue
+		}
+		if _, exists := usernameSet[user.Username]; exists {
+			continue
+		}
+		usernameSet[user.Username] = struct{}{}
+		usernames = append(usernames, user.Username)
+	}
+
+	return query.Where("username IN ? OR username LIKE ?", usernames, likeKeyword), nil
+}
+
 func GetQuotaDataByUsername(username string, startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
 	// 从quota_data表中查询数据
-	err = DB.Table("quota_data").
+	query := DB.Table("quota_data").
 		Select("user_id, username, model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
-		Where("username = ? and created_at >= ? and created_at <= ?", username, startTime, endTime).
+		Where("created_at >= ? and created_at <= ?", startTime, endTime)
+	query, err = applyQuotaDataUsernameFilter(query, username)
+	if err != nil {
+		return nil, err
+	}
+	err = query.
 		Group("user_id, username, model_name, created_at").
 		Find(&quotaDatas).Error
 	return quotaDatas, err
