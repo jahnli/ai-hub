@@ -99,17 +99,66 @@ export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
   } as unknown as ISpec
 }
 
-export function buildQuotaTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: number): ISpec {
+function getISOWeekLabel(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00')
+  const utcDate = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  )
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - (utcDate.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1))
+  const weekNo = Math.ceil(
+    ((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  )
+  return `${utcDate.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
+}
+
+export function buildCostTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: number): ISpec {
   const values = dailyStats.map((d) => ({ date: d.date, value: d.total_quota * quotaToCnyRate }))
   return {
     type: 'area',
-    title: { visible: true, text: '额度消耗趋势' },
+    title: { visible: true, text: '消耗趋势' },
     data: [{ values }],
     xField: 'date',
     yField: 'value',
     point: { visible: false },
     line: { style: { curveType: 'monotone' } },
     area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
+    axes: [
+      { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
+      { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtCny(v) } },
+    ],
+    theme: 'light', background: 'white',
+  } as unknown as ISpec
+}
+
+export function buildAvgPriceTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: number): ISpec | null {
+  const weeklyStats = new Map<string, { totalQuota: number; totalTokens: number }>()
+  for (const dailyStat of dailyStats) {
+    const weekLabel = getISOWeekLabel(dailyStat.date)
+    const weeklyStat = weeklyStats.get(weekLabel) ?? { totalQuota: 0, totalTokens: 0 }
+    weeklyStat.totalQuota += dailyStat.total_quota
+    weeklyStat.totalTokens += dailyStat.total_tokens
+    weeklyStats.set(weekLabel, weeklyStat)
+  }
+
+  const values = Array.from(weeklyStats.entries())
+    .map(([date, weeklyStat]) => {
+      if (weeklyStat.totalTokens <= 0) return null
+      const costYuan = weeklyStat.totalQuota * quotaToCnyRate
+      return { date, value: costYuan / (weeklyStat.totalTokens / 1_000_000) }
+    })
+    .filter((item): item is { date: string; value: number } => item !== null)
+
+  if (values.length === 0) return null
+
+  return {
+    type: 'line',
+    title: { visible: true, text: '均价趋势' },
+    data: [{ values }],
+    xField: 'date',
+    yField: 'value',
+    point: { visible: false },
+    line: { style: { curveType: 'monotone' } },
     axes: [
       { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
       { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtCny(v) } },
@@ -199,7 +248,7 @@ export function buildModelCostRankSpec(modelStats: ModelStat[], quotaToCnyRate: 
   const sorted = [...modelStats].sort((a, b) => a.total_quota - b.total_quota).slice(-15)
   return {
     type: 'bar',
-    title: { visible: true, text: '模型消耗排行' },
+    title: { visible: true, text: '模型费用排行' },
     data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_quota * quotaToCnyRate })) }],
     direction: 'horizontal',
     xField: 'value',

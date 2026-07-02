@@ -179,7 +179,7 @@ export function ExportDialog(props: ExportDialogProps) {
           </Button>
         }
       />
-      <DialogContent className='sm:max-w-md'>
+      <DialogContent className='sm:max-w-lg md:max-w-xl'>
         <DialogHeader>
           <DialogTitle>{t('Export Data')}</DialogTitle>
           <DialogDescription>

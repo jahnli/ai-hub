@@ -5,9 +5,10 @@ import {
   renderChartToBase64,
   buildSubDeptBarSpec,
   buildSubDeptPieSpec,
-  buildQuotaTrendSpec,
+  buildCostTrendSpec,
   buildRequestTrendSpec,
   buildTokenTrendSpec,
+  buildAvgPriceTrendSpec,
   buildModelUsageTrendSpec,
   buildModelCallRankSpec,
   buildModelCostRankSpec,
@@ -401,11 +402,16 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
 
   const mainWs = wb.getWorksheet(t('Data Overview'))!
 
+  let nextLeftChartRow = mainWs.rowCount + 2
   if (params.subStats.length > 0) {
-    await embedSubDeptCharts(wb, mainWs, params.subStats)
+    nextLeftChartRow = await embedSubDeptCharts(wb, mainWs, params.subStats)
   }
 
-  await embedRightSideCharts(wb, mainWs, params.usage, params.userRankings)
+  if (params.userRankings.length > 0) {
+    await embedUserRankingCharts(wb, mainWs, params.userRankings, nextLeftChartRow)
+  }
+
+  await embedRightSideCharts(wb, mainWs, params.usage)
 
   if (params.includeUserList) {
     buildUserListSheet(wb, params)
@@ -429,7 +435,7 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
       if (detail.subStats.length > 0) {
         await embedSubDeptCharts(wb, ws, detail.subStats)
       }
-      await embedRightSideCharts(wb, ws, detail.usage, [])
+      await embedRightSideCharts(wb, ws, detail.usage)
     }
   }
 
@@ -446,8 +452,8 @@ async function embedSubDeptCharts(
   wb: ExcelJS.Workbook,
   ws: ExcelJS.Worksheet,
   subStats: SubDepartmentStat[]
-): Promise<void> {
-  const imgWidth = 560
+): Promise<number> {
+  const imgWidth = 680
   const startRow = ws.rowCount + 2
   let row = startRow
 
@@ -461,20 +467,22 @@ async function embedSubDeptCharts(
   const pieSpec = buildSubDeptPieSpec(subStats)
   const pieImg = await renderChartToBase64(pieSpec, imgWidth, pieHeight)
   addImageToSheet(wb, ws, pieImg, row, 0, imgWidth, pieHeight)
+
+  return row + Math.ceil(pieHeight / 18) + 2
 }
 
 async function embedRightSideCharts(
   wb: ExcelJS.Workbook,
   ws: ExcelJS.Worksheet,
-  usage: UsageAnalysis,
-  rankings: UserRankingItem[]
+  usage: UsageAnalysis
 ): Promise<void> {
   const rightCol = 7
-  const imgWidth = 560
+  const rightChartColumnCount = 8
+  const imgWidth = rightChartColumnCount * 72
   const imgHeight = 360
   const rowSpacing = Math.ceil(imgHeight / 18) + 2
   const headerRowNumber = 4
-  let chartStartRow = 4
+  const chartStartRow = headerRowNumber
 
   const sectionHeaderRow = ws.getRow(headerRowNumber)
   const sectionCell = sectionHeaderRow.getCell(rightCol + 1)
@@ -482,7 +490,7 @@ async function embedRightSideCharts(
   sectionCell.font = SECTION_FONT
   sectionCell.fill = SECTION_FILL
   sectionCell.alignment = { vertical: 'middle' }
-  ws.mergeCells(headerRowNumber, rightCol + 1, headerRowNumber, rightCol + 8)
+  ws.mergeCells(headerRowNumber, rightCol + 1, headerRowNumber, rightCol + rightChartColumnCount)
   sectionHeaderRow.height = 22
   let row = chartStartRow
 
@@ -491,22 +499,24 @@ async function embedRightSideCharts(
   const modelStats = usage.model_stats ?? []
   const modelDailyStats = usage.model_daily_stats ?? []
 
+  const modelTrendSpec = buildModelUsageTrendSpec(modelDailyStats)
+
   if (dailyStats.length > 0) {
-    const img1 = await renderChartToBase64(buildQuotaTrendSpec(dailyStats, rate), imgWidth, imgHeight)
+    const img1 = await renderChartToBase64(buildTokenTrendSpec(dailyStats), imgWidth, imgHeight)
     addImageToSheet(wb, ws, img1, row, rightCol, imgWidth, imgHeight)
     row += rowSpacing
 
-    const img2 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), imgWidth, imgHeight)
+    const img2 = await renderChartToBase64(buildCostTrendSpec(dailyStats, rate), imgWidth, imgHeight)
     addImageToSheet(wb, ws, img2, row, rightCol, imgWidth, imgHeight)
     row += rowSpacing
 
-    const img3 = await renderChartToBase64(buildTokenTrendSpec(dailyStats), imgWidth, imgHeight)
+    const img3 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), imgWidth, imgHeight)
     addImageToSheet(wb, ws, img3, row, rightCol, imgWidth, imgHeight)
     row += rowSpacing
 
-    const modelTrendSpec = buildModelUsageTrendSpec(modelDailyStats)
-    if (modelTrendSpec) {
-      const img4 = await renderChartToBase64(modelTrendSpec, imgWidth, imgHeight)
+    const avgPriceTrendSpec = buildAvgPriceTrendSpec(dailyStats, rate)
+    if (avgPriceTrendSpec) {
+      const img4 = await renderChartToBase64(avgPriceTrendSpec, imgWidth, imgHeight)
       addImageToSheet(wb, ws, img4, row, rightCol, imgWidth, imgHeight)
       row += rowSpacing
     }
@@ -524,35 +534,29 @@ async function embedRightSideCharts(
     addImageToSheet(wb, ws, img6, row, rightCol, imgWidth, barHeight)
     row += barRowSpacing
 
-    const distSpec = buildModelTokenDistSpec(modelStats)
-    if (distSpec) {
-      const img7 = await renderChartToBase64(distSpec, imgWidth, imgHeight)
+    if (modelTrendSpec) {
+      const img7 = await renderChartToBase64(modelTrendSpec, imgWidth, imgHeight)
       addImageToSheet(wb, ws, img7, row, rightCol, imgWidth, imgHeight)
       row += rowSpacing
     }
-  }
 
-  if (rankings.length > 0) {
-    const barHeight = Math.max(280, Math.min(rankings.length, 10) * 34)
-    const barSpec = buildUserRankBarSpec(rankings)
-    const barImg = await renderChartToBase64(barSpec, imgWidth, barHeight)
-    addImageToSheet(wb, ws, barImg, row, rightCol, imgWidth, barHeight)
-    row += Math.ceil(barHeight / 18) + 2
-
-    const pieHeight = 360
-    const pieSpec = buildUserRankPieSpec(rankings)
-    const pieImg = await renderChartToBase64(pieSpec, imgWidth, pieHeight)
-    addImageToSheet(wb, ws, pieImg, row, rightCol, imgWidth, pieHeight)
+    const distSpec = buildModelTokenDistSpec(modelStats)
+    if (distSpec) {
+      const img8 = await renderChartToBase64(distSpec, imgWidth, imgHeight)
+      addImageToSheet(wb, ws, img8, row, rightCol, imgWidth, imgHeight)
+      row += rowSpacing
+    }
   }
 }
 
 async function embedUserRankingCharts(
   wb: ExcelJS.Workbook,
   ws: ExcelJS.Worksheet,
-  rankings: UserRankingItem[]
+  rankings: UserRankingItem[],
+  startRow?: number
 ): Promise<void> {
   const imgWidth = 680
-  let row = ws.rowCount + 2
+  let row = startRow ?? ws.rowCount + 2
 
   const barHeight = Math.max(280, Math.min(rankings.length, 10) * 34)
   const barSpec = buildUserRankBarSpec(rankings)
