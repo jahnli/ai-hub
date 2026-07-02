@@ -151,7 +151,7 @@ export function DataOverview() {
             start={dateRange.start}
             end={dateRange.end}
             onChange={setDateRange}
-            className='max-w-[300px]'
+            className='max-w-[302px]'
           />
           {selectedDeptId && (
             <div className='ml-auto flex items-center gap-2'>
