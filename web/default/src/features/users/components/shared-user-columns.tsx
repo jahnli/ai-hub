@@ -18,7 +18,6 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatQuota, formatTimestamp } from "@/lib/format";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
@@ -174,28 +173,7 @@ export function userQuotaColumn<T extends UserColumnRow>(
   return {
     id: "quota",
     accessorKey: "quota",
-    header: opts?.headerDescription
-      ? () => (
-          <div className="flex items-center gap-1.5">
-            <span>{headerText}</span>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Info
-                    className="text-muted-foreground size-3.5 cursor-help"
-                    aria-label={opts.headerDescription}
-                  />
-                }
-              />
-              <TooltipContent className="max-w-64">
-                <p className="text-xs leading-relaxed">
-                  {opts.headerDescription}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )
-      : headerText,
+    header: headerText,
     cell: ({ row }) => {
       const user = row.original as UserColumnRow;
       const used = user.sub_quota_used ?? 0;
@@ -250,6 +228,7 @@ export function userQuotaColumn<T extends UserColumnRow>(
       );
     },
     size: opts?.width ? opts.width + 20 : 170,
+    meta: { description: opts?.headerDescription },
   };
 }
 

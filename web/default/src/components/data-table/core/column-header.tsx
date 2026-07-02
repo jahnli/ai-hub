@@ -22,6 +22,7 @@ import {
   ArrowUp as ArrowUpIcon,
   ChevronsUpDown as CaretSortIcon,
   EyeOff as EyeNoneIcon,
+  Info,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -33,6 +34,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 type DataTableColumnHeaderProps<TData, TValue> =
@@ -47,8 +53,15 @@ export function DataTableColumnHeader<TData, TValue>({
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
   const { t } = useTranslation()
+  const description = column.columnDef.meta?.description
+
   if (!column.getCanSort()) {
-    return <div className={cn(className)}>{title}</div>
+    return (
+      <div className={cn('flex items-center gap-1.5', className)}>
+        {title}
+        {description && <DescriptionTooltip description={description} />}
+      </div>
+    )
   }
 
   return (
@@ -92,6 +105,25 @@ export function DataTableColumnHeader<TData, TValue>({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {description && <DescriptionTooltip description={description} />}
     </div>
+  )
+}
+
+function DescriptionTooltip({ description }: { description: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Info
+            className='text-muted-foreground size-3.5 shrink-0 cursor-help'
+            aria-label={description}
+          />
+        }
+      />
+      <TooltipContent className='max-w-64'>
+        <p className='text-xs leading-relaxed'>{description}</p>
+      </TooltipContent>
+    </Tooltip>
   )
 }

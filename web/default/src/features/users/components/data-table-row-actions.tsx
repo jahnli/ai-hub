@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   Link2,
   CreditCard,
+  BarChart3,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -46,6 +47,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { UserStatsDialog } from '@/features/data-overview/components/user-stats-dialog'
 import { UserSubscriptionsDialog } from '@/features/subscriptions/components/dialogs/user-subscriptions-dialog'
 
 import { manageUser, resetUserPasskey, resetUserTwoFA } from '../api'
@@ -72,6 +74,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [resetTwoFAOpen, setResetTwoFAOpen] = useState(false)
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false)
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false)
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false)
 
   const handleEdit = () => {
     setCurrentRow(user)
@@ -141,6 +144,22 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   return (
     <div className='-ml-1.5 flex items-center gap-1'>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={() => setStatsDialogOpen(true)}
+              aria-label={t('Statistics')}
+            />
+          }
+        >
+          <BarChart3 />
+        </TooltipTrigger>
+        <TooltipContent>{t('Statistics')}</TooltipContent>
+      </Tooltip>
+
       <Tooltip>
         <TooltipTrigger
           render={
@@ -300,6 +319,33 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         onOpenChange={setSubscriptionsDialogOpen}
         user={{ id: user.id, username: user.username }}
         onSuccess={triggerRefresh}
+      />
+
+      <UserStatsDialog
+        open={statsDialogOpen}
+        onOpenChange={setStatsDialogOpen}
+        user={
+          statsDialogOpen
+            ? {
+                id: user.id,
+                username: user.username,
+                display_name: user.display_name,
+                quota: user.quota,
+                used_quota: user.used_quota,
+                sub_quota_used: user.sub_quota_used ?? 0,
+                sub_quota_total: user.sub_quota_total ?? 0,
+                total_amount_cny: 0,
+                total_tokens: 0,
+                total_requests: 0,
+                request_count: user.request_count,
+                group: user.group,
+                status: user.status,
+                role: user.role,
+              }
+            : null
+        }
+        initialStartTimestamp={0}
+        initialEndTimestamp={0}
       />
     </div>
   )

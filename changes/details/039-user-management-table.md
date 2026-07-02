@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30
+**日期**: 2026-06-30 ~ 07-02（最后更新 07-02）
 
 ## 涉及文件
 
@@ -16,6 +16,8 @@
 - `web/default/src/features/users/components/users-columns.tsx` — 用户管理表格新增月度总消耗、Token、请求次数、常用模型列，并将请求数提示改为使用 `logs` 聚合结果。
 - `web/default/src/features/users/components/shared-user-columns.tsx` — 请求次数格式化统一（与数据总览保持一致）；抽取 `useSharedUserColumns` hook 统一用户管理与数据总览部门用户表格列定义
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 改用 `useSharedUserColumns` hook，移除独立的列定义
+- `web/default/src/features/users/components/users-table.tsx` — 默认按 quota 降序排序；getRowClassName 改为 early-return 写法
+- `web/default/src/features/users/components/data-table-row-actions.tsx` — 操作列新增「统计」按钮（BarChart3 图标），点击打开 UserStatsDialog 查看用户使用分析
 - `web/default/src/features/users/types.ts` — 用户类型补充订阅额度与月度统计字段。
 - `web/default/src/i18n/locales/en.json` — 补充用户管理新增统计列英文文案。
 - `web/default/src/i18n/locales/fr.json` — 补充用户管理新增统计列法文文案。

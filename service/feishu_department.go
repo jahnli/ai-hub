@@ -76,6 +76,10 @@ func feishuGetCachedTenantAccessToken() (string, error) {
 
 const departmentCacheTTL = 5 * time.Minute
 
+// departmentMemberCacheTTL is the TTL for per-department member caches (open_id list and details).
+// Using a longer TTL (30 min) since member lists rarely change within short intervals.
+const departmentMemberCacheTTL = 30 * time.Minute
+
 type feishuDeptItem struct {
 	OpenDepartmentID       string `json:"open_department_id"`
 	DepartmentID           string `json:"department_id"`
@@ -839,7 +843,7 @@ var deptMembersSF singleflight.Group
 func getCachedDepartmentMembers(token, openDeptID string) ([]string, error) {
 	if v, ok := deptMembersCache.Load(openDeptID); ok {
 		entry := v.(deptMembersCacheEntry)
-		if time.Since(entry.cachedAt) < departmentCacheTTL {
+		if time.Since(entry.cachedAt) < departmentMemberCacheTTL {
 			return entry.openIDs, nil
 		}
 	}
@@ -901,7 +905,7 @@ func fetchDepartmentMembers(token, openDeptID string) ([]string, error) {
 func getCachedDepartmentMemberDetails(token, openDeptID string) ([]feishuDeptMember, error) {
 	if v, ok := deptMemberDetailsCache.Load(openDeptID); ok {
 		entry := v.(deptMemberDetailsCacheEntry)
-		if time.Since(entry.cachedAt) < departmentCacheTTL {
+		if time.Since(entry.cachedAt) < departmentMemberCacheTTL {
 			return entry.members, nil
 		}
 	}
@@ -1299,27 +1303,22 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Page: req.Page, Size: req.PageSize}, nil
 	}
 
-	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
+	// Single-pass: always fetch member details (cached 30min), extract open_ids from it.
+	members, err := getAllMemberDetailsUnderDepts(token, openDeptIDs)
 	if err != nil {
-		return nil, fmt.Errorf("get department members: %w", err)
+		return nil, fmt.Errorf("get department member details: %w", err)
 	}
-	memberDetails := make(map[string]feishuDeptMember)
+	memberDetails := make(map[string]feishuDeptMember, len(members))
+	memberOpenIDs := make([]string, 0, len(members))
+	for _, member := range members {
+		if member.OpenID == "" {
+			continue
+		}
+		memberOpenIDs = append(memberOpenIDs, member.OpenID)
+		memberDetails[member.OpenID] = member
+	}
 	includeUnregistered := req.RegistrationStatus == departmentRegistrationStatusUnregistered ||
 		(req.RegistrationStatus != departmentRegistrationStatusRegistered && req.IncludeUnregistered)
-	if includeUnregistered {
-		members, err := getAllMemberDetailsUnderDepts(token, openDeptIDs)
-		if err != nil {
-			return nil, fmt.Errorf("get department member details: %w", err)
-		}
-		memberOpenIDs = memberOpenIDs[:0]
-		for _, member := range members {
-			if member.OpenID == "" {
-				continue
-			}
-			memberOpenIDs = append(memberOpenIDs, member.OpenID)
-			memberDetails[member.OpenID] = member
-		}
-	}
 
 	if len(memberOpenIDs) == 0 {
 		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Page: req.Page, Size: req.PageSize}, nil
@@ -1541,9 +1540,16 @@ func GetDepartmentUserRankings(req *DepartmentUsersRequest) ([]UserRankingItem, 
 		return []UserRankingItem{}, nil
 	}
 
-	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
+	// Reuse the same details cache as GetDepartmentUsers (30 min TTL)
+	members, err := getAllMemberDetailsUnderDepts(token, openDeptIDs)
 	if err != nil {
-		return nil, fmt.Errorf("get department members: %w", err)
+		return nil, fmt.Errorf("get department member details: %w", err)
+	}
+	memberOpenIDs := make([]string, 0, len(members))
+	for _, m := range members {
+		if m.OpenID != "" {
+			memberOpenIDs = append(memberOpenIDs, m.OpenID)
+		}
 	}
 
 	if len(memberOpenIDs) == 0 {

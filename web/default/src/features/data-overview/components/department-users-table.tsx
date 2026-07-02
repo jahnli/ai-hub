@@ -22,6 +22,7 @@ import {
 import {
   DataTablePage,
   useDataTable,
+  type DataTablePinnedColumn,
 } from '@/components/data-table'
 import { useSharedUserColumns } from '@/features/users/components/shared-user-columns'
 import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
@@ -47,6 +48,10 @@ const DEPT_COLUMN_SORT_MAP: Record<string, string> = {
   role: 'role',
   status: 'status',
 }
+
+const DEPARTMENT_USERS_PINNED_COLUMNS = [
+  { columnId: 'actions', side: 'right' },
+] satisfies DataTablePinnedColumn[]
 
 const REGISTRATION_STATUS = {
   ALL: 'all',
@@ -80,12 +85,14 @@ export function DepartmentUsersTable({
     requestsAccessor: 'total_requests',
     modelAccessor: 'common_model',
     requestCountAccessor: 'total_requests',
-    quotaHeaderDescription: t('Used quota and total quota data are fixed to the current calendar month and are not affected by the selected time range.'),
+    quotaHeaderDescription: undefined,
   })
 
   const [statsUser, setStatsUser] = useState<DepartmentUser | null>(null)
   const [pagination, setPagination] = usePagination()
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'quota', desc: true },
+  ])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   const registrationStatusFilter = getRegistrationStatusFilter(columnFilters)
@@ -197,6 +204,7 @@ export function DepartmentUsersTable({
         header: '',
         size: 80,
         enableSorting: false,
+        meta: { pinned: 'right' as const },
         cell: ({ row }) => {
           if (row.original.is_registered === false) {
             return <span className='text-muted-foreground text-sm'>-</span>
@@ -312,6 +320,7 @@ export function DepartmentUsersTable({
           emptyDescription={t('No users in this department.')}
           skeletonKeyPrefix='dept-users-skeleton'
           applyHeaderSize
+          pinnedColumns={DEPARTMENT_USERS_PINNED_COLUMNS}
           toolbarProps={null}
           fixedHeight={false}
           paginationInFooter={false}

@@ -69,11 +69,16 @@ export function UsersTable() {
   const { refreshTrigger } = useUsers()
   const isMobile = useMediaQuery('(max-width: 640px)')
 
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'quota', desc: true },
+  ])
 
   const sortParam = sorting[0]
   const sortBy = sortParam ? (USER_COLUMN_SORT_MAP[sortParam.id] ?? '') : ''
-  const sortOrder = sortParam ? (sortParam.desc ? 'desc' : 'asc') : ''
+  let sortOrder = ''
+  if (sortParam) {
+    sortOrder = sortParam.desc ? 'desc' : 'asc'
+  }
 
   const {
     globalFilter,
@@ -222,13 +227,12 @@ export function UsersTable() {
           },
         ],
       }}
-      getRowClassName={(row, { isMobile }) =>
-        isDisabledUserRow(row.original)
-          ? isMobile
-            ? DISABLED_ROW_MOBILE
-            : DISABLED_ROW_DESKTOP
-          : undefined
-      }
+      getRowClassName={(row, context) => {
+        if (!isDisabledUserRow(row.original)) {
+          return undefined
+        }
+        return context.isMobile ? DISABLED_ROW_MOBILE : DISABLED_ROW_DESKTOP
+      }}
       bulkActions={<DataTableBulkActions table={table} />}
     />
   )

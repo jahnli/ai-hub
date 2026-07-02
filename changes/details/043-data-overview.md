@@ -27,3 +27,7 @@
 - `web/default/src/features/data-overview/lib/export-excel.ts` — 注册状态判断改用 is_registered 字段，状态文本国际化；getWorksheet 非空断言提取为 getRequiredWorksheet 辅助函数
 - `web/default/src/i18n/static-keys.ts` — 新增 Registration Status、Registered、Unregistered 静态键
 - `web/default/src/i18n/locales/*.json` — 新增 Model Usage Trend、Avg Price Trend、Registered/Total、Total Requests、User Consumption Ranking Top 10、User Consumption Share Top 10、额度统计周期说明、User Statistics、Recent Usage Logs、No Logs Found、Statistics、Model Call Distribution、Model Consumption Ranking、Quota Consumption Trend、Registration Status、Registered、Unregistered 等翻译（6 语言）
+- `service/feishu_department.go` — 新增 departmentMemberCacheTTL（30 分钟），部门成员列表和详情缓存 TTL 独立于部门树（5 分钟）；GetDepartmentUsers/GetDepartmentUserRankings 统一走 getAllMemberDetailsUnderDepts 单次查询，移除冗余的 getAllMembersUnderDepts 调用
+- `web/default/src/features/data-overview/components/department-users-table.tsx` — 操作列 pinned right；默认按 quota 降序排序；额度列头 headerDescription 改为 undefined（tooltip 逻辑移至通用 column-header）
+- `web/default/src/components/data-table/core/column-header.tsx` — DataTableColumnHeader 新增 DescriptionTooltip，通过 column.columnDef.meta.description 渲染列头说明图标
+- `web/default/src/features/users/components/shared-user-columns.tsx` — userQuotaColumn 移除 inline header tooltip 渲染，改为 meta.description 传递
