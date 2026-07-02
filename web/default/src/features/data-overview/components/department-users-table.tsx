@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
-import type { PaginationState, OnChangeFn, SortingState } from '@tanstack/react-table'
+import { useState, useCallback, useMemo } from 'react'
+import type { PaginationState, OnChangeFn, SortingState, ColumnDef } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
-import { Users } from 'lucide-react'
+import { BarChart3, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DataTablePage,
@@ -11,6 +12,7 @@ import {
 import { useSharedUserColumns } from '@/features/users/components/shared-user-columns'
 import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
 import { UserConsumptionCharts } from './user-consumption-charts'
+import { UserStatsDialog } from './user-stats-dialog'
 import type { DepartmentUser } from '../types'
 
 interface DepartmentUsersTableProps {
@@ -38,7 +40,7 @@ export function DepartmentUsersTable({
   endTimestamp,
 }: DepartmentUsersTableProps) {
   const { t } = useTranslation()
-  const columns = useSharedUserColumns<DepartmentUser>({
+  const baseColumns = useSharedUserColumns<DepartmentUser>({
     costAccessor: 'total_amount_cny',
     tokensAccessor: 'total_tokens',
     requestsAccessor: 'total_requests',
@@ -47,12 +49,38 @@ export function DepartmentUsersTable({
     quotaHeaderDescription: t('Used quota and total quota data are fixed to the current calendar month and are not affected by the selected time range.'),
   })
 
+  const [statsUser, setStatsUser] = useState<DepartmentUser | null>(null)
+
+  const columns = useMemo<ColumnDef<DepartmentUser>[]>(() => [
+    ...baseColumns,
+    {
+      id: 'actions',
+      header: '',
+      size: 80,
+      enableSorting: false,
+      cell: ({ row }) => (
+        <Button
+          variant='ghost'
+          size='sm'
+          className='h-7 gap-1 px-2 text-xs'
+          onClick={() => setStatsUser(row.original)}
+        >
+          <BarChart3 className='size-3.5' />
+          {t('Statistics')}
+        </Button>
+      ),
+    },
+  ], [baseColumns, t])
+
   const [pagination, setPagination] = usePagination()
   const [sorting, setSorting] = useState<SortingState>([])
 
   const sortParam = sorting[0]
   const sortBy = sortParam ? (DEPT_COLUMN_SORT_MAP[sortParam.id] ?? '') : ''
-  const sortOrder = sortParam ? (sortParam.desc ? 'desc' : 'asc') : ''
+  let sortOrder = ''
+  if (sortParam) {
+    sortOrder = sortParam.desc ? 'desc' : 'asc'
+  }
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
@@ -141,6 +169,20 @@ export function DepartmentUsersTable({
           </div>
         )}
       </CardContent>
+      <UserStatsDialog
+        key={
+          statsUser
+            ? `${statsUser.id}-${startTimestamp}-${endTimestamp}`
+            : 'closed'
+        }
+        open={!!statsUser}
+        onOpenChange={(open) => {
+          if (!open) setStatsUser(null)
+        }}
+        user={statsUser}
+        initialStartTimestamp={startTimestamp}
+        initialEndTimestamp={endTimestamp}
+      />
     </Card>
   )
 }

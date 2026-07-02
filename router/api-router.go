@@ -236,6 +236,7 @@ func SetApiRouter(router *gin.Engine) {
 			departmentRoute.POST("/usage-analysis", controller.GetUsageAnalysis)
 			departmentRoute.POST("/users", controller.GetDepartmentUsers)
 			departmentRoute.POST("/user-rankings", controller.GetDepartmentUserRankings)
+			departmentRoute.POST("/user-usage-analysis", controller.GetUserUsageAnalysis)
 		}
 		reportNotifyRoute := apiRouter.Group("/report-notify-setting")
 		reportNotifyRoute.Use(middleware.UserAuth(), middleware.DataOverviewAccessCheck())

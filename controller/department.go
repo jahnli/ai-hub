@@ -129,6 +129,32 @@ func GetDepartmentUsers(c *gin.Context) {
 	})
 }
 
+func GetUserUsageAnalysis(c *gin.Context) {
+	var req service.UserUsageAnalysisRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if req.UserID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "user_id is required",
+		})
+		return
+	}
+
+	data, err := service.GetUserUsageAnalysis(&req)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
 func GetDepartmentUserRankings(c *gin.Context) {
 	var req service.DepartmentUsersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

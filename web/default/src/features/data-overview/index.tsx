@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertCircle,
@@ -39,6 +39,15 @@ import { SubDepartmentStats } from './components/sub-department-stats'
 import { UsageAnalysisSection } from './components/usage-analysis'
 import type { DeptTreeNode, DepartmentStat } from './types'
 
+const STATS_SKELETON_KEYS = Array.from(
+  { length: 8 },
+  (_, index) => `stats-skeleton-${index}`
+)
+const USAGE_ANALYSIS_SKELETON_KEYS = Array.from(
+  { length: 6 },
+  (_, index) => `usage-analysis-skeleton-${index}`
+)
+
 export function DataOverview() {
   const { t } = useTranslation()
   const [selectedDeptId, setSelectedDeptId] = useState<string>()
@@ -63,21 +72,30 @@ export function DataOverview() {
 
   const statsQuery = useQuery({
     queryKey: ['department', 'stats', queryParams],
-    queryFn: () => getDepartmentStats(queryParams!),
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getDepartmentStats(queryParams)
+    },
     enabled: !!queryParams,
     staleTime: 60 * 1000,
   })
 
   const subStatsQuery = useQuery({
     queryKey: ['department', 'sub-stats', queryParams],
-    queryFn: () => getSubDepartmentStats(queryParams!),
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getSubDepartmentStats(queryParams)
+    },
     enabled: !!queryParams,
     staleTime: 60 * 1000,
   })
 
   const usageQuery = useQuery({
     queryKey: ['department', 'usage-analysis', queryParams],
-    queryFn: () => getUsageAnalysis(queryParams!),
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getUsageAnalysis(queryParams)
+    },
     enabled: !!queryParams,
     staleTime: 60 * 1000,
   })
@@ -113,7 +131,7 @@ export function DataOverview() {
         })
       }
     }
-  }, [displayTreeData, treeData, selectedDeptId])
+  }, [displayTreeData, treeData, selectedDeptId, dateRange.start, dateRange.end])
 
   const handleDeptChange = (deptId: string, _node: DeptTreeNode) => {
     setSelectedDeptId(deptId)
@@ -132,21 +150,26 @@ export function DataOverview() {
     })
   }
 
+  let departmentSelector: ReactNode = null
+  if (treeQuery.isLoading) {
+    departmentSelector = <Skeleton className='h-8 w-[200px]' />
+  } else if (treeData) {
+    departmentSelector = (
+      <DepartmentTreeSelect
+        treeData={displayTreeData}
+        value={selectedDeptId}
+        onValueChange={handleDeptChange}
+        disabled={treeQuery.isFetching}
+      />
+    )
+  }
+
   return (
     <SectionPageLayout>
       <SectionPageLayout.Title>
         <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
           <span>{t('Data Overview')}</span>
-          {treeQuery.isLoading ? (
-            <Skeleton className='h-8 w-[200px]' />
-          ) : treeData ? (
-            <DepartmentTreeSelect
-              treeData={displayTreeData}
-              value={selectedDeptId}
-              onValueChange={handleDeptChange}
-              disabled={treeQuery.isFetching}
-            />
-          ) : null}
+          {departmentSelector}
           <CompactDateTimeRangePicker
             start={dateRange.start}
             end={dateRange.end}
@@ -216,8 +239,8 @@ export function DataOverview() {
           {statsQuery.isFetching && !statsQuery.data && (
             <div className='overflow-hidden rounded-lg border'>
               <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-4'>
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'>
+                {STATS_SKELETON_KEYS.map((key) => (
+                  <div key={key} className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'>
                     <Skeleton className='h-3.5 w-20' />
                     <Skeleton className='mt-2 h-7 w-24' />
                   </div>
@@ -268,8 +291,8 @@ export function DataOverview() {
               </CardHeader>
               <CardContent className='p-0'>
                 <div className='grid grid-cols-1 lg:grid-cols-2'>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className='border-border/60 border-b lg:odd:border-r'>
+                  {USAGE_ANALYSIS_SKELETON_KEYS.map((key) => (
+                    <div key={key} className='border-border/60 border-b lg:odd:border-r'>
                       <div className='px-5 py-3'>
                         <Skeleton className='h-4 w-32' />
                       </div>
@@ -283,12 +306,8 @@ export function DataOverview() {
             </Card>
           )}
 
-          {usageQuery.data?.data && queryParams && (
-            <UsageAnalysisSection
-              data={usageQuery.data.data}
-              startTimestamp={queryParams.start_timestamp}
-              endTimestamp={queryParams.end_timestamp}
-            />
+          {usageQuery.data?.data && (
+            <UsageAnalysisSection data={usageQuery.data.data} />
           )}
         </FadeIn>
       </SectionPageLayout.Content>

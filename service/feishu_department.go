@@ -1110,6 +1110,69 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 	}, nil
 }
 
+// UserUsageAnalysisRequest holds the request params for single-user usage analysis.
+type UserUsageAnalysisRequest struct {
+	UserID         int   `json:"user_id"`
+	StartTimestamp int64 `json:"start_timestamp"`
+	EndTimestamp   int64 `json:"end_timestamp"`
+}
+
+// GetUserUsageAnalysis fetches model ranking and daily trend for a single user.
+func GetUserUsageAnalysis(req *UserUsageAnalysisRequest) (*UsageAnalysisResponse, error) {
+	userIds := []int{req.UserID}
+
+	var (
+		modelStats      []model.ModelStatRow
+		dailyStats      []model.DailyStatRow
+		modelDailyStats []model.ModelDailyStatRow
+		modelErr        error
+		dailyErr        error
+		modelDailyErr   error
+		wg              sync.WaitGroup
+	)
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		modelStats, modelErr = model.GetModelStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
+	}()
+	go func() {
+		defer wg.Done()
+		dailyStats, dailyErr = model.GetDailyStats(userIds, req.StartTimestamp, req.EndTimestamp)
+	}()
+	go func() {
+		defer wg.Done()
+		modelDailyStats, modelDailyErr = model.GetModelDailyStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
+	}()
+	wg.Wait()
+
+	if modelErr != nil {
+		return nil, modelErr
+	}
+	if dailyErr != nil {
+		return nil, dailyErr
+	}
+	if modelDailyErr != nil {
+		return nil, modelDailyErr
+	}
+
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+	quotaToCNY := usdExchangeRate / quotaPerUnit
+
+	return &UsageAnalysisResponse{
+		ModelStats:      modelStats,
+		DailyStats:      dailyStats,
+		ModelDailyStats: modelDailyStats,
+		QuotaToCNY:      quotaToCNY,
+	}, nil
+}
+
 // DepartmentUsersRequest holds the request params for fetching department user list.
 type DepartmentUsersRequest struct {
 	DepartmentID        string `json:"department_id"`

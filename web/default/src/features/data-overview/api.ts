@@ -104,3 +104,15 @@ export async function getDepartmentUserRankings(params: {
   }>('/api/department/user-rankings', params)
   return res.data
 }
+
+export async function getUserUsageAnalysis(params: {
+  user_id: number
+  start_timestamp: number
+  end_timestamp: number
+}): Promise<{ success: boolean; data: UsageAnalysis }> {
+  const res = await api.post<{
+    success: boolean
+    data: UsageAnalysis
+  }>('/api/department/user-usage-analysis', params)
+  return res.data
+}
