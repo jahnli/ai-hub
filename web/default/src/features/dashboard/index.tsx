@@ -304,14 +304,14 @@ export function Dashboard() {
         start={draftModelFilters.start_timestamp}
         end={draftModelFilters.end_timestamp}
         onChange={handleDashboardTimeRangeChange}
-        className='h-8 w-full sm:w-[18rem] lg:w-[24rem]'
+        className='h-8 max-w-[320px]'
       />
       {isSuperAdmin && (
         <Input
           value={draftModelFilters.username ?? ''}
           onChange={handleDashboardUsernameChange}
-          placeholder={t('Filter by username')}
-          aria-label={t('Username')}
+          placeholder={t('User Name')}
+          aria-label={t('User Name')}
           className='h-8 w-full sm:w-44'
         />
       )}
@@ -397,6 +397,11 @@ export function Dashboard() {
         <div className='space-y-3 sm:space-y-4'>
           {activeSection !== 'overview' && (
             <div className='flex flex-wrap items-center justify-between gap-1.5 sm:gap-2'>
+              {sectionActions != null && (
+                <div className='flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2'>
+                  {sectionActions}
+                </div>
+              )}
               {showSectionTabs ? (
                 <Tabs value={activeSection} onValueChange={handleSectionChange}>
                   <TabsList className='max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto'>
@@ -409,11 +414,6 @@ export function Dashboard() {
                 </Tabs>
               ) : (
                 <div />
-              )}
-              {sectionActions != null && (
-                <div className='flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2'>
-                  {sectionActions}
-                </div>
               )}
             </div>
           )}
