@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, type ElementType, type ReactNode } from 'react'
 import { VChart } from '@visactor/react-vchart'
 import {
-  BarChart3,
   ChartLine,
   DollarSign,
   Hash,
@@ -17,8 +16,6 @@ import type { DailyStat, ModelDailyStat, ModelStat, UsageAnalysis } from '../typ
 
 interface UsageAnalysisProps {
   data: UsageAnalysis
-  startTimestamp: number
-  endTimestamp: number
 }
 
 export function UsageAnalysisSection(props: UsageAnalysisProps) {
@@ -47,27 +44,13 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
       <CardContent className='p-0'>
         <div className='grid grid-cols-1 lg:grid-cols-2'>
           {hasDailyData && (
-            <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
-          )}
-          {hasDailyData && (
             <CostTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
           {hasDailyData && (
             <RequestTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
           {hasDailyData && (
-            <AvgPriceTrendChart
-              data={props.data.daily_stats}
-              startTimestamp={props.startTimestamp}
-              endTimestamp={props.endTimestamp}
-              {...chartProps}
-            />
-          )}
-          {hasModelData && (
-            <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
-          )}
-          {hasModelData && (
-            <ModelCallRankChart data={props.data.model_stats} {...chartProps} />
+            <TokenTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
           {hasModelData && (
             <ModelUsageTrendChart
@@ -76,7 +59,13 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
             />
           )}
           {hasModelData && (
-            <ModelTokenDistChart data={props.data.model_stats} {...chartProps} />
+            <ModelCallDistributionChart
+              data={props.data.model_stats}
+              {...chartProps}
+            />
+          )}
+          {hasModelData && (
+            <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
           )}
         </div>
       </CardContent>
@@ -93,9 +82,9 @@ interface ChartBaseProps {
 }
 
 function ChartCard(props: {
-  icon: React.ElementType
+  icon: ElementType
   title: string
-  actions?: React.ReactNode
+  actions?: ReactNode
   themeReady: boolean
   resolvedTheme: string | undefined
   chartKey: string
@@ -351,7 +340,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
         },
       },
     }
-  }, [props.data, t])
+  }, [props.data, props.quotaToCnyRate, t])
 
   return (
     <ChartCard
@@ -467,21 +456,27 @@ function ModelUsageTrendChart(
   )
 }
 
-// ── 4. 模型调用排行 ──
+// ── 4. 模型调用分布 ──
 
-function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
+function ModelCallDistributionChart(
+  props: ChartBaseProps & { data: ModelStat[] }
+) {
   const { t } = useTranslation()
 
   const spec = useMemo(() => {
-    const sorted = [...props.data]
-      .sort((a, b) => b.total_requests - a.total_requests)
-      .slice(0, 15)
+    const filtered = props.data.filter((item) => item.total_requests > 0)
+    if (filtered.length === 0) return null
+
+    const totalRequests = filtered.reduce(
+      (sum, item) => sum + item.total_requests,
+      0
+    )
 
     return {
-      type: 'bar' as const,
+      type: 'pie' as const,
       data: [
         {
-          values: sorted.map((item) => ({
+          values: filtered.map((item) => ({
             name: item.model_name,
             value: item.total_requests,
             cost: item.total_quota * props.quotaToCnyRate,
@@ -489,97 +484,91 @@ function ModelCallRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
           })),
         },
       ],
-      direction: 'horizontal' as const,
-      xField: 'value',
-      yField: 'name',
-      ...APPEAR_ANIMATION,
+      valueField: 'value',
+      categoryField: 'name',
+      outerRadius: 0.8,
+      innerRadius: 0.5,
+      pie: {
+        state: {
+          hover: {
+            outerRadius: 0.88,
+            stroke: '#fff',
+            lineWidth: 2,
+          },
+        },
+      },
+      animationAppear: {
+        duration: 800,
+        easing: 'cubicOut',
+        preset: 'growRadiusIn',
+      },
       label: {
         visible: true,
         position: 'outside',
-        formatMethod: (value: number) => formatLargeNumber(value) + ' ' + t('times'),
+        formatMethod: (_: unknown, datum: { name?: string; value?: number }) => {
+          const name = datum.name ?? ''
+          const pct =
+            totalRequests > 0
+              ? (((datum.value ?? 0) / totalRequests) * 100).toFixed(2) + '%'
+              : ''
+          return pct ? `${name} ${pct}` : name
+        },
       },
-      bar: { style: { cornerRadius: [0, 4, 4, 0] } },
-      axes: [
-        {
-          orient: 'left',
-          type: 'band',
-          label: {
-            style: { fontSize: 11 },
-            formatMethod: (v: string) =>
-              v.length > 20 ? v.slice(0, 20) + '…' : v,
-          },
-        },
-        {
-          orient: 'bottom',
-          type: 'linear',
-          label: {
-            formatMethod: (v: number) => formatLargeNumber(v),
-          },
-        },
-      ],
       tooltip: {
-        dimension: {
-          content: [
-            {
-              key: () => t('Requests'),
-              value: (d: { value?: number }) =>
-                formatLargeNumber(d.value ?? 0) + ' ' + t('times'),
-            },
-            {
-              key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
-            },
-            {
-              key: () => t('Total Cost'),
-              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
-            },
-            {
-              key: () => t('Unit Price'),
-              value: (d: { cost?: number; tokens?: number }) =>
-                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0),
-            },
-          ],
-        },
         mark: {
           content: [
             {
               key: () => t('Requests'),
-              value: (d: { value?: number }) =>
-                formatLargeNumber(d.value ?? 0) + ' ' + t('times'),
+              value: (datum: { value?: number }) =>
+                formatLargeNumber(datum.value ?? 0) + ' ' + t('times'),
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
+              value: (datum: { tokens?: number }) =>
+                formatTokensDetail(datum.tokens ?? 0),
             },
             {
               key: () => t('Total Cost'),
-              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
-            },
-            {
-              key: () => t('Unit Price'),
-              value: (d: { cost?: number; tokens?: number }) =>
-                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0),
+              value: (datum: { cost?: number }) =>
+                formatCost(datum.cost ?? 0),
             },
           ],
         },
       },
+      legends: {
+        visible: true,
+        orient: 'right',
+        type: 'discrete',
+        item: {
+          width: 120,
+          label: {
+            style: { fontSize: 11 },
+            formatMethod: (label: string) =>
+              label.length > 12 ? label.slice(0, 12) + '…' : label,
+          },
+        },
+        maxRow: 12,
+        autoPage: true,
+      },
     }
-  }, [props.data, t])
+  }, [props.data, props.quotaToCnyRate, t])
+
+  if (!spec) return null
 
   return (
     <ChartCard
-      icon={BarChart3}
-      title={t('Model Call Ranking')}
+      icon={PieChart}
+      title={t('Model Call Distribution')}
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`model-call-rank-${props.resolvedTheme}`}
+      chartKey={`model-call-distribution-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />
   )
 }
 
-// ── 5. 模型费用排行 ──
+// ── 5. 模型消耗排行 ──
 
 function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
   const { t } = useTranslation()
@@ -677,12 +666,12 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         },
       },
     }
-  }, [props.data, t])
+  }, [props.data, props.quotaToCnyRate, t])
 
   return (
     <ChartCard
       icon={DollarSign}
-      title={t('Model Cost Ranking')}
+      title={t('Model Consumption Ranking')}
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
       chartKey={`model-cost-rank-${props.resolvedTheme}`}
@@ -793,7 +782,7 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   return (
     <ChartCard
       icon={DollarSign}
-      title={t('Cost Trend')}
+      title={t('Quota Consumption Trend')}
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
       chartKey={`cost-trend-${props.resolvedTheme}`}
@@ -803,273 +792,3 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   )
 }
 
-// ── 7. 均价趋势 ──
-
-type PriceGranularity = 'day' | 'week' | 'month'
-
-function getISOWeekLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  const d = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-  )
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  const weekNo = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
-  )
-  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
-}
-
-function getMonthLabel(dateStr: string): string {
-  return dateStr.slice(0, 7)
-}
-
-function AvgPriceTrendChart(
-  props: ChartBaseProps & {
-    data: DailyStat[]
-    startTimestamp: number
-    endTimestamp: number
-  }
-) {
-  const { t } = useTranslation()
-  const [granularity, setGranularity] = useState<PriceGranularity>('week')
-
-  const chartData = useMemo(() => {
-    if (granularity === 'day') {
-      return props.data
-        .map((item) => {
-          if (item.total_tokens <= 0) return null
-          const costYuan = item.total_quota * props.quotaToCnyRate
-          const pricePerMT = costYuan / (item.total_tokens / 1_000_000)
-          return { label: item.date, value: pricePerMT }
-        })
-        .filter((v): v is { label: string; value: number } => v !== null)
-    }
-
-    const getLabel =
-      granularity === 'week' ? getISOWeekLabel : getMonthLabel
-
-    const buckets = new Map<
-      string,
-      { totalQuota: number; totalTokens: number }
-    >()
-    for (const item of props.data) {
-      const bucketLabel = getLabel(item.date)
-      const bucket = buckets.get(bucketLabel) ?? {
-        totalQuota: 0,
-        totalTokens: 0,
-      }
-      bucket.totalQuota += item.total_quota
-      bucket.totalTokens += item.total_tokens
-      buckets.set(bucketLabel, bucket)
-    }
-
-    const result: { label: string; value: number }[] = []
-    for (const [bucketLabel, bucket] of buckets) {
-      if (bucket.totalTokens <= 0) continue
-      const costYuan = bucket.totalQuota * props.quotaToCnyRate
-      const pricePerMT = costYuan / (bucket.totalTokens / 1_000_000)
-      result.push({ label: bucketLabel, value: pricePerMT })
-    }
-    return result
-  }, [props.data, granularity])
-
-  const spec = useMemo(() => {
-    if (chartData.length === 0) return null
-
-    return {
-      type: 'line' as const,
-      data: [{ values: chartData }],
-      xField: 'label',
-      yField: 'value',
-      point: { visible: chartData.length <= 60, size: 4 },
-      line: { style: { curveType: 'monotone' } },
-      ...APPEAR_ANIMATION,
-      ...(chartData.length > DATA_ZOOM_THRESHOLD
-        ? { dataZoom: makeDataZoom('line') }
-        : {}),
-      axes: [
-        {
-          orient: 'bottom',
-          type: 'band',
-          label: {
-            style: { fontSize: 11 },
-            autoHide: true,
-            autoHideMethod: 'greedy',
-            formatMethod: (v: string) => {
-              if (v.includes('-W') || v.length === 7) return v
-              return formatDateLabel(v)
-            },
-          },
-        },
-        {
-          orient: 'left',
-          type: 'linear',
-          label: {
-            formatMethod: (v: number) =>
-              v === 0 ? '¥0' : '¥' + v.toFixed(2),
-          },
-        },
-      ],
-      tooltip: {
-        dimension: {
-          content: [
-            {
-              key: t('Avg Price'),
-              value: (d: { value?: number }) =>
-                '¥' + (d.value ?? 0).toFixed(2) + ' / M Tokens',
-            },
-          ],
-        },
-        mark: {
-          title: { value: (d: { label?: string }) => d.label ?? '' },
-          content: [
-            {
-              key: t('Avg Price'),
-              value: (d: { value?: number }) =>
-                '¥' + (d.value ?? 0).toFixed(2) + ' / M Tokens',
-            },
-          ],
-        },
-      },
-    }
-  }, [chartData, t])
-
-  const granularityTabs: { value: PriceGranularity; label: string }[] = [
-    { value: 'day', label: t('Day') },
-    { value: 'week', label: t('Week') },
-    { value: 'month', label: t('Month') },
-  ]
-
-  return (
-    <ChartCard
-      icon={DollarSign}
-      title={t('Avg Price Trend')}
-      themeReady={props.themeReady}
-      resolvedTheme={props.resolvedTheme}
-      chartKey={`avg-price-${granularity}-${props.resolvedTheme}`}
-      spec={spec}
-      height='h-[340px]'
-      actions={
-        <div className='bg-muted/60 inline-flex h-7 rounded-lg border p-0.5'>
-          {granularityTabs.map(({ value, label }) => (
-            <button
-              key={value}
-              type='button'
-              onClick={() => setGranularity(value)}
-              className={`shrink-0 rounded-md px-2.5 text-xs font-medium transition-colors ${
-                granularity === value
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      }
-    />
-  )
-}
-
-// ── 7. 模型 Token 分布 ──
-
-function ModelTokenDistChart(props: ChartBaseProps & { data: ModelStat[] }) {
-  const { t } = useTranslation()
-
-  const spec = useMemo(() => {
-    const filtered = props.data.filter((i) => i.total_tokens > 0)
-    if (filtered.length === 0) return null
-
-    const totalTokens = filtered.reduce((sum, i) => sum + i.total_tokens, 0)
-
-    return {
-      type: 'pie' as const,
-      data: [
-        {
-          values: filtered.map((i) => ({
-            name: i.model_name,
-            value: i.total_tokens,
-          })),
-        },
-      ],
-      valueField: 'value',
-      categoryField: 'name',
-      outerRadius: 0.8,
-      innerRadius: 0.5,
-      pie: {
-        state: {
-          hover: {
-            outerRadius: 0.88,
-            stroke: '#fff',
-            lineWidth: 2,
-          },
-        },
-      },
-      animationAppear: {
-        duration: 800,
-        easing: 'cubicOut',
-        preset: 'growRadiusIn',
-      },
-      label: {
-        visible: true,
-        position: 'outside',
-        formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
-          const name = d.name ?? ''
-          const pct =
-            totalTokens > 0
-              ? ((d.value ?? 0) / totalTokens * 100).toFixed(2) + '%'
-              : ''
-          return pct ? `${name} ${pct}` : name
-        },
-      },
-      tooltip: {
-        mark: {
-          content: [
-            {
-              key: (d: { name?: string }) => d.name ?? '',
-              value: (d: { value?: number }) => {
-                const v = d.value ?? 0
-                const formatted = formatTokenValue(v)
-                const pct =
-                  totalTokens > 0
-                    ? ((v / totalTokens) * 100).toFixed(2) + '%'
-                    : ''
-                return pct ? `${formatted} (${pct})` : formatted
-              },
-            },
-          ],
-        },
-      },
-      legends: {
-        visible: true,
-        orient: 'right',
-        type: 'discrete',
-        item: {
-          width: 120,
-          label: {
-            style: { fontSize: 11 },
-            formatMethod: (label: string) =>
-              label.length > 12 ? label.slice(0, 12) + '…' : label,
-          },
-        },
-        maxRow: 12,
-        autoPage: true,
-      },
-    }
-  }, [props.data])
-
-  if (!spec) return null
-
-  return (
-    <ChartCard
-      icon={PieChart}
-      title={t('Model Token Distribution')}
-      themeReady={props.themeReady}
-      resolvedTheme={props.resolvedTheme}
-      chartKey={`model-token-dist-${props.resolvedTheme}`}
-      spec={spec}
-      height='h-[360px]'
-    />
-  )
-}
