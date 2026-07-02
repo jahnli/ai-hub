@@ -513,8 +513,8 @@ func enableSubtree(nodes []*DeptTreeNode) []*DeptTreeNode {
 
 // DepartmentTreeResponse is the API response structure.
 type DepartmentTreeResponse struct {
-	TreeData      []*DeptTreeNode `json:"tree_data"`
-	LeaderDeptIDs []string        `json:"leader_dept_ids"`
+	TreeData      []*DeptTreeNode   `json:"tree_data"`
+	LeaderDeptIDs []string          `json:"leader_dept_ids"`
 	TenantInfo    *feishuTenantInfo `json:"tenant_info"`
 }
 
@@ -629,8 +629,6 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 
 	return stat, nil
 }
-
-
 
 // SubDepartmentStatItem holds stats for one sub-department.
 type SubDepartmentStatItem struct {
@@ -822,7 +820,18 @@ type deptMembersCacheEntry struct {
 	cachedAt time.Time
 }
 
+type deptMemberDetailsCacheEntry struct {
+	members  []feishuDeptMember
+	cachedAt time.Time
+}
+
+type feishuDeptMember struct {
+	OpenID string `json:"open_id"`
+	Name   string `json:"name"`
+}
+
 var deptMembersCache sync.Map
+var deptMemberDetailsCache sync.Map
 
 // deptMembersSF suppresses duplicate concurrent fetches for the same department.
 var deptMembersSF singleflight.Group
@@ -887,6 +896,62 @@ func fetchDepartmentMembers(token, openDeptID string) ([]string, error) {
 		pageToken = page.PageToken
 	}
 	return allOpenIDs, nil
+}
+
+func getCachedDepartmentMemberDetails(token, openDeptID string) ([]feishuDeptMember, error) {
+	if v, ok := deptMemberDetailsCache.Load(openDeptID); ok {
+		entry := v.(deptMemberDetailsCacheEntry)
+		if time.Since(entry.cachedAt) < departmentCacheTTL {
+			return entry.members, nil
+		}
+	}
+
+	v, err, _ := deptMembersSF.Do(openDeptID+":details", func() (any, error) {
+		return fetchDepartmentMemberDetails(token, openDeptID)
+	})
+	if err != nil {
+		return nil, err
+	}
+	members := v.([]feishuDeptMember)
+	deptMemberDetailsCache.Store(openDeptID, deptMemberDetailsCacheEntry{members: members, cachedAt: time.Now()})
+	return members, nil
+}
+
+func fetchDepartmentMemberDetails(token, openDeptID string) ([]feishuDeptMember, error) {
+	var allMembers []feishuDeptMember
+	pageToken := ""
+	for {
+		url := feishuBaseURL + "/contact/v3/users/find_by_department?department_id=" + openDeptID +
+			"&user_id_type=open_id&department_id_type=open_department_id&page_size=50"
+		if pageToken != "" {
+			url += "&page_token=" + pageToken
+		}
+		respBody, err := feishuRequestWithRetry(http.MethodGet, url, nil, token)
+		if err != nil {
+			return nil, fmt.Errorf("fetch department member details: %w", err)
+		}
+		var result feishuAPIResult
+		if err := common.Unmarshal(respBody, &result); err != nil {
+			return nil, fmt.Errorf("decode member details response: %w", err)
+		}
+		if result.Code != 0 {
+			return nil, fmt.Errorf("feishu code=%d msg=%s", result.Code, result.Msg)
+		}
+		var page struct {
+			HasMore   bool               `json:"has_more"`
+			PageToken string             `json:"page_token"`
+			Items     []feishuDeptMember `json:"items"`
+		}
+		if err := common.Unmarshal(result.Data, &page); err != nil {
+			return nil, fmt.Errorf("decode member details data: %w", err)
+		}
+		allMembers = append(allMembers, page.Items...)
+		if !page.HasMore {
+			break
+		}
+		pageToken = page.PageToken
+	}
+	return allMembers, nil
 }
 
 // deptMembersFetchConcurrency limits how many departments are fetched
@@ -1047,24 +1112,66 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 
 // DepartmentUsersRequest holds the request params for fetching department user list.
 type DepartmentUsersRequest struct {
-	DepartmentID   string `json:"department_id"`
-	StartTimestamp int64  `json:"start_timestamp"`
-	EndTimestamp   int64  `json:"end_timestamp"`
-	Page           int    `json:"page"`
-	PageSize       int    `json:"page_size"`
-	SortBy         string `json:"sort_by"`
-	SortOrder      string `json:"sort_order"`
+	DepartmentID        string `json:"department_id"`
+	StartTimestamp      int64  `json:"start_timestamp"`
+	EndTimestamp        int64  `json:"end_timestamp"`
+	Page                int    `json:"page"`
+	PageSize            int    `json:"page_size"`
+	SortBy              string `json:"sort_by"`
+	SortOrder           string `json:"sort_order"`
+	IncludeUnregistered bool   `json:"include_unregistered"`
 }
 
 // DepartmentUserItem holds user info with stats for a specific time range.
 type DepartmentUserItem struct {
 	*model.User
-	TotalAmountCNY   float64 `json:"total_amount_cny"`
-	TotalTokens      int64   `json:"total_tokens"`
-	TotalRequests    int64   `json:"total_requests"`
-	CommonModel      string  `json:"common_model"`
-	SubQuotaUsed     int64   `json:"sub_quota_used"`
-	SubQuotaTotal    int64   `json:"sub_quota_total"`
+	TotalAmountCNY float64 `json:"total_amount_cny"`
+	TotalTokens    int64   `json:"total_tokens"`
+	TotalRequests  int64   `json:"total_requests"`
+	CommonModel    string  `json:"common_model"`
+	SubQuotaUsed   int64   `json:"sub_quota_used"`
+	SubQuotaTotal  int64   `json:"sub_quota_total"`
+}
+
+func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *model.User {
+	displayName := member.Name
+	if displayName == "" {
+		displayName = openID
+	}
+	return &model.User{
+		Id:          0,
+		Username:    openID,
+		DisplayName: displayName,
+		OpenId:      openID,
+		Status:      0,
+	}
+}
+
+func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string, memberDetails map[string]feishuDeptMember, includeUnregistered bool) []DepartmentUserItem {
+	userMap := make(map[string]*model.User, len(users))
+	for _, u := range users {
+		if u.OpenId != "" {
+			userMap[u.OpenId] = u
+		}
+	}
+
+	result := make([]DepartmentUserItem, 0, len(memberOpenIDs))
+	seen := make(map[string]bool, len(memberOpenIDs))
+	for _, openID := range memberOpenIDs {
+		if openID == "" || seen[openID] {
+			continue
+		}
+		seen[openID] = true
+		if u, ok := userMap[openID]; ok {
+			result = append(result, DepartmentUserItem{User: u})
+			continue
+		}
+		if !includeUnregistered {
+			continue
+		}
+		result = append(result, DepartmentUserItem{User: buildUnregisteredDepartmentUser(openID, memberDetails[openID])})
+	}
+	return result
 }
 
 func sortDepartmentUserItems(items []DepartmentUserItem, sortBy string, sortOrder string) {
@@ -1123,6 +1230,21 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 	if err != nil {
 		return nil, fmt.Errorf("get department members: %w", err)
 	}
+	memberDetails := make(map[string]feishuDeptMember)
+	if req.IncludeUnregistered {
+		members, err := getAllMemberDetailsUnderDepts(token, openDeptIDs)
+		if err != nil {
+			return nil, fmt.Errorf("get department member details: %w", err)
+		}
+		memberOpenIDs = memberOpenIDs[:0]
+		for _, member := range members {
+			if member.OpenID == "" {
+				continue
+			}
+			memberOpenIDs = append(memberOpenIDs, member.OpenID)
+			memberDetails[member.OpenID] = member
+		}
+	}
 
 	if len(memberOpenIDs) == 0 {
 		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Page: req.Page, Size: req.PageSize}, nil
@@ -1143,12 +1265,21 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 
 	sortByComputed := common.IsComputedSortColumn(req.SortBy)
 	if sortByComputed {
-		users, total, err := model.GetUsersByOpenIDs(memberOpenIDs, 0, len(memberOpenIDs), "", "")
+		users, _, err := model.GetUsersByOpenIDs(memberOpenIDs, 0, len(memberOpenIDs), "", "")
 		if err != nil {
 			return nil, fmt.Errorf("get users by open_ids: %w", err)
 		}
 		if len(users) == 0 {
-			return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Total: total, Page: page, Size: pageSize}, nil
+			allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+			start := startIdx
+			end := start + pageSize
+			if start > len(allItems) {
+				start = len(allItems)
+			}
+			if end > len(allItems) {
+				end = len(allItems)
+			}
+			return &DepartmentUsersResponse{Items: allItems[start:end], Total: int64(len(allItems)), Page: page, Size: pageSize}, nil
 		}
 		ids := make([]int, len(users))
 		for i, u := range users {
@@ -1182,20 +1313,22 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		if usdExchangeRate <= 0 {
 			usdExchangeRate = 1
 		}
-		allItems := make([]DepartmentUserItem, len(users))
-		for i, u := range users {
-			item := DepartmentUserItem{User: u}
+		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+		for i := range allItems {
+			u := allItems[i].User
+			if u.Id == 0 {
+				continue
+			}
 			if s, ok := subMap[u.Id]; ok {
-				item.SubQuotaUsed = s.AmountUsed
-				item.SubQuotaTotal = s.AmountTotal
+				allItems[i].SubQuotaUsed = s.AmountUsed
+				allItems[i].SubQuotaTotal = s.AmountTotal
 			}
 			if stat, ok := userStats[u.Id]; ok {
-				item.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
-				item.TotalTokens = stat.TotalTokens
-				item.TotalRequests = stat.TotalReqs
+				allItems[i].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
+				allItems[i].TotalTokens = stat.TotalTokens
+				allItems[i].TotalRequests = stat.TotalReqs
 			}
-			item.CommonModel = commonModels[u.Id]
-			allItems[i] = item
+			allItems[i].CommonModel = commonModels[u.Id]
 		}
 		sortDepartmentUserItems(allItems, req.SortBy, req.SortOrder)
 		start := startIdx
@@ -1208,19 +1341,28 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		}
 		return &DepartmentUsersResponse{
 			Items: allItems[start:end],
-			Total: total,
+			Total: int64(len(allItems)),
 			Page:  page,
 			Size:  pageSize,
 		}, nil
 	}
 
-	users, total, err := model.GetUsersByOpenIDs(memberOpenIDs, startIdx, pageSize, req.SortBy, req.SortOrder)
+	users, _, err := model.GetUsersByOpenIDs(memberOpenIDs, 0, len(memberOpenIDs), req.SortBy, req.SortOrder)
 	if err != nil {
 		return nil, fmt.Errorf("get users by open_ids: %w", err)
 	}
 
 	if len(users) == 0 {
-		return &DepartmentUsersResponse{Items: []DepartmentUserItem{}, Total: total, Page: page, Size: pageSize}, nil
+		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+		start := startIdx
+		end := start + pageSize
+		if start > len(allItems) {
+			start = len(allItems)
+		}
+		if end > len(allItems) {
+			end = len(allItems)
+		}
+		return &DepartmentUsersResponse{Items: allItems[start:end], Total: int64(len(allItems)), Page: page, Size: pageSize}, nil
 	}
 
 	ids := make([]int, len(users))
@@ -1260,25 +1402,36 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		usdExchangeRate = 1
 	}
 
-	result := make([]DepartmentUserItem, len(users))
-	for i, u := range users {
-		item := DepartmentUserItem{User: u}
+	result := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+	for i := range result {
+		u := result[i].User
+		if u.Id == 0 {
+			continue
+		}
 		if s, ok := subMap[u.Id]; ok {
-			item.SubQuotaUsed = s.AmountUsed
-			item.SubQuotaTotal = s.AmountTotal
+			result[i].SubQuotaUsed = s.AmountUsed
+			result[i].SubQuotaTotal = s.AmountTotal
 		}
 		if stat, ok := userStats[u.Id]; ok {
-			item.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
-			item.TotalTokens = stat.TotalTokens
-			item.TotalRequests = stat.TotalReqs
+			result[i].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
+			result[i].TotalTokens = stat.TotalTokens
+			result[i].TotalRequests = stat.TotalReqs
 		}
-		item.CommonModel = commonModels[u.Id]
-		result[i] = item
+		result[i].CommonModel = commonModels[u.Id]
+	}
+	sortDepartmentUserItems(result, req.SortBy, req.SortOrder)
+	start := startIdx
+	end := start + pageSize
+	if start > len(result) {
+		start = len(result)
+	}
+	if end > len(result) {
+		end = len(result)
 	}
 
 	return &DepartmentUsersResponse{
-		Items: result,
-		Total: total,
+		Items: result[start:end],
+		Total: int64(len(result)),
 		Page:  page,
 		Size:  pageSize,
 	}, nil
@@ -1374,5 +1527,46 @@ func GetDepartmentUserRankings(req *DepartmentUsersRequest) ([]UserRankingItem, 
 		})
 	}
 
+	return result, nil
+}
+
+func getAllMemberDetailsUnderDepts(token string, openDeptIDs []string) ([]feishuDeptMember, error) {
+	seen := make(map[string]bool)
+	var result []feishuDeptMember
+	var mu sync.Mutex
+	var firstErr error
+	var errOnce sync.Once
+
+	sem := make(chan struct{}, deptMembersFetchConcurrency)
+	var wg sync.WaitGroup
+
+	for _, deptID := range openDeptIDs {
+		wg.Add(1)
+		go func(deptID string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			members, err := getCachedDepartmentMemberDetails(token, deptID)
+			if err != nil {
+				errOnce.Do(func() { firstErr = err })
+				return
+			}
+
+			mu.Lock()
+			for _, member := range members {
+				if member.OpenID != "" && !seen[member.OpenID] {
+					seen[member.OpenID] = true
+					result = append(result, member)
+				}
+			}
+			mu.Unlock()
+		}(deptID)
+	}
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
 	return result, nil
 }

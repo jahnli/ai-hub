@@ -1,8 +1,8 @@
 import VChart, { type ISpec } from '@visactor/vchart'
 import type { DailyStat, ModelDailyStat, ModelStat, SubDepartmentStat, UserRankingItem } from '../types'
 
-const CHART_WIDTH = 600
-const CHART_HEIGHT = 360
+const CHART_WIDTH = 680
+const CHART_HEIGHT = 400
 
 export async function renderChartToBase64(
   spec: ISpec,
@@ -10,26 +10,29 @@ export async function renderChartToBase64(
   height = CHART_HEIGHT
 ): Promise<string> {
   const container = document.createElement('div')
-  container.style.position = 'fixed'
-  container.style.left = '-9999px'
-  container.style.top = '-9999px'
-  container.style.width = `${width}px`
-  container.style.height = `${height}px`
-  container.style.opacity = '0'
-  container.style.pointerEvents = 'none'
+  container.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${width}px;height:${height}px;`
   document.body.appendChild(container)
 
   try {
     const chartSpec = {
       ...spec,
+      animation: false,
       background: 'white',
     } as ISpec
-    const chart = new VChart(
-      chartSpec,
-      { dom: container, mode: 'desktop-browser' }
-    )
-    await chart.renderAsync()
-    const dataUrl: string = await chart.getDataURL()
+    const chart = new VChart(chartSpec, { dom: container, animation: false })
+    chart.renderSync()
+
+    const dataUrl: string = await new Promise((resolve) => {
+      setTimeout(() => {
+        const canvas = container.querySelector('canvas')
+        if (canvas) {
+          resolve(canvas.toDataURL('image/png'))
+        } else {
+          resolve('')
+        }
+      }, 300)
+    })
+
     chart.release()
     return dataUrl
   } catch (e) {
@@ -62,6 +65,7 @@ export function buildSubDeptBarSpec(subStats: SubDepartmentStat[]): ISpec {
   const sorted = [...subStats].sort((a, b) => b.total_tokens - a.total_tokens)
   return {
     type: 'bar',
+    title: { visible: true, text: '子部门 Token 用量排行' },
     data: [{ values: sorted.map((s) => ({ name: s.department_name, value: s.total_tokens })) }],
     direction: 'horizontal',
     xField: 'value',
@@ -82,6 +86,7 @@ export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
   const total = sorted.reduce((s, i) => s + i.total_amount_cny, 0)
   return {
     type: 'pie',
+    title: { visible: true, text: '子部门消耗占比' },
     data: [{ values: sorted.filter((i) => i.total_amount_cny > 0).map((i) => ({ name: i.department_name, value: i.total_amount_cny })) }],
     valueField: 'value',
     categoryField: 'name',
@@ -98,6 +103,7 @@ export function buildQuotaTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: num
   const values = dailyStats.map((d) => ({ date: d.date, value: d.total_quota * quotaToCnyRate }))
   return {
     type: 'area',
+    title: { visible: true, text: '额度消耗趋势' },
     data: [{ values }],
     xField: 'date',
     yField: 'value',
@@ -116,6 +122,7 @@ export function buildRequestTrendSpec(dailyStats: DailyStat[]): ISpec {
   const values = dailyStats.map((d) => ({ date: d.date, value: d.total_requests }))
   return {
     type: 'area',
+    title: { visible: true, text: '请求次数趋势' },
     data: [{ values }],
     xField: 'date',
     yField: 'value',
@@ -134,6 +141,7 @@ export function buildTokenTrendSpec(dailyStats: DailyStat[]): ISpec {
   const values = dailyStats.map((d) => ({ date: d.date, value: d.total_tokens }))
   return {
     type: 'area',
+    title: { visible: true, text: 'Token 用量趋势' },
     data: [{ values }],
     xField: 'date',
     yField: 'value',
@@ -152,6 +160,7 @@ export function buildModelUsageTrendSpec(modelDailyStats: ModelDailyStat[]): ISp
   if (modelDailyStats.length === 0) return null
   return {
     type: 'line',
+    title: { visible: true, text: '模型使用趋势' },
     data: [{ values: modelDailyStats.map((item) => ({ date: item.date, model: item.model_name, tokens: item.total_tokens })) }],
     xField: 'date',
     yField: 'tokens',
@@ -171,6 +180,7 @@ export function buildModelCallRankSpec(modelStats: ModelStat[]): ISpec {
   const sorted = [...modelStats].sort((a, b) => a.total_requests - b.total_requests).slice(-15)
   return {
     type: 'bar',
+    title: { visible: true, text: '模型调用排行' },
     data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_requests })) }],
     direction: 'horizontal',
     xField: 'value',
@@ -189,6 +199,7 @@ export function buildModelCostRankSpec(modelStats: ModelStat[], quotaToCnyRate: 
   const sorted = [...modelStats].sort((a, b) => a.total_quota - b.total_quota).slice(-15)
   return {
     type: 'bar',
+    title: { visible: true, text: '模型消耗排行' },
     data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_quota * quotaToCnyRate })) }],
     direction: 'horizontal',
     xField: 'value',
@@ -209,6 +220,7 @@ export function buildModelTokenDistSpec(modelStats: ModelStat[]): ISpec | null {
   const total = filtered.reduce((s, i) => s + i.total_tokens, 0)
   return {
     type: 'pie',
+    title: { visible: true, text: '模型 Token 分布' },
     data: [{ values: filtered.map((i) => ({ name: i.model_name, value: i.total_tokens })) }],
     valueField: 'value',
     categoryField: 'name',
@@ -224,6 +236,7 @@ export function buildUserRankBarSpec(rankings: UserRankingItem[]): ISpec {
   const sorted = [...rankings].sort((a, b) => b.total_cost - a.total_cost).slice(0, 10)
   return {
     type: 'bar',
+    title: { visible: true, text: '用户消耗排行 Top 10' },
     data: [{ values: sorted.map((u) => ({ name: u.display_name || u.username, value: u.total_cost })) }],
     direction: 'horizontal',
     xField: 'value',
@@ -243,6 +256,7 @@ export function buildUserRankPieSpec(rankings: UserRankingItem[]): ISpec {
   const total = sorted.reduce((s, u) => s + u.total_cost, 0)
   return {
     type: 'pie',
+    title: { visible: true, text: '用户消耗占比 Top 10' },
     data: [{ values: sorted.filter((u) => u.total_cost > 0).map((u) => ({ name: u.display_name || u.username, value: u.total_cost })) }],
     valueField: 'value',
     categoryField: 'name',

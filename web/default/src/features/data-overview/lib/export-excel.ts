@@ -95,48 +95,62 @@ export function findNodeByValue(
 
 // ── Style constants ───────────────────────────────────
 
-const HEADER_FILL: ExcelJS.Fill = {
+const TITLE_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FF4472C4' },
+  fgColor: { argb: 'FF126DF5' },
 }
-const HEADER_FONT: Partial<ExcelJS.Font> = {
+const TITLE_FONT: Partial<ExcelJS.Font> = {
   bold: true,
   color: { argb: 'FFFFFFFF' },
-  size: 11,
+  size: 14,
 }
 const SECTION_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FFD9E2F3' },
+  fgColor: { argb: 'FFF0F5FF' },
 }
-const ALT_ROW_FILL: ExcelJS.Fill = {
+const SECTION_FONT: Partial<ExcelJS.Font> = {
+  bold: true,
+  color: { argb: 'FF126DF5' },
+  size: 11,
+}
+const TABLE_HEADER_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FFF8F9FA' },
+  fgColor: { argb: 'FFF7F8FA' },
 }
-const THIN_BORDER: Partial<ExcelJS.Borders> = {
-  top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-  left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-  bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
-  right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+const TABLE_HEADER_BORDER: Partial<ExcelJS.Borders> = {
+  bottom: { style: 'thin', color: { argb: 'FFD6E4F0' } },
+}
+
+function styleTitleRow(
+  ws: ExcelJS.Worksheet,
+  text: string,
+  colSpan: number
+): void {
+  const row = ws.addRow([text])
+  const cell = row.getCell(1)
+  cell.font = TITLE_FONT
+  cell.fill = TITLE_FILL
+  cell.alignment = { vertical: 'middle', horizontal: 'center' }
+  if (colSpan > 1) ws.mergeCells(row.number, 1, row.number, colSpan)
+  row.height = 30
 }
 
 function styleHeaderRow(row: ExcelJS.Row): void {
   row.eachCell((cell) => {
-    cell.fill = HEADER_FILL
-    cell.font = HEADER_FONT
-    cell.border = THIN_BORDER
-    cell.alignment = { vertical: 'middle', horizontal: 'center' }
+    cell.fill = TABLE_HEADER_FILL
+    cell.font = { bold: true, size: 11 }
+    cell.border = TABLE_HEADER_BORDER
+    cell.alignment = { vertical: 'middle', horizontal: 'left' }
   })
-  row.height = 24
+  row.height = 22
 }
 
-function styleDataRow(row: ExcelJS.Row, alt: boolean): void {
+function styleDataRow(row: ExcelJS.Row, _alt: boolean): void {
   row.eachCell((cell) => {
-    cell.border = THIN_BORDER
-    cell.alignment = { vertical: 'middle' }
-    if (alt) cell.fill = ALT_ROW_FILL
+    cell.alignment = { vertical: 'middle', horizontal: 'left' }
   })
 }
 
@@ -148,12 +162,11 @@ function addSectionTitle(
   ws.addRow([])
   const row = ws.addRow([title])
   const cell = row.getCell(1)
-  cell.font = { bold: true, size: 12 }
+  cell.font = SECTION_FONT
   cell.fill = SECTION_FILL
-  cell.border = THIN_BORDER
   cell.alignment = { vertical: 'middle' }
   if (colSpan > 1) ws.mergeCells(row.number, 1, row.number, colSpan)
-  row.height = 28
+  row.height = 22
 }
 
 function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
@@ -187,19 +200,19 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
 function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   const ws = wb.addWorksheet(t('Data Overview'))
 
-  const titleRow = ws.addRow([`${p.departmentName} - ${t('Data Overview')}`])
-  titleRow.getCell(1).font = { bold: true, size: 16 }
-  titleRow.height = 30
-
   const timeRange = formatTimeRangeForFilename(p.startTimestamp, p.endTimestamp)
-  const tr = ws.addRow([`${t('Statistical Time')}: ${timeRange}`])
-  tr.getCell(1).font = { size: 11, color: { argb: 'FF666666' } }
+  styleTitleRow(ws, `${t('Data Overview')} — ${p.departmentName}（${timeRange}）`, 6)
   ws.addRow([])
 
-  addSectionTitle(ws, t('Overview'), 2)
+  ws.getColumn(1).width = 28
+  ws.getColumn(2).width = 16
+  ws.getColumn(3).width = 14
+  ws.getColumn(4).width = 14
+  ws.getColumn(5).width = 12
+  ws.getColumn(6).width = 14
+
+  addSectionTitle(ws, t('Overview'), 6)
   addStatsTable(ws, p.stats)
-  ws.getColumn(1).width = 22
-  ws.getColumn(2).width = 26
 
   if (p.subStats.length > 0) {
     addSectionTitle(ws, t('Sub-department Statistics'), 6)
@@ -226,12 +239,6 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
         ])
         styleDataRow(r, i % 2 === 1)
       })
-
-    ws.getColumn(1).width = 25
-    ws.getColumn(3).width = 12
-    ws.getColumn(4).width = 18
-    ws.getColumn(5).width = 15
-    ws.getColumn(6).width = 15
   }
 }
 
@@ -243,20 +250,18 @@ function buildSubDeptSheet(
 ): void {
   const ws = wb.addWorksheet(sheetName)
 
-  const titleRow = ws.addRow([
-    `${detail.departmentName} - ${t('Data Overview')}`,
-  ])
-  titleRow.getCell(1).font = { bold: true, size: 16 }
-  titleRow.height = 30
-
-  const tr = ws.addRow([`${t('Statistical Time')}: ${timeRange}`])
-  tr.getCell(1).font = { size: 11, color: { argb: 'FF666666' } }
+  styleTitleRow(ws, `${t('Data Overview')} — ${detail.departmentName}（${timeRange}）`, 6)
   ws.addRow([])
 
-  addSectionTitle(ws, t('Overview'), 2)
+  ws.getColumn(1).width = 28
+  ws.getColumn(2).width = 16
+  ws.getColumn(3).width = 14
+  ws.getColumn(4).width = 14
+  ws.getColumn(5).width = 12
+  ws.getColumn(6).width = 14
+
+  addSectionTitle(ws, t('Overview'), 6)
   addStatsTable(ws, detail.stats)
-  ws.getColumn(1).width = 22
-  ws.getColumn(2).width = 26
 
   if (detail.subStats.length > 0) {
     addSectionTitle(ws, t('Sub-department Statistics'), 6)
@@ -283,120 +288,84 @@ function buildSubDeptSheet(
         ])
         styleDataRow(r, i % 2 === 1)
       })
-
-    ws.getColumn(1).width = 25
-    ws.getColumn(3).width = 12
-    ws.getColumn(4).width = 18
-    ws.getColumn(5).width = 15
-    ws.getColumn(6).width = 15
   }
 }
 
 function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   const ws = wb.addWorksheet(t('Department User List'))
 
-  const titleRow = ws.addRow([t('Department User List')])
-  titleRow.getCell(1).font = { bold: true, size: 16 }
-  titleRow.height = 30
-
   const timeRange = formatTimeRangeForFilename(p.startTimestamp, p.endTimestamp)
-  const tr = ws.addRow([
-    `${t('Department')}: ${p.departmentName}  |  ${t('Statistical Time')}: ${timeRange}`,
-  ])
-  tr.getCell(1).font = { size: 11, color: { argb: 'FF666666' } }
+  styleTitleRow(
+    ws,
+    `${t('Department User List')} — ${p.departmentName}（${timeRange}）`,
+    8
+  )
   ws.addRow([])
 
-  const statusLabel = (s: number) =>
-    s === 1 ? t('Enabled') : s === 2 ? t('Disabled') : String(s)
-  const roleLabel = (r: number) => {
-    if (r >= 100) return t('Super Admin')
-    if (r >= 10) return t('Admin')
-    return t('User')
-  }
+  ws.getColumn(1).width = 14
+  ws.getColumn(2).width = 16
+  ws.getColumn(3).width = 14
+  ws.getColumn(4).width = 12
+  ws.getColumn(5).width = 22
+  ws.getColumn(6).width = 18
+  ws.getColumn(7).width = 18
+  ws.getColumn(8).width = 10
 
-  addSectionTitle(ws, t('User List'), 10)
+  addSectionTitle(ws, t('User List'), 8)
   const hdr = ws.addRow([
-    t('ID'),
-    t('Username'),
     t('Display Name'),
-    t('Department'),
     t('Total Cost'),
     t('Total Tokens'),
     t('Requests'),
     t('Common Model'),
-    t('Status'),
-    t('Role'),
+    t('Last Login'),
+    t('Created At'),
+    '注册状态',
   ])
   styleHeaderRow(hdr)
 
-  p.users.forEach((u, i) => {
-    const r = ws.addRow([
-      u.id,
-      u.username,
-      u.display_name || '',
-      u.department_name || '',
-      fmtCny(u.total_amount_cny ?? 0),
-      fmtTokens(u.total_tokens ?? 0),
-      fmtRequests(u.total_requests ?? 0),
-      u.common_model || '',
-      statusLabel(u.status),
-      roleLabel(u.role),
-    ])
-    styleDataRow(r, i % 2 === 1)
-  })
-
-  const colWidths = [8, 18, 18, 25, 15, 18, 12, 28, 10, 12]
-  colWidths.forEach((w, i) => {
-    ws.getColumn(i + 1).width = w
-  })
-
-  if (p.userRankings.length > 0) {
-    const sorted = [...p.userRankings].sort(
-      (a, b) => b.total_cost - a.total_cost
-    )
-    const top10 = sorted.slice(0, 10)
-    const totalCost = sorted.reduce((s, u) => s + u.total_cost, 0)
-
-    addSectionTitle(ws, t('User Consumption Ranking Top 10'), 4)
-    const hdr1 = ws.addRow([
-      t('Rank'),
-      t('User'),
-      t('Total Cost'),
-      t('Total Tokens'),
-    ])
-    styleHeaderRow(hdr1)
-    top10.forEach((u, i) => {
-      const r = ws.addRow([
-        i + 1,
-        u.display_name || u.username,
-        fmtCny(u.total_cost),
-        fmtTokens(u.total_tokens),
-      ])
-      styleDataRow(r, i % 2 === 1)
-    })
-
-    addSectionTitle(ws, t('User Consumption Share Top 10'), 4)
-    const hdr2 = ws.addRow([
-      t('Rank'),
-      t('User'),
-      t('Total Cost'),
-      t('Share'),
-    ])
-    styleHeaderRow(hdr2)
-    top10.forEach((u, i) => {
-      const pct =
-        totalCost > 0
-          ? ((u.total_cost / totalCost) * 100).toFixed(1) + '%'
-          : '0%'
-      const r = ws.addRow([
-        i + 1,
-        u.display_name || u.username,
-        fmtCny(u.total_cost),
-        pct,
-      ])
-      styleDataRow(r, i % 2 === 1)
-    })
+  const UNREGISTERED_FONT: Partial<ExcelJS.Font> = { color: { argb: 'FF8C8C8C' } }
+  const UNREGISTERED_FILL: ExcelJS.Fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF5F5F5' },
   }
+  const UNREGISTERED_BORDER: Partial<ExcelJS.Borders> = {
+    top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+    left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+    bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+    right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+  }
+
+  p.users.forEach((u) => {
+    const isRegistered = u.status === 1 || u.status === 2
+    const row = ws.addRow([
+      u.display_name || u.username || '-',
+      isRegistered ? fmtCny(u.total_amount_cny ?? 0) : '-',
+      isRegistered ? fmtTokens(u.total_tokens ?? 0) : '-',
+      isRegistered ? fmtRequests(u.total_requests ?? 0) : '-',
+      isRegistered ? (u.common_model || '-') : '-',
+      isRegistered && u.last_login_at
+        ? dayjs.unix(u.last_login_at).format('YYYY-MM-DD HH:mm')
+        : '-',
+      isRegistered && u.created_at
+        ? dayjs.unix(u.created_at).format('YYYY-MM-DD HH:mm')
+        : '-',
+      isRegistered ? '已注册' : '未注册',
+    ])
+
+    if (!isRegistered) {
+      for (let col = 1; col <= 8; col++) {
+        row.getCell(col).font = UNREGISTERED_FONT
+        row.getCell(col).fill = UNREGISTERED_FILL
+        row.getCell(col).border = UNREGISTERED_BORDER
+      }
+    }
+
+    row.eachCell((cell) => {
+      cell.alignment = { horizontal: 'left', vertical: 'middle' }
+    })
+  })
 }
 
 // ── Public API ────────────────────────────────────────
@@ -436,11 +405,15 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
     await embedSubDeptCharts(wb, mainWs, params.subStats)
   }
 
-  if (params.userRankings.length > 0) {
-    await embedUserRankingCharts(wb, mainWs, params.userRankings)
-  }
+  await embedRightSideCharts(wb, mainWs, params.usage, params.userRankings)
 
-  await embedUsageAnalysisCharts(wb, mainWs, params.usage)
+  if (params.includeUserList) {
+    buildUserListSheet(wb, params)
+    if (params.userRankings.length > 0) {
+      const userWs = wb.getWorksheet(t('Department User List'))!
+      await embedUserRankingCharts(wb, userWs, params.userRankings)
+    }
+  }
 
   if (params.includeSubDepartments && params.subDepartmentDetails.length > 0) {
     const rawNames = params.subDepartmentDetails.map((d) => d.departmentName)
@@ -456,15 +429,7 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
       if (detail.subStats.length > 0) {
         await embedSubDeptCharts(wb, ws, detail.subStats)
       }
-      await embedUsageAnalysisCharts(wb, ws, detail.usage)
-    }
-  }
-
-  if (params.includeUserList) {
-    buildUserListSheet(wb, params)
-    if (params.userRankings.length > 0) {
-      const ws = wb.getWorksheet(t('Department User List'))!
-      await embedUserRankingCharts(wb, ws, params.userRankings)
+      await embedRightSideCharts(wb, ws, detail.usage, [])
     }
   }
 
@@ -482,60 +447,101 @@ async function embedSubDeptCharts(
   ws: ExcelJS.Worksheet,
   subStats: SubDepartmentStat[]
 ): Promise<void> {
-  const barSpec = buildSubDeptBarSpec(subStats)
-  const barImg = await renderChartToBase64(barSpec, 560, Math.max(240, subStats.length * 34))
-  const pieSpec = buildSubDeptPieSpec(subStats)
-  const pieImg = await renderChartToBase64(pieSpec, 480, 360)
-
+  const imgWidth = 560
   const startRow = ws.rowCount + 2
-  addImageToSheet(wb, ws, barImg, startRow, 0, 560, Math.max(240, subStats.length * 34))
-  addImageToSheet(wb, ws, pieImg, startRow, 4, 480, 360)
+  let row = startRow
+
+  const barHeight = Math.max(280, subStats.length * 34)
+  const barSpec = buildSubDeptBarSpec(subStats)
+  const barImg = await renderChartToBase64(barSpec, imgWidth, barHeight)
+  addImageToSheet(wb, ws, barImg, row, 0, imgWidth, barHeight)
+  row += Math.ceil(barHeight / 18) + 2
+
+  const pieHeight = 360
+  const pieSpec = buildSubDeptPieSpec(subStats)
+  const pieImg = await renderChartToBase64(pieSpec, imgWidth, pieHeight)
+  addImageToSheet(wb, ws, pieImg, row, 0, imgWidth, pieHeight)
 }
 
-async function embedUsageAnalysisCharts(
+async function embedRightSideCharts(
   wb: ExcelJS.Workbook,
   ws: ExcelJS.Worksheet,
-  usage: UsageAnalysis
+  usage: UsageAnalysis,
+  rankings: UserRankingItem[]
 ): Promise<void> {
-  const W = 560
-  const H = 300
-  let row = ws.rowCount + 2
+  const rightCol = 7
+  const imgWidth = 560
+  const imgHeight = 360
+  const rowSpacing = Math.ceil(imgHeight / 18) + 2
+  let row = 3
+
+  const sectionHeaderRow = ws.getRow(row)
+  const sectionCell = sectionHeaderRow.getCell(rightCol + 1)
+  sectionCell.value = t('Usage Analysis')
+  sectionCell.font = SECTION_FONT
+  sectionCell.fill = SECTION_FILL
+  sectionCell.alignment = { vertical: 'middle' }
+  ws.mergeCells(row, rightCol + 1, row, rightCol + 8)
+  sectionHeaderRow.height = 22
+  row += 2
+
   const rate = usage.quota_to_cny || (1 / 500000)
   const dailyStats = usage.daily_stats ?? []
   const modelStats = usage.model_stats ?? []
   const modelDailyStats = usage.model_daily_stats ?? []
 
   if (dailyStats.length > 0) {
-    const img1 = await renderChartToBase64(buildQuotaTrendSpec(dailyStats, rate), W, H)
-    addImageToSheet(wb, ws, img1, row, 0, W, H)
-    const img2 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), W, H)
-    addImageToSheet(wb, ws, img2, row, 4, W, H)
-    row += Math.ceil(H / 15) + 2
+    const img1 = await renderChartToBase64(buildQuotaTrendSpec(dailyStats, rate), imgWidth, imgHeight)
+    addImageToSheet(wb, ws, img1, row, rightCol, imgWidth, imgHeight)
+    row += rowSpacing
 
-    const img3 = await renderChartToBase64(buildTokenTrendSpec(dailyStats), W, H)
-    addImageToSheet(wb, ws, img3, row, 0, W, H)
+    const img2 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), imgWidth, imgHeight)
+    addImageToSheet(wb, ws, img2, row, rightCol, imgWidth, imgHeight)
+    row += rowSpacing
+
+    const img3 = await renderChartToBase64(buildTokenTrendSpec(dailyStats), imgWidth, imgHeight)
+    addImageToSheet(wb, ws, img3, row, rightCol, imgWidth, imgHeight)
+    row += rowSpacing
 
     const modelTrendSpec = buildModelUsageTrendSpec(modelDailyStats)
     if (modelTrendSpec) {
-      const img4 = await renderChartToBase64(modelTrendSpec, W, H)
-      addImageToSheet(wb, ws, img4, row, 4, W, H)
+      const img4 = await renderChartToBase64(modelTrendSpec, imgWidth, imgHeight)
+      addImageToSheet(wb, ws, img4, row, rightCol, imgWidth, imgHeight)
+      row += rowSpacing
     }
-    row += Math.ceil(H / 15) + 2
   }
 
   if (modelStats.length > 0) {
-    const barH = Math.max(240, Math.min(modelStats.length, 15) * 30)
-    const img5 = await renderChartToBase64(buildModelCallRankSpec(modelStats), W, barH)
-    addImageToSheet(wb, ws, img5, row, 0, W, barH)
-    const img6 = await renderChartToBase64(buildModelCostRankSpec(modelStats, rate), W, barH)
-    addImageToSheet(wb, ws, img6, row, 4, W, barH)
-    row += Math.ceil(barH / 15) + 2
+    const barHeight = Math.max(280, Math.min(modelStats.length, 15) * 30)
+    const barRowSpacing = Math.ceil(barHeight / 18) + 2
+
+    const img5 = await renderChartToBase64(buildModelCallRankSpec(modelStats), imgWidth, barHeight)
+    addImageToSheet(wb, ws, img5, row, rightCol, imgWidth, barHeight)
+    row += barRowSpacing
+
+    const img6 = await renderChartToBase64(buildModelCostRankSpec(modelStats, rate), imgWidth, barHeight)
+    addImageToSheet(wb, ws, img6, row, rightCol, imgWidth, barHeight)
+    row += barRowSpacing
 
     const distSpec = buildModelTokenDistSpec(modelStats)
     if (distSpec) {
-      const img7 = await renderChartToBase64(distSpec, 480, 360)
-      addImageToSheet(wb, ws, img7, row, 0, 480, 360)
+      const img7 = await renderChartToBase64(distSpec, imgWidth, imgHeight)
+      addImageToSheet(wb, ws, img7, row, rightCol, imgWidth, imgHeight)
+      row += rowSpacing
     }
+  }
+
+  if (rankings.length > 0) {
+    const barHeight = Math.max(280, Math.min(rankings.length, 10) * 34)
+    const barSpec = buildUserRankBarSpec(rankings)
+    const barImg = await renderChartToBase64(barSpec, imgWidth, barHeight)
+    addImageToSheet(wb, ws, barImg, row, rightCol, imgWidth, barHeight)
+    row += Math.ceil(barHeight / 18) + 2
+
+    const pieHeight = 360
+    const pieSpec = buildUserRankPieSpec(rankings)
+    const pieImg = await renderChartToBase64(pieSpec, imgWidth, pieHeight)
+    addImageToSheet(wb, ws, pieImg, row, rightCol, imgWidth, pieHeight)
   }
 }
 
@@ -544,14 +550,19 @@ async function embedUserRankingCharts(
   ws: ExcelJS.Worksheet,
   rankings: UserRankingItem[]
 ): Promise<void> {
-  const barSpec = buildUserRankBarSpec(rankings)
-  const barImg = await renderChartToBase64(barSpec, 560, Math.max(240, Math.min(rankings.length, 10) * 34))
-  const pieSpec = buildUserRankPieSpec(rankings)
-  const pieImg = await renderChartToBase64(pieSpec, 480, 360)
+  const imgWidth = 680
+  let row = ws.rowCount + 2
 
-  const startRow = ws.rowCount + 2
-  addImageToSheet(wb, ws, barImg, startRow, 0, 560, Math.max(240, Math.min(rankings.length, 10) * 34))
-  addImageToSheet(wb, ws, pieImg, startRow, 4, 480, 360)
+  const barHeight = Math.max(280, Math.min(rankings.length, 10) * 34)
+  const barSpec = buildUserRankBarSpec(rankings)
+  const barImg = await renderChartToBase64(barSpec, imgWidth, barHeight)
+  addImageToSheet(wb, ws, barImg, row, 0, imgWidth, barHeight)
+  row += Math.ceil(barHeight / 18) + 2
+
+  const pieHeight = 400
+  const pieSpec = buildUserRankPieSpec(rankings)
+  const pieImg = await renderChartToBase64(pieSpec, imgWidth, pieHeight)
+  addImageToSheet(wb, ws, pieImg, row, 0, imgWidth, pieHeight)
 }
 
 function addImageToSheet(
