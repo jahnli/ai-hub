@@ -21,42 +21,42 @@ const UserNameMaxLength = 20
 // User if you add sensitive fields, don't forget to clean them in setupLogin function.
 // Otherwise, the sensitive information will be saved on local storage in plain text!
 type User struct {
-	Id               int            `json:"id"`
-	Username         string         `json:"username" gorm:"unique;index" validate:"max=20"`
-	Password         string         `json:"password" gorm:"not null;" validate:"min=8,max=20"`
-	OriginalPassword string         `json:"original_password" gorm:"-:all"` // this field is only for Password change verification, don't save it to database!
-	DisplayName      string         `json:"display_name" gorm:"index" validate:"max=20"`
-	Role             int            `json:"role" gorm:"type:int;default:1"`   // admin, common
-	Status           int            `json:"status" gorm:"type:int;default:1"` // enabled, disabled
-	Email            string         `json:"email" gorm:"index" validate:"max=50"`
-	OidcId           string         `json:"oidc_id" gorm:"column:oidc_id;index"`
-	WeChatId         string         `json:"wechat_id" gorm:"column:wechat_id;index"`
-	VerificationCode string         `json:"verification_code" gorm:"-:all"`                         // this field is only for Email verification, don't save it to database!
-	AccessToken      *string        `json:"-" gorm:"type:char(32);column:access_token;uniqueIndex"` // this token is for system management
-	Quota            int            `json:"quota" gorm:"type:int;default:0"`
-	UsedQuota        int            `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
-	RequestCount     int            `json:"request_count" gorm:"type:int;default:0;"`               // request number
-	Group            string         `json:"group" gorm:"type:varchar(64);default:'default'"`
-	DeletedAt        gorm.DeletedAt `gorm:"index"`
-	Setting          string         `json:"setting" gorm:"type:text;column:setting"`
-	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
-	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
-	CreatedAt        int64          `json:"created_at" gorm:"autoCreateTime;column:created_at"`
-	LastLoginAt      int64          `json:"last_login_at" gorm:"default:0;column:last_login_at"`
-	AvatarUrl        string         `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url;default:''"`
-	OpenId           string         `json:"open_id" gorm:"type:varchar(64);column:open_id;default:''"`
-	DepartmentName   string         `json:"department_name" gorm:"type:varchar(256);column:department_name;default:''"`
-	Departments      string         `json:"departments" gorm:"type:text;column:departments;default:'[]'"`
-	JobNumber        string         `json:"job_number" gorm:"type:varchar(64);column:job_number;default:''"`
-	Description      string         `json:"description" gorm:"type:text;column:description;default:''"`
-	Gender           int            `json:"gender" gorm:"type:int;column:gender;default:0"`
-	LeaderId         string         `json:"leader_id" gorm:"type:varchar(64);column:leader_id;default:''"`
-	Mobile           string         `json:"mobile" gorm:"type:varchar(32);column:mobile;default:''"`
-	JobTitle         string         `json:"job_title" gorm:"type:varchar(128);column:job_title;default:''"`
-	BackgroundImage  string         `json:"background_image" gorm:"type:varchar(512);column:background_image;default:''"`
-	CustomFieldValues string        `json:"custom_field_values" gorm:"type:text;column:custom_field_values;default:'{}'"`
-	JoinDate          string         `json:"join_date" gorm:"type:varchar(16);column:join_date;default:''"`
-	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
+	Id                int                        `json:"id"`
+	Username          string                     `json:"username" gorm:"unique;index" validate:"max=20"`
+	Password          string                     `json:"password" gorm:"not null;" validate:"min=8,max=20"`
+	OriginalPassword  string                     `json:"original_password" gorm:"-:all"` // this field is only for Password change verification, don't save it to database!
+	DisplayName       string                     `json:"display_name" gorm:"index" validate:"max=20"`
+	Role              int                        `json:"role" gorm:"type:int;default:1"`   // admin, common
+	Status            int                        `json:"status" gorm:"type:int;default:1"` // enabled, disabled
+	Email             string                     `json:"email" gorm:"index" validate:"max=50"`
+	OidcId            string                     `json:"oidc_id" gorm:"column:oidc_id;index"`
+	WeChatId          string                     `json:"wechat_id" gorm:"column:wechat_id;index"`
+	VerificationCode  string                     `json:"verification_code" gorm:"-:all"`                         // this field is only for Email verification, don't save it to database!
+	AccessToken       *string                    `json:"-" gorm:"type:char(32);column:access_token;uniqueIndex"` // this token is for system management
+	Quota             int                        `json:"quota" gorm:"type:int;default:0"`
+	UsedQuota         int                        `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
+	RequestCount      int                        `json:"request_count" gorm:"type:int;default:0;"`               // request number
+	Group             string                     `json:"group" gorm:"type:varchar(64);default:'default'"`
+	DeletedAt         gorm.DeletedAt             `gorm:"index"`
+	Setting           string                     `json:"setting" gorm:"type:text;column:setting"`
+	Remark            string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
+	StripeCustomer    string                     `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
+	CreatedAt         int64                      `json:"created_at" gorm:"autoCreateTime;column:created_at"`
+	LastLoginAt       int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
+	AvatarUrl         string                     `json:"avatar_url" gorm:"type:varchar(512);column:avatar_url;default:''"`
+	OpenId            string                     `json:"open_id" gorm:"type:varchar(64);column:open_id;default:''"`
+	DepartmentName    string                     `json:"department_name" gorm:"type:varchar(256);column:department_name;default:''"`
+	Departments       string                     `json:"departments" gorm:"type:text;column:departments;default:'[]'"`
+	JobNumber         string                     `json:"job_number" gorm:"type:varchar(64);column:job_number;default:''"`
+	Description       string                     `json:"description" gorm:"type:text;column:description;default:''"`
+	Gender            int                        `json:"gender" gorm:"type:int;column:gender;default:0"`
+	LeaderId          string                     `json:"leader_id" gorm:"type:varchar(64);column:leader_id;default:''"`
+	Mobile            string                     `json:"mobile" gorm:"type:varchar(32);column:mobile;default:''"`
+	JobTitle          string                     `json:"job_title" gorm:"type:varchar(128);column:job_title;default:''"`
+	BackgroundImage   string                     `json:"background_image" gorm:"type:varchar(512);column:background_image;default:''"`
+	CustomFieldValues string                     `json:"custom_field_values" gorm:"type:text;column:custom_field_values;default:'{}'"`
+	JoinDate          string                     `json:"join_date" gorm:"type:varchar(16);column:join_date;default:''"`
+	AdminPermissions  map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
 }
 
 // ComputeIsDeptLeader checks whether the user's OpenId appears as a leader_id
@@ -108,7 +108,7 @@ func (user *User) SetAccessToken(token string) {
 }
 
 func (user *User) GetSetting() dto.UserSetting {
-	setting := dto.UserSetting{}
+	setting := dto.UserSetting{RecordIpLog: true}
 	if user.Setting != "" {
 		err := json.Unmarshal([]byte(user.Setting), &setting)
 		if err != nil {
@@ -372,7 +372,7 @@ func (user *User) Insert(inviterId int) error {
 
 	// 初始化用户设置，包括默认的边栏配置
 	if user.Setting == "" {
-		defaultSetting := dto.UserSetting{}
+		defaultSetting := dto.UserSetting{RecordIpLog: true}
 		user.SetSetting(defaultSetting)
 	}
 
@@ -422,7 +422,7 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 	user.Quota = common.QuotaForNewUser
 
 	if user.Setting == "" {
-		defaultSetting := dto.UserSetting{}
+		defaultSetting := dto.UserSetting{RecordIpLog: true}
 		user.SetSetting(defaultSetting)
 	}
 
@@ -602,8 +602,6 @@ func (user *User) FillUserByEmail() error {
 	return nil
 }
 
-
-
 func (user *User) FillUserByOidcId() error {
 	if user.OidcId == "" {
 		return errors.New("oidc id 为空！")
@@ -620,8 +618,6 @@ func (user *User) FillUserByWeChatId() error {
 	return nil
 }
 
-
-
 func IsEmailAlreadyTaken(email string) bool {
 	return DB.Unscoped().Where("email = ?", email).Find(&User{}).RowsAffected == 1
 }
@@ -630,13 +626,9 @@ func IsWeChatIdAlreadyTaken(wechatId string) bool {
 	return DB.Unscoped().Where("wechat_id = ?", wechatId).Find(&User{}).RowsAffected == 1
 }
 
-
-
 func IsOidcIdAlreadyTaken(oidcId string) bool {
 	return DB.Where("oidc_id = ?", oidcId).Find(&User{}).RowsAffected == 1
 }
-
-
 
 func ResetUserPasswordByEmail(email string, password string) error {
 	if email == "" || password == "" {
@@ -979,8 +971,6 @@ func GetUsernameById(id int, fromDB bool) (username string, err error) {
 
 	return username, nil
 }
-
-
 
 func RootUserExists() bool {
 	var user User
