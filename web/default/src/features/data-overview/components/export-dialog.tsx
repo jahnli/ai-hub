@@ -60,6 +60,7 @@ async function fetchAllUsers(
       end_timestamp: endTimestamp,
       page,
       page_size: pageSize,
+      include_unregistered: true,
     })
     all.push(...res.data.items)
     if (all.length >= res.data.total || res.data.items.length === 0) break
