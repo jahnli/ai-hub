@@ -17,27 +17,44 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
-import { Eye, EyeOff } from 'lucide-react'
-import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
+import { Search, Eye, EyeOff } from 'lucide-react'
+import {
+  type ChangeEvent,
+  useState,
+  useCallback,
+  useMemo,
+  lazy,
+  Suspense,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/page-transition'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
 import { ROLE } from '@/lib/roles'
+import type { TimeGranularity } from '@/lib/time'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ModelsChartPreferences } from './components/models/models-chart-preferences'
-import { ModelsFilter } from './components/models/models-filter-dialog'
 import { OverviewDashboard } from './components/overview/overview-dashboard'
-import { DEFAULT_TIME_GRANULARITY } from './constants'
+import { DEFAULT_TIME_GRANULARITY, TIME_GRANULARITY_OPTIONS } from './constants'
 import {
   buildDefaultDashboardFilters,
   getDefaultDays,
@@ -50,11 +67,11 @@ import {
   DASHBOARD_DEFAULT_SECTION,
   DASHBOARD_SECTION_IDS,
 } from './section-registry'
-import {
-  type DashboardChartPreferences,
-  type DashboardFilters,
-  type QuotaDataItem,
-  type UserChartsFilters,
+import type {
+  DashboardChartPreferences,
+  DashboardFilters,
+  QuotaDataItem,
+  UserChartsFilters,
 } from './types'
 
 const route = getRouteApi('/_authenticated/dashboard/$section')
@@ -95,12 +112,28 @@ const LazyFlowCharts = lazy(() =>
   }))
 )
 
+const LOG_STAT_CARD_FALLBACK_ITEMS = [
+  'total-quota',
+  'token-used',
+  'request-count',
+  'model-count',
+  'time-range',
+]
+
+const PERFORMANCE_FALLBACK_METRICS = [
+  'status',
+  'latency',
+  'success-rate',
+]
+
+const PERFORMANCE_FALLBACK_BADGES = ['bucket-count', 'sample-count']
+
 function LogStatCardsFallback() {
   return (
     <div className='overflow-hidden rounded-lg border'>
       <div className='divide-border/60 grid grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className='px-4 py-3.5 sm:px-5 sm:py-4'>
+        {LOG_STAT_CARD_FALLBACK_ITEMS.map((fallbackItem) => (
+          <div key={fallbackItem} className='px-4 py-3.5 sm:px-5 sm:py-4'>
             <Skeleton className='h-3.5 w-16' />
             <Skeleton className='mt-2 h-7 w-20' />
             <Skeleton className='mt-1.5 h-3.5 w-28' />
@@ -132,15 +165,15 @@ function PerformanceOverviewFallback() {
         <div className='flex items-center gap-2'>
           <Skeleton className='h-4 w-24' />
         </div>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className='flex items-center gap-1.5'>
+        {PERFORMANCE_FALLBACK_METRICS.map((fallbackMetric) => (
+          <div key={fallbackMetric} className='flex items-center gap-1.5'>
             <Skeleton className='h-3 w-14' />
             <Skeleton className='h-4 w-16' />
           </div>
         ))}
         <div className='ml-auto flex items-center gap-2'>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton key={i} className='h-5 w-28 rounded-full' />
+          {PERFORMANCE_FALLBACK_BADGES.map((fallbackBadge) => (
+            <Skeleton key={fallbackBadge} className='h-5 w-28 rounded-full' />
           ))}
         </div>
       </div>
@@ -178,6 +211,9 @@ export function Dashboard() {
   const [modelFilters, setModelFilters] = useState<DashboardFilters>(() =>
     buildDefaultDashboardFilters(getSavedChartPreferences())
   )
+  const [draftModelFilters, setDraftModelFilters] = useState<DashboardFilters>(
+    () => buildDefaultDashboardFilters(getSavedChartPreferences())
+  )
   const [userChartsFilters, setUserChartsFilters] = useState<UserChartsFilters>(
     () => {
       const granularity = getSavedGranularity()
@@ -190,13 +226,42 @@ export function Dashboard() {
   )
   const [flowSensitiveVisible, setFlowSensitiveVisible] = useState(true)
 
-  const handleFilterChange = useCallback((filters: DashboardFilters) => {
-    setModelFilters(filters)
-  }, [])
+  const handleDashboardTimeRangeChange = useCallback(
+    (range: { start?: Date; end?: Date }) => {
+      setDraftModelFilters((prev) => ({
+        ...prev,
+        start_timestamp: range.start,
+        end_timestamp: range.end,
+      }))
+    },
+    []
+  )
 
-  const handleResetFilters = useCallback(() => {
-    setModelFilters(buildDefaultDashboardFilters(chartPreferences))
-  }, [chartPreferences])
+  const handleDashboardUsernameChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const username = event.target.value
+      setDraftModelFilters((prev) => ({
+        ...prev,
+        username: username || undefined,
+      }))
+    },
+    []
+  )
+
+  const handleDashboardGranularityChange = useCallback(
+    (value: TimeGranularity | null) => {
+      if (!value) return
+      setDraftModelFilters((prev) => ({
+        ...prev,
+        time_granularity: value,
+      }))
+    },
+    []
+  )
+
+  const handleDashboardSearch = useCallback(() => {
+    setModelFilters(draftModelFilters)
+  }, [draftModelFilters])
 
   const handleDataUpdate = useCallback(
     (data: QuotaDataItem[], loading: boolean) => {
@@ -208,8 +273,10 @@ export function Dashboard() {
 
   const handleChartPreferencesChange = useCallback(
     (preferences: DashboardChartPreferences) => {
+      const defaultFilters = buildDefaultDashboardFilters(preferences)
       setChartPreferences(preferences)
-      setModelFilters(buildDefaultDashboardFilters(preferences))
+      setDraftModelFilters(defaultFilters)
+      setModelFilters(defaultFilters)
       saveChartPreferences(preferences)
     },
     []
@@ -217,6 +284,7 @@ export function Dashboard() {
 
   const meta = SECTION_META[activeSection] ?? SECTION_META.overview
   const isAdmin = Boolean(userRole && userRole >= ROLE.ADMIN)
+  const isSuperAdmin = Boolean(userRole && userRole >= ROLE.SUPER_ADMIN)
   const visibleSections = useMemo(
     () =>
       DASHBOARD_SECTION_IDS.filter(
@@ -235,24 +303,70 @@ export function Dashboard() {
   )
   const showSectionTabs =
     activeSection !== 'overview' && visibleSections.length > 1
+  const dashboardFilterControls = (
+    <>
+      <CompactDateTimeRangePicker
+        start={draftModelFilters.start_timestamp}
+        end={draftModelFilters.end_timestamp}
+        onChange={handleDashboardTimeRangeChange}
+        className='h-8 w-full sm:w-[18rem] lg:w-[24rem]'
+      />
+      {isSuperAdmin && (
+        <Input
+          value={draftModelFilters.username ?? ''}
+          onChange={handleDashboardUsernameChange}
+          placeholder={t('Filter by username')}
+          aria-label={t('Username')}
+          className='h-8 w-full sm:w-44'
+        />
+      )}
+      <Select
+        items={TIME_GRANULARITY_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(option.label),
+        }))}
+        value={draftModelFilters.time_granularity ?? DEFAULT_TIME_GRANULARITY}
+        onValueChange={handleDashboardGranularityChange}
+      >
+        <SelectTrigger
+          aria-label={t('Time Granularity')}
+          className='h-8 w-full gap-2 sm:w-36'
+        >
+          <span className='text-muted-foreground shrink-0'>
+            {t('Time Granularity')}
+          </span>
+          <SelectValue placeholder={t('Time Granularity')} />
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false}>
+          <SelectGroup>
+            {TIME_GRANULARITY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {t(option.label)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      <Button className='h-8 gap-1.5' onClick={handleDashboardSearch}>
+        <Search className='size-3.5' />
+        {t('Search')}
+      </Button>
+    </>
+  )
   const modelActions =
     activeSection === 'models' ? (
       <>
+        {dashboardFilterControls}
         <ModelsChartPreferences
           preferences={chartPreferences}
           onPreferencesChange={handleChartPreferencesChange}
-        />
-        <ModelsFilter
-          preferences={chartPreferences}
-          currentFilters={modelFilters}
-          onFilterChange={handleFilterChange}
-          onReset={handleResetFilters}
         />
       </>
     ) : null
   const flowActions =
     activeSection === 'flow' ? (
       <>
+        {dashboardFilterControls}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -277,14 +391,6 @@ export function Dashboard() {
               : t('Show sensitive data')}
           </TooltipContent>
         </Tooltip>
-        <ModelsFilter
-          preferences={chartPreferences}
-          currentFilters={modelFilters}
-          onFilterChange={handleFilterChange}
-          onReset={handleResetFilters}
-          titleKey='Flow Filters'
-          descriptionKey='Filter the traffic flow view by time range and user.'
-        />
       </>
     ) : null
   const sectionActions = modelActions ?? flowActions
