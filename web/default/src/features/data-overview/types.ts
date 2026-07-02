@@ -86,6 +86,7 @@ export interface DepartmentUser {
   total_amount_cny: number
   total_tokens: number
   total_requests: number
+  is_registered?: boolean
   common_model?: string
   request_count: number
   group: string

@@ -1182,8 +1182,14 @@ type DepartmentUsersRequest struct {
 	PageSize            int    `json:"page_size"`
 	SortBy              string `json:"sort_by"`
 	SortOrder           string `json:"sort_order"`
+	RegistrationStatus  string `json:"registration_status"`
 	IncludeUnregistered bool   `json:"include_unregistered"`
 }
+
+const (
+	departmentRegistrationStatusRegistered   = "registered"
+	departmentRegistrationStatusUnregistered = "unregistered"
+)
 
 // DepartmentUserItem holds user info with stats for a specific time range.
 type DepartmentUserItem struct {
@@ -1192,6 +1198,7 @@ type DepartmentUserItem struct {
 	TotalTokens    int64   `json:"total_tokens"`
 	TotalRequests  int64   `json:"total_requests"`
 	CommonModel    string  `json:"common_model"`
+	IsRegistered   bool    `json:"is_registered"`
 	SubQuotaUsed   int64   `json:"sub_quota_used"`
 	SubQuotaTotal  int64   `json:"sub_quota_total"`
 }
@@ -1199,18 +1206,18 @@ type DepartmentUserItem struct {
 func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *model.User {
 	displayName := member.Name
 	if displayName == "" {
-		displayName = openID
+		displayName = "-"
 	}
 	return &model.User{
 		Id:          0,
-		Username:    openID,
+		Username:    displayName,
 		DisplayName: displayName,
 		OpenId:      openID,
 		Status:      0,
 	}
 }
 
-func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string, memberDetails map[string]feishuDeptMember, includeUnregistered bool) []DepartmentUserItem {
+func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string, memberDetails map[string]feishuDeptMember, includeUnregistered bool, registrationStatus string) []DepartmentUserItem {
 	userMap := make(map[string]*model.User, len(users))
 	for _, u := range users {
 		if u.OpenId != "" {
@@ -1226,10 +1233,13 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 		}
 		seen[openID] = true
 		if u, ok := userMap[openID]; ok {
-			result = append(result, DepartmentUserItem{User: u})
+			if registrationStatus == departmentRegistrationStatusUnregistered {
+				continue
+			}
+			result = append(result, DepartmentUserItem{User: u, IsRegistered: true})
 			continue
 		}
-		if !includeUnregistered {
+		if !includeUnregistered || registrationStatus == departmentRegistrationStatusRegistered {
 			continue
 		}
 		result = append(result, DepartmentUserItem{User: buildUnregisteredDepartmentUser(openID, memberDetails[openID])})
@@ -1238,7 +1248,7 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 }
 
 func sortDepartmentUserItems(items []DepartmentUserItem, sortBy string, sortOrder string) {
-	desc := sortOrder == "desc"
+	desc := sortOrder == "desc" || (sortBy == "" && sortOrder == "")
 	sort.Slice(items, func(i, j int) bool {
 		var less bool
 		switch sortBy {
@@ -1294,7 +1304,9 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		return nil, fmt.Errorf("get department members: %w", err)
 	}
 	memberDetails := make(map[string]feishuDeptMember)
-	if req.IncludeUnregistered {
+	includeUnregistered := req.RegistrationStatus == departmentRegistrationStatusUnregistered ||
+		(req.RegistrationStatus != departmentRegistrationStatusRegistered && req.IncludeUnregistered)
+	if includeUnregistered {
 		members, err := getAllMemberDetailsUnderDepts(token, openDeptIDs)
 		if err != nil {
 			return nil, fmt.Errorf("get department member details: %w", err)
@@ -1333,7 +1345,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 			return nil, fmt.Errorf("get users by open_ids: %w", err)
 		}
 		if len(users) == 0 {
-			allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+			allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
 			start := startIdx
 			end := start + pageSize
 			if start > len(allItems) {
@@ -1376,7 +1388,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		if usdExchangeRate <= 0 {
 			usdExchangeRate = 1
 		}
-		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
 		for i := range allItems {
 			u := allItems[i].User
 			if u.Id == 0 {
@@ -1416,7 +1428,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 	}
 
 	if len(users) == 0 {
-		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
 		start := startIdx
 		end := start + pageSize
 		if start > len(allItems) {
@@ -1465,7 +1477,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		usdExchangeRate = 1
 	}
 
-	result := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.IncludeUnregistered)
+	result := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
 	for i := range result {
 		u := result[i].User
 		if u.Id == 0 {

@@ -84,6 +84,7 @@ export async function getDepartmentUsers(params: {
   page_size: number
   sort_by?: string
   sort_order?: string
+  registration_status?: string
   include_unregistered?: boolean
 }): Promise<{ success: boolean; data: DepartmentUsersResponse }> {
   const res = await api.post<{

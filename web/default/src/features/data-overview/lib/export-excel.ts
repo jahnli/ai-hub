@@ -65,9 +65,20 @@ export function formatTimeRangeForFilename(
 }
 
 export function sanitizeSheetName(name: string): string {
-  let s = name.replace(/[/\\?*[\]]/g, '').trim()
-  if (s.length > 31) s = s.substring(0, 31)
+  let s = name.replaceAll(/[/\\?*[\]]/g, '').trim()
+  if (s.length > 31) s = s.slice(0, 31)
   return s || 'Sheet'
+}
+
+function getRequiredWorksheet(
+  wb: ExcelJS.Workbook,
+  name: string
+): ExcelJS.Worksheet {
+  const ws = wb.getWorksheet(name)
+  if (!ws) {
+    throw new Error(`Worksheet not found: ${name}`)
+  }
+  return ws
 }
 
 function ensureUniqueSheetNames(names: string[]): string[] {
@@ -78,7 +89,7 @@ function ensureUniqueSheetNames(names: string[]): string[] {
     seen.set(base, count + 1)
     if (count === 0) return base
     const suffix = ` (${count})`
-    return base.substring(0, 31 - suffix.length) + suffix
+    return base.slice(0, 31 - suffix.length) + suffix
   })
 }
 
@@ -321,7 +332,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
     t('Common Model'),
     t('Last Login'),
     t('Created At'),
-    '注册状态',
+    t('Registration Status'),
   ])
   styleHeaderRow(hdr)
 
@@ -339,7 +350,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   }
 
   p.users.forEach((u) => {
-    const isRegistered = u.status === 1 || u.status === 2
+    const isRegistered = u.is_registered !== false
     const row = ws.addRow([
       u.display_name || u.username || '-',
       isRegistered ? fmtCny(u.total_amount_cny ?? 0) : '-',
@@ -352,7 +363,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
       isRegistered && u.created_at
         ? dayjs.unix(u.created_at).format('YYYY-MM-DD HH:mm')
         : '-',
-      isRegistered ? '已注册' : '未注册',
+      isRegistered ? t('Registered') : t('Unregistered'),
     ])
 
     if (!isRegistered) {
@@ -400,7 +411,7 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
 
   buildMainSheet(wb, params)
 
-  const mainWs = wb.getWorksheet(t('Data Overview'))!
+  const mainWs = getRequiredWorksheet(wb, t('Data Overview'))
 
   let nextLeftChartRow = mainWs.rowCount + 2
   if (params.subStats.length > 0) {
@@ -416,7 +427,7 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
   if (params.includeUserList) {
     buildUserListSheet(wb, params)
     if (params.userRankings.length > 0) {
-      const userWs = wb.getWorksheet(t('Department User List'))!
+      const userWs = getRequiredWorksheet(wb, t('Department User List'))
       await embedUserRankingCharts(wb, userWs, params.userRankings)
     }
   }
@@ -431,7 +442,7 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
     for (let i = 0; i < params.subDepartmentDetails.length; i++) {
       const detail = params.subDepartmentDetails[i]
       buildSubDeptSheet(wb, sheetNames[i], detail, timeRange)
-      const ws = wb.getWorksheet(sheetNames[i])!
+      const ws = getRequiredWorksheet(wb, sheetNames[i])
       if (detail.subStats.length > 0) {
         await embedSubDeptCharts(wb, ws, detail.subStats)
       }

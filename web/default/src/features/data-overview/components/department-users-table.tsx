@@ -1,10 +1,24 @@
 import { useState, useCallback, useMemo } from 'react'
-import type { PaginationState, OnChangeFn, SortingState, ColumnDef } from '@tanstack/react-table'
+import type {
+  PaginationState,
+  OnChangeFn,
+  SortingState,
+  ColumnDef,
+  ColumnFiltersState,
+} from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, Users } from 'lucide-react'
+import { BarChart3, CheckCircle2, Funnel, UserRoundX, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   DataTablePage,
   useDataTable,
@@ -34,6 +48,26 @@ const DEPT_COLUMN_SORT_MAP: Record<string, string> = {
   status: 'status',
 }
 
+const REGISTRATION_STATUS = {
+  ALL: 'all',
+  REGISTERED: 'registered',
+  UNREGISTERED: 'unregistered',
+} as const
+
+function getRegistrationStatusFilter(
+  columnFilters: ColumnFiltersState
+): string | undefined {
+  const filterValue = columnFilters.find(
+    (filter) => filter.id === 'is_registered'
+  )?.value
+
+  if (!Array.isArray(filterValue) || filterValue.length === 0) {
+    return undefined
+  }
+
+  return String(filterValue[0])
+}
+
 export function DepartmentUsersTable({
   departmentId,
   startTimestamp,
@@ -50,30 +84,139 @@ export function DepartmentUsersTable({
   })
 
   const [statsUser, setStatsUser] = useState<DepartmentUser | null>(null)
-
-  const columns = useMemo<ColumnDef<DepartmentUser>[]>(() => [
-    ...baseColumns,
-    {
-      id: 'actions',
-      header: '',
-      size: 80,
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          variant='ghost'
-          size='sm'
-          className='h-7 gap-1 px-2 text-xs'
-          onClick={() => setStatsUser(row.original)}
-        >
-          <BarChart3 className='size-3.5' />
-          {t('Statistics')}
-        </Button>
-      ),
-    },
-  ], [baseColumns, t])
-
   const [pagination, setPagination] = usePagination()
   const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+
+  const registrationStatusFilter = getRegistrationStatusFilter(columnFilters)
+
+  const setRegistrationStatusFilterValue = useCallback(
+    (value: string) => {
+      setColumnFilters((prev) => {
+        const next = prev.filter((filter) => filter.id !== 'is_registered')
+        if (value === REGISTRATION_STATUS.ALL) {
+          return next
+        }
+        return [...next, { id: 'is_registered', value: [value] }]
+      })
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+    },
+    [setPagination]
+  )
+
+  const registrationStatusColumn = useMemo<ColumnDef<DepartmentUser>>(
+    () => ({
+      id: 'is_registered',
+      accessorFn: (row) =>
+        row.is_registered === false
+          ? REGISTRATION_STATUS.UNREGISTERED
+          : REGISTRATION_STATUS.REGISTERED,
+      header: () => (
+        <div className='flex items-center gap-1.5'>
+          <span>{t('Registration Status')}</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='icon-xs'
+                  className={
+                    registrationStatusFilter
+                      ? 'text-primary hover:text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }
+                  aria-label={t('Registration Status')}
+                />
+              }
+            >
+              <Funnel className='size-3.5' />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start' className='w-36'>
+              <DropdownMenuRadioGroup
+                value={registrationStatusFilter ?? REGISTRATION_STATUS.ALL}
+                onValueChange={setRegistrationStatusFilterValue}
+              >
+                <DropdownMenuRadioItem value={REGISTRATION_STATUS.ALL}>
+                  {t('All')}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value={REGISTRATION_STATUS.REGISTERED}>
+                  <CheckCircle2 className='text-success size-3.5' />
+                  {t('Registered')}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value={REGISTRATION_STATUS.UNREGISTERED}>
+                  <UserRoundX className='text-muted-foreground size-3.5' />
+                  {t('Unregistered')}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+      cell: ({ row }) => {
+        const isRegistered = row.original.is_registered !== false
+        return (
+          <StatusBadge
+            label={t(isRegistered ? 'Registered' : 'Unregistered')}
+            variant={isRegistered ? 'success' : 'neutral'}
+            copyable={false}
+          />
+        )
+      },
+      enableSorting: false,
+      filterFn: (row, id, value) => {
+        if (!Array.isArray(value) || value.length === 0) return true
+        return value.includes(String(row.getValue(id)))
+      },
+      size: 150,
+      meta: { mobileBadge: true },
+    }),
+    [registrationStatusFilter, setRegistrationStatusFilterValue, t]
+  )
+
+  const columns = useMemo<ColumnDef<DepartmentUser>[]>(() => {
+    const createdAtIndex = baseColumns.findIndex((column) => {
+      if (column.id === 'created_at') return true
+      return (
+        'accessorKey' in column &&
+        typeof column.accessorKey === 'string' &&
+        column.accessorKey === 'created_at'
+      )
+    })
+    const nextColumns = [...baseColumns]
+    nextColumns.splice(
+      createdAtIndex >= 0 ? createdAtIndex + 1 : nextColumns.length,
+      0,
+      registrationStatusColumn
+    )
+
+    return [
+      ...nextColumns,
+      {
+        id: 'actions',
+        header: '',
+        size: 80,
+        enableSorting: false,
+        cell: ({ row }) => {
+          if (row.original.is_registered === false) {
+            return <span className='text-muted-foreground text-sm'>-</span>
+          }
+
+          return (
+            <Button
+              variant='ghost'
+              size='sm'
+              className='h-7 gap-1 px-2 text-xs'
+              onClick={() => setStatsUser(row.original)}
+            >
+              <BarChart3 className='size-3.5' />
+              {t('Statistics')}
+            </Button>
+          )
+        },
+      },
+    ]
+  }, [baseColumns, registrationStatusColumn, t])
 
   const sortParam = sorting[0]
   const sortBy = sortParam ? (DEPT_COLUMN_SORT_MAP[sortParam.id] ?? '') : ''
@@ -93,6 +236,7 @@ export function DepartmentUsersTable({
       pagination.pageSize,
       sortBy,
       sortOrder,
+      registrationStatusFilter,
     ],
     queryFn: () =>
       getDepartmentUsers({
@@ -103,6 +247,9 @@ export function DepartmentUsersTable({
         page_size: pagination.pageSize,
         sort_by: sortBy || undefined,
         sort_order: sortOrder || undefined,
+        registration_status: registrationStatusFilter,
+        include_unregistered:
+          registrationStatusFilter !== REGISTRATION_STATUS.REGISTERED,
       }),
     enabled: !!departmentId,
     staleTime: 60 * 1000,
@@ -117,6 +264,13 @@ export function DepartmentUsersTable({
     enableRowSelection: false,
     pagination,
     onPaginationChange: setPagination,
+    columnFilters,
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters((prev) =>
+        typeof updater === 'function' ? updater(prev) : updater
+      )
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+    },
     sorting,
     onSortingChange: (updater) => {
       setSorting(updater)
