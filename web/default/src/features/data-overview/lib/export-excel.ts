@@ -473,17 +473,18 @@ async function embedRightSideCharts(
   const imgWidth = 560
   const imgHeight = 360
   const rowSpacing = Math.ceil(imgHeight / 18) + 2
-  let row = 3
+  const headerRowNumber = 4
+  let chartStartRow = 4
 
-  const sectionHeaderRow = ws.getRow(row)
+  const sectionHeaderRow = ws.getRow(headerRowNumber)
   const sectionCell = sectionHeaderRow.getCell(rightCol + 1)
   sectionCell.value = t('Usage Analysis')
   sectionCell.font = SECTION_FONT
   sectionCell.fill = SECTION_FILL
   sectionCell.alignment = { vertical: 'middle' }
-  ws.mergeCells(row, rightCol + 1, row, rightCol + 8)
+  ws.mergeCells(headerRowNumber, rightCol + 1, headerRowNumber, rightCol + 8)
   sectionHeaderRow.height = 22
-  row += 2
+  let row = chartStartRow
 
   const rate = usage.quota_to_cny || (1 / 500000)
   const dailyStats = usage.daily_stats ?? []
