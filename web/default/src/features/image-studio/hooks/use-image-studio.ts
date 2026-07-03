@@ -23,6 +23,7 @@ import {
   CUSTOM_SIZE,
   DEFAULT_ESTIMATE_MS,
   ESTIMATE_SAMPLE_SIZE,
+  MAX_IMAGE_COUNT,
 } from '../constants'
 import type {
   GeneratedImage,
@@ -50,11 +51,12 @@ function buildPayload(
   mode: StudioMode,
   referenceImages: ReferenceImage[]
 ): ImageGenerationPayload {
+  const imageCount = Math.min(MAX_IMAGE_COUNT, Math.max(1, config.n))
   const payload: ImageGenerationPayload = {
     model: config.model,
     group: config.group,
     prompt,
-    n: config.n,
+    n: imageCount,
   }
   const size = resolveSize(config)
   if (size) payload.size = size
@@ -169,7 +171,7 @@ export function useImageGeneration({
           quality: config.quality,
           moderation: config.moderation,
           outputFormat: config.outputFormat,
-          n: config.n,
+          n: payload.n ?? 1,
           images,
           referenceImages: mode === 'edit' ? referenceImages : undefined,
           usage: { durationMs },

@@ -249,6 +249,11 @@ export function ParamsPanel({
             <Plus className='size-3.5' />
           </Button>
         </div>
+        <p className='text-muted-foreground/70 text-[11px] leading-snug'>
+          {t('Up to {{count}} images per generation', {
+            count: MAX_IMAGE_COUNT,
+          })}
+        </p>
       </FieldRow>
 
       <Collapsible defaultOpen>

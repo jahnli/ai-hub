@@ -45,6 +45,7 @@ type HistoryPanelProps = {
   onDelete: (id: string) => void
   onClear: () => void
   onToggleFavorite: (id: string) => void
+  disabled?: boolean
 }
 
 export function HistoryPanel({
@@ -54,6 +55,7 @@ export function HistoryPanel({
   onDelete,
   onClear,
   onToggleFavorite,
+  disabled = false,
 }: HistoryPanelProps) {
   const { t } = useTranslation()
   const [keyword, setKeyword] = useState('')
@@ -88,6 +90,7 @@ export function HistoryPanel({
             size='icon'
             className={cn('size-7', favoritesOnly && 'text-amber-500')}
             onClick={() => setFavoritesOnly((prev) => !prev)}
+            disabled={disabled}
             aria-label={t('Show favorites only')}
           >
             <Star
@@ -103,6 +106,7 @@ export function HistoryPanel({
                     variant='ghost'
                     size='icon'
                     className='text-muted-foreground hover:text-destructive size-7'
+                    disabled={disabled}
                     aria-label={t('Clear history')}
                   >
                     <Trash2 className='size-3.5' />
@@ -137,6 +141,7 @@ export function HistoryPanel({
           onChange={(e) => setKeyword(e.target.value)}
           placeholder={t('Search prompt or model')}
           className='h-8 pl-8 text-xs'
+          disabled={disabled}
         />
       </div>
 
@@ -147,18 +152,29 @@ export function HistoryPanel({
               {t('No history yet')}
             </p>
           )}
+          {disabled && history.length > 0 && (
+            <p className='text-muted-foreground px-1 text-[11px] leading-snug'>
+              {t('History is temporarily disabled during generation')}
+            </p>
+          )}
           {filtered.map((record) => (
             <div
               key={record.id}
               className={cn(
-                'group hover:bg-muted/60 relative cursor-pointer rounded-lg border p-2 transition-colors',
+                'group relative rounded-lg border p-2 transition-colors',
+                disabled
+                  ? 'cursor-not-allowed opacity-60'
+                  : 'hover:bg-muted/60 cursor-pointer',
                 activeRecordId === record.id && 'border-primary/50 bg-muted/40'
               )}
-              onClick={() => onRestore(record)}
+              onClick={() => {
+                if (!disabled) onRestore(record)
+              }}
               role='button'
-              tabIndex={0}
+              tabIndex={disabled ? -1 : 0}
+              aria-disabled={disabled}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') onRestore(record)
+                if (!disabled && e.key === 'Enter') onRestore(record)
               }}
             >
               <div className='flex items-start gap-2'>
@@ -191,8 +207,9 @@ export function HistoryPanel({
                   )}
                   onClick={(e) => {
                     e.stopPropagation()
-                    onToggleFavorite(record.id)
+                    if (!disabled) onToggleFavorite(record.id)
                   }}
+                  disabled={disabled}
                   aria-label={t('Favorite')}
                 >
                   <Star
@@ -206,8 +223,9 @@ export function HistoryPanel({
                   className='bg-background/80 hover:text-destructive size-6'
                   onClick={(e) => {
                     e.stopPropagation()
-                    onDelete(record.id)
+                    if (!disabled) onDelete(record.id)
                   }}
+                  disabled={disabled}
                   aria-label={t('Delete')}
                 >
                   <Trash2 className='size-3' />

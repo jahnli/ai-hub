@@ -20,6 +20,7 @@ import {
   Copy,
   Download,
   ImageIcon,
+  Loader2,
   PackageOpen,
   Pencil,
   RefreshCw,
@@ -105,9 +106,13 @@ export function ResultGrid({
   if (!record) {
     return (
       <Empty className='border-none py-16'>
-        <ImageIcon className='text-muted-foreground/50 size-10' />
+        {isGenerating ? (
+          <Loader2 className='text-muted-foreground/50 size-10 animate-spin' />
+        ) : (
+          <ImageIcon className='text-muted-foreground/50 size-10' />
+        )}
         <p className='text-muted-foreground text-sm'>
-          {t('Generated images will appear here')}
+          {isGenerating ? t('Thinking...') : t('Generated images will appear here')}
         </p>
       </Empty>
     )

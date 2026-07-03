@@ -26,7 +26,7 @@ import { GeneratePanel } from './components/generate-panel'
 import { HistoryPanel } from './components/history-panel'
 import { ParamsPanel } from './components/params-panel'
 import { ResultGrid } from './components/result-grid'
-import { CUSTOM_SIZE } from './constants'
+import { CUSTOM_SIZE, MAX_IMAGE_COUNT } from './constants'
 import {
   useGenerationHistory,
   useImageGeneration,
@@ -89,22 +89,36 @@ export function ImageStudio() {
           customSizeHeight <= 3840 &&
           customSizePixelCount <= 3840 * 2160)))
 
+  const imageCountValid = config.n >= 1 && config.n <= MAX_IMAGE_COUNT
+
   const canGenerate =
     !isGenerating &&
     Boolean(config.model) &&
     prompt.trim().length > 0 &&
     customSizeValid &&
+    imageCountValid &&
     (mode === 'generate' || referenceImages.length > 0)
 
   const handleGenerate = useCallback(() => {
     if (!canGenerate) return
+    setActiveRecordId(null)
+    setGenerationError(null)
     void generate({
       config,
       prompt: prompt.trim(),
       mode,
       referenceImages,
     })
-  }, [canGenerate, generate, config, prompt, mode, referenceImages])
+  }, [
+    canGenerate,
+    setActiveRecordId,
+    setGenerationError,
+    generate,
+    config,
+    prompt,
+    mode,
+    referenceImages,
+  ])
 
   const handleRestore = useCallback(
     (record: GenerationRecord) => {
@@ -192,6 +206,7 @@ export function ImageStudio() {
           onDelete={handleDelete}
           onClear={handleClear}
           onToggleFavorite={toggleFavorite}
+          disabled={isGenerating}
         />
       </div>
       <span className='sr-only'>{t('Online Image Generation')}</span>

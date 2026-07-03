@@ -55,7 +55,7 @@ export function PromptPresets({ onSelect, disabled }: PromptPresetsProps) {
             className='gap-1.5'
           >
             <Lightbulb className='size-3.5' />
-            {t('Prompt presets')}
+            {t('Prompt reference')}
           </Button>
         }
       />

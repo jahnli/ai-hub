@@ -133,6 +133,7 @@ export const STATIC_I18N_KEYS = [
   'Rate Limiting',
   'Token Mgmt',
   'Prompt Caching',
+  'Prompt reference',
   'Pass-Through',
   'requests served',
   'AI models supported',
