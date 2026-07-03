@@ -5129,7 +5129,7 @@
     "Waffo Payment Gateway": "Cổng thanh toán Waffo",
     "Waffo Public Key (Production)": "Waffo Public Key (Sản xuất)",
     "Waffo Public Key (Sandbox)": "Khóa công khai Waffo (Sandbox)",
-    "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s",
+    "Waited {{elapsed}}s, single image {{estimate}}s": "Đã chờ {{elapsed}} giây, mỗi ảnh {{estimate}} giây",
     "Waiting": "Đang chờ",
     "Waiting for email...": "Đang chờ email...",
     "Wallet": "Ví",

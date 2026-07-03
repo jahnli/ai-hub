@@ -238,7 +238,7 @@ export function GeneratePanel({
         <div className='flex flex-col gap-1.5'>
           <Progress value={progressValue} />
           <p className='text-muted-foreground text-xs tabular-nums'>
-            {t('Waited {{elapsed}}s, estimated {{estimate}}s', {
+            {t('Waited {{elapsed}}s, single image {{estimate}}s', {
               elapsed: Math.floor(elapsedMs / 1000),
               estimate: Math.ceil(estimateMs / 1000),
             })}

@@ -5129,7 +5129,7 @@
     "Waffo Payment Gateway": "Waffo決済ゲートウェイ",
     "Waffo Public Key (Production)": "Waffo公開鍵（本番）",
     "Waffo Public Key (Sandbox)": "Waffo公開鍵（サンドボックス）",
-    "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s",
+    "Waited {{elapsed}}s, single image {{estimate}}s": "{{elapsed}}秒経過、1枚あたり{{estimate}}秒",
     "Waiting": "待機中",
     "Waiting for email...": "メールを待っています...",
     "Wallet": "ウォレット",

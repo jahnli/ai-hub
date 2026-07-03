@@ -5129,7 +5129,7 @@
     "Waffo Payment Gateway": "Passerelle de paiement Waffo",
     "Waffo Public Key (Production)": "Clé publique Waffo (Production)",
     "Waffo Public Key (Sandbox)": "Clé publique Waffo (Sandbox)",
-    "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s",
+    "Waited {{elapsed}}s, single image {{estimate}}s": "{{elapsed}} s écoulées, {{estimate}} s par image",
     "Waiting": "En attente",
     "Waiting for email...": "En attente de l'e-mail...",
     "Wallet": "Portefeuille",

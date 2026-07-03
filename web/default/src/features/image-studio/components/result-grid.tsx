@@ -28,7 +28,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type WheelEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -184,6 +184,14 @@ export function ResultGrid({
     setPreviewRotation((currentRotation) => (currentRotation + 90) % 360);
   };
 
+  const handlePreviewWheel = (event: WheelEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    setPreviewZoom((currentZoom) => {
+      const zoomDelta = event.deltaY < 0 ? 0.1 : -0.1;
+      return Math.min(Math.max(currentZoom + zoomDelta, 0.5), 3);
+    });
+  };
+
   const handleResetPreview = () => {
     setPreviewZoom(1);
     setPreviewRotation(0);
@@ -282,7 +290,10 @@ export function ResultGrid({
               className="flex h-[96vh] w-screen min-w-0 flex-col items-center justify-start px-6 pt-4 pb-3"
               onClick={handleClosePreview}
             >
-              <div className="flex min-h-0 max-w-[86vw] flex-1 items-center justify-center overflow-hidden">
+              <div
+                className="flex min-h-0 max-w-[86vw] flex-1 items-center justify-center overflow-hidden"
+                onWheel={handlePreviewWheel}
+              >
                 <img
                   src={previewImage.src}
                   alt={record.prompt.slice(0, 80)}

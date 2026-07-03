@@ -5129,7 +5129,7 @@
     "Waffo Payment Gateway": "Платёжный шлюз Waffo",
     "Waffo Public Key (Production)": "Публичный ключ Waffo (Продакшн)",
     "Waffo Public Key (Sandbox)": "Публичный ключ Waffo (Песочница)",
-    "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s",
+    "Waited {{elapsed}}s, single image {{estimate}}s": "Прошло {{elapsed}} с, на одно изображение {{estimate}} с",
     "Waiting": "Ожидание",
     "Waiting for email...": "Ожидание письма...",
     "Wallet": "Кошелек",

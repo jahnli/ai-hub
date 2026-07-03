@@ -5133,7 +5133,7 @@
     "Waffo Payment Gateway": "Waffo 支付网关",
     "Waffo Public Key (Production)": "Waffo 公钥（生产）",
     "Waffo Public Key (Sandbox)": "Waffo 公钥（沙盒）",
-    "Waited {{elapsed}}s, estimated {{estimate}}s": "已等待 {{elapsed}} 秒，预计 {{estimate}} 秒",
+    "Waited {{elapsed}}s, single image {{estimate}}s": "已等待 {{elapsed}} 秒，单图 {{estimate}} 秒",
     "Waiting": "等待中",
     "Waiting for email...": "等待电子邮件...",
     "Wallet": "钱包",

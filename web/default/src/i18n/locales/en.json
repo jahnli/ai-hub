@@ -5133,7 +5133,7 @@
     "Waffo Payment Gateway": "Waffo Payment Gateway",
     "Waffo Public Key (Production)": "Waffo Public Key (Production)",
     "Waffo Public Key (Sandbox)": "Waffo Public Key (Sandbox)",
-    "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s",
+    "Waited {{elapsed}}s, single image {{estimate}}s": "Waited {{elapsed}}s, single image {{estimate}}s",
     "Waiting": "Waiting",
     "Waiting for email...": "Waiting for email...",
     "Wallet": "Wallet",
