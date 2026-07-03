@@ -7,7 +7,6 @@
   "At most {{count}} reference images": "At most {{count}} reference images",
   "Average price per million tokens": "Average price per million tokens",
   "Average response time": "Average response time",
-  "Background": "Background",
   "Bind DN": "Bind DN",
   "Bind Password": "Bind 密码",
   "Channel test mode": "Channel test mode",
@@ -73,7 +72,6 @@
   "Price per 1M input tokens in {{currency}}.": "Price per 1M input tokens in {{currency}}.",
   "Price per 1M tokens in {{currency}}.": "Price per 1M tokens in {{currency}}.",
   "Prompt presets": "Prompt presets",
-  "Quality": "Quality",
   "Quota Consumption Trend": "Quota Consumption Trend",
   "Recent Usage Logs": "Recent Usage Logs",
   "Registered Count": "Registered Count",
@@ -113,6 +111,5 @@
   "User Consumption Share Top 10": "User Consumption Share Top 10",
   "User Statistics": "User Statistics",
   "Username or password is empty": "Username or password is empty",
-  "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s",
-  "Watermark": "Watermark"
+  "Waited {{elapsed}}s, estimated {{estimate}}s": "Waited {{elapsed}}s, estimated {{estimate}}s"
 }

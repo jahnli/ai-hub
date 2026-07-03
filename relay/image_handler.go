@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,54 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func addImageGenerationDetail(details map[string]interface{}, key string, value interface{}) {
+	if value == nil {
+		return
+	}
+
+	switch typedValue := value.(type) {
+	case string:
+		if typedValue != "" {
+			details[key] = typedValue
+		}
+	case *bool:
+		if typedValue != nil {
+			details[key] = *typedValue
+		}
+	case json.RawMessage:
+		if len(typedValue) == 0 || string(typedValue) == "null" {
+			return
+		}
+		var decodedValue interface{}
+		if err := common.Unmarshal(typedValue, &decodedValue); err == nil {
+			details[key] = decodedValue
+			return
+		}
+		details[key] = string(typedValue)
+	default:
+		details[key] = typedValue
+	}
+}
+
+func buildImageGenerationDetails(request *dto.ImageRequest, imageCount uint, quality string) map[string]interface{} {
+	details := make(map[string]interface{})
+	addImageGenerationDetail(details, "size", request.Size)
+	addImageGenerationDetail(details, "quality", quality)
+	addImageGenerationDetail(details, "count", imageCount)
+	addImageGenerationDetail(details, "response_format", request.ResponseFormat)
+	addImageGenerationDetail(details, "style", request.Style)
+	addImageGenerationDetail(details, "background", request.Background)
+	addImageGenerationDetail(details, "moderation", request.Moderation)
+	addImageGenerationDetail(details, "output_format", request.OutputFormat)
+	addImageGenerationDetail(details, "output_compression", request.OutputCompression)
+	addImageGenerationDetail(details, "partial_images", request.PartialImages)
+	addImageGenerationDetail(details, "stream", request.Stream)
+	addImageGenerationDetail(details, "input_fidelity", request.InputFidelity)
+	addImageGenerationDetail(details, "watermark", request.Watermark)
+	addImageGenerationDetail(details, "watermark_enabled", request.WatermarkEnabled)
+	return details
+}
 
 func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
 	info.InitChannelMeta(c)
@@ -156,6 +205,8 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types
 	if imageN > 0 {
 		logContent = append(logContent, fmt.Sprintf("生成数量 %d", imageN))
 	}
+
+	common.SetContextKey(c, constant.ContextKeyImageGenerationDetails, buildImageGenerationDetails(request, imageN, quality))
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), logContent)
 	return nil

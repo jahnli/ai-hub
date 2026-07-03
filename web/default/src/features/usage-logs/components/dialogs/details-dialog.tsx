@@ -399,6 +399,83 @@ function TokenBreakdown(props: { log: UsageLog; other: LogOtherData }) {
   )
 }
 
+const IMAGE_GENERATION_DETAIL_LABELS: Record<string, string> = {
+  size: 'Size',
+  quality: 'Quality',
+  count: 'Generated Images',
+  response_format: 'Response Format',
+  style: 'Style',
+  background: 'Background',
+  moderation: 'Moderation',
+  output_format: 'Output Format',
+  output_compression: 'Output Compression',
+  partial_images: 'Partial Images',
+  stream: 'Stream',
+  input_fidelity: 'Input Fidelity',
+  watermark: 'Watermark',
+  watermark_enabled: 'Watermark Enabled',
+}
+
+const IMAGE_GENERATION_DETAIL_ORDER = [
+  'size',
+  'quality',
+  'count',
+  'response_format',
+  'style',
+  'background',
+  'moderation',
+  'output_format',
+  'output_compression',
+  'partial_images',
+  'stream',
+  'input_fidelity',
+  'watermark',
+  'watermark_enabled',
+]
+
+function formatDetailValue(value: unknown): string {
+  if (value == null) return '-'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number') return value.toLocaleString()
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function ImageGenerationDetails(props: { other: LogOtherData }) {
+  const { t } = useTranslation()
+  const imageGenerationDetails = props.other.image_generation_details
+
+  if (!imageGenerationDetails) return null
+
+  const detailRecord = imageGenerationDetails as Record<string, unknown>
+  const rows = IMAGE_GENERATION_DETAIL_ORDER.flatMap((detailKey) => {
+    const detailValue = detailRecord[detailKey]
+    if (detailValue == null || detailValue === '') return []
+
+    return [
+      {
+        label: t(IMAGE_GENERATION_DETAIL_LABELS[detailKey] ?? detailKey),
+        value: formatDetailValue(detailValue),
+      },
+    ]
+  })
+
+  if (rows.length === 0) return null
+
+  return (
+    <DetailSection label={t('Image Parameters')}>
+      {rows.map((row) => (
+        <DetailRow key={row.label} label={row.label} value={row.value} mono />
+      ))}
+    </DetailSection>
+  )
+}
+
 interface DetailsDialogProps {
   log: UsageLog
   isAdmin: boolean
@@ -953,6 +1030,10 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {/* Token breakdown (for consume/error types with token data) */}
         {isDisplayableType(props.log.type) && other && (
           <TokenBreakdown log={props.log} other={other} />
+        )}
+
+        {isConsume && other?.image_generation_details && (
+          <ImageGenerationDetails other={other} />
         )}
 
         {/* Billing breakdown (consume type) */}

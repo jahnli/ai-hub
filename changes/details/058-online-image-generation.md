@@ -14,5 +14,6 @@
 - `web/default/src/hooks/use-sidebar-data.ts` — 在快捷方式分组中新增“在线生图”入口。
 - `web/default/src/routeTree.gen.ts` — 更新 TanStack Router 生成路由树。
 - `web/default/package.json`、`web/bun.lock` — 新增前端依赖以支持在线生图功能。
-- `web/default/src/i18n/locales/*.json` — 新增在线生图相关 6 语言翻译，并将原“图像工作台”文案调整为“在线生图”。
-- `web/default/src/i18n/locales/_reports/*.json` — 更新 i18n 同步报告。
+- `relay/image_handler.go`、`constant/context_key.go`、`service/text_quota.go` — 图片生成消费日志写入结构化参数详情，覆盖尺寸、品质、生成数量、背景、输出格式、输出压缩、审核敏感度、水印等配置。
+- `web/default/src/features/usage-logs/components/dialogs/details-dialog.tsx`、`web/default/src/features/usage-logs/types.ts` — 使用日志详情新增图片参数区块，按结构化字段本地化展示图片生成配置。
+- `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补齐图片参数日志详情相关 6 语言翻译并更新同步报告。

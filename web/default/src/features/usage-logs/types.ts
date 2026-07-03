@@ -176,6 +176,22 @@ export interface LogOtherData {
   audio_input_seperate_price?: boolean
   audio_input_token_count?: number
   audio_input_price?: number
+  image_generation_details?: {
+    size?: string
+    quality?: string
+    count?: number
+    response_format?: string
+    style?: unknown
+    background?: unknown
+    moderation?: unknown
+    output_format?: unknown
+    output_compression?: unknown
+    partial_images?: unknown
+    stream?: boolean
+    input_fidelity?: unknown
+    watermark?: boolean
+    watermark_enabled?: unknown
+  }
   image_generation_call?: boolean
   image_generation_call_price?: number
   is_system_prompt_overwritten?: boolean
