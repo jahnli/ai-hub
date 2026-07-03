@@ -165,7 +165,8 @@ export function HistoryPanel({
                 disabled
                   ? 'cursor-not-allowed opacity-60'
                   : 'hover:bg-muted/60 cursor-pointer',
-                activeRecordId === record.id && 'border-primary/50 bg-muted/40'
+                activeRecordId === record.id &&
+                  'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20'
               )}
               onClick={() => {
                 if (!disabled) onRestore(record)
