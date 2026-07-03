@@ -108,7 +108,7 @@ export function ResultGrid({
 
   if (!record) {
     return (
-      <Empty className="border-none py-16">
+      <Empty className="h-full min-h-[360px] border-none py-0">
         {!isGenerating && (
           <div className="from-primary/10 via-primary/5 to-background relative flex size-16 items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br shadow-sm">
             <div className="bg-primary/20 absolute -top-6 -right-6 size-12 rounded-full blur-xl" />
