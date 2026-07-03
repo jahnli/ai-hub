@@ -2105,6 +2105,8 @@
     "Generated image": "生成的图像",
     "Generated Images": "生成数量",
     "Generated images will appear here": "生成的图片将显示在这里",
+    "Enter a prompt to start generating images": "输入提示词，开始生成你的图片",
+    "Choose a model and parameters, then your results will appear here.": "选择模型和参数后，生成结果会展示在这里。",
     "Generating new codes will invalidate all existing backup codes.": "生成新代码将使所有现有备份代码失效。",
     "Generating...": "生成中...",
     "Generation quality preset": "生成质量预设",

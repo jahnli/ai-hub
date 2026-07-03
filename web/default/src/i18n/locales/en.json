@@ -2105,6 +2105,8 @@
     "Generated image": "Generated image",
     "Generated Images": "Generated Images",
     "Generated images will appear here": "Generated images will appear here",
+    "Enter a prompt to start generating images": "Enter a prompt to start generating images",
+    "Choose a model and parameters, then your results will appear here.": "Choose a model and parameters, then your results will appear here.",
     "Generating new codes will invalidate all existing backup codes.": "Generating new codes will invalidate all existing backup codes.",
     "Generating...": "Generating...",
     "Generation quality preset": "Generation quality preset",

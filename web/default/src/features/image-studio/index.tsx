@@ -157,9 +157,9 @@ export function ImageStudio() {
   }, [clearHistory, setActiveRecordId])
 
   return (
-    <div className='flex size-full min-h-0 flex-col gap-4 p-4 lg:grid lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:gap-0 lg:p-0'>
+    <div className='flex size-full min-h-0 flex-col gap-4 p-4 lg:grid lg:h-full lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:gap-0 lg:p-0'>
       {/* Params panel */}
-      <ScrollArea className='min-h-0 rounded-lg border p-3 lg:rounded-none lg:border-0 lg:border-r lg:p-4'>
+      <ScrollArea className='min-h-0 rounded-lg border p-3 lg:relative lg:h-full lg:rounded-none lg:border-0 lg:p-4 lg:after:absolute lg:after:top-1.5 lg:after:right-0 lg:after:bottom-1.5 lg:after:w-px lg:after:bg-border'>
         <ParamsPanel
           config={config}
           updateConfig={updateConfig}
@@ -198,7 +198,7 @@ export function ImageStudio() {
       </div>
 
       {/* History */}
-      <div className='min-h-64 rounded-lg border p-3 lg:min-h-0 lg:rounded-none lg:border-0 lg:border-l lg:p-4'>
+      <div className='min-h-64 rounded-lg border p-3 lg:relative lg:h-full lg:min-h-0 lg:rounded-none lg:border-0 lg:p-4 lg:before:absolute lg:before:top-1.5 lg:before:bottom-1.5 lg:before:left-0 lg:before:w-px lg:before:bg-border'>
         <HistoryPanel
           history={history}
           activeRecordId={activeRecordId}

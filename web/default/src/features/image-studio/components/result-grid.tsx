@@ -23,6 +23,7 @@ import {
   PackageOpen,
   Pencil,
   RefreshCw,
+  Sparkles,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -106,7 +107,11 @@ export function ResultGrid({
     return (
       <Empty className='border-none py-16'>
         {!isGenerating && (
-          <ImageIcon className='text-muted-foreground/50 size-10' />
+          <div className='from-primary/10 via-primary/5 to-background relative flex size-16 items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br shadow-sm'>
+            <div className='bg-primary/20 absolute -top-6 -right-6 size-12 rounded-full blur-xl' />
+            <ImageIcon className='text-primary/70 relative size-8' />
+            <Sparkles className='text-primary/60 absolute top-3 right-3 size-3.5' />
+          </div>
         )}
         <div className='text-muted-foreground flex flex-col items-center gap-2 text-sm'>
           {isGenerating ? (
@@ -121,7 +126,11 @@ export function ResultGrid({
               </span>
             </>
           ) : (
-            t('Generated images will appear here')
+            <>
+              <p className='text-foreground text-base font-medium'>
+                {t('Enter a prompt to start generating images')}
+              </p>
+            </>
           )}
         </div>
       </Empty>
