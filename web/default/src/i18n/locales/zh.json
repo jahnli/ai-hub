@@ -4571,6 +4571,7 @@
     "These toggles affect whether certain request fields are passed through to the upstream provider.": "这些开关控制某些请求字段是否透传到上游服务。",
     "Thinking Suffix Adapter": "思考后缀适配器",
     "Thinking to Content": "思维到内容",
+    "Thinking": "思考中",
     "Thinking...": "思考中...",
     "Third-party account bindings (read-only, managed by user in profile settings)": "第三方账户绑定（只读，由用户在个人资料设置中管理）",
     "Third-party Payment Config": "第三方支付配置",
