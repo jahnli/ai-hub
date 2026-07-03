@@ -84,12 +84,12 @@ export function PromptPresets({ onSelect, disabled }: PromptPresetsProps) {
                 key={prompt}
                 type='button'
                 onClick={() => {
-                  onSelect(prompt)
+                  onSelect(t(prompt))
                   setOpen(false)
                 }}
                 className='hover:bg-muted rounded-md p-2 text-left text-xs leading-relaxed transition-colors'
               >
-                {prompt}
+                {t(prompt)}
               </button>
             ))}
           </div>

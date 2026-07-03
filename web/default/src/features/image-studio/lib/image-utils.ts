@@ -41,10 +41,21 @@ function extensionForMime(mime: string): string {
   return 'png'
 }
 
-export function imageFileName(index: number, src: string): string {
-  const ext = src.startsWith('data:')
-    ? extensionForMime(guessMimeFromDataUrl(src))
-    : 'png'
+function extensionForOutputFormat(outputFormat: string | undefined): string | null {
+  if (outputFormat === 'webp') return 'webp'
+  if (outputFormat === 'jpeg' || outputFormat === 'jpg') return 'jpg'
+  if (outputFormat === 'png') return 'png'
+  return null
+}
+
+export function imageFileName(
+  index: number,
+  src: string,
+  outputFormat?: string
+): string {
+  const ext =
+    extensionForOutputFormat(outputFormat) ??
+    (src.startsWith('data:') ? extensionForMime(guessMimeFromDataUrl(src)) : 'png')
   return `image-${index + 1}.${ext}`
 }
 
@@ -84,7 +95,8 @@ export async function downloadImage(
 /** Bundle all images into a single zip download. Returns skipped count. */
 export async function downloadImagesAsZip(
   images: GeneratedImage[],
-  zipName: string
+  zipName: string,
+  outputFormat?: string
 ): Promise<number> {
   const zip = new JSZip()
   let skipped = 0
@@ -92,7 +104,7 @@ export async function downloadImagesAsZip(
     images.map(async (image, index) => {
       try {
         const blob = await srcToBlob(image.src)
-        zip.file(imageFileName(index, image.src), blob)
+        zip.file(imageFileName(index, image.src, outputFormat), blob)
       } catch {
         skipped += 1
       }

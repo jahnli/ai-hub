@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ImagePlus, Loader2, Square, Wand2, X } from 'lucide-react'
+import { ImagePlus, Loader2, Wand2, X } from 'lucide-react'
 import {
   useCallback,
   useEffect,
@@ -239,14 +239,14 @@ export function GeneratePanel({
           <Progress value={progressValue} />
           <p className='text-muted-foreground text-xs tabular-nums'>
             {t('Waited {{elapsed}}s, estimated {{estimate}}s', {
-              elapsed: (elapsedMs / 1000).toFixed(1),
-              estimate: (estimateMs / 1000).toFixed(0),
+              elapsed: Math.floor(elapsedMs / 1000),
+              estimate: Math.ceil(estimateMs / 1000),
             })}
           </p>
         </div>
       )}
 
-      <div className='flex items-center gap-2'>
+      <div className='flex items-center justify-end gap-2'>
         {isGenerating ? (
           <Button
             type='button'
@@ -254,7 +254,7 @@ export function GeneratePanel({
             className='border-destructive/25 text-destructive hover:bg-destructive/10 gap-1.5'
             onClick={onStop}
           >
-            <Square className='size-3.5 fill-current' />
+            <Loader2 className='size-3.5 animate-spin' />
             {t('Stop')}
           </Button>
         ) : (
@@ -267,9 +267,6 @@ export function GeneratePanel({
             <Wand2 className='size-4' />
             {t('Generate')}
           </Button>
-        )}
-        {isGenerating && (
-          <Loader2 className='text-muted-foreground size-4 animate-spin' />
         )}
         {prompt && !isGenerating && (
           <Button

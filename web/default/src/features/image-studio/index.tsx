@@ -71,9 +71,23 @@ export function ImageStudio() {
     [history, activeRecordId]
   )
 
+  const customSizeWidth = config.customWidth
+  const customSizeHeight = config.customHeight
+  const customSizeAspectRatio = customSizeWidth / customSizeHeight
+  const customSizePixelCount = customSizeWidth * customSizeHeight
+  const isGptImage2Model = config.model.toLowerCase().startsWith('gpt-image-2')
   const customSizeValid =
     config.size !== CUSTOM_SIZE ||
-    (config.customWidth > 0 && config.customHeight > 0)
+    (customSizeWidth > 0 &&
+      customSizeHeight > 0 &&
+      (!isGptImage2Model ||
+        (customSizeWidth % 16 === 0 &&
+          customSizeHeight % 16 === 0 &&
+          customSizeAspectRatio >= 1 / 3 &&
+          customSizeAspectRatio <= 3 &&
+          customSizeWidth <= 3840 &&
+          customSizeHeight <= 3840 &&
+          customSizePixelCount <= 3840 * 2160)))
 
   const canGenerate =
     !isGenerating &&

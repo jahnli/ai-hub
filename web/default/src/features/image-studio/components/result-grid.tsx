@@ -32,7 +32,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Empty } from '@/components/ui/empty'
-import { formatLogQuota, formatTokens } from '@/lib/format'
 
 import {
   copyImageToClipboard,
@@ -56,8 +55,8 @@ function UsageBar({ record }: { record: GenerationRecord }) {
   return (
     <div className='text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs'>
       <Badge variant='secondary'>{record.model}</Badge>
-      <span>{record.size}</span>
-      {record.quality && <span>{record.quality}</span>}
+      <span>{t(record.size)}</span>
+      {record.quality && <span>{t(record.quality)}</span>}
       <span>
         {t('{{count}} images', { count: record.images.length })}
       </span>
@@ -66,19 +65,6 @@ function UsageBar({ record }: { record: GenerationRecord }) {
           {t('Took {{seconds}}s', {
             seconds: (usage.durationMs / 1000).toFixed(1),
           })}
-        </span>
-      )}
-      {usage?.quota !== undefined && (
-        <span className='tabular-nums'>
-          {t('Cost')}: {formatLogQuota(usage.quota)}
-        </span>
-      )}
-      {usage?.promptTokens !== undefined && usage.promptTokens > 0 && (
-        <span className='tabular-nums'>
-          Tokens: {formatTokens(usage.promptTokens)}
-          {usage.completionTokens
-            ? ` + ${formatTokens(usage.completionTokens)}`
-            : ''}
         </span>
       )}
     </div>
@@ -130,7 +116,8 @@ export function ResultGrid({
   const handleDownloadAll = async () => {
     const skipped = await downloadImagesAsZip(
       record.images,
-      `images-${record.createdAt}`
+      `images-${record.createdAt}`,
+      record.outputFormat
     )
     if (skipped > 0) {
       toast.warning(t('{{count}} images could not be packed', { count: skipped }))
@@ -189,7 +176,10 @@ export function ResultGrid({
                 size='icon'
                 className='size-7'
                 onClick={() =>
-                  void downloadImage(image.src, imageFileName(index, image.src))
+                  void downloadImage(
+                    image.src,
+                    imageFileName(index, image.src, record.outputFormat)
+                  )
                 }
                 aria-label={t('Download')}
               >
@@ -254,7 +244,8 @@ export function ResultGrid({
                         record.images.findIndex(
                           (item) => item.id === previewImage.id
                         ),
-                        previewImage.src
+                        previewImage.src,
+                        record.outputFormat
                       )
                     )
                   }

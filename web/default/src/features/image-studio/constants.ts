@@ -41,10 +41,8 @@ export const SIZE_PRESETS = [
   '2048x2048',
 ] as const
 
-export const QUALITY_OPTIONS = [
+export const GPT_IMAGE_QUALITY_OPTIONS = [
   'auto',
-  'standard',
-  'hd',
   'low',
   'medium',
   'high',
@@ -52,7 +50,7 @@ export const QUALITY_OPTIONS = [
 
 export const MODERATION_OPTIONS = ['auto', 'low'] as const
 
-export const BACKGROUND_OPTIONS = ['auto', 'transparent', 'opaque'] as const
+export const GPT_IMAGE_2_BACKGROUND_OPTIONS = ['auto', 'opaque'] as const
 
 export const OUTPUT_FORMAT_OPTIONS = ['png', 'webp', 'jpeg'] as const
 
@@ -86,22 +84,19 @@ export const IMAGE_MODEL_KEYWORDS = [
 export const DEFAULT_CONFIG: ImageStudioConfig = {
   group: DEFAULT_GROUP,
   model: '',
-  size: '1024x1024',
+  size: 'auto',
   customWidth: 1024,
   customHeight: 1024,
-  quality: '',
-  moderation: '',
+  quality: 'auto',
+  moderation: 'auto',
   n: 1,
-  background: '',
-  outputFormat: '',
+  background: 'auto',
+  outputFormat: 'png',
   outputCompression: null,
-  style: '',
-  watermark: null,
-  seed: '',
 }
 
 /** fallback estimate (ms) when no local history exists for the model */
-export const DEFAULT_ESTIMATE_MS = 20000
+export const DEFAULT_ESTIMATE_MS = 60000
 
 /** number of recent generations used for the moving-average estimate */
 export const ESTIMATE_SAMPLE_SIZE = 5

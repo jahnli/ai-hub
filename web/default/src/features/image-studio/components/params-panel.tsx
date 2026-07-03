@@ -39,19 +39,15 @@ import {
 } from '@/components/ui/select'
 
 import {
-  BACKGROUND_OPTIONS,
   CUSTOM_SIZE,
+  GPT_IMAGE_2_BACKGROUND_OPTIONS,
+  GPT_IMAGE_QUALITY_OPTIONS,
   MAX_IMAGE_COUNT,
   MODERATION_OPTIONS,
   OUTPUT_FORMAT_OPTIONS,
-  QUALITY_OPTIONS,
   SIZE_PRESETS,
 } from '../constants'
-import type {
-  GroupOption,
-  ImageStudioConfig,
-  ModelOption,
-} from '../types'
+import type { GroupOption, ImageStudioConfig, ModelOption } from '../types'
 
 type ParamsPanelProps = {
   config: ImageStudioConfig
@@ -79,32 +75,34 @@ function FieldRow({ label, children }: { label: string; children: ReactNode }) {
 function OptionalSelect({
   value,
   options,
-  placeholder,
   onChange,
   disabled,
+  translateOptions = false,
 }: {
   value: string
   options: readonly string[]
-  placeholder: string
   onChange: (value: string) => void
   disabled?: boolean
+  translateOptions?: boolean
 }) {
   const { t } = useTranslation()
+  const displayValue = value || 'auto'
   return (
     <Select
-      value={value || 'unset'}
-      onValueChange={(v) => onChange(v === 'unset' ? '' : (v ?? ''))}
+      value={displayValue}
+      onValueChange={(nextValue) => onChange(nextValue ?? 'auto')}
       disabled={disabled}
     >
       <SelectTrigger className='w-full'>
-        <SelectValue>{value || placeholder}</SelectValue>
+        <SelectValue>
+          {translateOptions ? t(displayValue) : displayValue}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false}>
         <SelectGroup>
-          <SelectItem value='unset'>{t('Default (not sent)')}</SelectItem>
           {options.map((option) => (
             <SelectItem key={option} value={option}>
-              {option}
+              {translateOptions ? t(option) : option}
             </SelectItem>
           ))}
         </SelectGroup>
@@ -126,12 +124,9 @@ export function ParamsPanel({
   const clampCount = (value: number) =>
     Math.min(MAX_IMAGE_COUNT, Math.max(1, value))
 
-  let watermarkValue = 'unset'
-  let watermarkLabel = t('Default (not sent)')
-  if (config.watermark !== null) {
-    watermarkValue = config.watermark ? 'on' : 'off'
-    watermarkLabel = config.watermark ? t('Enabled') : t('Disabled')
-  }
+  const customSizeHelpText = t(
+    'GPT Image 2 custom sizes must be divisible by 16, within a 1:3 to 3:1 aspect ratio, and no larger than 3840×2160 total pixels.'
+  )
 
   return (
     <div className='flex flex-col gap-4'>
@@ -150,62 +145,69 @@ export function ParamsPanel({
       <FieldRow label={t('Image size')}>
         <Select
           value={config.size}
-          onValueChange={(value) => updateConfig('size', value ?? '1024x1024')}
+          onValueChange={(value) => updateConfig('size', value ?? 'auto')}
           disabled={disabled}
         >
           <SelectTrigger className='w-full'>
             <SelectValue>
-              {config.size === CUSTOM_SIZE ? t('Custom size') : config.size}
+              {config.size === CUSTOM_SIZE ? t('Custom size') : t(config.size)}
             </SelectValue>
           </SelectTrigger>
           <SelectContent alignItemWithTrigger={false}>
             <SelectGroup>
+              <SelectItem value='auto'>{t('auto')}</SelectItem>
               {SIZE_PRESETS.map((size) => (
                 <SelectItem key={size} value={size}>
                   {size}
                 </SelectItem>
               ))}
-              <SelectItem value='auto'>auto</SelectItem>
               <SelectItem value={CUSTOM_SIZE}>{t('Custom size')}</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>
         {config.size === CUSTOM_SIZE && (
-          <div className='flex items-center gap-2'>
-            <Input
-              type='number'
-              min={16}
-              max={8192}
-              value={config.customWidth}
-              onChange={(e) =>
-                updateConfig('customWidth', Number(e.target.value) || 0)
-              }
-              disabled={disabled}
-              aria-label={t('Width')}
-            />
-            <span className='text-muted-foreground text-xs'>×</span>
-            <Input
-              type='number'
-              min={16}
-              max={8192}
-              value={config.customHeight}
-              onChange={(e) =>
-                updateConfig('customHeight', Number(e.target.value) || 0)
-              }
-              disabled={disabled}
-              aria-label={t('Height')}
-            />
-          </div>
+          <>
+            <div className='flex items-center gap-2'>
+              <Input
+                type='number'
+                min={16}
+                max={3840}
+                step={16}
+                value={config.customWidth}
+                onChange={(event) =>
+                  updateConfig('customWidth', Number(event.target.value) || 0)
+                }
+                disabled={disabled}
+                aria-label={t('Width')}
+              />
+              <span className='text-muted-foreground text-xs'>×</span>
+              <Input
+                type='number'
+                min={16}
+                max={3840}
+                step={16}
+                value={config.customHeight}
+                onChange={(event) =>
+                  updateConfig('customHeight', Number(event.target.value) || 0)
+                }
+                disabled={disabled}
+                aria-label={t('Height')}
+              />
+            </div>
+            <p className='text-muted-foreground/70 text-[11px] leading-snug'>
+              {customSizeHelpText}
+            </p>
+          </>
         )}
       </FieldRow>
 
       <FieldRow label={t('Quality')}>
         <OptionalSelect
           value={config.quality}
-          options={QUALITY_OPTIONS}
-          placeholder={t('Default (not sent)')}
+          options={GPT_IMAGE_QUALITY_OPTIONS}
           onChange={(value) => updateConfig('quality', value)}
           disabled={disabled}
+          translateOptions
         />
       </FieldRow>
 
@@ -213,13 +215,10 @@ export function ParamsPanel({
         <OptionalSelect
           value={config.moderation}
           options={MODERATION_OPTIONS}
-          placeholder={t('Default (not sent)')}
           onChange={(value) => updateConfig('moderation', value)}
           disabled={disabled}
+          translateOptions
         />
-        <p className='text-muted-foreground text-[11px] leading-snug'>
-          {t('Only effective for models that support it, e.g. gpt-image-1')}
-        </p>
       </FieldRow>
 
       <FieldRow label={t('Image count')}>
@@ -252,7 +251,7 @@ export function ParamsPanel({
         </div>
       </FieldRow>
 
-      <Collapsible>
+      <Collapsible defaultOpen>
         <CollapsibleTrigger className='text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-medium transition-colors'>
           {t('Advanced parameters')}
           <ChevronDown className='size-3.5' />
@@ -261,10 +260,10 @@ export function ParamsPanel({
           <FieldRow label={t('Background')}>
             <OptionalSelect
               value={config.background}
-              options={BACKGROUND_OPTIONS}
-              placeholder={t('Default (not sent)')}
+              options={GPT_IMAGE_2_BACKGROUND_OPTIONS}
               onChange={(value) => updateConfig('background', value)}
               disabled={disabled}
+              translateOptions
             />
           </FieldRow>
 
@@ -272,70 +271,24 @@ export function ParamsPanel({
             <OptionalSelect
               value={config.outputFormat}
               options={OUTPUT_FORMAT_OPTIONS}
-              placeholder={t('Default (not sent)')}
               onChange={(value) => updateConfig('outputFormat', value)}
               disabled={disabled}
             />
           </FieldRow>
 
-          <FieldRow label={t('Output compression (0-100)')}>
+          <FieldRow label={t('Output compression')}>
             <Input
               type='number'
               min={0}
               max={100}
               value={config.outputCompression ?? ''}
-              placeholder={t('Default (not sent)')}
-              onChange={(e) =>
+              placeholder='0-100'
+              onChange={(event) =>
                 updateConfig(
                   'outputCompression',
-                  e.target.value === '' ? null : Number(e.target.value)
+                  event.target.value === '' ? null : Number(event.target.value)
                 )
               }
-              disabled={disabled}
-            />
-          </FieldRow>
-
-          <FieldRow label={t('Style')}>
-            <Input
-              value={config.style}
-              placeholder={t('e.g. vivid / natural')}
-              onChange={(e) => updateConfig('style', e.target.value)}
-              disabled={disabled}
-            />
-          </FieldRow>
-
-          <FieldRow label={t('Watermark')}>
-            <Select
-              value={watermarkValue}
-              onValueChange={(value) =>
-                updateConfig(
-                  'watermark',
-                  value === 'unset' ? null : value === 'on'
-                )
-              }
-              disabled={disabled}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue>{watermarkLabel}</SelectValue>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectGroup>
-                  <SelectItem value='unset'>
-                    {t('Default (not sent)')}
-                  </SelectItem>
-                  <SelectItem value='on'>{t('Enabled')}</SelectItem>
-                  <SelectItem value='off'>{t('Disabled')}</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </FieldRow>
-
-          <FieldRow label={t('Seed')}>
-            <Input
-              type='number'
-              value={config.seed}
-              placeholder={t('Default (not sent)')}
-              onChange={(e) => updateConfig('seed', e.target.value)}
               disabled={disabled}
             />
           </FieldRow>

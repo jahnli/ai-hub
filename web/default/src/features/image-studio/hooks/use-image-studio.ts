@@ -33,6 +33,12 @@ import type {
   StudioMode,
 } from '../types'
 
+function imageMimeTypeForOutputFormat(outputFormat: string): string {
+  if (outputFormat === 'jpeg') return 'image/jpeg'
+  if (outputFormat === 'webp') return 'image/webp'
+  return 'image/png'
+}
+
 function resolveSize(config: ImageStudioConfig): string {
   if (config.size !== CUSTOM_SIZE) return config.size
   return `${config.customWidth}x${config.customHeight}`
@@ -52,18 +58,12 @@ function buildPayload(
   }
   const size = resolveSize(config)
   if (size) payload.size = size
-  if (config.quality) payload.quality = config.quality
-  if (config.moderation) payload.moderation = config.moderation
-  if (config.background) payload.background = config.background
-  if (config.outputFormat) payload.output_format = config.outputFormat
+  payload.quality = config.quality
+  payload.moderation = config.moderation
+  payload.background = config.background
+  payload.output_format = config.outputFormat
   if (config.outputCompression !== null) {
     payload.output_compression = config.outputCompression
-  }
-  if (config.style) payload.style = config.style
-  if (config.watermark !== null) payload.watermark = config.watermark
-  if (config.seed !== '') {
-    const seed = Number(config.seed)
-    if (Number.isFinite(seed)) payload.seed = seed
   }
   // dall-e defaults to expiring URLs; request base64 so history stays valid
   if (config.model.startsWith('dall-e')) {
@@ -143,11 +143,12 @@ export function useImageGeneration({
         const { response, requestId } = await send(payload, controller.signal)
         const durationMs = Date.now() - startedAt
 
+        const imageMimeType = imageMimeTypeForOutputFormat(config.outputFormat)
         const images: GeneratedImage[] = (response.data ?? []).map(
           (item, index) => ({
             id: `${startedAt}-${index}`,
             src: item.b64_json
-              ? `data:image/png;base64,${item.b64_json}`
+              ? `data:${imageMimeType};base64,${item.b64_json}`
               : (item.url ?? ''),
             revisedPrompt: item.revised_prompt,
           })
@@ -165,8 +166,9 @@ export function useImageGeneration({
           model: config.model,
           group: config.group,
           size: resolveSize(config),
-          quality: config.quality || undefined,
-          moderation: config.moderation || undefined,
+          quality: config.quality,
+          moderation: config.moderation,
+          outputFormat: config.outputFormat,
           n: config.n,
           images,
           referenceImages: mode === 'edit' ? referenceImages : undefined,

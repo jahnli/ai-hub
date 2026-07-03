@@ -16,24 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { getUserGroups, getUserModels } from '../api'
 import { DEFAULT_CONFIG, IMAGE_MODEL_KEYWORDS } from '../constants'
 import type { GroupOption, ImageStudioConfig, ModelOption } from '../types'
-
-const CONFIG_STORAGE_KEY = 'image-studio-config'
-
-function loadStoredConfig(): ImageStudioConfig {
-  try {
-    const raw = localStorage.getItem(CONFIG_STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_CONFIG }
-    const parsed = JSON.parse(raw) as Partial<ImageStudioConfig>
-    return { ...DEFAULT_CONFIG, ...parsed }
-  } catch {
-    return { ...DEFAULT_CONFIG }
-  }
-}
 
 export function isLikelyImageModel(model: string): boolean {
   const lower = model.toLowerCase()
@@ -41,7 +28,9 @@ export function isLikelyImageModel(model: string): boolean {
 }
 
 export function useImageStudioState() {
-  const [config, setConfig] = useState<ImageStudioConfig>(loadStoredConfig)
+  const [config, setConfig] = useState<ImageStudioConfig>(() => ({
+    ...DEFAULT_CONFIG,
+  }))
   const [groups, setGroups] = useState<GroupOption[]>([])
   const [models, setModels] = useState<ModelOption[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
@@ -51,15 +40,7 @@ export function useImageStudioState() {
       key: K,
       value: ImageStudioConfig[K]
     ) => {
-      setConfig((prev) => {
-        const next = { ...prev, [key]: value }
-        try {
-          localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(next))
-        } catch {
-          /* storage quota errors are non-fatal */
-        }
-        return next
-      })
+      setConfig((prev) => ({ ...prev, [key]: value }))
     },
     []
   )
@@ -91,14 +72,21 @@ export function useImageStudioState() {
     getUserModels(config.group)
       .then((loaded) => {
         if (cancelled) return
-        setModels(loaded)
+        const imageModels = loaded.filter((model) =>
+          isLikelyImageModel(model.value)
+        )
+        setModels(imageModels)
         setConfig((prev) => {
-          if (prev.model && loaded.some((m) => m.value === prev.model)) {
+          if (
+            prev.model &&
+            imageModels.some((model) => model.value === prev.model)
+          ) {
             return prev
           }
-          const imageModel = loaded.find((m) => isLikelyImageModel(m.value))
-          const fallback = imageModel ?? loaded[0]
-          return fallback ? { ...prev, model: fallback.value } : prev
+          const fallback = imageModels[0]
+          return fallback
+            ? { ...prev, model: fallback.value }
+            : { ...prev, model: '' }
         })
       })
       .finally(() => {
@@ -112,19 +100,11 @@ export function useImageStudioState() {
     }
   }, [config.group])
 
-  // Image-capable models first, others after — user can still pick any
-  const sortedModels = useMemo(() => {
-    const imageModels = models.filter((m) => isLikelyImageModel(m.value))
-    const otherModels = models.filter((m) => !isLikelyImageModel(m.value))
-    return { imageModels, otherModels }
-  }, [models])
-
   return {
     config,
     updateConfig,
     groups,
     models,
-    sortedModels,
     isLoadingModels,
   }
 }

@@ -34,11 +34,6 @@ export interface ImageStudioConfig {
   background: string
   outputFormat: string
   outputCompression: number | null
-  style: string
-  /** null = not sent */
-  watermark: boolean | null
-  /** '' = not sent, passed through as extra field */
-  seed: string
 }
 
 export interface ModelOption {
@@ -83,6 +78,7 @@ export interface GenerationRecord {
   size: string
   quality?: string
   moderation?: string
+  outputFormat?: string
   n: number
   images: GeneratedImage[]
   referenceImages?: ReferenceImage[]
@@ -101,9 +97,6 @@ export interface ImageGenerationPayload {
   background?: string
   output_format?: string
   output_compression?: number
-  style?: string
-  watermark?: boolean
-  seed?: number
   response_format?: string
   /** edit mode: reference images as data URLs */
   image?: string[]
