@@ -50,7 +50,9 @@ type GeneratePanelProps = {
   estimateMs: number
   onGenerate: () => void
   onStop: () => void
+  onReset: () => void
   canGenerate: boolean
+  canReset: boolean
 }
 
 export function GeneratePanel({
@@ -64,7 +66,9 @@ export function GeneratePanel({
   estimateMs,
   onGenerate,
   onStop,
+  onReset,
   canGenerate,
+  canReset,
 }: GeneratePanelProps) {
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -79,7 +83,7 @@ export function GeneratePanel({
     const startedAt = Date.now()
     const timer = window.setInterval(() => {
       setElapsedMs(Date.now() - startedAt)
-    }, 200)
+    }, 100)
     return () => window.clearInterval(timer)
   }, [isGenerating])
 
@@ -238,9 +242,8 @@ export function GeneratePanel({
         <div className='flex flex-col gap-1.5'>
           <Progress value={progressValue} />
           <p className='text-muted-foreground text-xs tabular-nums'>
-            {t('Waited {{elapsed}}s, single image {{estimate}}s', {
+            {t('Waited {{elapsed}}s', {
               elapsed: Math.floor(elapsedMs / 1000),
-              estimate: Math.ceil(estimateMs / 1000),
             })}
           </p>
         </div>
@@ -268,14 +271,14 @@ export function GeneratePanel({
             {t('Generate')}
           </Button>
         )}
-        {prompt && !isGenerating && (
+        {canReset && !isGenerating && (
           <Button
             type='button'
             variant='ghost'
             size='sm'
-            onClick={() => onPromptChange('')}
+            onClick={onReset}
           >
-            {t('Clear')}
+            {t('Reset')}
           </Button>
         )}
       </div>

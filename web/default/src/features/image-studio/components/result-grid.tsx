@@ -121,11 +121,11 @@ export function ResultGrid({
             <>
               <span className="animate-pulse">{t("Thinking")}</span>
               <span className="flex h-5 items-end gap-1" aria-hidden="true">
-                <span className="bg-primary/40 h-2 w-1 animate-pulse rounded-full" />
-                <span className="bg-primary/60 h-4 w-1 animate-pulse rounded-full [animation-delay:120ms]" />
-                <span className="bg-primary/80 h-5 w-1 animate-pulse rounded-full [animation-delay:240ms]" />
-                <span className="bg-primary/60 h-3 w-1 animate-pulse rounded-full [animation-delay:360ms]" />
-                <span className="bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-delay:480ms]" />
+                <span className="bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-duration:700ms]" />
+                <span className="bg-primary/60 h-4 w-1 animate-pulse rounded-full [animation-delay:80ms] [animation-duration:700ms]" />
+                <span className="bg-primary/80 h-5 w-1 animate-pulse rounded-full [animation-delay:160ms] [animation-duration:700ms]" />
+                <span className="bg-primary/60 h-3 w-1 animate-pulse rounded-full [animation-delay:240ms] [animation-duration:700ms]" />
+                <span className="bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-delay:320ms] [animation-duration:700ms]" />
               </span>
             </>
           ) : (

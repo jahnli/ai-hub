@@ -29,6 +29,18 @@ export function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
+export async function imageSrcToDataUrl(src: string): Promise<string> {
+  if (src.startsWith('data:')) return src
+
+  const blob = await srcToBlob(src)
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
 function guessMimeFromDataUrl(src: string): string {
   const match = /^data:([^;,]+)/.exec(src)
   return match?.[1] ?? 'image/png'

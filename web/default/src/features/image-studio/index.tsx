@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -32,6 +33,7 @@ import {
   useImageGeneration,
   useImageStudioState,
 } from './hooks'
+import { imageSrcToDataUrl } from './lib/image-utils'
 import type {
   GeneratedImage,
   GenerationRecord,
@@ -99,6 +101,12 @@ export function ImageStudio() {
     imageCountValid &&
     (mode === 'generate' || referenceImages.length > 0)
 
+  const canReset =
+    prompt.length > 0 ||
+    referenceImages.length > 0 ||
+    activeRecord !== null ||
+    generationError !== null
+
   const handleGenerate = useCallback(() => {
     if (!canGenerate) return
     setActiveRecordId(null)
@@ -132,16 +140,42 @@ export function ImageStudio() {
     [setActiveRecordId, setGenerationError, updateConfig]
   )
 
-  const handleEditImage = useCallback((image: GeneratedImage) => {
-    setMode('edit')
-    setReferenceImages([
-      {
-        id: `${Date.now()}-edit`,
-        dataUrl: image.src,
-        name: 'generated-image',
-      },
-    ])
-  }, [])
+  const handleEditImage = useCallback(
+    async (image: GeneratedImage) => {
+      try {
+        const dataUrl = await imageSrcToDataUrl(image.src)
+        setMode('edit')
+        setReferenceImages([
+          {
+            id: `${Date.now()}-edit`,
+            dataUrl,
+            name: 'generated-image',
+          },
+        ])
+      } catch {
+        toast.error(t('Unable to load this image for editing'))
+      }
+    },
+    [t]
+  )
+
+  const handleModeChange = useCallback(
+    (nextMode: StudioMode) => {
+      setMode(nextMode)
+      if (
+        nextMode !== 'edit' ||
+        referenceImages.length > 0 ||
+        !activeRecord ||
+        activeRecord.images.length === 0
+      ) {
+        return
+      }
+
+      const firstGeneratedImage = activeRecord.images[0]
+      void handleEditImage(firstGeneratedImage)
+    },
+    [activeRecord, handleEditImage, referenceImages.length]
+  )
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -150,6 +184,13 @@ export function ImageStudio() {
     },
     [activeRecordId, removeRecord, setActiveRecordId]
   )
+
+  const handleReset = useCallback(() => {
+    setActiveRecordId(null)
+    setGenerationError(null)
+    setPrompt('')
+    setReferenceImages([])
+  }, [setActiveRecordId, setGenerationError])
 
   const handleClear = useCallback(() => {
     setActiveRecordId(null)
@@ -174,7 +215,7 @@ export function ImageStudio() {
       <div className='flex min-h-0 flex-col gap-4 lg:overflow-hidden lg:p-4'>
         <GeneratePanel
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={handleModeChange}
           prompt={prompt}
           onPromptChange={setPrompt}
           referenceImages={referenceImages}
@@ -183,7 +224,9 @@ export function ImageStudio() {
           estimateMs={estimateDurationMs(config.model)}
           onGenerate={handleGenerate}
           onStop={stopGeneration}
+          onReset={handleReset}
           canGenerate={canGenerate}
+          canReset={canReset}
         />
         <Separator />
         <ScrollArea className='min-h-0 flex-1'>

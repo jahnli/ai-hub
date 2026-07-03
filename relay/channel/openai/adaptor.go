@@ -2,6 +2,7 @@ package openai
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -430,7 +431,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 	switch info.RelayMode {
 	case relayconstant.RelayModeImagesEdits:
 		if isJSONRequest(c) {
-			return request, nil
+			return convertJSONImageEditRequestToMultipart(c, request)
 		}
 
 		var requestBody bytes.Buffer
@@ -565,6 +566,204 @@ func isJSONRequest(c *gin.Context) bool {
 		return false
 	}
 	return strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json")
+}
+
+func convertJSONImageEditRequestToMultipart(c *gin.Context, request dto.ImageRequest) (*bytes.Buffer, error) {
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+
+	if err := writeRequiredImageEditFields(writer, request); err != nil {
+		return nil, err
+	}
+	if err := writeOptionalImageEditFields(writer, request); err != nil {
+		return nil, err
+	}
+	if err := writeJSONImageEditImages(writer, request.Image); err != nil {
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("close multipart writer failed: %w", err)
+	}
+
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+	if c.Request.ContentLength <= 0 {
+		c.Request.ContentLength = int64(requestBody.Len())
+	}
+	return &requestBody, nil
+}
+
+func writeRequiredImageEditFields(writer *multipart.Writer, request dto.ImageRequest) error {
+	if strings.TrimSpace(request.Model) == "" {
+		return errors.New("model is required")
+	}
+	if strings.TrimSpace(request.Prompt) == "" {
+		return errors.New("prompt is required")
+	}
+	if err := writer.WriteField("model", request.Model); err != nil {
+		return err
+	}
+	return writer.WriteField("prompt", request.Prompt)
+}
+
+func writeOptionalImageEditFields(writer *multipart.Writer, request dto.ImageRequest) error {
+	if request.N != nil {
+		if err := writer.WriteField("n", fmt.Sprintf("%d", *request.N)); err != nil {
+			return err
+		}
+	}
+	if request.Size != "" {
+		if err := writer.WriteField("size", request.Size); err != nil {
+			return err
+		}
+	}
+	if request.Quality != "" {
+		if err := writer.WriteField("quality", request.Quality); err != nil {
+			return err
+		}
+	}
+	if request.ResponseFormat != "" {
+		if err := writer.WriteField("response_format", request.ResponseFormat); err != nil {
+			return err
+		}
+	}
+	return writeRawImageEditFields(writer, request)
+}
+
+func writeRawImageEditFields(writer *multipart.Writer, request dto.ImageRequest) error {
+	rawFields := map[string]json.RawMessage{
+		"background":         request.Background,
+		"moderation":         request.Moderation,
+		"output_format":      request.OutputFormat,
+		"output_compression": request.OutputCompression,
+		"partial_images":     request.PartialImages,
+		"input_fidelity":     request.InputFidelity,
+		"mask":               request.Mask,
+	}
+	for fieldName, rawValue := range rawFields {
+		fieldValue, ok := stringFromRawJSONValue(rawValue)
+		if !ok {
+			continue
+		}
+		if err := writer.WriteField(fieldName, fieldValue); err != nil {
+			return err
+		}
+	}
+	if request.Stream != nil {
+		if err := writer.WriteField("stream", fmt.Sprintf("%t", *request.Stream)); err != nil {
+			return err
+		}
+	}
+	if request.Watermark != nil {
+		if err := writer.WriteField("watermark", fmt.Sprintf("%t", *request.Watermark)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func stringFromRawJSONValue(rawValue json.RawMessage) (string, bool) {
+	if len(rawValue) == 0 || string(rawValue) == "null" {
+		return "", false
+	}
+	var stringValue string
+	if err := common.Unmarshal(rawValue, &stringValue); err == nil {
+		return stringValue, stringValue != ""
+	}
+	return string(rawValue), true
+}
+
+func writeJSONImageEditImages(writer *multipart.Writer, rawImages json.RawMessage) error {
+	imageValues, err := imageEditValuesFromRawJSON(rawImages)
+	if err != nil {
+		return err
+	}
+	if len(imageValues) == 0 {
+		return errors.New("image is required")
+	}
+	for imageIndex, imageValue := range imageValues {
+		if err := writeJSONImageEditImage(writer, imageValue, imageIndex, len(imageValues)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func imageEditValuesFromRawJSON(rawImages json.RawMessage) ([]string, error) {
+	if len(rawImages) == 0 || string(rawImages) == "null" {
+		return nil, nil
+	}
+	var imageValues []string
+	if err := common.Unmarshal(rawImages, &imageValues); err == nil {
+		return imageValues, nil
+	}
+	var imageValue string
+	if err := common.Unmarshal(rawImages, &imageValue); err != nil {
+		return nil, fmt.Errorf("invalid image field: %w", err)
+	}
+	return []string{imageValue}, nil
+}
+
+func writeJSONImageEditImage(writer *multipart.Writer, imageValue string, imageIndex int, imageCount int) error {
+	imageBytes, mimeType, err := decodeImageEditImageValue(imageValue)
+	if err != nil {
+		return fmt.Errorf("invalid image %d: %w", imageIndex, err)
+	}
+	fieldName := "image"
+	if imageCount > 1 {
+		fieldName = "image[]"
+	}
+	fileExtension := extensionForImageMimeType(mimeType)
+	partHeader := make(textproto.MIMEHeader)
+	partHeader.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="image-%d.%s"`, fieldName, imageIndex+1, fileExtension))
+	partHeader.Set("Content-Type", mimeType)
+	part, err := writer.CreatePart(partHeader)
+	if err != nil {
+		return err
+	}
+	_, err = part.Write(imageBytes)
+	return err
+}
+
+func decodeImageEditImageValue(imageValue string) ([]byte, string, error) {
+	imageValue = strings.TrimSpace(imageValue)
+	if imageValue == "" {
+		return nil, "", errors.New("empty image value")
+	}
+	mimeType := "image/png"
+	base64Value := imageValue
+	if strings.HasPrefix(imageValue, "data:") {
+		metadata, encodedData, found := strings.Cut(strings.TrimPrefix(imageValue, "data:"), ",")
+		if !found {
+			return nil, "", errors.New("invalid data URL")
+		}
+		base64Value = encodedData
+		if mediaType, _, found := strings.Cut(metadata, ";"); found && mediaType != "" {
+			mimeType = mediaType
+		} else if metadata != "" {
+			mimeType = metadata
+		}
+	}
+	imageBytes, err := base64.StdEncoding.DecodeString(base64Value)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(imageBytes) == 0 {
+		return nil, "", errors.New("empty image data")
+	}
+	return imageBytes, mimeType, nil
+}
+
+func extensionForImageMimeType(mimeType string) string {
+	switch strings.ToLower(mimeType) {
+	case "image/jpeg", "image/jpg":
+		return "jpg"
+	case "image/webp":
+		return "webp"
+	case "image/gif":
+		return "gif"
+	default:
+		return "png"
+	}
 }
 
 // detectImageMimeType determines the MIME type based on the file extension

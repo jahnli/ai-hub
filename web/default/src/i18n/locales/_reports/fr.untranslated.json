@@ -1,10 +1,12 @@
 {
   "Apps using the most tokens through AI Hub": "Apps using the most tokens through AI Hub",
+  "Choose a model and parameters, then your results will appear here.": "Choose a model and parameters, then your results will appear here.",
   "Click, drag or paste images here": "Click, drag or paste images here",
   "Copy failed, please download instead": "Copy failed, please download instead",
   "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.": "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.",
   "Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.": "Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.",
   "Describe the image you want to generate...": "Describe the image you want to generate...",
+  "Enter a prompt to start generating images": "Enter a prompt to start generating images",
   "Enter prices in {{currency}} instead of USD. Values will be converted to USD on save.": "Enter prices in {{currency}} instead of USD. Values will be converted to USD on save.",
   "Format: AccessKey|SecretKey (or just ApiKey if upstream is AI Hub)": "Format: AccessKey|SecretKey (or just ApiKey if upstream is AI Hub)",
   "How frequently the system checks auto-disabled channels for recovery": "How frequently the system checks auto-disabled channels for recovery",
