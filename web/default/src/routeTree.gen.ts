@@ -45,6 +45,7 @@ import { Route as AuthenticatedProfileIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedPlaygroundIndexRouteImport } from './routes/_authenticated/playground/index'
 import { Route as AuthenticatedModelsIndexRouteImport } from './routes/_authenticated/models/index'
 import { Route as AuthenticatedKeysIndexRouteImport } from './routes/_authenticated/keys/index'
+import { Route as AuthenticatedImageStudioIndexRouteImport } from './routes/_authenticated/image-studio/index'
 import { Route as AuthenticatedDataOverviewIndexRouteImport } from './routes/_authenticated/data-overview/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedChannelsIndexRouteImport } from './routes/_authenticated/channels/index'
@@ -256,6 +257,12 @@ const AuthenticatedKeysIndexRoute = AuthenticatedKeysIndexRouteImport.update({
   path: '/keys/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedImageStudioIndexRoute =
+  AuthenticatedImageStudioIndexRouteImport.update({
+    id: '/image-studio/',
+    path: '/image-studio/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDataOverviewIndexRoute =
   AuthenticatedDataOverviewIndexRouteImport.update({
     id: '/data-overview/',
@@ -426,6 +433,7 @@ export interface FileRoutesByFullPath {
   '/channels/': typeof AuthenticatedChannelsIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/data-overview/': typeof AuthenticatedDataOverviewIndexRoute
+  '/image-studio/': typeof AuthenticatedImageStudioIndexRoute
   '/keys/': typeof AuthenticatedKeysIndexRoute
   '/models/': typeof AuthenticatedModelsIndexRoute
   '/playground/': typeof AuthenticatedPlaygroundIndexRoute
@@ -484,6 +492,7 @@ export interface FileRoutesByTo {
   '/channels': typeof AuthenticatedChannelsIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/data-overview': typeof AuthenticatedDataOverviewIndexRoute
+  '/image-studio': typeof AuthenticatedImageStudioIndexRoute
   '/keys': typeof AuthenticatedKeysIndexRoute
   '/models': typeof AuthenticatedModelsIndexRoute
   '/playground': typeof AuthenticatedPlaygroundIndexRoute
@@ -546,6 +555,7 @@ export interface FileRoutesById {
   '/_authenticated/channels/': typeof AuthenticatedChannelsIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/data-overview/': typeof AuthenticatedDataOverviewIndexRoute
+  '/_authenticated/image-studio/': typeof AuthenticatedImageStudioIndexRoute
   '/_authenticated/keys/': typeof AuthenticatedKeysIndexRoute
   '/_authenticated/models/': typeof AuthenticatedModelsIndexRoute
   '/_authenticated/playground/': typeof AuthenticatedPlaygroundIndexRoute
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/channels/'
     | '/dashboard/'
     | '/data-overview/'
+    | '/image-studio/'
     | '/keys/'
     | '/models/'
     | '/playground/'
@@ -665,6 +676,7 @@ export interface FileRouteTypes {
     | '/channels'
     | '/dashboard'
     | '/data-overview'
+    | '/image-studio'
     | '/keys'
     | '/models'
     | '/playground'
@@ -726,6 +738,7 @@ export interface FileRouteTypes {
     | '/_authenticated/channels/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/data-overview/'
+    | '/_authenticated/image-studio/'
     | '/_authenticated/keys/'
     | '/_authenticated/models/'
     | '/_authenticated/playground/'
@@ -1027,6 +1040,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKeysIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/image-studio/': {
+      id: '/_authenticated/image-studio/'
+      path: '/image-studio'
+      fullPath: '/image-studio/'
+      preLoaderRoute: typeof AuthenticatedImageStudioIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/data-overview/': {
       id: '/_authenticated/data-overview/'
       path: '/data-overview'
@@ -1285,6 +1305,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedChannelsIndexRoute: typeof AuthenticatedChannelsIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDataOverviewIndexRoute: typeof AuthenticatedDataOverviewIndexRoute
+  AuthenticatedImageStudioIndexRoute: typeof AuthenticatedImageStudioIndexRoute
   AuthenticatedKeysIndexRoute: typeof AuthenticatedKeysIndexRoute
   AuthenticatedModelsIndexRoute: typeof AuthenticatedModelsIndexRoute
   AuthenticatedPlaygroundIndexRoute: typeof AuthenticatedPlaygroundIndexRoute
@@ -1308,6 +1329,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChannelsIndexRoute: AuthenticatedChannelsIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedDataOverviewIndexRoute: AuthenticatedDataOverviewIndexRoute,
+  AuthenticatedImageStudioIndexRoute: AuthenticatedImageStudioIndexRoute,
   AuthenticatedKeysIndexRoute: AuthenticatedKeysIndexRoute,
   AuthenticatedModelsIndexRoute: AuthenticatedModelsIndexRoute,
   AuthenticatedPlaygroundIndexRoute: AuthenticatedPlaygroundIndexRoute,
