@@ -1,17 +1,9 @@
-# AI Hub Docker Compose Configuration (1Panel 部署版)
-#
-# 前置条件：
-#   1. 已通过 1Panel 安装 PostgreSQL 和 Redis，并接入 1panel-network 网络
-#   2. 在同目录 .env 中配置 FEISHU_APP_ID / FEISHU_APP_SECRET
-#   3. docker-compose up -d 启动，服务仅监听 127.0.0.1:3000，需配合反向代理对外提供服务
-
 version: "3.4"
 
 services:
-  new-api:
-    image: quantumnous/ai-hub:latest
-    # image: jahnlis/new-api:latest  # 自建镜像，部署时可切换
-    container_name: new-api
+  ai-hub:
+    image: jahnlis/ai-hub:latest
+    container_name: ai-hub
     restart: always
     command: --log-dir /app/logs
     ports:
