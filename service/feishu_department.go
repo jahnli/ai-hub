@@ -1276,10 +1276,13 @@ func sortDepartmentUserItems(items []DepartmentUserItem, sortBy string, sortOrde
 
 // DepartmentUsersResponse holds paginated department user list.
 type DepartmentUsersResponse struct {
-	Items []DepartmentUserItem `json:"items"`
-	Total int64                `json:"total"`
-	Page  int                  `json:"page"`
-	Size  int                  `json:"page_size"`
+	Items             []DepartmentUserItem `json:"items"`
+	Total             int64                `json:"total"`
+	Page              int                  `json:"page"`
+	Size              int                  `json:"page_size"`
+	TotalUsers        int64                `json:"total_users"`
+	RegisteredUsers   int64                `json:"registered_users"`
+	UnregisteredUsers int64                `json:"unregistered_users"`
 }
 
 // GetDepartmentUsers returns paginated user list for a department with stats in the given time range.
@@ -1343,6 +1346,12 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		if err != nil {
 			return nil, fmt.Errorf("get users by open_ids: %w", err)
 		}
+		totalUsers := int64(len(memberOpenIDs))
+		registeredUsers := int64(len(users))
+		unregisteredUsers := totalUsers - registeredUsers
+		if unregisteredUsers < 0 {
+			unregisteredUsers = 0
+		}
 		if len(users) == 0 {
 			allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
 			start := startIdx
@@ -1353,7 +1362,15 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 			if end > len(allItems) {
 				end = len(allItems)
 			}
-			return &DepartmentUsersResponse{Items: allItems[start:end], Total: int64(len(allItems)), Page: page, Size: pageSize}, nil
+			return &DepartmentUsersResponse{
+				Items:             allItems[start:end],
+				Total:             int64(len(allItems)),
+				Page:              page,
+				Size:              pageSize,
+				TotalUsers:        totalUsers,
+				RegisteredUsers:   registeredUsers,
+				UnregisteredUsers: unregisteredUsers,
+			}, nil
 		}
 		ids := make([]int, len(users))
 		for i, u := range users {
@@ -1414,10 +1431,13 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 			end = len(allItems)
 		}
 		return &DepartmentUsersResponse{
-			Items: allItems[start:end],
-			Total: int64(len(allItems)),
-			Page:  page,
-			Size:  pageSize,
+			Items:             allItems[start:end],
+			Total:             int64(len(allItems)),
+			Page:              page,
+			Size:              pageSize,
+			TotalUsers:        totalUsers,
+			RegisteredUsers:   registeredUsers,
+			UnregisteredUsers: unregisteredUsers,
 		}, nil
 	}
 
@@ -1436,7 +1456,15 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		if end > len(allItems) {
 			end = len(allItems)
 		}
-		return &DepartmentUsersResponse{Items: allItems[start:end], Total: int64(len(allItems)), Page: page, Size: pageSize}, nil
+		return &DepartmentUsersResponse{
+			Items:             allItems[start:end],
+			Total:             int64(len(allItems)),
+			Page:              page,
+			Size:              pageSize,
+			TotalUsers:        int64(len(memberOpenIDs)),
+			RegisteredUsers:   0,
+			UnregisteredUsers: int64(len(memberOpenIDs)),
+		}, nil
 	}
 
 	ids := make([]int, len(users))
@@ -1504,10 +1532,13 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 	}
 
 	return &DepartmentUsersResponse{
-		Items: result[start:end],
-		Total: int64(len(result)),
-		Page:  page,
-		Size:  pageSize,
+		Items:             result[start:end],
+		Total:             int64(len(result)),
+		Page:              page,
+		Size:              pageSize,
+		TotalUsers:        int64(len(memberOpenIDs)),
+		RegisteredUsers:   int64(len(users)),
+		UnregisteredUsers: max(int64(len(memberOpenIDs)-len(users)), 0),
 	}, nil
 }
 

@@ -265,6 +265,10 @@ export function DepartmentUsersTable({
 
   const users = data?.data?.items ?? []
   const total = data?.data?.total ?? 0
+  const userSummary = data?.data
+  const totalUsers = userSummary?.total_users ?? 0
+  const registeredUsers = userSummary?.registered_users ?? 0
+  const unregisteredUsers = userSummary?.unregistered_users ?? 0
 
   const { table } = useDataTable({
     data: users,
@@ -305,9 +309,22 @@ export function DepartmentUsersTable({
   return (
     <Card className='mt-4'>
       <CardHeader className='pb-3'>
-        <CardTitle className='flex items-center gap-2 text-base'>
-          <Users className='text-primary size-5' />
-          {t('Department Users')}
+        <CardTitle className='flex flex-wrap items-center gap-2 text-base'>
+          <span className='inline-flex items-center gap-2'>
+            <Users className='text-primary size-5' />
+            {t('Department Users')}
+          </span>
+          <span className='flex flex-wrap items-center gap-1.5 text-xs font-medium'>
+            <span className='rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300'>
+              {t('Total Users')}: {totalUsers}
+            </span>
+            <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'>
+              {t('Registered')}: {registeredUsers}
+            </span>
+            <span className='rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300'>
+              {t('Unregistered')}: {unregisteredUsers}
+            </span>
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className='px-4 pb-4 pt-0'>

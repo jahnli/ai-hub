@@ -114,6 +114,9 @@ export interface DepartmentUsersResponse {
   total: number
   page: number
   page_size: number
+  total_users: number
+  registered_users: number
+  unregistered_users: number
 }
 
 export interface UserRankingItem {
