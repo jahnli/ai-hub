@@ -14,7 +14,11 @@ publish-docker-hub:
   services:
     - name: docker.m.daocloud.io/docker:27.4.1-dind
       alias: docker
+      variables:
+        DOCKER_TLS_CERTDIR: ""
+        HEALTHCHECK_TCP_PORT: "2375"
       command:
+        - "--tls=false"
         - "--registry-mirror=https://docker.m.daocloud.io"
 
   rules:
