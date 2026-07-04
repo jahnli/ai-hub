@@ -693,8 +693,12 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 	if err != nil {
 		return "", err
 	}
+	source := strings.TrimSpace(sourceNote)
+	if source == "" {
+		source = "admin"
+	}
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		_, err := CreateUserSubscriptionFromPlanTx(tx, userId, plan, "admin")
+		_, err := CreateUserSubscriptionFromPlanTx(tx, userId, plan, source)
 		return err
 	})
 	if err != nil {
