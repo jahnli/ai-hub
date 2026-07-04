@@ -38,6 +38,7 @@ import {
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
 import type { UserColumnRow } from '@/features/users/types'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { stringToColor } from '@/lib/colors'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import {
   formatLogQuota,
@@ -99,6 +100,11 @@ function getGroupRatioText(other: LogOtherData | null): string | null {
   }
 
   return null;
+}
+
+function getChannelBadgeVariant(channelId: string): StatusBadgeProps['variant'] {
+  const generatedColor = stringToColor(channelId)
+  return generatedColor === 'red' ? 'orange' : generatedColor
 }
 
 function splitQuotaDisplay(value: string): { prefix: string; amount: string } {
@@ -705,7 +711,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                 <div className="relative inline-flex w-fit items-center gap-1">
                   <StatusBadge
                     label={channelIdDisplay}
-                    autoColor={String(log.channel)}
+                    variant={getChannelBadgeVariant(String(log.channel))}
                     copyText={String(log.channel)}
                     size="sm"
                     showDot={false}
