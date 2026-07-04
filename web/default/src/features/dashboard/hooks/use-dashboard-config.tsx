@@ -44,25 +44,25 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
 
   return [
     {
-      key: 'count',
-      title: t('Total Count'),
-      description: t('Statistical count'),
-      icon: Hash,
-      getValue: (stat) => stat?.rpm ?? 0,
-    },
-    {
-      key: 'quota',
-      title: t('Total Quota'),
-      description: t('Statistical quota'),
-      icon: Coins,
-      getValue: (stat) => stat?.quota ?? 0,
-    },
-    {
       key: 'tokens',
       title: t('Total Tokens'),
       description: t('Statistical tokens'),
       icon: Layers,
       getValue: (stat) => stat?.tpm ?? 0,
+    },
+    {
+      key: 'quota',
+      title: t('Total Cost'),
+      description: t('Statistical cost'),
+      icon: Coins,
+      getValue: (stat) => stat?.quota ?? 0,
+    },
+    {
+      key: 'count',
+      title: t('Total Requests'),
+      description: t('Statistical count'),
+      icon: Hash,
+      getValue: (stat) => stat?.rpm ?? 0,
     },
     {
       key: 'avgRpm',

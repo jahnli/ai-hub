@@ -113,11 +113,11 @@ const LazyFlowCharts = lazy(() =>
 )
 
 const LOG_STAT_CARD_FALLBACK_ITEMS = [
-  'total-quota',
   'token-used',
+  'total-cost',
   'request-count',
-  'model-count',
-  'time-range',
+  'average-rpm',
+  'average-tpm',
 ]
 
 const PERFORMANCE_FALLBACK_METRICS = [

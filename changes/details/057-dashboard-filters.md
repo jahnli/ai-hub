@@ -1,10 +1,12 @@
 # 数据看板筛选优化
 
-**日期**: 2026-07-02
+**日期**: 2026-07-04
 
 ## 涉及文件
 
-- `web/default/src/features/dashboard/index.tsx` — 模型分析与 Flow 共用顶部筛选栏，支持时间范围、时间粒度和超级管理员用户名称筛选；筛选区与模块 Tab 位置互换并保持同一行显示，微调时间选择器宽度，移除模型偏好设置按钮并新增重置按钮。
+- `web/default/src/features/dashboard/index.tsx` — 模型分析与 Flow 共用顶部筛选栏，支持时间范围、时间粒度和超级管理员用户名称筛选；默认筛选时间范围改为当天；筛选区与模块 Tab 位置互换并保持同一行显示，微调时间选择器宽度，移除模型偏好设置按钮并新增重置按钮；统计卡片加载骨架屏顺序同步调整。
+- `web/default/src/features/dashboard/hooks/use-dashboard-config.tsx` — 数据看板统计卡片顺序调整为 Token、总费用、请求次数、平均 RPM、平均 TPM，并将总额度文案更名为总费用。
+- `web/default/src/features/dashboard/lib/filters.ts` — 数据看板默认时间范围从滚动 1 天改为当天 00:00:00 到 23:59:59。
 - `model/usedata.go` — 模型调用分析用户名筛选支持通过用户表匹配 username 与 display_name 后回查 quota_data。
 - `model/usedata_flow.go` — Flow 数据查询复用用户名/display_name 筛选逻辑，保持与模型分析筛选行为一致。
 - `web/default/src/i18n/locales/en.json` — 新增用户名称文案并清理数据看板筛选相关英文翻译。
