@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import {
   Hash,
   Coins,
+  DollarSign,
   Layers,
   Gauge,
   Zap,
@@ -56,6 +57,14 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       description: t('Statistical cost'),
       icon: Coins,
       getValue: (stat) => stat?.quota ?? 0,
+    },
+    {
+      key: 'avgPrice',
+      title: t('Avg Price'),
+      description: t('Average price per million tokens'),
+      icon: DollarSign,
+      getValue: (stat) =>
+        safeDivide(stat?.quota ?? 0, stat?.tpm ?? 0) * 1_000_000,
     },
     {
       key: 'count',

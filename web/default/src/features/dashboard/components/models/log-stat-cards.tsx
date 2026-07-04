@@ -132,6 +132,9 @@ export function LogStatCards(props: LogStatCardsProps) {
     if (config.key === 'quota') {
       const display = formatDashboardQuota(rawValue)
       formatted = { displayValue: display, fullValue: display }
+    } else if (config.key === 'avgPrice') {
+      const display = `${formatDashboardQuota(rawValue)}/MT`
+      formatted = { displayValue: display, fullValue: display }
     } else if (config.key === 'tokens') {
       formatted = {
         displayValue: formatTokenCount(rawValue),
@@ -157,7 +160,7 @@ export function LogStatCards(props: LogStatCardsProps) {
 
   return (
     <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
+      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-6'>
         {items.map((it, idx) => {
           const Icon = it.icon
           return (
