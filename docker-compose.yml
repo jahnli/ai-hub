@@ -14,14 +14,14 @@ services:
     environment:
       - SQL_DSN=${SQL_DSN}
       - REDIS_CONN_STRING=${REDIS_CONN_STRING}
-      - TZ=Asia/Shanghai
-      - ERROR_LOG_ENABLED=true
-      - BATCH_UPDATE_ENABLED=true
-      - PORT=3002
       - FEISHU_APP_ID=${FEISHU_APP_ID}
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
       - FEISHU_EMAIL_SUFFIX=${FEISHU_EMAIL_SUFFIX}
       - FEISHU_SUPPORT_OPEN_ID=${FEISHU_SUPPORT_OPEN_ID}
+      - TZ=Asia/Shanghai
+      - ERROR_LOG_ENABLED=true
+      - BATCH_UPDATE_ENABLED=true
+      - PORT=3002
     #      - STREAMING_TIMEOUT=300
     #      - SESSION_SECRET=random_string
     #      - SYNC_FREQUENCY=60
