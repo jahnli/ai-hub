@@ -4664,6 +4664,7 @@
     "This will delete temporary cache files that have not been used for more than 10 minutes": "Cela supprimera les fichiers de cache temporaires inutilisés depuis plus de 10 minutes",
     "This will extend the deployment by the specified hours.": "Cela prolongera le déploiement du nombre d'heures spécifié.",
     "This will permanently delete all generation history stored in this browser.": "This will permanently delete all generation history stored in this browser.",
+    "This will permanently delete generation history and stored image files.": "This will permanently delete generation history and stored image files.",
     "This will permanently delete all manually and automatically disabled channels. This action cannot be undone.": "Cela supprimera définitivement tous les canaux désactivés manuellement et automatiquement. Cette action ne peut pas être annulée.",
     "This will permanently delete API key": "Cela supprimera définitivement la clé API",
     "This will permanently delete redemption code": "Cela supprimera définitivement le code d'échange",

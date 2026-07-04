@@ -25,6 +25,7 @@ import {
   saveGeneration,
   updateGeneration,
 } from '../lib/storage'
+import { HISTORY_LIMIT } from '../constants'
 import type { GenerationRecord } from '../types'
 
 export function useGenerationHistory() {
@@ -49,7 +50,7 @@ export function useGenerationHistory() {
   }, [])
 
   const addRecord = useCallback((record: GenerationRecord) => {
-    setHistory((prev) => [record, ...prev])
+    setHistory((prev) => [record, ...prev].slice(0, HISTORY_LIMIT))
     void saveGeneration(record)
   }, [])
 

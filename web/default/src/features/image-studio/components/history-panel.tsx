@@ -118,7 +118,7 @@ export function HistoryPanel({
                   <AlertDialogTitle>{t('Clear history')}</AlertDialogTitle>
                   <AlertDialogDescription>
                     {t(
-                      'This will permanently delete all generation history stored in this browser.'
+                      'This will permanently delete generation history and stored image files.'
                     )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -192,7 +192,15 @@ export function HistoryPanel({
                     {record.prompt}
                   </p>
                   <p className='text-muted-foreground mt-1 truncate text-[10px]'>
-                    {record.model} · {record.images.length} ·{' '}
+                    {record.model} · {record.size}
+                    {record.quality && <> · {t(record.quality)}</>}
+                    {record.images[0]?.width && record.images[0]?.height && (
+                      <>
+                        {' '}
+                        · {record.images[0].width}×{record.images[0].height}
+                      </>
+                    )}{' '}
+                    · {record.images.length} ·{' '}
                     {new Date(record.createdAt).toLocaleString()}
                   </p>
                 </div>

@@ -56,8 +56,13 @@ export interface ReferenceImage {
 
 export interface GeneratedImage {
   id: string
-  /** data URL (preferred) or remote URL */
+  /** Backend-served persisted image URL. */
   src: string
+  storageId?: string
+  mimeType?: string
+  sizeBytes?: number
+  width?: number
+  height?: number
   revisedPrompt?: string
 }
 
@@ -111,6 +116,55 @@ export interface ImageApiResponseData {
 export interface ImageApiResponse {
   created?: number
   data?: ImageApiResponseData[]
+}
+
+export interface StoredImageAsset {
+  id: string
+  url: string
+  mime_type: string
+  size_bytes: number
+  width?: number
+  height?: number
+  revised_prompt?: string
+}
+
+export interface ImageStudioGenerationRecord {
+  id: string
+  created_at: number
+  mode: StudioMode
+  prompt: string
+  model: string
+  group: string
+  size: string
+  quality?: string
+  moderation?: string
+  output_format?: string
+  n: number
+  duration_ms: number
+  quota?: number
+  prompt_tokens?: number
+  completion_tokens?: number
+  favorite?: boolean
+  images: StoredImageAsset[]
+}
+
+export interface StoreImageStudioGenerationPayload {
+  id: string
+  created_at: number
+  mode: StudioMode
+  prompt: string
+  model: string
+  group: string
+  size: string
+  quality?: string
+  moderation?: string
+  output_format?: string
+  n: number
+  duration_ms: number
+  images: Array<{
+    src: string
+    revised_prompt?: string
+  }>
 }
 
 export interface PromptPreset {

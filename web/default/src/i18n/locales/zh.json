@@ -4664,6 +4664,7 @@
     "This will delete temporary cache files that have not been used for more than 10 minutes": "这将删除超过 10 分钟未使用的临时缓存文件",
     "This will extend the deployment by the specified hours.": "这将通过指定的小时数延长部署。",
     "This will permanently delete all generation history stored in this browser.": "这将永久删除保存在此浏览器中的所有生成历史。",
+    "This will permanently delete generation history and stored image files.": "这将永久删除生成历史和已存储的图片文件。",
     "This will permanently delete all manually and automatically disabled channels. This action cannot be undone.": "这将永久删除所有手动禁用和自动禁用的渠道。此操作无法撤销。",
     "This will permanently delete API key": "这将永久删除 API 密钥",
     "This will permanently delete redemption code": "这将永久删除兑换码",

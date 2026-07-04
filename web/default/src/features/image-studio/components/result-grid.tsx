@@ -56,11 +56,11 @@ type ResultGridProps = {
 function UsageBar({ record }: { record: GenerationRecord }) {
   const { t } = useTranslation();
   const usage = record.usage;
+  const firstImage = record.images[0];
+  const fileSize = formatImageFileSize(firstImage?.sizeBytes);
   return (
     <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
       <Badge variant="secondary">{record.model}</Badge>
-      <span>{t(record.size)}</span>
-      {record.quality && <span>{t(record.quality)}</span>}
       <span>{t("{{count}} images", { count: record.images.length })}</span>
       {usage && (
         <span className="tabular-nums">
@@ -69,8 +69,22 @@ function UsageBar({ record }: { record: GenerationRecord }) {
           })}
         </span>
       )}
+      <span>{t(record.size)}</span>
+      {record.quality && <span>{t(record.quality)}</span>}
+      {firstImage?.width && firstImage.height && (
+        <span className="tabular-nums">
+          {firstImage.width}×{firstImage.height}
+        </span>
+      )}
+      {fileSize && <span className="tabular-nums">{fileSize}</span>}
     </div>
   );
+}
+
+function formatImageFileSize(sizeBytes?: number): string | null {
+  if (!sizeBytes || sizeBytes <= 0) return null;
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 export function ResultGrid({

@@ -39,6 +39,17 @@ func SetApiRouter(router *gin.Engine) {
 			perfMetricsRoute.GET("", controller.GetPerfMetrics)
 		}
 		apiRouter.GET("/rankings", middleware.HeaderNavModuleAuth("rankings"), controller.GetRankings)
+		apiRouter.GET("/image-studio/assets/*path", controller.GetImageStudioImage)
+		imageStudioRoute := apiRouter.Group("/image-studio")
+		imageStudioRoute.Use(middleware.UserAuth())
+		{
+			imageStudioRoute.GET("/generations", controller.ListImageStudioGenerations)
+			imageStudioRoute.POST("/generations", controller.StoreImageStudioImages)
+			imageStudioRoute.PATCH("/generations/:id/favorite", controller.UpdateImageStudioGenerationFavorite)
+			imageStudioRoute.PATCH("/generations/:id/usage", controller.UpdateImageStudioGenerationUsage)
+			imageStudioRoute.DELETE("/generations/:id", controller.DeleteImageStudioGeneration)
+			imageStudioRoute.DELETE("/generations", controller.ClearImageStudioGenerations)
+		}
 		apiRouter.GET("/verification", middleware.EmailVerificationRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, controller.ResetPassword)
