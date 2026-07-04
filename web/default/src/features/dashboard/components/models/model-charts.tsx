@@ -16,40 +16,69 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useQuery } from '@tanstack/react-query'
 import { VChart } from '@visactor/react-vchart'
 import { PieChart as PieChartIcon } from 'lucide-react'
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Skeleton } from '@/components/ui/skeleton'
 import { useThemeCustomization } from '@/context/theme-customization-provider'
 import { useTheme } from '@/context/theme-provider'
 import {
   DEFAULT_TIME_GRANULARITY,
   MODEL_ANALYTICS_CHART_OPTIONS,
 } from '@/features/dashboard/constants'
-import { processChartData } from '@/features/dashboard/lib'
+import { getUserQuotaDataByUsers } from '@/features/dashboard/api'
+import {
+  getDefaultDays,
+  processChartData,
+  processUserChartData,
+} from '@/features/dashboard/lib'
 import type {
+  DashboardFilters,
   ModelAnalyticsChartTab,
   QuotaDataItem,
 } from '@/features/dashboard/types'
 import { useThemeRadiusPx } from '@/lib/theme-radius'
-import type { TimeGranularity } from '@/lib/time'
+import { computeTimeRange, type TimeGranularity } from '@/lib/time'
 import { VCHART_OPTION } from '@/lib/vchart'
 
 let themeManagerPromise: Promise<
   (typeof import('@visactor/vchart'))['ThemeManager']
 > | null = null
 
-type ChartSpecKey = 'spec_model_line' | 'spec_pie' | 'spec_rank_bar'
+type ModelChartSpecKey =
+  | 'spec_model_line'
+  | 'spec_pie'
+  | 'spec_rank_bar'
+  | 'spec_line'
+type UserChartSpecKey = 'spec_user_rank' | 'spec_user_trend'
 
-const CHART_SPEC_KEYS: Record<ModelAnalyticsChartTab, ChartSpecKey> = {
+const MODEL_CHART_SPEC_KEYS: Partial<
+  Record<ModelAnalyticsChartTab, ModelChartSpecKey>
+> = {
   trend: 'spec_model_line',
   proportion: 'spec_pie',
   top: 'spec_rank_bar',
+  quota: 'spec_line',
 }
+
+const USER_CHART_SPEC_KEYS: Partial<
+  Record<ModelAnalyticsChartTab, UserChartSpecKey>
+> = {
+  userRank: 'spec_user_rank',
+  userTrend: 'spec_user_trend',
+}
+
+const USER_ANALYTICS_TABS = new Set<ModelAnalyticsChartTab>([
+  'userRank',
+  'userTrend',
+])
 
 interface ModelChartsProps {
   data: QuotaDataItem[]
+  filters?: DashboardFilters
   loading?: boolean
   timeGranularity?: TimeGranularity
   defaultChartTab?: ModelAnalyticsChartTab
@@ -106,13 +135,58 @@ export function ModelCharts(props: ModelChartsProps) {
     [props.data, props.loading, timeGranularity, t, chartRadius]
   )
 
-  const spec = chartData[CHART_SPEC_KEYS[activeTab]]
+  const userTimeRange = useMemo(
+    () =>
+      computeTimeRange(
+        getDefaultDays(timeGranularity),
+        props.filters?.start_timestamp,
+        props.filters?.end_timestamp
+      ),
+    [
+      props.filters?.end_timestamp,
+      props.filters?.start_timestamp,
+      timeGranularity,
+    ]
+  )
+
+  const userQuotaQuery = useQuery({
+    queryKey: ['dashboard', 'model-analytics-user-quota', userTimeRange],
+    queryFn: () => getUserQuotaDataByUsers(userTimeRange),
+    enabled: USER_ANALYTICS_TABS.has(activeTab),
+    select: (response) => (response.success ? response.data : []),
+    staleTime: 60_000,
+  })
+
+  const userChartData = useMemo(
+    () =>
+      processUserChartData(
+        userQuotaQuery.isLoading ? [] : (userQuotaQuery.data ?? []),
+        timeGranularity,
+        t,
+        10
+      ),
+    [userQuotaQuery.data, userQuotaQuery.isLoading, timeGranularity, t]
+  )
+
+  const modelSpecKey = MODEL_CHART_SPEC_KEYS[activeTab]
+  const userSpecKey = USER_CHART_SPEC_KEYS[activeTab]
+  let spec = null
+  if (modelSpecKey) {
+    spec = chartData[modelSpecKey]
+  } else if (userSpecKey) {
+    spec = userChartData[userSpecKey]
+  }
+  const isChartLoading = props.loading || userQuotaQuery.isLoading
+  const summaryDisplay = USER_ANALYTICS_TABS.has(activeTab)
+    ? chartData.totalQuotaDisplay
+    : chartData.totalCountDisplay
   const specType = typeof spec?.type === 'string' ? spec.type : activeTab
   const chartKey = [
     activeTab,
     specType,
-    props.loading ? 'loading' : 'ready',
+    isChartLoading ? 'loading' : 'ready',
     props.data.length,
+    userQuotaQuery.data?.length ?? 0,
     resolvedTheme,
     customization.preset,
   ].join('-')
@@ -126,7 +200,7 @@ export function ModelCharts(props: ModelChartsProps) {
             {t('Model Call Analytics')}
           </div>
           <span className='text-muted-foreground text-xs'>
-            {t('Total:')} {chartData.totalCountDisplay}
+            {t('Total:')} {summaryDisplay}
           </span>
         </div>
 
@@ -149,16 +223,21 @@ export function ModelCharts(props: ModelChartsProps) {
       </div>
 
       <div className='h-[300px] p-1.5 sm:h-96 sm:p-2'>
-        {themeReady && spec && (
-          <VChart
-            key={chartKey}
-            spec={{
-              ...spec,
-              theme: resolvedTheme === 'dark' ? 'dark' : 'light',
-              background: 'transparent',
-            }}
-            option={VCHART_OPTION}
-          />
+        {isChartLoading ? (
+          <Skeleton className='h-full w-full' />
+        ) : (
+          themeReady &&
+          spec && (
+            <VChart
+              key={chartKey}
+              spec={{
+                ...spec,
+                theme: resolvedTheme === 'dark' ? 'dark' : 'light',
+                background: 'transparent',
+              }}
+              option={VCHART_OPTION}
+            />
+          )
         )}
       </div>
     </div>

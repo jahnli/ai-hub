@@ -58,11 +58,7 @@ import {
   DEFAULT_TIME_GRANULARITY,
   TIME_GRANULARITY_OPTIONS,
 } from './constants'
-import {
-  buildDefaultDashboardFilters,
-  getDefaultDays,
-  getSavedGranularity,
-} from './lib'
+import { buildDefaultDashboardFilters } from './lib'
 import {
   type DashboardSectionId,
   DASHBOARD_DEFAULT_SECTION,
@@ -71,7 +67,6 @@ import {
 import type {
   DashboardFilters,
   QuotaDataItem,
-  UserChartsFilters,
 } from './types'
 
 const route = getRouteApi('/_authenticated/dashboard/$section')
@@ -88,21 +83,9 @@ const LazyModelCharts = lazy(() =>
   }))
 )
 
-const LazyConsumptionDistributionChart = lazy(() =>
-  import('./components/models/consumption-distribution-chart').then((m) => ({
-    default: m.ConsumptionDistributionChart,
-  }))
-)
-
 const LazyPerformanceOverview = lazy(() =>
   import('./components/models/performance-overview').then((m) => ({
     default: m.PerformanceOverview,
-  }))
-)
-
-const LazyUserCharts = lazy(() =>
-  import('./components/users/user-charts').then((m) => ({
-    default: m.UserCharts,
   }))
 )
 
@@ -192,9 +175,6 @@ const SECTION_META: Record<DashboardSectionId, { titleKey: string }> = {
   flow: {
     titleKey: 'Flow',
   },
-  users: {
-    titleKey: 'User Analytics',
-  },
 }
 
 export function Dashboard() {
@@ -212,16 +192,6 @@ export function Dashboard() {
   )
   const [draftModelFilters, setDraftModelFilters] = useState<DashboardFilters>(
     () => buildDefaultDashboardFilters(DEFAULT_DASHBOARD_CHART_PREFERENCES)
-  )
-  const [userChartsFilters, setUserChartsFilters] = useState<UserChartsFilters>(
-    () => {
-      const granularity = getSavedGranularity()
-      return {
-        timeGranularity: granularity,
-        selectedRange: getDefaultDays(granularity),
-        topUserLimit: 10,
-      }
-    }
   )
   const [flowSensitiveVisible, setFlowSensitiveVisible] = useState(true)
 
@@ -282,11 +252,8 @@ export function Dashboard() {
   const isAdmin = Boolean(userRole && userRole >= ROLE.ADMIN)
   const isSuperAdmin = Boolean(userRole && userRole >= ROLE.SUPER_ADMIN)
   const visibleSections = useMemo(
-    () =>
-      DASHBOARD_SECTION_IDS.filter(
-        (section) => section !== 'overview' && (section !== 'users' || isAdmin)
-      ),
-    [isAdmin]
+    () => DASHBOARD_SECTION_IDS.filter((section) => section !== 'overview'),
+    []
   )
   const handleSectionChange = useCallback(
     (section: string) => {
@@ -440,24 +407,11 @@ export function Dashboard() {
                   </Suspense>
                 </FadeIn>
               )}
-              <FadeIn delay={0.1}>
-                <Suspense fallback={<ModelChartsFallback />}>
-                  <LazyConsumptionDistributionChart
-                    data={modelData}
-                    loading={dataLoading}
-                    defaultChartType={
-                      DEFAULT_DASHBOARD_CHART_PREFERENCES.consumptionDistributionChart
-                    }
-                    timeGranularity={
-                      modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
-                    }
-                  />
-                </Suspense>
-              </FadeIn>
               <FadeIn delay={0.15}>
                 <Suspense fallback={<ModelChartsFallback />}>
                   <LazyModelCharts
                     data={modelData}
+                    filters={modelFilters}
                     loading={dataLoading}
                     defaultChartTab={
                       DEFAULT_DASHBOARD_CHART_PREFERENCES.modelAnalyticsChart
@@ -469,16 +423,6 @@ export function Dashboard() {
                 </Suspense>
               </FadeIn>
             </>
-          )}
-          {activeSection === 'users' && (
-            <FadeIn>
-              <Suspense fallback={<ModelChartsFallback />}>
-                <LazyUserCharts
-                  filters={userChartsFilters}
-                  onFiltersChange={setUserChartsFilters}
-                />
-              </Suspense>
-            </FadeIn>
           )}
           {activeSection === 'flow' && (
             <FadeIn>

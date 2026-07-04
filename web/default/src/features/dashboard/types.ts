@@ -193,7 +193,13 @@ export interface DashboardFilters {
 
 export type ConsumptionDistributionChartType = 'bar' | 'area'
 
-export type ModelAnalyticsChartTab = 'trend' | 'proportion' | 'top'
+export type ModelAnalyticsChartTab =
+  | 'trend'
+  | 'proportion'
+  | 'top'
+  | 'quota'
+  | 'userRank'
+  | 'userTrend'
 
 export interface DashboardChartPreferences {
   consumptionDistributionChart: ConsumptionDistributionChartType

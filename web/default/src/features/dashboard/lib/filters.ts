@@ -52,7 +52,14 @@ function isConsumptionDistributionChartType(
 function isModelAnalyticsChartTab(
   value: unknown
 ): value is ModelAnalyticsChartTab {
-  return value === 'trend' || value === 'proportion' || value === 'top'
+  return (
+    value === 'trend' ||
+    value === 'proportion' ||
+    value === 'top' ||
+    value === 'quota' ||
+    value === 'userRank' ||
+    value === 'userTrend'
+  )
 }
 
 function isTimeRangePresetDays(value: unknown): value is number {
