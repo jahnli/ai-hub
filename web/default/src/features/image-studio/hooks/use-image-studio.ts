@@ -18,7 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useCallback, useRef, useState } from 'react'
 
-import { editImages, fetchGenerationLog, generateImages } from '../api'
+import {
+  editImages,
+  fetchGenerationLog,
+  generateImages,
+  storeImageStudioGeneration,
+} from '../api'
 import {
   CUSTOM_SIZE,
   DEFAULT_ESTIMATE_MS,
@@ -177,35 +182,69 @@ export function useImageGeneration({
         const imageMimeType = imageMimeTypeForOutputFormat(
           payload.output_format ?? 'png'
         )
-        const images: GeneratedImage[] = (response.data ?? []).map(
-          (item, index) => ({
-            id: `${startedAt}-${index}`,
-            src: item.b64_json
-              ? `data:${imageMimeType};base64,${item.b64_json}`
-              : (item.url ?? ''),
-            revisedPrompt: item.revised_prompt,
-          })
-        )
+        const responseItems = response.data ?? []
+        const imageOutputs = responseItems
+          .map((item) =>
+            ({
+              src: item.b64_json
+                ? `data:${imageMimeType};base64,${item.b64_json}`
+                : (item.url ?? ''),
+              revisedPrompt: item.revised_prompt,
+            })
+          )
+          .filter((item) => item.src)
 
-        if (images.every((image) => !image.src)) {
+        if (imageOutputs.length === 0) {
           throw new Error('empty image response')
         }
 
+        const recordId = `${startedAt}-${Math.random().toString(36).slice(2, 8)}`
+        const storedRecord = await storeImageStudioGeneration(
+          {
+            id: recordId,
+            created_at: startedAt,
+            mode,
+            prompt,
+            model: config.model,
+            group: config.group,
+            size: resolveSize(config),
+            quality: payload.quality,
+            moderation: payload.moderation,
+            output_format: payload.output_format,
+            n: payload.n ?? 1,
+            duration_ms: durationMs,
+            images: imageOutputs.map((item) => ({
+              src: item.src,
+              revised_prompt: item.revisedPrompt,
+            })),
+          },
+          controller.signal
+        )
+        const images: GeneratedImage[] = storedRecord.images.map((image) => ({
+          id: image.id,
+          src: image.url,
+          storageId: image.id,
+          mimeType: image.mime_type,
+          sizeBytes: image.size_bytes,
+          width: image.width,
+          height: image.height,
+          revisedPrompt: image.revised_prompt,
+        }))
         const record: GenerationRecord = {
-          id: `${startedAt}-${Math.random().toString(36).slice(2, 8)}`,
-          createdAt: startedAt,
-          mode,
-          prompt,
-          model: config.model,
-          group: config.group,
-          size: resolveSize(config),
-          quality: payload.quality,
-          moderation: payload.moderation,
-          outputFormat: payload.output_format,
-          n: payload.n ?? 1,
+          id: storedRecord.id,
+          createdAt: storedRecord.created_at,
+          mode: storedRecord.mode,
+          prompt: storedRecord.prompt,
+          model: storedRecord.model,
+          group: storedRecord.group,
+          size: storedRecord.size,
+          quality: storedRecord.quality || undefined,
+          moderation: storedRecord.moderation || undefined,
+          outputFormat: storedRecord.output_format || undefined,
+          n: storedRecord.n,
           images,
-          referenceImages: mode === 'edit' ? referenceImages : undefined,
-          usage: { durationMs },
+          usage: { durationMs: storedRecord.duration_ms },
+          favorite: storedRecord.favorite,
         }
         addRecord(record)
         setActiveRecordId(record.id)

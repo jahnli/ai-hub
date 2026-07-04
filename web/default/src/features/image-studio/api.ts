@@ -23,7 +23,9 @@ import type {
   GroupOption,
   ImageApiResponse,
   ImageGenerationPayload,
+  ImageStudioGenerationRecord,
   ModelOption,
+  StoreImageStudioGenerationPayload,
 } from './types'
 
 export interface ImageRequestResult {
@@ -58,6 +60,75 @@ export function editImages(
   signal?: AbortSignal
 ): Promise<ImageRequestResult> {
   return postImageRequest(API_ENDPOINTS.IMAGE_EDITS, payload, signal)
+}
+
+interface ApiEnvelope<T> {
+  success: boolean
+  data?: T
+  message?: string
+}
+
+function unwrapApiData<T>(data: ApiEnvelope<T>, message: string): T {
+  if (!data.success || data.data === undefined) {
+    throw new Error(data.message || message)
+  }
+  return data.data
+}
+
+export async function storeImageStudioGeneration(
+  payload: StoreImageStudioGenerationPayload,
+  signal?: AbortSignal
+): Promise<ImageStudioGenerationRecord> {
+  const res = await api.post(
+    API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS,
+    payload,
+    { signal }
+  )
+  return unwrapApiData(
+    res.data as ApiEnvelope<ImageStudioGenerationRecord>,
+    'failed to store generated images'
+  )
+}
+
+export async function listImageStudioGenerations(): Promise<
+  ImageStudioGenerationRecord[]
+> {
+  const res = await api.get(API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS)
+  const { data } = res
+  if (!data.success || !Array.isArray(data.data)) return []
+  return data.data as ImageStudioGenerationRecord[]
+}
+
+export async function deleteImageStudioGeneration(id: string): Promise<void> {
+  await api.delete(`${API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS}/${id}`)
+}
+
+export async function clearImageStudioGenerations(): Promise<void> {
+  await api.delete(API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS)
+}
+
+export async function updateImageStudioGenerationFavorite(
+  id: string,
+  favorite: boolean
+): Promise<void> {
+  await api.patch(`${API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS}/${id}/favorite`, {
+    favorite,
+  })
+}
+
+export async function updateImageStudioGenerationUsage(
+  id: string,
+  usage: {
+    quota?: number
+    promptTokens?: number
+    completionTokens?: number
+  }
+): Promise<void> {
+  await api.patch(`${API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS}/${id}/usage`, {
+    quota: usage.quota ?? 0,
+    prompt_tokens: usage.promptTokens ?? 0,
+    completion_tokens: usage.completionTokens ?? 0,
+  })
 }
 
 export async function getUserModels(group: string): Promise<ModelOption[]> {

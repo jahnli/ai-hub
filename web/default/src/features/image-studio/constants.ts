@@ -21,6 +21,8 @@ import type { ImageStudioConfig, PromptPreset } from './types'
 export const API_ENDPOINTS = {
   IMAGE_GENERATIONS: '/pg/images/generations',
   IMAGE_EDITS: '/pg/images/edits',
+  IMAGE_ASSETS: '/api/image-studio/assets',
+  IMAGE_STUDIO_GENERATIONS: '/api/image-studio/generations',
   USER_MODELS: '/api/user/models',
   USER_GROUPS: '/api/user/self/groups',
 } as const
@@ -102,7 +104,7 @@ export const DEFAULT_ESTIMATE_MS = 60000
 /** number of recent generations used for the moving-average estimate */
 export const ESTIMATE_SAMPLE_SIZE = 5
 
-export const HISTORY_LIMIT = 200
+export const HISTORY_LIMIT = 10
 
 /**
  * Built-in prompt presets. Category names are i18n keys; prompts are

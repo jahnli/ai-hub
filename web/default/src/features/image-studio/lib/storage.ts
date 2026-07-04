@@ -16,117 +16,99 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { HISTORY_LIMIT } from '../constants'
-import type { GenerationRecord } from '../types'
+import {
+  clearImageStudioGenerations,
+  deleteImageStudioGeneration,
+  listImageStudioGenerations,
+  updateImageStudioGenerationFavorite,
+  updateImageStudioGenerationUsage,
+} from '../api'
+import type { GenerationRecord, ImageStudioGenerationRecord } from '../types'
 
-const DB_NAME = 'image-studio'
-const DB_VERSION = 1
-const STORE_NAME = 'generations'
+const LEGACY_DB_NAME = 'image-studio'
+const STORAGE_KEY = 'image-studio.generations'
 
-let dbPromise: Promise<IDBDatabase> | null = null
+let legacyDbDeletionStarted = false
 
-function openDb(): Promise<IDBDatabase> {
-  if (dbPromise) return dbPromise
-  dbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' })
-        store.createIndex('createdAt', 'createdAt')
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => {
-      dbPromise = null
-      reject(request.error)
-    }
+function deleteLegacyIndexedDbHistory(): void {
+  if (legacyDbDeletionStarted || !window.indexedDB) return
+  legacyDbDeletionStarted = true
+  const request = window.indexedDB.deleteDatabase(LEGACY_DB_NAME)
+  request.addEventListener('error', () => {
+    legacyDbDeletionStarted = false
   })
-  return dbPromise
 }
 
-function requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+function removeLegacyLocalHistory(): void {
+  window.localStorage.removeItem(STORAGE_KEY)
+}
+
+function fromServerRecord(record: ImageStudioGenerationRecord): GenerationRecord {
+  return {
+    id: record.id,
+    createdAt: record.created_at,
+    mode: record.mode,
+    prompt: record.prompt,
+    model: record.model,
+    group: record.group,
+    size: record.size,
+    quality: record.quality || undefined,
+    moderation: record.moderation || undefined,
+    outputFormat: record.output_format || undefined,
+    n: record.n,
+    images: record.images.map((image) => ({
+      id: image.id,
+      src: image.url,
+      storageId: image.id,
+      mimeType: image.mime_type,
+      sizeBytes: image.size_bytes,
+      width: image.width,
+      height: image.height,
+      revisedPrompt: image.revised_prompt || undefined,
+    })),
+    usage: {
+      durationMs: record.duration_ms,
+      quota: record.quota,
+      promptTokens: record.prompt_tokens,
+      completionTokens: record.completion_tokens,
+    },
+    favorite: record.favorite,
+  }
 }
 
 export async function listGenerations(): Promise<GenerationRecord[]> {
   try {
-    const db = await openDb()
-    const tx = db.transaction(STORE_NAME, 'readonly')
-    const records = await requestAsPromise(
-      tx.objectStore(STORE_NAME).getAll() as IDBRequest<GenerationRecord[]>
-    )
-    return records.sort((a, b) => b.createdAt - a.createdAt)
+    deleteLegacyIndexedDbHistory()
+    removeLegacyLocalHistory()
+    const records = await listImageStudioGenerations()
+    return records.map(fromServerRecord)
   } catch {
     return []
   }
 }
 
-export async function saveGeneration(record: GenerationRecord): Promise<void> {
-  const db = await openDb()
-  const tx = db.transaction(STORE_NAME, 'readwrite')
-  tx.objectStore(STORE_NAME).put(record)
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-  void pruneHistory()
+export async function saveGeneration(_record: GenerationRecord): Promise<void> {
+  removeLegacyLocalHistory()
 }
 
 export async function updateGeneration(
   record: GenerationRecord
 ): Promise<void> {
-  const db = await openDb()
-  const tx = db.transaction(STORE_NAME, 'readwrite')
-  tx.objectStore(STORE_NAME).put(record)
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  await Promise.all([
+    updateImageStudioGenerationFavorite(record.id, Boolean(record.favorite)),
+    updateImageStudioGenerationUsage(record.id, {
+      quota: record.usage?.quota,
+      promptTokens: record.usage?.promptTokens,
+      completionTokens: record.usage?.completionTokens,
+    }),
+  ])
 }
 
 export async function deleteGeneration(id: string): Promise<void> {
-  const db = await openDb()
-  const tx = db.transaction(STORE_NAME, 'readwrite')
-  tx.objectStore(STORE_NAME).delete(id)
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  await deleteImageStudioGeneration(id)
 }
 
 export async function clearGenerations(): Promise<void> {
-  const db = await openDb()
-  const tx = db.transaction(STORE_NAME, 'readwrite')
-  tx.objectStore(STORE_NAME).clear()
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-}
-
-/** Evict oldest non-favorite records beyond HISTORY_LIMIT. */
-async function pruneHistory(): Promise<void> {
-  try {
-    const records = await listGenerations()
-    const excess = records.length - HISTORY_LIMIT
-    if (excess <= 0) return
-    // records is newest-first; delete the oldest non-favorite ones
-    const toDelete = records
-      .filter((r) => !r.favorite)
-      .slice(-excess)
-    const db = await openDb()
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    const store = tx.objectStore(STORE_NAME)
-    toDelete.forEach((r) => store.delete(r.id))
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error)
-    })
-  } catch {
-    /* pruning is best-effort */
-  }
+  removeLegacyLocalHistory()
+  await clearImageStudioGenerations()
 }

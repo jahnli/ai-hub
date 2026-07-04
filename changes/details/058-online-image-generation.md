@@ -20,3 +20,15 @@
 - `web/default/src/features/image-studio/index.tsx`、`web/default/src/features/image-studio/lib/image-utils.ts` — 历史生成结果支持一键带入图生图，远程图片会先转换为 data URL；重置时清空提示词、参考图、当前结果与错误。
 - `web/default/src/features/image-studio/components/generate-panel.tsx`、`web/default/src/features/image-studio/components/result-grid.tsx` — 生成进度文案移除单图预估时间，思考动画加快，清空按钮改为重置。
 - `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补齐图片参数日志详情相关 6 语言翻译并更新同步报告。
+- `model/image_studio.go` — 新增 ImageStudioGeneration 数据库模型，含图片元数据（尺寸、格式、大小）和收藏/用量字段，CRUD 方法支持按用户分页查询、收藏标记、用量更新和删除。
+- `controller/image_studio_storage.go` — 新增图片存储控制器：接收 base64/URL 图片并落盘至 IMAGE_STUDIO_STORAGE_DIR 目录，提供静态文件访问、列表查询、收藏/用量更新和删除等 API。
+- `model/main.go` — 注册 ImageStudioGeneration 模型的数据库迁移。
+- `router/api-router.go` — 注册 /api/image-studio 路由组（CRUD + 静态文件访问）。
+- `web/default/src/features/image-studio/api.ts` — 新增服务端存储相关 API 调用函数（store/list/delete/clear/favorite/usage）。
+- `web/default/src/features/image-studio/types.ts` — 新增服务端数据类型定义（ImageStudioGenerationRecord、StoreImageStudioGenerationPayload 等）。
+- `web/default/src/features/image-studio/lib/storage.ts` — 历史记录存储层重构为调用服务端 API，移除 localStorage 实现。
+- `web/default/src/features/image-studio/hooks/use-image-studio.ts` — 生成完成后调用服务端存储 API 持久化图片，返回服务端 URL 替代 data URL。
+- `web/default/src/features/image-studio/hooks/use-generation-history.ts` — 历史加载改为从服务端 API 获取。
+- `web/default/src/features/image-studio/components/result-grid.tsx` — 结果网格适配服务端图片 URL 展示。
+- `web/default/src/features/image-studio/components/history-panel.tsx` — 历史面板适配服务端数据结构。
+- `web/default/src/features/image-studio/constants.ts` — 新增 IMAGE_STUDIO_GENERATIONS API 端点常量。
