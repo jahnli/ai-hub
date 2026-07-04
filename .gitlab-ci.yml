@@ -1,0 +1,55 @@
+stages:
+  - docker
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+  DOCKER_TLS_VERIFY: "1"
+
+publish-docker-hub:
+  stage: docker
+  tags:
+    - public
+  image: docker.m.daocloud.io/docker:27.4.1-cli
+  services:
+    - name: docker.m.daocloud.io/docker:27.4.1-dind
+      alias: docker
+      command:
+        - "--registry-mirror=https://docker.m.daocloud.io"
+
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+
+  before_script:
+    - docker version
+    - docker login -u "$DOCKERHUB_USERNAME" --password-stdin <<< "$DOCKERHUB_TOKEN"
+    - docker run --privileged --rm docker.m.daocloud.io/tonistiigi/binfmt --install amd64,arm64
+    - docker context create ai-hub-builder
+    - docker buildx create ai-hub-builder --driver docker-container --use
+    - docker buildx inspect --bootstrap
+
+  script:
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        IMAGE_TAG="$CI_COMMIT_TAG"
+      else
+        IMAGE_TAG="${CUSTOM_TAG:-manual-${CI_COMMIT_SHORT_SHA}}"
+      fi
+
+      echo "$IMAGE_TAG" > VERSION
+
+      docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --tag "$DOCKERHUB_IMAGE:$IMAGE_TAG" \
+        --tag "$DOCKERHUB_IMAGE:latest" \
+        --provenance=true \
+        --sbom=true \
+        --push \
+        .
+
+      echo "Published Docker images:"
+      echo "$DOCKERHUB_IMAGE:$IMAGE_TAG"
+      echo "$DOCKERHUB_IMAGE:latest"

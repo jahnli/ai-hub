@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Lightbulb } from 'lucide-react'
-import { useState } from 'react'
+import { type WheelEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
 import { PROMPT_PRESETS } from '../constants'
@@ -42,6 +41,12 @@ export function PromptPresets({ onSelect, disabled }: PromptPresetsProps) {
   const [activeCategory, setActiveCategory] = useState(0)
 
   const active = PROMPT_PRESETS[activeCategory]
+
+  function handlePromptListWheel(event: WheelEvent<HTMLDivElement>) {
+    event.stopPropagation()
+
+    event.currentTarget.scrollTop += event.deltaY
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -59,8 +64,11 @@ export function PromptPresets({ onSelect, disabled }: PromptPresetsProps) {
           </Button>
         }
       />
-      <PopoverContent className='w-[min(92vw,560px)] p-0' align='start'>
-        <div className='flex flex-wrap gap-1 border-b p-2'>
+      <PopoverContent
+        className='max-h-[min(80vh,28rem)] w-[min(92vw,560px)] gap-0 overflow-hidden p-0'
+        align='start'
+      >
+        <div className='flex shrink-0 flex-wrap gap-1 border-b p-2'>
           {PROMPT_PRESETS.map((preset, index) => (
             <button
               key={preset.category}
@@ -77,7 +85,10 @@ export function PromptPresets({ onSelect, disabled }: PromptPresetsProps) {
             </button>
           ))}
         </div>
-        <ScrollArea className='max-h-72'>
+        <div
+          className='max-h-[min(68vh,22rem)] overflow-y-auto overscroll-contain'
+          onWheel={handlePromptListWheel}
+        >
           <div className='flex flex-col gap-1 p-2'>
             {active?.prompts.map((prompt) => (
               <button
@@ -93,7 +104,7 @@ export function PromptPresets({ onSelect, disabled }: PromptPresetsProps) {
               </button>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   )
