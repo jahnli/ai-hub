@@ -111,6 +111,9 @@ var MemoryCacheEnabled bool
 
 var LogConsumeEnabled = true
 
+// RecordRequestMessageEnabled 控制是否记录用户请求提示词（request_message 表）
+var RecordRequestMessageEnabled = true
+
 var TLSInsecureSkipVerify bool
 var InsecureTLSConfig = &tls.Config{InsecureSkipVerify: true}
 

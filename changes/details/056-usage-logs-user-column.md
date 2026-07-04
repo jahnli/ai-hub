@@ -1,6 +1,6 @@
-# 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化
+# 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-04
+**日期**: 2026-07-05
 
 ## 涉及文件
 
@@ -24,5 +24,23 @@
 - `web/default/src/components/layout/components/section-page-layout.tsx` — 页面布局在无标题、操作区和面包屑时跳过顶部 header 容器，避免空元素继续占据空间
 - `web/default/src/features/usage-logs/data/schema.ts` — Zod schema 新增 display_name、avatar_url、open_id 字段
 - `web/default/src/features/usage-logs/types.ts` — UserInfo 接口扩展完整用户详情字段并补充 open_id，TaskLog 补充 open_id
-- `web/default/src/i18n/locales/en.json` — 新增 "Timing / First Token" 翻译
-- `web/default/src/i18n/locales/zh.json` — 新增 "耗时 / 首字" 翻译
+- `web/default/src/i18n/locales/en.json` — 新增 "Timing / First Token"、"Request Content"、"Record request content" 等翻译
+- `web/default/src/i18n/locales/zh.json` — 新增 "耗时 / 首字"、"请求内容"、"记录请求内容" 等翻译
+- `model/request_message.go` — 新增 RequestMessage 模型（request_id 关联 logs 表），存储用户提示词和模型参数
+- `controller/request_message.go` — 管理员和普通用户批量查询 request_message 接口
+- `service/request_message.go` — 中继请求后异步记录用户输入：提取多模态内容为占位符、截断超长对话、序列化参数
+- `controller/relay.go` — 中继入口调用 RecordRequestMessage 记录请求内容
+- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由
+- `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
+- `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
+- `model/main.go` — AutoMigrate 注册 RequestMessage 模型
+- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数
+- `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容
+- `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用
+- `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义
+- `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 包裹 RequestMessagesProvider，按当前页日志批量加载请求内容
+- `web/default/src/features/system-settings/maintenance/log-settings-section.tsx` — 日志设置新增「记录请求内容」开关
+- `web/default/src/features/system-settings/operations/section-registry.tsx` — 运维设置传入 RecordRequestMessageEnabled 默认值
+- `web/default/src/features/system-settings/operations/index.tsx` — 运维设置默认值补充 RecordRequestMessageEnabled
+- `web/default/src/features/system-settings/types.ts` — OperationsSettings 类型补充 RecordRequestMessageEnabled
+- `web/default/src/components/dialog.tsx` — Dialog 组件样式调整

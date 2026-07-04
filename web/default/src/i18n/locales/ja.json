@@ -5318,6 +5318,13 @@
     "Zero retention": "データ保持なし",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V 4",
-    "Zoom": "ズーム"
+    "Zoom": "ズーム",
+    "Request Content": "リクエスト内容",
+    "Click to view the full conversation": "クリックして会話全体を表示",
+    "User message {{index}}": "ユーザーメッセージ {{index}}",
+    "Latest": "最新",
+    "Request Parameters": "リクエストパラメータ",
+    "Record request content": "リクエスト内容を記録",
+    "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "監査のために各リレーリクエストのユーザープロンプトとモデルパラメータを保存します。有効にするとデータベースへの書き込みとストレージ使用量が増加します。"
   }
 }

@@ -40,6 +40,7 @@ import { useColumnsByCategory } from '../lib/columns'
 import { fetchLogsByCategory } from '../lib/utils'
 import type { LogCategory } from '../types'
 import { CommonLogsFilterBar } from './common-logs-filter-bar'
+import { RequestMessagesProvider } from './request-messages-provider'
 import { TaskLogsFilterBar } from './task-logs-filter-bar'
 import { UsageLogsMobileList } from './usage-logs-mobile-card'
 
@@ -169,53 +170,61 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
 
   const isCommon = logCategory === 'common'
 
-  return (
-    <DataTablePage
-      table={table}
-      columns={columns as ColumnDef<Record<string, unknown>>[]}
-      isLoading={isLoadingData}
-      isFetching={isFetching}
-      emptyTitle={t('No Logs Found')}
-      emptyDescription={t(
-        'No usage logs available. Logs will appear here once API calls are made.'
-      )}
-      skeletonKeyPrefix='usage-log-skeleton'
-      applyHeaderSize
-      tableClassName={cn(
-        '[&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
-      )}
-      mobile={
-        <UsageLogsMobileList
-          table={table}
-          isLoading={isLoadingData}
-          logCategory={logCategory}
-        />
-      }
-      toolbar={
-        isCommon ? (
-          <CommonLogsFilterBar table={table} />
-        ) : (
-          <TaskLogsFilterBar table={table} logCategory={logCategory} />
-        )
-      }
-      renderRow={(row, helpers) => {
-        const logType = (row.original as Record<string, unknown>).type as
-          | number
-          | undefined
-        const tintClass =
-          isCommon && logType != null ? (logTypeRowTint[logType] ?? '') : ''
+  const requestIds = isCommon
+    ? (logs as Array<{ request_id?: string }>)
+        .map((log) => log.request_id ?? '')
+        .filter(Boolean)
+    : []
 
-        return (
-          <DataTableRow
-            key={row.id}
-            row={row}
-            className={cn('transition-colors', tintClass)}
-            getColumnClassName={(columnId) =>
-              helpers.getCellClassName(columnId, isCommon ? 'py-2' : 'py-3.5')
-            }
+  return (
+    <RequestMessagesProvider requestIds={requestIds} isAdmin={isAdmin}>
+      <DataTablePage
+        table={table}
+        columns={columns as ColumnDef<Record<string, unknown>>[]}
+        isLoading={isLoadingData}
+        isFetching={isFetching}
+        emptyTitle={t('No Logs Found')}
+        emptyDescription={t(
+          'No usage logs available. Logs will appear here once API calls are made.'
+        )}
+        skeletonKeyPrefix='usage-log-skeleton'
+        applyHeaderSize
+        tableClassName={cn(
+          '[&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
+        )}
+        mobile={
+          <UsageLogsMobileList
+            table={table}
+            isLoading={isLoadingData}
+            logCategory={logCategory}
           />
-        )
-      }}
-    />
+        }
+        toolbar={
+          isCommon ? (
+            <CommonLogsFilterBar table={table} />
+          ) : (
+            <TaskLogsFilterBar table={table} logCategory={logCategory} />
+          )
+        }
+        renderRow={(row, helpers) => {
+          const logType = (row.original as Record<string, unknown>).type as
+            | number
+            | undefined
+          const tintClass =
+            isCommon && logType != null ? (logTypeRowTint[logType] ?? '') : ''
+
+          return (
+            <DataTableRow
+              key={row.id}
+              row={row}
+              className={cn('transition-colors', tintClass)}
+              getColumnClassName={(columnId) =>
+                helpers.getCellClassName(columnId, isCommon ? 'py-2' : 'py-3.5')
+              }
+            />
+          )
+        }}
+      />
+    </RequestMessagesProvider>
   )
 }

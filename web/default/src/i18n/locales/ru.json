@@ -5318,6 +5318,13 @@
     "Zero retention": "Без хранения данных",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Request Content": "Содержимое запроса",
+    "Click to view the full conversation": "Нажмите, чтобы просмотреть весь диалог",
+    "User message {{index}}": "Сообщение пользователя {{index}}",
+    "Latest": "Последнее",
+    "Request Parameters": "Параметры запроса",
+    "Record request content": "Записывать содержимое запросов",
+    "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Сохранять пользовательские промпты и параметры модели каждого запроса для аудита. Включение увеличивает количество записей в базу данных и использование хранилища."
   }
 }

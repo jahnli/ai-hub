@@ -26,6 +26,7 @@ import type {
   GetLogStatsResponse,
   GetMidjourneyLogsParams,
   GetTaskLogsParams,
+  RequestMessage,
   UserInfo,
 } from './types'
 
@@ -88,6 +89,21 @@ export async function getUserInfo(
   userId: number
 ): Promise<{ success: boolean; message?: string; data?: UserInfo }> {
   const res = await api.get(`/api/user/${userId}`)
+  return res.data
+}
+
+// ============================================================================
+// Request Message (recorded user prompts) API
+// ============================================================================
+
+export async function getRequestMessages(
+  requestIds: string[],
+  isAdmin: boolean
+): Promise<{ success: boolean; message?: string; data?: RequestMessage[] }> {
+  const path = buildApiPath('/api/request_message', isAdmin)
+  const res = await api.get(
+    `${path}?request_ids=${encodeURIComponent(requestIds.join(','))}`
+  )
   return res.data
 }
 

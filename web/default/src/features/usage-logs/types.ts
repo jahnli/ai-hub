@@ -381,6 +381,27 @@ export interface FetchLogsConfig {
 }
 
 // ============================================================================
+// Request Message Types
+// ============================================================================
+
+/**
+ * A recorded user prompt (request_message table row), linked to a log entry
+ * via request_id. user_content is a JSON-encoded string array (one entry per
+ * user message in the conversation); parameters is a JSON-encoded object.
+ */
+export interface RequestMessage {
+  id: number
+  request_id: string
+  user_id: number
+  token_id: number
+  model_name: string
+  relay_format: string
+  created_at: number
+  user_content: string
+  parameters: string
+}
+
+// ============================================================================
 // User Info Types
 // ============================================================================
 

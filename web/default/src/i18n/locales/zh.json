@@ -5318,6 +5318,13 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "Request Content": "请求内容",
+    "Click to view the full conversation": "点击查看完整对话",
+    "User message {{index}}": "用户消息 {{index}}",
+    "Latest": "最新",
+    "Request Parameters": "请求参数",
+    "Record request content": "记录请求内容",
+    "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "存储每次中继请求的用户提示词和模型参数以供审计。开启后会增加数据库写入和存储占用。"
   }
 }

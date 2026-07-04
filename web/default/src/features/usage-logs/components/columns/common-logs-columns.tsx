@@ -68,7 +68,12 @@ import {
 } from '../../lib/utils'
 import type { LogOtherData } from '../../types'
 import { DetailsDialog } from '../dialogs/details-dialog'
+import { RequestContentDialog } from '../dialogs/request-content-dialog'
 import { ModelBadge } from '../model-badge'
+import {
+  parseUserMessages,
+  useRequestMessage,
+} from '../request-messages-provider'
 import { useUsageLogsContext } from '../usage-logs-provider'
 
 interface DetailSegment {
@@ -445,7 +450,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
 
         return (
           <div
-            className="flex w-[150px] min-w-0 items-center gap-2"
+            className="flex w-[130px] min-w-0 items-center gap-2"
             onMouseEnter={handleFetchUser}
           >
             <UserProfileHoverCard user={baseUser}>
@@ -487,6 +492,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         );
       },
       meta: { mobileTitle: true },
+      size: 180,
     },
     {
       accessorKey: "use_time",
@@ -686,6 +692,8 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
 
         return <div className="flex flex-col gap-0.5">{quotaNode}</div>;
       },
+      size: 115,
+      maxSize: 130,
     },
   );
 
@@ -843,6 +851,48 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
   }
 
   columns.push(
+    {
+      id: "request_content",
+      header: t("Request Content"),
+      cell: function RequestContentCell({ row }) {
+        const [dialogOpen, setDialogOpen] = useState(false);
+        const log = row.original;
+        const requestMessage = useRequestMessage(log.request_id);
+        if (!requestMessage) {
+          return <span className="text-muted-foreground/40">—</span>;
+        }
+
+        const messages = parseUserMessages(requestMessage.user_content);
+        const latestMessage = messages.at(-1) ?? "";
+
+        return (
+          <>
+            <button
+              type="button"
+              className="group flex max-w-[200px] items-start gap-1 text-left text-xs"
+              onClick={() => setDialogOpen(true)}
+              title={t("Click to view the full conversation")}
+            >
+              <span className="text-muted-foreground line-clamp-2 break-words group-hover:underline">
+                {latestMessage}
+              </span>
+              {messages.length > 1 && (
+                <span className="text-muted-foreground/40 shrink-0">
+                  +{messages.length - 1}
+                </span>
+              )}
+            </button>
+            <RequestContentDialog
+              requestMessage={requestMessage}
+              open={dialogOpen}
+              onOpenChange={setDialogOpen}
+            />
+          </>
+        );
+      },
+      size: 200,
+      maxSize: 220,
+    },
     {
       accessorKey: "ip",
       header: t("IP Address"),

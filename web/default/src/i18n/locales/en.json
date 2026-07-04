@@ -5318,6 +5318,13 @@
     "Zero retention": "Zero retention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Request Content": "Request Content",
+    "Click to view the full conversation": "Click to view the full conversation",
+    "User message {{index}}": "User message {{index}}",
+    "Latest": "Latest",
+    "Request Parameters": "Request Parameters",
+    "Record request content": "Record request content",
+    "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage."
   }
 }

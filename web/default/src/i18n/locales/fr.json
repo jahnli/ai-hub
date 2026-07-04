@@ -5318,6 +5318,13 @@
     "Zero retention": "Aucune rétention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Request Content": "Contenu de la requête",
+    "Click to view the full conversation": "Cliquez pour voir la conversation complète",
+    "User message {{index}}": "Message utilisateur {{index}}",
+    "Latest": "Dernier",
+    "Request Parameters": "Paramètres de la requête",
+    "Record request content": "Enregistrer le contenu des requêtes",
+    "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Stocker les invites utilisateur et les paramètres du modèle de chaque requête relayée à des fins d'audit. Cette option augmente les écritures en base de données et l'utilisation du stockage."
   }
 }
