@@ -96,9 +96,9 @@ export function userIdColumn<T extends UserColumnRow>(
     accessorKey: "id",
     header: t("ID"),
     cell: ({ row }) => (
-      <TableId value={row.getValue("id") as number} className="w-[60px]" />
+      <TableId value={row.getValue("id") as number} className="w-[48px]" />
     ),
-    size: 80,
+    size: 64,
     meta: { mobileHidden: true },
   };
 }
@@ -120,7 +120,7 @@ export function userNameColumn<T extends UserColumnRow>(
       const avatarFallbackStyle = getUserAvatarStyle(primaryName);
 
       return (
-        <div className="flex w-[150px] min-w-0 items-center gap-2">
+        <div className="flex w-[130px] min-w-0 items-center gap-2">
           <UserProfileHoverCard user={user}>
             <Avatar size="sm" className="shrink-0">
               {avatarUrl && <AvatarImage src={avatarUrl} alt={primaryName} />}
@@ -160,7 +160,7 @@ export function userNameColumn<T extends UserColumnRow>(
       );
     },
     enableHiding: false,
-    size: 190,
+    size: 170,
     meta: { mobileTitle: true },
   };
 }
@@ -248,7 +248,7 @@ export function userCostColumn<T extends UserColumnRow>(
         )}
       </span>
     ),
-    size: 140,
+    size: 120,
     meta: { mobileHidden: true },
   };
 }
@@ -286,7 +286,7 @@ export function userTokensColumn<T extends UserColumnRow>(
         </span>
       );
     },
-    size: 120,
+    size: 100,
     meta: { mobileHidden: true },
   };
 }
@@ -307,7 +307,7 @@ export function userRequestsColumn<T extends UserColumnRow>(
         )}
       </span>
     ),
-    size: 120,
+    size: 100,
     meta: { mobileHidden: true },
   };
 }
@@ -361,13 +361,28 @@ export function userDepartmentColumn<T extends UserColumnRow>(
       const firstLevel = parts[0];
       const rest = parts.slice(1).join("/");
       return (
-        <div className="text-sm leading-snug">
-          <div>{firstLevel}</div>
-          {rest && <div className="text-muted-foreground !text-xs">{rest}</div>}
-        </div>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <div className="w-[200px] min-w-[200px] max-w-[200px] cursor-help" />
+            }
+          >
+            <div className="text-sm leading-snug">
+              <LongText>{firstLevel}</LongText>
+              {rest && (
+                <LongText className="text-muted-foreground !text-xs">
+                  {rest}
+                </LongText>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-[320px] text-xs">{dept}</p>
+          </TooltipContent>
+        </Tooltip>
       );
     },
-    size: 180,
+    size: 200,
     meta: { mobileHidden: true },
   };
 }
@@ -421,7 +436,7 @@ export function userLastLoginColumn<T extends UserColumnRow>(
         </span>
       );
     },
-    size: 180,
+    size: 150,
     meta: { mobileHidden: true },
   };
 }
@@ -575,15 +590,19 @@ export function useSharedUserColumns<T extends UserColumnRow>(
       userCostColumn<T>(t, { accessor: opts.costAccessor }),
       userTokensColumn<T>(t, { accessor: opts.tokensAccessor }),
       userRequestsColumn<T>(t, { accessor: opts.requestsAccessor }),
-      userModelColumn<T>(t, { accessor: opts.modelAccessor, variant: "badge" }),
       userDepartmentColumn<T>(t),
       userJobLevelColumn<T>(t),
-      userJoinDateColumn<T>(t),
       userLastLoginColumn<T>(t),
+      userModelColumn<T>(t, { accessor: opts.modelAccessor, variant: "badge" }),
+      userJoinDateColumn<T>(t),
       userCreatedAtColumn<T>(t),
       {
         ...userRoleColumn<T>(t),
-        filterFn: (row: { getValue: (id: string) => unknown }, id: string, value: string[]) => {
+        filterFn: (
+          row: { getValue: (id: string) => unknown },
+          id: string,
+          value: string[],
+        ) => {
           return value.includes(String(row.getValue(id)));
         },
       },
@@ -592,7 +611,11 @@ export function useSharedUserColumns<T extends UserColumnRow>(
           showRequestCount: true,
           requestCountAccessor: opts.requestCountAccessor as keyof T,
         }),
-        filterFn: (row: { getValue: (id: string) => unknown }, id: string, value: string[]) => {
+        filterFn: (
+          row: { getValue: (id: string) => unknown },
+          id: string,
+          value: string[],
+        ) => {
           return value.includes(String(row.getValue(id)));
         },
       },
@@ -600,7 +623,11 @@ export function useSharedUserColumns<T extends UserColumnRow>(
         ...userGroupColumn<T>(t, {
           withBadgeCell: opts.withGroupBadgeCell ?? true,
         }),
-        filterFn: (row: { getValue: (id: string) => unknown }, id: string, value: string) => {
+        filterFn: (
+          row: { getValue: (id: string) => unknown },
+          id: string,
+          value: string,
+        ) => {
           const group = String(
             row.getValue(id) || t("User Group"),
           ).toLowerCase();
