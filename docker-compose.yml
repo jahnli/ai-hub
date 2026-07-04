@@ -11,6 +11,7 @@ services:
     volumes:
       - ./data:/data
       - ./logs:/app/logs
+      - /home/work/generated-images:/data/image-studio
     environment:
       - SQL_DSN=${SQL_DSN}
       - REDIS_CONN_STRING=${REDIS_CONN_STRING}
@@ -21,6 +22,7 @@ services:
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - BATCH_UPDATE_ENABLED=true
+      - IMAGE_STUDIO_STORAGE_DIR=/data/image-studio
       - PORT=3002
     #      - STREAMING_TIMEOUT=300
     #      - SESSION_SECRET=random_string
