@@ -77,12 +77,12 @@ export function ImageStudio() {
   const customSizeHeight = config.customHeight
   const customSizeAspectRatio = customSizeWidth / customSizeHeight
   const customSizePixelCount = customSizeWidth * customSizeHeight
-  const isGptImage2Model = config.model.toLowerCase().startsWith('gpt-image-2')
+  const isGptImageModel = config.model.toLowerCase().startsWith('gpt-image')
   const customSizeValid =
     config.size !== CUSTOM_SIZE ||
     (customSizeWidth > 0 &&
       customSizeHeight > 0 &&
-      (!isGptImage2Model ||
+      (!isGptImageModel ||
         (customSizeWidth % 16 === 0 &&
           customSizeHeight % 16 === 0 &&
           customSizeAspectRatio >= 1 / 3 &&

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { getUserGroups, getUserModels } from '../api'
 import { DEFAULT_CONFIG, IMAGE_MODEL_KEYWORDS } from '../constants'
+import { normalizeConfigForModel } from '../lib/model-params'
 import type { GroupOption, ImageStudioConfig, ModelOption } from '../types'
 
 export function isLikelyImageModel(model: string): boolean {
@@ -40,7 +41,11 @@ export function useImageStudioState() {
       key: K,
       value: ImageStudioConfig[K]
     ) => {
-      setConfig((prev) => ({ ...prev, [key]: value }))
+      setConfig((prev) => {
+        const next = { ...prev, [key]: value }
+        // model families support different size/quality/n subsets
+        return key === 'model' ? normalizeConfigForModel(next) : next
+      })
     },
     []
   )
@@ -85,7 +90,7 @@ export function useImageStudioState() {
           }
           const fallback = imageModels[0]
           return fallback
-            ? { ...prev, model: fallback.value }
+            ? normalizeConfigForModel({ ...prev, model: fallback.value })
             : { ...prev, model: '' }
         })
       })

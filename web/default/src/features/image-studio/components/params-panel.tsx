@@ -40,13 +40,10 @@ import {
 
 import {
   CUSTOM_SIZE,
-  GPT_IMAGE_2_BACKGROUND_OPTIONS,
-  GPT_IMAGE_QUALITY_OPTIONS,
-  MAX_IMAGE_COUNT,
   MODERATION_OPTIONS,
   OUTPUT_FORMAT_OPTIONS,
-  SIZE_PRESETS,
 } from '../constants'
+import { imageModelParamSupport } from '../lib/model-params'
 import type { GroupOption, ImageStudioConfig, ModelOption } from '../types'
 
 type ParamsPanelProps = {
@@ -121,8 +118,12 @@ export function ParamsPanel({
 }: ParamsPanelProps) {
   const { t } = useTranslation()
 
+  const support = imageModelParamSupport(config.model)
+  const showAdvanced =
+    support.backgroundOptions !== null || support.supportsOutputFormat
+
   const clampCount = (value: number) =>
-    Math.min(MAX_IMAGE_COUNT, Math.max(1, value))
+    Math.min(support.maxImages, Math.max(1, value))
 
   const customSizeHelpText = t(
     'GPT Image 2 custom sizes must be divisible by 16, within a 1:3 to 3:1 aspect ratio, and no larger than 3840×2160 total pixels.'
@@ -155,13 +156,17 @@ export function ParamsPanel({
           </SelectTrigger>
           <SelectContent alignItemWithTrigger={false}>
             <SelectGroup>
-              <SelectItem value='auto'>{t('auto')}</SelectItem>
-              {SIZE_PRESETS.map((size) => (
+              {support.supportsAutoSize && (
+                <SelectItem value='auto'>{t('auto')}</SelectItem>
+              )}
+              {support.sizePresets.map((size) => (
                 <SelectItem key={size} value={size}>
                   {size}
                 </SelectItem>
               ))}
-              <SelectItem value={CUSTOM_SIZE}>{t('Custom size')}</SelectItem>
+              {support.supportsCustomSize && (
+                <SelectItem value={CUSTOM_SIZE}>{t('Custom size')}</SelectItem>
+              )}
             </SelectGroup>
           </SelectContent>
         </Select>
@@ -201,25 +206,29 @@ export function ParamsPanel({
         )}
       </FieldRow>
 
-      <FieldRow label={t('Quality')}>
-        <OptionalSelect
-          value={config.quality}
-          options={GPT_IMAGE_QUALITY_OPTIONS}
-          onChange={(value) => updateConfig('quality', value)}
-          disabled={disabled}
-          translateOptions
-        />
-      </FieldRow>
+      {support.qualityOptions !== null && (
+        <FieldRow label={t('Quality')}>
+          <OptionalSelect
+            value={config.quality}
+            options={support.qualityOptions}
+            onChange={(value) => updateConfig('quality', value)}
+            disabled={disabled}
+            translateOptions
+          />
+        </FieldRow>
+      )}
 
-      <FieldRow label={t('Moderation sensitivity')}>
-        <OptionalSelect
-          value={config.moderation}
-          options={MODERATION_OPTIONS}
-          onChange={(value) => updateConfig('moderation', value)}
-          disabled={disabled}
-          translateOptions
-        />
-      </FieldRow>
+      {support.supportsModeration && (
+        <FieldRow label={t('Moderation sensitivity')}>
+          <OptionalSelect
+            value={config.moderation}
+            options={MODERATION_OPTIONS}
+            onChange={(value) => updateConfig('moderation', value)}
+            disabled={disabled}
+            translateOptions
+          />
+        </FieldRow>
+      )}
 
       <FieldRow label={t('Image count')}>
         <div className='flex items-center gap-2'>
@@ -243,7 +252,7 @@ export function ParamsPanel({
             size='icon'
             className='size-8'
             onClick={() => updateConfig('n', clampCount(config.n + 1))}
-            disabled={disabled || config.n >= MAX_IMAGE_COUNT}
+            disabled={disabled || config.n >= support.maxImages}
             aria-label={t('Increase count')}
           >
             <Plus className='size-3.5' />
@@ -251,54 +260,64 @@ export function ParamsPanel({
         </div>
         <p className='text-muted-foreground/70 text-[11px] leading-snug'>
           {t('Up to {{count}} images per generation', {
-            count: MAX_IMAGE_COUNT,
+            count: support.maxImages,
           })}
         </p>
       </FieldRow>
 
-      <Collapsible defaultOpen>
-        <CollapsibleTrigger className='text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-medium transition-colors'>
-          {t('Advanced parameters')}
-          <ChevronDown className='size-3.5' />
-        </CollapsibleTrigger>
-        <CollapsibleContent className='mt-3 flex flex-col gap-4'>
-          <FieldRow label={t('Background')}>
-            <OptionalSelect
-              value={config.background}
-              options={GPT_IMAGE_2_BACKGROUND_OPTIONS}
-              onChange={(value) => updateConfig('background', value)}
-              disabled={disabled}
-              translateOptions
-            />
-          </FieldRow>
+      {showAdvanced && (
+        <Collapsible defaultOpen>
+          <CollapsibleTrigger className='text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-medium transition-colors'>
+            {t('Advanced parameters')}
+            <ChevronDown className='size-3.5' />
+          </CollapsibleTrigger>
+          <CollapsibleContent className='mt-3 flex flex-col gap-4'>
+            {support.backgroundOptions !== null && (
+              <FieldRow label={t('Background')}>
+                <OptionalSelect
+                  value={config.background}
+                  options={support.backgroundOptions}
+                  onChange={(value) => updateConfig('background', value)}
+                  disabled={disabled}
+                  translateOptions
+                />
+              </FieldRow>
+            )}
 
-          <FieldRow label={t('Output format')}>
-            <OptionalSelect
-              value={config.outputFormat}
-              options={OUTPUT_FORMAT_OPTIONS}
-              onChange={(value) => updateConfig('outputFormat', value)}
-              disabled={disabled}
-            />
-          </FieldRow>
+            {support.supportsOutputFormat && (
+              <>
+                <FieldRow label={t('Output format')}>
+                  <OptionalSelect
+                    value={config.outputFormat}
+                    options={OUTPUT_FORMAT_OPTIONS}
+                    onChange={(value) => updateConfig('outputFormat', value)}
+                    disabled={disabled}
+                  />
+                </FieldRow>
 
-          <FieldRow label={t('Output compression')}>
-            <Input
-              type='number'
-              min={0}
-              max={100}
-              value={config.outputCompression ?? ''}
-              placeholder='0-100'
-              onChange={(event) =>
-                updateConfig(
-                  'outputCompression',
-                  event.target.value === '' ? null : Number(event.target.value)
-                )
-              }
-              disabled={disabled}
-            />
-          </FieldRow>
-        </CollapsibleContent>
-      </Collapsible>
+                <FieldRow label={t('Output compression')}>
+                  <Input
+                    type='number'
+                    min={0}
+                    max={100}
+                    value={config.outputCompression ?? ''}
+                    placeholder='0-100'
+                    onChange={(event) =>
+                      updateConfig(
+                        'outputCompression',
+                        event.target.value === ''
+                          ? null
+                          : Number(event.target.value)
+                      )
+                    }
+                    disabled={disabled}
+                  />
+                </FieldRow>
+              </>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   )
 }

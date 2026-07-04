@@ -23,8 +23,8 @@ import {
   CUSTOM_SIZE,
   DEFAULT_ESTIMATE_MS,
   ESTIMATE_SAMPLE_SIZE,
-  MAX_IMAGE_COUNT,
 } from '../constants'
+import { imageModelParamSupport } from '../lib/model-params'
 import type {
   GeneratedImage,
   GenerationRecord,
@@ -45,13 +45,19 @@ function resolveSize(config: ImageStudioConfig): string {
   return `${config.customWidth}x${config.customHeight}`
 }
 
+/**
+ * Build the request body from the model's parameter support table
+ * (gpt-image-2 spec today): 'auto' values are omitted so the provider
+ * default applies, and unsupported fields are never sent.
+ */
 function buildPayload(
   config: ImageStudioConfig,
   prompt: string,
   mode: StudioMode,
   referenceImages: ReferenceImage[]
 ): ImageGenerationPayload {
-  const imageCount = Math.min(MAX_IMAGE_COUNT, Math.max(1, config.n))
+  const support = imageModelParamSupport(config.model)
+  const imageCount = Math.min(support.maxImages, Math.max(1, config.n))
   const payload: ImageGenerationPayload = {
     model: config.model,
     group: config.group,
@@ -59,17 +65,38 @@ function buildPayload(
     n: imageCount,
   }
   const size = resolveSize(config)
-  if (size) payload.size = size
-  payload.quality = config.quality
-  payload.moderation = config.moderation
-  payload.background = config.background
-  payload.output_format = config.outputFormat
-  if (config.outputCompression !== null) {
-    payload.output_compression = config.outputCompression
+  // omitted size/quality/etc. means "provider default", same as 'auto'
+  if (size && size !== 'auto') payload.size = size
+  if (
+    support.qualityOptions !== null &&
+    config.quality &&
+    config.quality !== 'auto'
+  ) {
+    payload.quality = config.quality
   }
-  // dall-e defaults to expiring URLs; request base64 so history stays valid
-  if (config.model.startsWith('dall-e')) {
-    payload.response_format = 'b64_json'
+  if (
+    support.supportsModeration &&
+    mode === 'generate' &&
+    config.moderation &&
+    config.moderation !== 'auto'
+  ) {
+    payload.moderation = config.moderation
+  }
+  if (
+    support.backgroundOptions !== null &&
+    config.background &&
+    config.background !== 'auto'
+  ) {
+    payload.background = config.background
+  }
+  if (support.supportsOutputFormat && config.outputFormat) {
+    payload.output_format = config.outputFormat
+    if (config.outputCompression !== null) {
+      payload.output_compression = config.outputCompression
+    }
+  }
+  if (support.responseFormat) {
+    payload.response_format = support.responseFormat
   }
   if (mode === 'edit') {
     payload.image = referenceImages.map((image) => image.dataUrl)
@@ -145,7 +172,11 @@ export function useImageGeneration({
         const { response, requestId } = await send(payload, controller.signal)
         const durationMs = Date.now() - startedAt
 
-        const imageMimeType = imageMimeTypeForOutputFormat(config.outputFormat)
+        // label images with the format actually requested; when
+        // output_format was not sent, providers return PNG
+        const imageMimeType = imageMimeTypeForOutputFormat(
+          payload.output_format ?? 'png'
+        )
         const images: GeneratedImage[] = (response.data ?? []).map(
           (item, index) => ({
             id: `${startedAt}-${index}`,
@@ -168,9 +199,9 @@ export function useImageGeneration({
           model: config.model,
           group: config.group,
           size: resolveSize(config),
-          quality: config.quality,
-          moderation: config.moderation,
-          outputFormat: config.outputFormat,
+          quality: payload.quality,
+          moderation: payload.moderation,
+          outputFormat: payload.output_format,
           n: payload.n ?? 1,
           images,
           referenceImages: mode === 'edit' ? referenceImages : undefined,
