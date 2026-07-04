@@ -20,6 +20,7 @@ import (
 	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"github.com/QuantumNous/new-api/constant"
 
@@ -238,6 +239,17 @@ func Register(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserRegisterFailed)
 		return
 	}
+
+	autoSubscribePlanId := system_setting.GetRegistrationSettings().AutoSubscribePlanId
+	if autoSubscribePlanId > 0 {
+		msg, bindErr := model.AdminBindSubscription(insertedUser.Id, autoSubscribePlanId, "register_auto")
+		if bindErr != nil {
+			common.SysError(fmt.Sprintf("[Register] auto-subscribe failed for user %d plan %d: %v", insertedUser.Id, autoSubscribePlanId, bindErr))
+		} else {
+			common.SysLog(fmt.Sprintf("[Register] auto-subscribe succeeded for user %d plan %d: %s", insertedUser.Id, autoSubscribePlanId, msg))
+		}
+	}
+
 	// 生成默认令牌
 	if constant.GenerateDefaultToken {
 		key, err := common.GenerateKey()
