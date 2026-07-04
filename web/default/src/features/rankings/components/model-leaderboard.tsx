@@ -27,6 +27,7 @@ import { GrowthText } from './growth-text'
 
 type ModelLeaderboardProps = {
   rows: ModelRanking[]
+  canViewTokenNumbers: boolean
   /** Density variant. `compact` is used inside per-category sections; the
    * default fits the larger overall "Top Models" section. */
   variant?: 'default' | 'compact'
@@ -56,8 +57,18 @@ export function ModelLeaderboard(props: ModelLeaderboardProps) {
 
   return (
     <div className='grid grid-cols-1 gap-x-8 md:grid-cols-2'>
-      <ModelList rows={left} variant={variant} />
-      {right.length > 0 && <ModelList rows={right} variant={variant} />}
+      <ModelList
+        rows={left}
+        variant={variant}
+        canViewTokenNumbers={props.canViewTokenNumbers}
+      />
+      {right.length > 0 && (
+        <ModelList
+          rows={right}
+          variant={variant}
+          canViewTokenNumbers={props.canViewTokenNumbers}
+        />
+      )}
     </div>
   )
 }
@@ -65,6 +76,7 @@ export function ModelLeaderboard(props: ModelLeaderboardProps) {
 function ModelList(props: {
   rows: ModelRanking[]
   variant: 'default' | 'compact'
+  canViewTokenNumbers: boolean
 }) {
   const { t } = useTranslation()
   const compact = props.variant === 'compact'
@@ -109,29 +121,31 @@ function ModelList(props: {
               </VendorLink>
             </p>
           </div>
-          <div className='shrink-0 text-right'>
-            <div
-              className={
-                compact
-                  ? 'text-foreground font-mono text-xs font-semibold tabular-nums'
-                  : 'text-foreground font-mono text-sm font-semibold tabular-nums'
-              }
-            >
-              {formatTokens(row.total_tokens)}
-              {!compact && (
-                <>
-                  {' '}
-                  <span className='text-muted-foreground/80 font-normal'>
-                    {t('tokens')}
-                  </span>
-                </>
-              )}
+          {props.canViewTokenNumbers && (
+            <div className='shrink-0 text-right'>
+              <div
+                className={
+                  compact
+                    ? 'text-foreground font-mono text-xs font-semibold tabular-nums'
+                    : 'text-foreground font-mono text-sm font-semibold tabular-nums'
+                }
+              >
+                {formatTokens(row.total_tokens)}
+                {!compact && (
+                  <>
+                    {' '}
+                    <span className='text-muted-foreground/80 font-normal'>
+                      {t('tokens')}
+                    </span>
+                  </>
+                )}
+              </div>
+              <GrowthText
+                value={row.growth_pct}
+                className={compact ? 'text-[10px]' : 'text-[11px]'}
+              />
             </div>
-            <GrowthText
-              value={row.growth_pct}
-              className={compact ? 'text-[10px]' : 'text-[11px]'}
-            />
-          </div>
+          )}
         </li>
       ))}
     </ul>

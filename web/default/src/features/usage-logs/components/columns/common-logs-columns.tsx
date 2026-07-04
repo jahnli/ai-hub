@@ -104,7 +104,9 @@ function getGroupRatioText(other: LogOtherData | null): string | null {
 
 function getChannelBadgeVariant(channelId: string): StatusBadgeProps['variant'] {
   const generatedColor = stringToColor(channelId)
-  return generatedColor === 'red' ? 'orange' : generatedColor
+  if (generatedColor === 'red') return 'orange'
+  if (generatedColor === 'slate') return 'neutral'
+  return generatedColor
 }
 
 function splitQuotaDisplay(value: string): { prefix: string; amount: string } {

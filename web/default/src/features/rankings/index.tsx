@@ -22,6 +22,8 @@ import { useTranslation } from 'react-i18next'
 import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ROLE } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 
 import {
   MarketShareSection,
@@ -38,6 +40,9 @@ export function Rankings() {
   const { t } = useTranslation()
   const search = useSearch({ from: '/rankings/' })
   const navigate = useNavigate()
+  const canViewTokenNumbers = useAuthStore(
+    (state) => state.auth.user?.role === ROLE.SUPER_ADMIN
+  )
 
   const period: RankingPeriod = VALID_PERIODS.includes(
     search.period as RankingPeriod
@@ -92,12 +97,14 @@ export function Rankings() {
                 history={snapshot.models_history}
                 rows={snapshot.models}
                 period={period}
+                canViewTokenNumbers={canViewTokenNumbers}
               />
 
               <MarketShareSection
                 history={snapshot.vendor_share_history}
                 rows={snapshot.vendors}
                 period={period}
+                canViewTokenNumbers={canViewTokenNumbers}
               />
 
               <PulseSection

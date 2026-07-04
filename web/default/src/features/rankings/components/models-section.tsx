@@ -41,7 +41,22 @@ type ModelsSectionProps = {
   history: ModelHistorySeries;
   rows: ModelRanking[];
   period: RankingPeriod;
+  canViewTokenNumbers: boolean;
 };
+
+function formatTooltipRank(rank: number): string {
+  return `#${rank}`;
+}
+
+function formatTooltipValue(
+  value: string | number,
+  rank: number,
+  canViewTokenNumbers: boolean,
+): string {
+  const rankText = formatTooltipRank(rank);
+  if (!canViewTokenNumbers) return rankText;
+  return `${formatTokens(Number(value) || 0)} · ${rankText}`;
+}
 
 /**
  * Combined "Top Models" card: a stacked bar chart showing token usage by
@@ -77,6 +92,10 @@ export function ModelsSection(props: ModelsSectionProps) {
     [props.rows],
   );
 
+  const modelRankMap = useMemo(() => {
+    return new Map(props.rows.map((row) => [row.model_name, row.rank]));
+  }, [props.rows]);
+
   const spec = useMemo(() => {
     if (orderedPoints.length === 0) return null;
     return {
@@ -100,7 +119,8 @@ export function ModelsSection(props: ModelsSectionProps) {
         {
           orient: "left",
           label: {
-            formatMethod: (val: number | string) => formatTokens(Number(val)),
+            formatMethod: (val: number | string) =>
+              props.canViewTokenNumbers ? formatTokens(Number(val)) : '',
             style: { fill: chartTextColor, fontSize: 10 },
           },
           grid: {
@@ -115,8 +135,15 @@ export function ModelsSection(props: ModelsSectionProps) {
             {
               key: (datum: Record<string, unknown>) =>
                 String(datum?.model ?? ""),
-              value: (datum: Record<string, unknown>) =>
-                formatTokens(Number(datum?.tokens) || 0),
+              value: (datum: Record<string, unknown>) => {
+                const modelName = String(datum?.model ?? "");
+                const rank = modelRankMap.get(modelName) ?? 1;
+                return formatTooltipValue(
+                  Number(datum?.tokens) || 0,
+                  rank,
+                  props.canViewTokenNumbers,
+                );
+              },
             },
           ],
         },
@@ -137,12 +164,23 @@ export function ModelsSection(props: ModelsSectionProps) {
             array: Array<{ key: string; value: string | number }>,
           ) => {
             array.sort((a, b) => Number(b.value) - Number(a.value));
-            const sum = array.reduce((s, x) => s + (Number(x.value) || 0), 0);
             const visible = array.slice(0, TOOLTIP_MAX_ROWS);
+            if (!props.canViewTokenNumbers) {
+              return visible.map((item, index) => ({
+                key: item.key,
+                value: formatTooltipRank(index + 1),
+              }));
+            }
+
+            const sum = array.reduce((s, x) => s + (Number(x.value) || 0), 0);
             const overflow = array.slice(TOOLTIP_MAX_ROWS);
-            const result = visible.map((item) => ({
+            const result = visible.map((item, index) => ({
               key: item.key,
-              value: formatTokens(Number(item.value) || 0),
+              value: formatTooltipValue(
+                item.value,
+                index + 1,
+                props.canViewTokenNumbers,
+              ),
             }));
             if (overflow.length > 0) {
               const otherSum = overflow.reduce(
@@ -161,7 +199,14 @@ export function ModelsSection(props: ModelsSectionProps) {
       },
       animationAppear: { duration: 800 },
     };
-  }, [chartGridColor, chartTextColor, orderedPoints, t]);
+  }, [
+    chartGridColor,
+    chartTextColor,
+    modelRankMap,
+    orderedPoints,
+    props.canViewTokenNumbers,
+    t,
+  ]);
 
   return (
     <section className="bg-card overflow-hidden rounded-lg border">
@@ -176,14 +221,16 @@ export function ModelsSection(props: ModelsSectionProps) {
             {t(PERIOD_DESCRIPTIONS[props.period])}
           </p>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="text-foreground font-mono text-2xl font-semibold tabular-nums">
-            {formatTokens(totalTokens)}
+        {props.canViewTokenNumbers && (
+          <div className="shrink-0 text-right">
+            <div className="text-foreground font-mono text-2xl font-semibold tabular-nums">
+              {formatTokens(totalTokens)}
+            </div>
+            <div className="text-muted-foreground/80 text-[10px] font-medium tracking-widest uppercase">
+              {t("tokens")}
+            </div>
           </div>
-          <div className="text-muted-foreground/80 text-[10px] font-medium tracking-widest uppercase">
-            {t("tokens")}
-          </div>
-        </div>
+        )}
       </header>
 
       <div className="px-5 pb-5">
@@ -223,7 +270,10 @@ export function ModelsSection(props: ModelsSectionProps) {
           </div>
         ) : (
           <div className="px-5 pt-1 pb-4">
-            <ModelLeaderboard rows={props.rows} />
+            <ModelLeaderboard
+              rows={props.rows}
+              canViewTokenNumbers={props.canViewTokenNumbers}
+            />
           </div>
         )}
       </div>
