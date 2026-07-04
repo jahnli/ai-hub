@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { AnimateInView } from '@/components/animate-in-view'
 import { useStatus } from '@/hooks/use-status'
+import { buildFeishuUserChatUrl } from '@/lib/utils'
 
 export function CTA() {
   const { t } = useTranslation()
@@ -29,9 +30,9 @@ export function CTA() {
   const feishuSupportOpenId = (status?.feishu_support_open_id ??
     status?.data?.feishu_support_open_id) as string | undefined
 
-  if (!feishuSupportOpenId) return null
+  const feishuLink = buildFeishuUserChatUrl(feishuSupportOpenId)
 
-  const feishuLink = `https://applink.feishu.cn/client/chat/open?openId=${feishuSupportOpenId}`
+  if (!feishuLink) return null
 
   return (
     <section className='relative z-10 overflow-hidden px-6 pt-0 pb-8 md:pb-12'>

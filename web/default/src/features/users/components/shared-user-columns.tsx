@@ -21,7 +21,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useTranslation } from "react-i18next";
 import { formatQuota, formatTimestamp } from "@/lib/format";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
-import { cn } from "@/lib/utils";
+import { buildFeishuUserChatUrl, cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -48,10 +48,12 @@ import { UserProfileHoverCard } from "./user-profile-hover-card";
 // ============================================================================
 
 export function getQuotaProgressColor(usedPercentage: number): string {
-  if (usedPercentage >= 80)
+  if (usedPercentage >= 80) {
     return "[&_[data-slot=progress-indicator]]:bg-red-500";
-  if (usedPercentage >= 50)
+  }
+  if (usedPercentage >= 50) {
     return "[&_[data-slot=progress-indicator]]:bg-amber-500";
+  }
   return "[&_[data-slot=progress-indicator]]:bg-emerald-500";
 }
 export function formatAmountCny(value: number | undefined): string {
@@ -118,20 +120,36 @@ export function userNameColumn<T extends UserColumnRow>(
       const primaryName = displayName || username;
       const avatarFallback = getUserAvatarFallback(primaryName);
       const avatarFallbackStyle = getUserAvatarStyle(primaryName);
+      const feishuChatUrl = buildFeishuUserChatUrl(user.open_id);
+      const avatarElement = (
+        <Avatar size="sm" className="shrink-0">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt={primaryName} />}
+          <AvatarFallback
+            className="text-xs font-medium text-white"
+            style={avatarFallbackStyle}
+          >
+            {avatarFallback}
+          </AvatarFallback>
+        </Avatar>
+      );
 
       return (
         <div className="flex w-[130px] min-w-0 items-center gap-2">
-          <UserProfileHoverCard user={user}>
-            <Avatar size="sm" className="shrink-0">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={primaryName} />}
-              <AvatarFallback
-                className="text-xs font-medium text-white"
-                style={avatarFallbackStyle}
-              >
-                {avatarFallback}
-              </AvatarFallback>
-            </Avatar>
-          </UserProfileHoverCard>
+          {feishuChatUrl ? (
+            <a
+              href={feishuChatUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {avatarElement}
+            </a>
+          ) : (
+            <UserProfileHoverCard user={user}>
+              {avatarElement}
+            </UserProfileHoverCard>
+          )}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <LongText className="max-w-full font-medium">
               {primaryName}
@@ -355,8 +373,9 @@ export function userDepartmentColumn<T extends UserColumnRow>(
     header: t("Department"),
     cell: ({ row }) => {
       const dept = row.original.department_name;
-      if (!dept)
+      if (!dept) {
         return <span className="text-muted-foreground text-sm">-</span>;
+      }
       const parts = dept.split("/");
       const firstLevel = parts[0];
       const rest = parts.slice(1).join("/");

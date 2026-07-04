@@ -27,6 +27,15 @@ export function sleep(ms: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export function buildFeishuUserChatUrl(openId: string | undefined): string | undefined {
+  const normalizedOpenId = openId?.trim()
+  if (!normalizedOpenId) return undefined
+
+  const feishuChatUrl = new URL('https://applink.feishu.cn/client/chat/open')
+  feishuChatUrl.searchParams.set('openId', normalizedOpenId)
+  return feishuChatUrl.toString()
+}
+
 /**
  * 清理 CSS 变量名，替换特殊字符
  * 用于将模型名称（如 gpt-3.5-turbo）转换为有效的 CSS 变量名（gpt-3-5-turbo）
@@ -34,9 +43,7 @@ export function sleep(ms: number = 1000) {
  * @returns 清理后的 CSS 变量名
  */
 export function sanitizeCssVariableName(name: string): string {
-  // 将点号、空格、斜杠替换为连字符
-  // 移除其他不允许在 CSS 变量名中的特殊字符
-  return name.replace(/[.\s/]/g, '-').replace(/[^\w-]/g, '')
+  return name.replaceAll(/[.\s/]/g, '-').replaceAll(/[^\w-]/g, '')
 }
 
 /**

@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { CircleAlert, GitBranch, Globe, KeyRound, Sparkles } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -45,7 +45,7 @@ import {
   formatTimestampToDate,
   formatUseTime,
 } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
 import { getUserInfo } from '../../api'
 import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
@@ -220,8 +220,9 @@ function buildDetailSegments(
   } else {
     const isPerCall = isPerCallBilling(other.model_price);
     if (isPerCall) {
+      const modelPrice = other.model_price ?? 0;
       segments.push({
-        text: `${t("Per-call")} · ${formatBillingCurrencyFromUSD(other.model_price!, priceOpts)}`,
+        text: `${t("Per-call")} · ${formatBillingCurrencyFromUSD(modelPrice, priceOpts)}`,
       });
     } else if (other.model_ratio != null) {
       const inputPriceUSD = other.model_ratio * 2.0;
@@ -328,18 +329,15 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
       header: t("User"),
       accessorFn: (row) => row.username,
       cell: function UserCell({ row }) {
-        const { sensitiveVisible, setSelectedUserId, setUserInfoDialogOpen } =
-          useUsageLogsContext();
+        const { sensitiveVisible } = useUsageLogsContext();
         const log = row.original;
         const [userData, setUserData] = useState<UserColumnRow | null>(null);
         const fetchedRef = useRef(false);
 
-        if (!log.username) return null;
-
         const handleFetchUser = useCallback(() => {
           if (fetchedRef.current || !sensitiveVisible) return;
           fetchedRef.current = true;
-          getUserInfo(log.user_id).then((res) => {
+          void getUserInfo(log.user_id).then((res) => {
             if (res.success && res.data) {
               const info = res.data;
               setUserData({
@@ -365,16 +363,13 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                 description: info.description,
                 background_image: info.background_image,
                 mobile: info.mobile,
+                open_id: info.open_id,
               });
             }
           });
         }, [log.user_id, sensitiveVisible]);
 
-        const handleClick = (e: React.MouseEvent) => {
-          e.stopPropagation();
-          setSelectedUserId(log.user_id);
-          setUserInfoDialogOpen(true);
-        };
+        if (!log.username) return null;
 
         if (!sensitiveVisible) {
           return (
@@ -394,6 +389,9 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         const primaryName = log.display_name || log.username;
         const avatarFallback = getUserAvatarFallback(primaryName);
         const avatarFallbackStyle = getUserAvatarStyle(primaryName);
+        const feishuChatUrl = buildFeishuUserChatUrl(
+          userData?.open_id ?? log.open_id,
+        );
 
         const baseUser: UserColumnRow = userData ?? {
           id: log.user_id,
@@ -408,13 +406,16 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           group: "",
           status: 1,
           role: 1,
+          open_id: log.open_id || undefined,
         };
 
-        const avatarEl = (
-          <button
-            type="button"
+        const avatarEl = feishuChatUrl ? (
+          <a
+            href={feishuChatUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
-            onClick={handleClick}
+            onClick={(event) => event.stopPropagation()}
           >
             <Avatar size="sm" className="shrink-0">
               {log.avatar_url && (
@@ -427,7 +428,19 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                 {avatarFallback}
               </AvatarFallback>
             </Avatar>
-          </button>
+          </a>
+        ) : (
+          <Avatar size="sm" className="shrink-0">
+            {log.avatar_url && (
+              <AvatarImage src={log.avatar_url} alt={primaryName} />
+            )}
+            <AvatarFallback
+              className="text-xs font-medium text-white"
+              style={avatarFallbackStyle}
+            >
+              {avatarFallback}
+            </AvatarFallback>
+          </Avatar>
         );
 
         return (
@@ -887,7 +900,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         }
         if (groupRatioText) metaParts.push(groupRatioText);
         return (
-          <div className="flex max-w-[160px] flex-col gap-0.5">
+          <div className="flex max-w-[120px] min-w-0 flex-col gap-0.5">
             <TooltipProvider delay={300}>
               <Tooltip>
                 <TooltipTrigger render={<div className="max-w-full" />}>
@@ -897,7 +910,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                     copyText={sensitiveVisible ? tokenName : undefined}
                     size="sm"
                     showDot={false}
-                    className="border-border/60 bg-muted/30 text-foreground h-6 max-w-full gap-1.5 overflow-hidden rounded-md border px-2 py-0.5 [font-family:var(--font-body)]"
+                    className="border-border/60 bg-muted/30 text-foreground h-6 max-w-full gap-1.5 overflow-hidden rounded-md border px-2 py-0.5 [font-family:var(--font-body)] [&>span]:truncate"
                   />
                 </TooltipTrigger>
                 {sensitiveVisible && tokenName.length > 16 && (
@@ -915,7 +928,8 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           </div>
         );
       },
-      size: 140,
+      size: 120,
+      maxSize: 120,
     },
     {
       accessorKey: "content",
@@ -930,6 +944,47 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         const hasMore = segments.length > 1;
         const isErrorLog = log.type === LOG_TYPE_ENUM.ERROR;
 
+        let primaryTextClassName = "text-foreground";
+        if (primary?.muted) {
+          primaryTextClassName = "text-muted-foreground/60";
+        } else if (primary?.danger || isErrorLog) {
+          primaryTextClassName = "text-red-600 dark:text-red-400";
+        }
+        let contentTextClassName = "text-muted-foreground";
+        if (isErrorLog) {
+          contentTextClassName = "text-red-600 dark:text-red-400";
+        }
+        let detailContent = <span className="text-muted-foreground/40">—</span>;
+        if (log.content) {
+          detailContent = (
+            <span
+              className={cn(
+                "truncate group-hover:underline",
+                contentTextClassName,
+              )}
+            >
+              {log.content}
+            </span>
+          );
+        }
+        if (primary) {
+          detailContent = (
+            <span
+              className={cn(
+                "truncate leading-snug group-hover:underline",
+                primaryTextClassName,
+              )}
+            >
+              {primary.text}
+              {hasMore && (
+                <span className="text-muted-foreground/40 ml-0.5">
+                  +{segments.length - 1}
+                </span>
+              )}
+            </span>
+          );
+        }
+
         return (
           <>
             <button
@@ -938,38 +993,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
               onClick={() => setDialogOpen(true)}
               title={t("Click to view full details")}
             >
-              {primary ? (
-                <span
-                  className={cn(
-                    "truncate leading-snug group-hover:underline",
-                    primary.muted
-                      ? "text-muted-foreground/60"
-                      : primary.danger || isErrorLog
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-foreground",
-                  )}
-                >
-                  {primary.text}
-                  {hasMore && (
-                    <span className="text-muted-foreground/40 ml-0.5">
-                      +{segments.length - 1}
-                    </span>
-                  )}
-                </span>
-              ) : log.content ? (
-                <span
-                  className={cn(
-                    "truncate group-hover:underline",
-                    isErrorLog
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {log.content}
-                </span>
-              ) : (
-                <span className="text-muted-foreground/40">—</span>
-              )}
+              {detailContent}
             </button>
             <DetailsDialog
               log={log}

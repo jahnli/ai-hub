@@ -286,6 +286,7 @@ export interface TaskLog {
   other?: string
   created_at?: number
   updated_at?: number
+  open_id?: string
 }
 
 // ============================================================================
@@ -404,4 +405,5 @@ export interface UserInfo {
   description?: string
   background_image?: string
   mobile?: string
+  open_id?: string
 }

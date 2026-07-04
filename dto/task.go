@@ -49,6 +49,7 @@ type TaskDto struct {
 	Progress   string          `json:"progress"`
 	Properties any             `json:"properties"`
 	Username   string          `json:"username,omitempty"`
+	OpenId     string          `json:"open_id,omitempty"`
 	Data       json.RawMessage `json:"data"`
 }
 

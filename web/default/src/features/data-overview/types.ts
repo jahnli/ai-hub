@@ -106,6 +106,7 @@ export interface DepartmentUser {
   background_image?: string
   custom_field_values?: string
   join_date?: string
+  open_id?: string
 }
 
 export interface DepartmentUsersResponse {

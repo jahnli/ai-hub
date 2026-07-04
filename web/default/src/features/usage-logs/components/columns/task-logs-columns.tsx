@@ -26,7 +26,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatTimestampToDate } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
 import { TASK_ACTIONS, TASK_STATUS } from '../../constants'
 import { taskActionMapper, taskStatusMapper } from '../../lib/mappers'
@@ -125,38 +125,43 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
       header: t('User'),
       accessorFn: (row) => row.username || row.user_id,
       cell: function UserCell({ row }) {
-        const { sensitiveVisible, setSelectedUserId, setUserInfoDialogOpen } =
-          useUsageLogsContext()
+        const { sensitiveVisible } = useUsageLogsContext()
         const log = row.original
         const displayName = log.username || String(log.user_id || '?')
+        const feishuChatUrl = buildFeishuUserChatUrl(log.open_id)
+        const avatarElement = (
+          <Avatar className='ring-border/60 size-6 ring-1 max-sm:hidden'>
+            <AvatarFallback
+              className={cn(
+                'text-[11px] font-semibold',
+                !sensitiveVisible && 'bg-muted text-muted-foreground'
+              )}
+              style={sensitiveVisible ? getUserAvatarStyle(displayName) : undefined}
+            >
+              {sensitiveVisible ? getUserAvatarFallback(displayName) : '•'}
+            </AvatarFallback>
+          </Avatar>
+        )
 
         return (
-          <button
-            type='button'
-            className='flex items-center gap-1.5 text-left'
-            onClick={(e) => {
-              e.stopPropagation()
-              setSelectedUserId(log.user_id)
-              setUserInfoDialogOpen(true)
-            }}
-          >
-            <Avatar className='ring-border/60 size-6 ring-1 max-sm:hidden'>
-              <AvatarFallback
-                className={cn(
-                  'text-[11px] font-semibold',
-                  !sensitiveVisible && 'bg-muted text-muted-foreground'
-                )}
-                style={
-                  sensitiveVisible ? getUserAvatarStyle(displayName) : undefined
-                }
+          <div className='flex items-center gap-1.5 text-left'>
+            {feishuChatUrl && sensitiveVisible ? (
+              <a
+                href={feishuChatUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none'
+                onClick={(event) => event.stopPropagation()}
               >
-                {sensitiveVisible ? getUserAvatarFallback(displayName) : '•'}
-              </AvatarFallback>
-            </Avatar>
-            <span className='text-muted-foreground truncate text-sm hover:underline'>
+                {avatarElement}
+              </a>
+            ) : (
+              avatarElement
+            )}
+            <span className='text-muted-foreground truncate text-sm'>
               {sensitiveVisible ? displayName : '••••'}
             </span>
-          </button>
+          </div>
         )
       },
     })

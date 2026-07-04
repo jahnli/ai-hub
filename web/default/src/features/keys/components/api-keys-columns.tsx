@@ -100,7 +100,9 @@ export function useApiKeysColumns(): ColumnDef<ApiKey>[] {
       accessorKey: 'name',
       header: t('Name'),
       cell: ({ row }) => (
-        <span className='font-medium'>{row.getValue('name')}</span>
+        <TruncatedCell className='font-medium'>
+          {row.getValue('name') as string}
+        </TruncatedCell>
       ),
       size: 180,
       meta: { mobileTitle: true },
