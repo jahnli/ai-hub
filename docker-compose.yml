@@ -12,8 +12,8 @@ services:
       - ./data:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=postgresql://admin:semitech@1Panel-postgresql-Umtv:5432/aihub
-      - REDIS_CONN_STRING=redis://:semitech@1Panel-redis-SRr2
+      - SQL_DSN=${SQL_DSN}
+      - REDIS_CONN_STRING=${REDIS_CONN_STRING}
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - BATCH_UPDATE_ENABLED=true
