@@ -70,7 +70,7 @@ export function UsersTable() {
   const isMobile = useMediaQuery('(max-width: 640px)')
 
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'quota', desc: true },
+    { id: 'created_at', desc: true },
   ])
 
   const sortParam = sorting[0]
