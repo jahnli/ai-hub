@@ -853,11 +853,16 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
   columns.push(
     {
       id: "request_content",
+      accessorFn: (row) => row.request_id,
       header: t("Request Content"),
       cell: function RequestContentCell({ row }) {
         const [dialogOpen, setDialogOpen] = useState(false);
+        const { sensitiveVisible } = useUsageLogsContext();
         const log = row.original;
         const requestMessage = useRequestMessage(log.request_id);
+        if (!sensitiveVisible) {
+          return <span className="text-muted-foreground/40">••••</span>;
+        }
         if (!requestMessage) {
           return <span className="text-muted-foreground/40">—</span>;
         }
