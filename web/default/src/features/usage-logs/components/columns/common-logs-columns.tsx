@@ -850,8 +850,8 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
     });
   }
 
-  columns.push(
-    {
+  if (isAdmin) {
+    columns.push({
       id: "request_content",
       accessorFn: (row) => row.request_id,
       header: t("Request Content"),
@@ -897,7 +897,10 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
       },
       size: 200,
       maxSize: 220,
-    },
+    });
+  }
+
+  columns.push(
     {
       accessorKey: "ip",
       header: t("IP Address"),
