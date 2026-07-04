@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { type ColumnDef } from '@tanstack/react-table'
-import { CircleAlert, GitBranch, KeyRound, Sparkles } from 'lucide-react'
+import { CircleAlert, GitBranch, Globe, KeyRound, Sparkles } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -47,7 +47,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { getUserInfo } from '../../api'
-import { LOG_TYPE_ALL_VALUE } from '../../constants'
+import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
 import type { UsageLog } from '../../data/schema'
 import {
   formatModelName,
@@ -823,6 +823,43 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
 
   columns.push(
     {
+      accessorKey: "ip",
+      header: t("IP Address"),
+      cell: function IpAddressCell({ row }) {
+        const { sensitiveVisible } = useUsageLogsContext();
+        const log = row.original;
+        const ipAddress = log.ip;
+        if (!ipAddress) return null;
+
+        const displayIpAddress = sensitiveVisible ? ipAddress : "••••";
+
+        return (
+          <div className="flex max-w-[140px] flex-col gap-0.5">
+            <TooltipProvider delay={300}>
+              <Tooltip>
+                <TooltipTrigger render={<div className="max-w-full" />}>
+                  <StatusBadge
+                    label={displayIpAddress}
+                    icon={Globe}
+                    copyText={sensitiveVisible ? ipAddress : undefined}
+                    size="sm"
+                    showDot={false}
+                    className="border-border/60 bg-muted/30 text-foreground h-6 max-w-full gap-1.5 overflow-hidden rounded-md border px-2 py-0.5 font-mono"
+                  />
+                </TooltipTrigger>
+                {sensitiveVisible && ipAddress.length > 15 && (
+                  <TooltipContent side="top" className="max-w-xs break-all">
+                    {ipAddress}
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      },
+      size: 130,
+    },
+    {
       accessorKey: "token_name",
       header: t("Token"),
       cell: function TokenNameCell({ row }) {
@@ -883,6 +920,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         const segments = buildDetailSegments(log, other, t);
         const primary = segments[0];
         const hasMore = segments.length > 1;
+        const isErrorLog = log.type === LOG_TYPE_ENUM.ERROR;
 
         return (
           <>
@@ -898,7 +936,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                     "truncate leading-snug group-hover:underline",
                     primary.muted
                       ? "text-muted-foreground/60"
-                      : primary.danger
+                      : primary.danger || isErrorLog
                         ? "text-red-600 dark:text-red-400"
                         : "text-foreground",
                   )}
@@ -911,7 +949,14 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                   )}
                 </span>
               ) : log.content ? (
-                <span className="text-muted-foreground truncate group-hover:underline">
+                <span
+                  className={cn(
+                    "truncate group-hover:underline",
+                    isErrorLog
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-muted-foreground",
+                  )}
+                >
                   {log.content}
                 </span>
               ) : (
@@ -929,6 +974,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
       },
       size: 155,
       maxSize: 175,
+      meta: { pinned: "right" as const },
     },
   );
 
