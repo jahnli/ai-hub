@@ -77,7 +77,7 @@ export function RequestContentDialog({
       onOpenChange={onOpenChange}
       title={t('Request Content')}
       description={`${requestMessage.model_name} · ${requestMessage.relay_format} · ${formatTimestampToDate(requestMessage.created_at)}`}
-      contentClassName='sm:max-w-4xl'
+      contentClassName='sm:max-w-[70rem]'
       contentHeight='auto'
       bodyClassName='space-y-4'
     >
