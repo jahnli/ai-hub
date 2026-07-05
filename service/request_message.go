@@ -55,6 +55,8 @@ var injectedTagNames = []string{
 	"available_skills",
 	"mcp_instructions",
 	"agent_transcripts",
+	"task-notification",
+	"task_notification",
 	"appshot",
 	"skill",
 	"codex_internal_context",
