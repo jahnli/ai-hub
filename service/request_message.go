@@ -65,6 +65,10 @@ var injectedBlockMarkers = []string{
 	"Another language model started to solve this problem",
 }
 
+var injectedBlockPrefixes = []string{
+	"# AGENTS.md instructions",
+}
+
 const continuedSessionResumeMarker = "Pick up the last task as if the break never happened."
 
 var codexUserRequestPattern = regexp.MustCompile(`(?is)(?:^|\n)\s*(?:#{1,6}\s*)?My request for Codex:\s*(.*)\z`)
@@ -99,6 +103,9 @@ func filterUserText(text string) string {
 	if text == "" {
 		return ""
 	}
+	if isInjectedBlock(text) {
+		return ""
+	}
 	if strings.Contains(text, "<user_query") {
 		var queries []string
 		for _, match := range userQueryPattern.FindAllStringSubmatch(text, -1) {
@@ -108,16 +115,29 @@ func filterUserText(text string) string {
 		}
 		return strings.Join(queries, "\n")
 	}
-	for _, marker := range injectedBlockMarkers {
-		if strings.Contains(text, marker) {
-			return ""
+	return stripInjectedTags(text)
+}
+
+func isInjectedBlock(text string) bool {
+	trimmedText := strings.TrimSpace(text)
+	for _, prefix := range injectedBlockPrefixes {
+		if strings.HasPrefix(trimmedText, prefix) {
+			return true
 		}
 	}
-	return stripInjectedTags(text)
+	for _, marker := range injectedBlockMarkers {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func cleanUserQueryText(text string) string {
 	text = stripInjectedTags(text)
+	if isInjectedBlock(text) {
+		return ""
+	}
 	if markerIndex := strings.Index(text, continuedSessionResumeMarker); markerIndex >= 0 {
 		text = text[markerIndex+len(continuedSessionResumeMarker):]
 	}
@@ -130,9 +150,10 @@ func cleanUserQueryText(text string) string {
 
 func stripInjectedTags(text string) string {
 	stripped := false
-	for i, name := range injectedTagNames {
-		if strings.Contains(text, "<"+name) {
-			text = injectedTagPatterns[i].ReplaceAllString(text, "")
+	for _, pattern := range injectedTagPatterns {
+		cleanedText := pattern.ReplaceAllString(text, "")
+		if cleanedText != text {
+			text = cleanedText
 			stripped = true
 		}
 	}
