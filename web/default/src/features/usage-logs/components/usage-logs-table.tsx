@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
-import { type ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -29,7 +29,9 @@ import {
 } from '@/components/data-table'
 import { useIsAdmin } from '@/hooks/use-admin'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
+import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import {
   DEFAULT_LOGS_DATA,
@@ -59,8 +61,15 @@ function getColumnVisibilityStorageKey(
 }
 
 function deserializeLogTypeFilter(value: unknown): unknown[] {
-  const values = Array.isArray(value) ? value : value ? [value] : []
-  return values.filter((item) => String(item) !== LOG_TYPE_ALL_VALUE)
+  if (Array.isArray(value)) {
+    return value.filter((item) => String(item) !== LOG_TYPE_ALL_VALUE)
+  }
+
+  if (!value) {
+    return []
+  }
+
+  return String(value) === LOG_TYPE_ALL_VALUE ? [] : [value]
 }
 
 interface UsageLogsTableProps {
@@ -70,6 +79,8 @@ interface UsageLogsTableProps {
 export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { t } = useTranslation()
   const isAdmin = useIsAdmin()
+  const currentUserRole = useAuthStore((state) => state.auth.user?.role)
+  const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const searchParams = route.useSearch()
 
   const {
@@ -177,7 +188,11 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
     : []
 
   return (
-    <RequestMessagesProvider requestIds={requestIds} isAdmin={isAdmin}>
+    <RequestMessagesProvider
+      requestIds={requestIds}
+      canViewRequestContent={canViewRequestContent}
+      isAdmin={isAdmin}
+    >
       <DataTablePage
         table={table}
         columns={columns as ColumnDef<Record<string, unknown>>[]}

@@ -129,6 +129,8 @@ func GetAndValidateResponsesRequest(c *gin.Context) (*dto.OpenAIResponsesRequest
 	return request, nil
 }
 
+const maxOpenAIImageRequestCount uint = 4
+
 func GetAndValidateResponsesCompactionRequest(c *gin.Context) (*dto.OpenAIResponsesCompactionRequest, error) {
 	request := &dto.OpenAIResponsesCompactionRequest{}
 	if err := common.UnmarshalBodyReusable(c, request); err != nil {
@@ -232,6 +234,10 @@ func GetAndValidOpenAIImageRequest(c *gin.Context, relayMode int) (*dto.ImageReq
 		if imageRequest.N == nil || *imageRequest.N == 0 {
 			imageRequest.N = common.GetPointer(uint(1))
 		}
+	}
+
+	if imageRequest.N != nil && *imageRequest.N > maxOpenAIImageRequestCount {
+		return nil, fmt.Errorf("n must be less than or equal to %d", maxOpenAIImageRequestCount)
 	}
 
 	return imageRequest, nil

@@ -10,6 +10,8 @@ import {
 import { useCommonLogsColumns } from '@/features/usage-logs/components/columns/common-logs-columns'
 import { RequestMessagesProvider } from '@/features/usage-logs/components/request-messages-provider'
 import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-provider'
+import { ROLE } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 import { getAllLogs } from '@/features/usage-logs/api'
 
 interface UserLogsSectionProps {
@@ -21,6 +23,8 @@ interface UserLogsSectionProps {
 export function UserLogsSection(props: UserLogsSectionProps) {
   const { t } = useTranslation()
   const columns = useCommonLogsColumns(true)
+  const currentUserRole = useAuthStore((state) => state.auth.user?.role)
+  const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const [pagination, setPagination] = usePagination()
 
   const { data, isLoading, isFetching } = useQuery({
@@ -63,7 +67,11 @@ export function UserLogsSection(props: UserLogsSectionProps) {
 
   return (
     <UsageLogsProvider>
-      <RequestMessagesProvider requestIds={requestIds} isAdmin>
+      <RequestMessagesProvider
+        requestIds={requestIds}
+        canViewRequestContent={canViewRequestContent}
+        isAdmin
+      >
         <div className='space-y-3 overflow-hidden'>
           <h3 className='flex items-center gap-2 text-sm font-medium'>
             <ScrollText className='text-primary size-4' />

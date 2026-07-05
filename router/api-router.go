@@ -292,7 +292,7 @@ func SetApiRouter(router *gin.Engine) {
 		logRoute.GET("/self/search", middleware.UserAuth(), middleware.SearchRateLimit(), controller.SearchUserLogs)
 
 		requestMessageRoute := apiRouter.Group("/request_message")
-		requestMessageRoute.GET("/", middleware.AdminAuth(), controller.GetRequestMessages)
+		requestMessageRoute.GET("/", middleware.RootAuth(), controller.GetRequestMessages)
 		requestMessageRoute.GET("/self", middleware.UserAuth(), controller.GetUserRequestMessages)
 
 		systemTaskRoute := apiRouter.Group("/system-task")

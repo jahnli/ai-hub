@@ -29,6 +29,7 @@ const RequestMessagesContext = createContext<Map<string, RequestMessage>>(
 
 interface RequestMessagesProviderProps {
   requestIds: string[]
+  canViewRequestContent: boolean
   isAdmin: boolean
   children: ReactNode
 }
@@ -40,6 +41,7 @@ interface RequestMessagesProviderProps {
  */
 export function RequestMessagesProvider({
   requestIds,
+  canViewRequestContent,
   isAdmin,
   children,
 }: RequestMessagesProviderProps) {
@@ -51,7 +53,7 @@ export function RequestMessagesProvider({
   const { data } = useQuery({
     queryKey: ['request-messages', isAdmin, ids],
     queryFn: () => getRequestMessages(ids, isAdmin),
-    enabled: ids.length > 0,
+    enabled: canViewRequestContent && ids.length > 0,
     staleTime: 60 * 1000,
   })
 

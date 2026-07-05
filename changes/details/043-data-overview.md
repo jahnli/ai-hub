@@ -18,7 +18,7 @@
 - `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：柱状图改为纵向、坐标轴格式化大数值；表头「用户数」改为「已注册/总人数」居中对齐；费用列、排序和图表改用后端返回的人民币金额
 - `web/default/src/features/data-overview/components/usage-analysis.tsx` — 使用分析组件：模型排行/费用占比（tab 切换条形图/饼图）改为纵向柱状图；新增模型使用趋势折线图（ModelUsageTrend，按 Top N 模型展示每日 Token 量）；每日用量趋势新增「费用」指标切换；新增均价趋势折线图（AvgPriceTrendChart，计算每日平均单价并补全无数据日期）；费用和均价计算改用后端返回的 quota_to_cny 换算率；请求趋势图高度调整；重构为纯展示组件（移除 startTimestamp/endTimestamp 参数），移除均价趋势和 Token 分布图表，模型调用排行改为饼图分布，费用排行标题改为「模型消耗排行」，费用趋势标题改为「额度消耗趋势」
 - `web/default/src/features/data-overview/components/user-stats-dialog.tsx` — 新增用户统计弹窗：展示单用户独立时间筛选、使用分析图表与近期调用日志；弹窗宽度调整为 1360px，并保留视口宽度自适应
-- `web/default/src/features/data-overview/components/user-logs-section.tsx` — 新增用户日志列表组件，复用 usage-logs 公共列定义；补充 RequestMessagesProvider 以加载并显示近期调用日志中的请求内容
+- `web/default/src/features/data-overview/components/user-logs-section.tsx` — 新增用户日志列表组件，复用 usage-logs 公共列定义；补充 RequestMessagesProvider 以加载并显示近期调用日志中的请求内容；请求内容加载同步遵循超级管理员可见性限制
 - `web/default/src/hooks/use-sidebar-config.ts` — 侧边栏配置新增 data_overview 模块及 URL 映射
 - `web/default/src/hooks/use-sidebar-data.ts` — 「数据总览」菜单从管理员分区移至控制台分区，添加 requiredRole ADMIN
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 请求次数格式化统一

@@ -57,7 +57,7 @@ export const GPT_IMAGE_2_BACKGROUND_OPTIONS = ['auto', 'opaque'] as const
 
 export const OUTPUT_FORMAT_OPTIONS = ['png', 'webp', 'jpeg'] as const
 
-export const MAX_IMAGE_COUNT = 6
+export const MAX_IMAGE_COUNT = 4
 
 export const MAX_REFERENCE_IMAGES = 4
 

@@ -13,7 +13,7 @@
 - `relay/relay_task.go` — 任务模型转 DTO 时透传 open_id
 - `web/default/src/lib/utils.ts` — 新增 buildFeishuUserChatUrl 工具，统一构造飞书 openId 聊天链接
 - `web/default/src/features/home/components/sections/cta.tsx` — 首页底部飞书联系卡复用统一的飞书聊天链接构造函数
-- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列重写：显示头像+显示名+悬停资料卡片（UserProfileHoverCard），头像点击改为按 open_id 跳转飞书；列顺序调整（用户→模型→耗时→渠道→Token）；时间、渠道、令牌和详情列宽度微调；费用列订阅抵扣记录改为直接显示抵扣金额，悬停提示订阅来源；新增 IP 地址列，支持敏感信息隐藏、复制和完整内容悬浮提示；详情列固定在表格右侧；错误日志详情文字显示错误色；渠道标签自动配色排除红色并将 slate 映射为 neutral，避免不受支持的 Badge variant 类型错误；请求内容列仅管理员可见（isAdmin 条件守卫）；新增 User-Agent 列展示原始请求头且仅超级管理员可见；Token 与请求内容列超出时省略显示
+- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列重写：显示头像+显示名+悬停资料卡片（UserProfileHoverCard），头像点击改为按 open_id 跳转飞书；列顺序调整（用户→模型→耗时→渠道→Token）；时间、渠道、令牌和详情列宽度微调；费用列订阅抵扣记录改为直接显示抵扣金额，悬停提示订阅来源；新增 IP 地址列，支持敏感信息隐藏、复制和完整内容悬浮提示；详情列固定在表格右侧；错误日志详情文字显示错误色；渠道标签自动配色排除红色并将 slate 映射为 neutral，避免不受支持的 Badge variant 类型错误；请求内容列收紧为仅超级管理员可见；新增 User-Agent 列展示原始请求头且仅超级管理员可见；Token 与请求内容列超出时省略显示
 - `web/default/src/features/usage-logs/components/columns/task-logs-columns.tsx` — 任务日志用户列头像点击改为通过 open_id 跳转飞书，不再打开用户信息弹框
 - `web/default/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框桌面端宽度调整为屏幕宽度 50%
 - `web/default/src/features/usage-logs/components/usage-logs-mobile-card.tsx` — 移动端使用日志卡片在令牌前展示 IP 地址字段
@@ -30,15 +30,15 @@
 - `controller/request_message.go` — 管理员和普通用户批量查询 request_message 接口
 - `service/request_message.go` — 中继请求后异步记录用户输入：提取多模态内容为占位符、截断超长对话、序列化参数
 - `controller/relay.go` — 中继入口调用 RecordRequestMessage 记录请求内容
-- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由
+- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由；管理端批量查询接口改为 RootAuth，仅超级管理员可读取任意用户请求内容
 - `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
 - `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
 - `model/main.go` — AutoMigrate 注册 RequestMessage 模型
 - `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距
-- `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容
+- `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容；新增 canViewRequestContent 控制，非超级管理员不发起请求内容批量查询
 - `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent
-- `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 包裹 RequestMessagesProvider，按当前页日志批量加载请求内容
+- `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 包裹 RequestMessagesProvider，按当前页日志批量加载请求内容；基于当前用户角色传入请求内容可见性，仅超级管理员允许加载
 - `web/default/src/features/system-settings/maintenance/log-settings-section.tsx` — 日志设置新增「记录请求内容」开关
 - `web/default/src/features/system-settings/operations/section-registry.tsx` — 运维设置传入 RecordRequestMessageEnabled 默认值
 - `web/default/src/features/system-settings/operations/index.tsx` — 运维设置默认值补充 RecordRequestMessageEnabled
