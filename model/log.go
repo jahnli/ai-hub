@@ -31,6 +31,89 @@ func applyExplicitLogTextFilter(tx *gorm.DB, column string, value string) (*gorm
 	return tx.Where(column+" = ?", value), nil
 }
 
+func applyLogUserKeywordFilter(tx *gorm.DB, keyword string, logUsernameColumn string) (*gorm.DB, error) {
+	keyword = strings.TrimSpace(keyword)
+	if keyword == "" {
+		return tx, nil
+	}
+
+	logCondition, logPattern, err := buildLogContainsCondition(logUsernameColumn, keyword, common.LogDatabaseType())
+	if err != nil {
+		return nil, err
+	}
+
+	userCondition, userPattern, err := buildLogContainsCondition("username", keyword, common.MainDatabaseType())
+	if err != nil {
+		return nil, err
+	}
+	displayNameCondition, displayNamePattern, err := buildLogContainsCondition("display_name", keyword, common.MainDatabaseType())
+	if err != nil {
+		return nil, err
+	}
+
+	var matchedUsers []struct {
+		Id       int    `gorm:"column:id"`
+		Username string `gorm:"column:username"`
+	}
+	if err = DB.Table("users").Select("id, username").Where(
+		"("+userCondition+") OR ("+displayNameCondition+")",
+		userPattern,
+		displayNamePattern,
+	).Find(&matchedUsers).Error; err != nil {
+		return nil, err
+	}
+
+	matchedUserIds := make([]int, 0, len(matchedUsers))
+	matchedUsernames := make([]string, 0, len(matchedUsers))
+	for _, matchedUser := range matchedUsers {
+		if matchedUser.Id != 0 {
+			matchedUserIds = append(matchedUserIds, matchedUser.Id)
+		}
+		if matchedUser.Username != "" {
+			matchedUsernames = append(matchedUsernames, matchedUser.Username)
+		}
+	}
+
+	if len(matchedUserIds) == 0 && len(matchedUsernames) == 0 {
+		return tx.Where(logCondition, logPattern), nil
+	}
+
+	return tx.Where(
+		"("+logCondition+") OR logs.user_id IN ? OR "+logUsernameColumn+" IN ?",
+		logPattern,
+		matchedUserIds,
+		matchedUsernames,
+	), nil
+}
+
+func buildLogContainsCondition(column string, value string, databaseType common.DatabaseType) (string, string, error) {
+	pattern, err := sanitizeContainsLikePattern(value, databaseType)
+	if err != nil {
+		return "", "", err
+	}
+	if databaseType == common.DatabaseTypeClickHouse {
+		return column + " LIKE ?", pattern, nil
+	}
+	return column + " LIKE ? ESCAPE '!'", pattern, nil
+}
+
+func sanitizeContainsLikePattern(input string, databaseType common.DatabaseType) (string, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return "", nil
+	}
+	if databaseType == common.DatabaseTypeClickHouse {
+		input = strings.ReplaceAll(input, `\`, `\\`)
+		input = strings.ReplaceAll(input, `%`, `\%`)
+		input = strings.ReplaceAll(input, `_`, `\_`)
+		return "%" + input + "%", nil
+	}
+	input = strings.ReplaceAll(input, "!", "!!")
+	input = strings.ReplaceAll(input, `%`, `!%`)
+	input = strings.ReplaceAll(input, `_`, `!_`)
+	return "%" + input + "%", nil
+}
+
 func buildLogLikeCondition(column string, value string) (string, string, error) {
 	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
 		pattern, err := sanitizeClickHouseLikePattern(value)
@@ -484,7 +567,7 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
 		return nil, 0, err
 	}
-	if tx, err = applyExplicitLogTextFilter(tx, "logs.username", username); err != nil {
+	if tx, err = applyLogUserKeywordFilter(tx, username, "logs.username"); err != nil {
 		return nil, 0, err
 	}
 	if tokenName != "" {
@@ -666,10 +749,10 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	// 为rpm和tpm创建单独的查询
 	rpmTpmQuery := LOG_DB.Table("logs").Select("count(*) rpm, COALESCE(sum(prompt_tokens), 0) + COALESCE(sum(completion_tokens), 0) tpm")
 
-	if tx, err = applyExplicitLogTextFilter(tx, "username", username); err != nil {
+	if tx, err = applyLogUserKeywordFilter(tx, username, "username"); err != nil {
 		return stat, err
 	}
-	if rpmTpmQuery, err = applyExplicitLogTextFilter(rpmTpmQuery, "username", username); err != nil {
+	if rpmTpmQuery, err = applyLogUserKeywordFilter(rpmTpmQuery, username, "username"); err != nil {
 		return stat, err
 	}
 	if tokenName != "" {
