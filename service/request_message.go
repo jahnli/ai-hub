@@ -115,7 +115,11 @@ func filterUserText(text string) string {
 		}
 		return strings.Join(queries, "\n")
 	}
-	return stripInjectedTags(text)
+	text = stripInjectedTags(text)
+	if query, ok := extractCodexUserRequestText(text); ok {
+		return query
+	}
+	return text
 }
 
 func isInjectedBlock(text string) bool {
@@ -141,11 +145,19 @@ func cleanUserQueryText(text string) string {
 	if markerIndex := strings.Index(text, continuedSessionResumeMarker); markerIndex >= 0 {
 		text = text[markerIndex+len(continuedSessionResumeMarker):]
 	}
-	if match := codexUserRequestPattern.FindStringSubmatch(text); len(match) == 2 {
-		text = match[1]
+	if query, ok := extractCodexUserRequestText(text); ok {
+		text = query
 	}
 	text = orphanInjectedClosingTagPattern.ReplaceAllString(text, "")
 	return strings.TrimSpace(text)
+}
+
+func extractCodexUserRequestText(text string) (string, bool) {
+	match := codexUserRequestPattern.FindStringSubmatch(text)
+	if len(match) != 2 {
+		return "", false
+	}
+	return strings.TrimSpace(match[1]), true
 }
 
 func stripInjectedTags(text string) string {
