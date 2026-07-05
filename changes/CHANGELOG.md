@@ -66,3 +66,4 @@
 | 059 | 2026-07-04 | 排行榜 Token 可见性与热门模型 Tooltip 优化：所有 Token 数字仅超级管理员可见，热门模型悬停提示右侧显示连续排行编号，并更新 Token 排行相关 6 语言文案 | [详情](details/059-rankings-token-visibility.md) |
 | 060 | 2026-07-04 | API 密钥表格名称列改用截断单元格，避免长名称撑开表格 | [详情](details/060-api-keys-name-truncate.md) |
 | 061 | 2026-07-04 | 新增普通注册后自动订阅套餐：系统设置可选择自动绑定套餐，注册成功后创建订阅并记录来源 | [详情](details/061-registration-auto-subscribe.md) |
+| 062 | 2026-07-05 | 渠道与订阅管理入口权限收紧为仅超级管理员可见，普通管理员访问路由时跳转 403 | `web/default/src/hooks/use-sidebar-data.ts`、`web/default/src/routes/_authenticated/channels/index.tsx`、`web/default/src/routes/_authenticated/subscriptions/index.tsx` |
