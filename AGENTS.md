@@ -1,5 +1,7 @@
 # AGENTS.md — 项目规范
 
+DO NOT send optional commentary
+
 ## 概述
 
 这是一个基于 Go 构建的 AI API 网关/代理。它将 40 多个上游 AI 提供商（OpenAI、Claude、Gemini、Azure、AWS Bedrock 等）聚合在统一的 API 之后，并提供用户管理、计费、速率限制和管理后台。
