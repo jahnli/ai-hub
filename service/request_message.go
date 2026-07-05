@@ -14,9 +14,13 @@ import (
 	"github.com/samber/lo"
 )
 
-// 单条请求记录的用户输入上限（字节）。超出后丢弃更早的消息并标记截断，
+// 单条请求记录的用户输入总上限（字节）。超出后丢弃更早的消息并标记截断，
 // 防止超长对话历史撑爆 text 列（MySQL TEXT 上限 64KB）。
 const maxUserContentBytes = 60 * 1024
+
+// 单段清洗后的用户输入展示上限（字节）。超过后保留前缀并标记截断，
+// 避免把客户端注入的大段上下文写入请求内容日志。
+const maxSingleUserContentBytes = 8 * 1024
 
 const truncatedMarker = "...[truncated]"
 
@@ -71,7 +75,7 @@ var injectedBlockPrefixes = []string{
 
 const continuedSessionResumeMarker = "Pick up the last task as if the break never happened."
 
-var codexUserRequestPattern = regexp.MustCompile(`(?is)(?:^|\n)\s*(?:#{1,6}\s*)?My request for Codex:\s*(.*)\z`)
+var codexUserRequestLinePattern = regexp.MustCompile(`(?i)^\s*(?:#{1,6}\s*)?My request for Codex:\s*$`)
 
 // Go 的 RE2 不支持反向引用，为保证开闭标签配对，每个标签编译独立正则。
 // (?is) 忽略大小写且 . 匹配换行；`\z` 兜底处理被截断的未闭合区段。
@@ -113,13 +117,13 @@ func filterUserText(text string) string {
 				queries = append(queries, query)
 			}
 		}
-		return strings.Join(queries, "\n")
+		return normalizeFilteredUserText(strings.Join(queries, "\n"))
 	}
 	text = stripInjectedTags(text)
 	if query, ok := extractCodexUserRequestText(text); ok {
-		return query
+		return normalizeFilteredUserText(query)
 	}
-	return text
+	return normalizeFilteredUserText(text)
 }
 
 func isInjectedBlock(text string) bool {
@@ -153,11 +157,37 @@ func cleanUserQueryText(text string) string {
 }
 
 func extractCodexUserRequestText(text string) (string, bool) {
-	match := codexUserRequestPattern.FindStringSubmatch(text)
-	if len(match) != 2 {
-		return "", false
+	lines := strings.Split(text, "\n")
+	for lineIndex, line := range lines {
+		if codexUserRequestLinePattern.MatchString(line) {
+			return strings.TrimSpace(strings.Join(lines[lineIndex+1:], "\n")), true
+		}
 	}
-	return strings.TrimSpace(match[1]), true
+	return "", false
+}
+
+func normalizeFilteredUserText(text string) string {
+	text = strings.TrimSpace(text)
+	if len(text) <= maxSingleUserContentBytes {
+		return text
+	}
+	return truncateTextWithMarker(text, maxSingleUserContentBytes)
+}
+
+func truncateTextWithMarker(text string, maxBytes int) string {
+	if maxBytes <= len(truncatedMarker) {
+		return truncatedMarker[:maxBytes]
+	}
+	remainingBytes := maxBytes - len(truncatedMarker)
+	truncatedEnd := 0
+	for index, currentRune := range text {
+		nextEnd := index + len(string(currentRune))
+		if nextEnd > remainingBytes {
+			break
+		}
+		truncatedEnd = nextEnd
+	}
+	return text[:truncatedEnd] + truncatedMarker
 }
 
 func stripInjectedTags(text string) string {
