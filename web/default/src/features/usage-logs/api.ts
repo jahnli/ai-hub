@@ -18,7 +18,6 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
 
-import { buildQueryParams } from './lib/utils'
 import type {
   GetLogsParams,
   GetLogsResponse,
@@ -36,6 +35,18 @@ import type {
 
 function buildApiPath(endpoint: string, isAdmin: boolean): string {
   return isAdmin ? endpoint : `${endpoint}/self`
+}
+
+function buildQueryParams(params: Record<string, unknown>): URLSearchParams {
+  const queryParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, String(value))
+    }
+  })
+
+  return queryParams
 }
 
 async function fetchLogs<T>(
@@ -101,9 +112,7 @@ export async function getRequestMessages(
   isAdmin: boolean
 ): Promise<{ success: boolean; message?: string; data?: RequestMessage[] }> {
   const path = buildApiPath('/api/request_message', isAdmin)
-  const res = await api.get(
-    `${path}?request_ids=${encodeURIComponent(requestIds.join(','))}`
-  )
+  const res = await api.post(`${path}/batch`, { request_ids: requestIds })
   return res.data
 }
 

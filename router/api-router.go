@@ -293,7 +293,9 @@ func SetApiRouter(router *gin.Engine) {
 
 		requestMessageRoute := apiRouter.Group("/request_message")
 		requestMessageRoute.GET("/", middleware.RootAuth(), controller.GetRequestMessages)
+		requestMessageRoute.POST("/batch", middleware.RootAuth(), controller.GetRequestMessagesBatch)
 		requestMessageRoute.GET("/self", middleware.UserAuth(), controller.GetUserRequestMessages)
+		requestMessageRoute.POST("/self/batch", middleware.UserAuth(), controller.GetUserRequestMessagesBatch)
 
 		systemTaskRoute := apiRouter.Group("/system-task")
 		systemTaskRoute.Use(middleware.RootAuth())

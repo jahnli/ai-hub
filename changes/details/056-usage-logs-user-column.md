@@ -27,16 +27,16 @@
 - `web/default/src/i18n/locales/en.json` — 新增 "Timing / First Token"、"Request Content"、"Record request content" 等翻译
 - `web/default/src/i18n/locales/zh.json` — 新增 "耗时 / 首字"、"请求内容"、"记录请求内容" 等翻译
 - `model/request_message.go` — 新增 RequestMessage 模型（request_id 关联 logs 表），存储用户提示词和模型参数
-- `controller/request_message.go` — 管理员和普通用户批量查询 request_message 接口
+- `controller/request_message.go` — 管理员和普通用户批量查询 request_message 接口；新增 POST body 批量查询解析，避免分页 100 时 request_ids 拼入 URL 导致线上网关 502
 - `service/request_message.go` — 中继请求后异步记录用户输入：提取多模态内容为占位符、截断超长对话、序列化参数
 - `controller/relay.go` — 中继入口调用 RecordRequestMessage 记录请求内容
-- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由；管理端批量查询接口改为 RootAuth，仅超级管理员可读取任意用户请求内容
+- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由；管理端批量查询接口改为 RootAuth，仅超级管理员可读取任意用户请求内容；补充 /batch 与 /self/batch POST 路由承载批量 request_ids
 - `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
 - `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
 - `model/main.go` — AutoMigrate 注册 RequestMessage 模型
 - `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距
 - `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容；新增 canViewRequestContent 控制，非超级管理员不发起请求内容批量查询
-- `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用
+- `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用；请求内容批量查询改为 POST /batch 并通过 body 传递 request_ids，避免分页 100 时 query 过长
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent
 - `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 包裹 RequestMessagesProvider，按当前页日志批量加载请求内容；基于当前用户角色传入请求内容可见性，仅超级管理员允许加载
 - `web/default/src/features/system-settings/maintenance/log-settings-section.tsx` — 日志设置新增「记录请求内容」开关
