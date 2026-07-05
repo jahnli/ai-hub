@@ -56,6 +56,7 @@ var injectedTagNames = []string{
 	"mcp_instructions",
 	"agent_transcripts",
 	"appshot",
+	"skill",
 	"codex_internal_context",
 }
 
