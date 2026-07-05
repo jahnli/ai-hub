@@ -890,7 +890,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
               onClick={() => setDialogOpen(true)}
               title={t("Click to view the full conversation")}
             >
-              <span className="text-muted-foreground min-w-0 flex-1 truncate group-hover:underline">
+              <span className="text-muted-foreground min-w-0 flex-1 truncate hover:underline">
                 {latestMessage}
               </span>
               {messages.length > 1 && (
@@ -1070,7 +1070,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           detailContent = (
             <span
               className={cn(
-                "truncate group-hover:underline",
+                "truncate hover:underline",
                 contentTextClassName,
               )}
             >
@@ -1082,7 +1082,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           detailContent = (
             <span
               className={cn(
-                "truncate leading-snug group-hover:underline",
+                "truncate leading-snug hover:underline",
                 primaryTextClassName,
               )}
             >
