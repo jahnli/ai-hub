@@ -16,40 +16,48 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { ColumnDef } from '@tanstack/react-table'
-import { CircleAlert, GitBranch, Globe, KeyRound, Sparkles } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import type { ColumnDef } from "@tanstack/react-table";
+import {
+  CircleAlert,
+  GitBranch,
+  Globe,
+  KeyRound,
+  Sparkles,
+} from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { LongText } from '@/components/long-text'
-import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { LongText } from "@/components/long-text";
+import { StatusBadge, type StatusBadgeProps } from "@/components/status-badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
-import type { UserColumnRow } from '@/features/users/types'
-import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
-import { stringToColor } from '@/lib/colors'
-import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+} from "@/components/ui/tooltip";
+import { UserProfileHoverCard } from "@/features/users/components/user-profile-hover-card";
+import type { UserColumnRow } from "@/features/users/types";
+import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
+import { stringToColor } from "@/lib/colors";
+import { formatBillingCurrencyFromUSD } from "@/lib/currency";
 import {
   formatLogQuota,
   formatTimestampToDate,
   formatUseTime,
-} from '@/lib/format'
-import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
+} from "@/lib/format";
+import { buildFeishuUserChatUrl, cn } from "@/lib/utils";
+import { ROLE } from "@/lib/roles";
+import { useAuthStore } from "@/stores/auth-store";
 
-import { getUserInfo } from '../../api'
-import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
-import type { UsageLog } from '../../data/schema'
+import { getUserInfo } from "../../api";
+import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from "../../constants";
+import type { UsageLog } from "../../data/schema";
 import {
   formatModelName,
   getFirstResponseTimeColor,
@@ -59,22 +67,22 @@ import {
   isViolationFeeLog,
   parseLogOther,
   renderAuditContent,
-} from '../../lib/format'
+} from "../../lib/format";
 import {
   getLogTypeConfig,
   isDisplayableLogType,
   isPerCallBilling,
   isTimingLogType,
-} from '../../lib/utils'
-import type { LogOtherData } from '../../types'
-import { DetailsDialog } from '../dialogs/details-dialog'
-import { RequestContentDialog } from '../dialogs/request-content-dialog'
-import { ModelBadge } from '../model-badge'
+} from "../../lib/utils";
+import type { LogOtherData } from "../../types";
+import { DetailsDialog } from "../dialogs/details-dialog";
+import { RequestContentDialog } from "../dialogs/request-content-dialog";
+import { ModelBadge } from "../model-badge";
 import {
   parseUserMessages,
   useRequestMessage,
-} from '../request-messages-provider'
-import { useUsageLogsContext } from '../usage-logs-provider'
+} from "../request-messages-provider";
+import { useUsageLogsContext } from "../usage-logs-provider";
 
 interface DetailSegment {
   text: string;
@@ -107,11 +115,13 @@ function getGroupRatioText(other: LogOtherData | null): string | null {
   return null;
 }
 
-function getChannelBadgeVariant(channelId: string): StatusBadgeProps['variant'] {
-  const generatedColor = stringToColor(channelId)
-  if (generatedColor === 'red') return 'orange'
-  if (generatedColor === 'slate') return 'neutral'
-  return generatedColor
+function getChannelBadgeVariant(
+  channelId: string,
+): StatusBadgeProps["variant"] {
+  const generatedColor = stringToColor(channelId);
+  if (generatedColor === "red") return "orange";
+  if (generatedColor === "slate") return "neutral";
+  return generatedColor;
 }
 
 function splitQuotaDisplay(value: string): { prefix: string; amount: string } {
@@ -294,6 +304,8 @@ function buildDetailSegments(
 
 export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
   const { t } = useTranslation();
+  const currentUserRole = useAuthStore((state) => state.auth.user?.role);
+  const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN;
   const columns: ColumnDef<UsageLog>[] = [
     {
       accessorKey: "created_at",
@@ -450,7 +462,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
 
         return (
           <div
-            className="flex w-[130px] min-w-0 items-center gap-2"
+            className="flex w-[120px] min-w-0 items-center gap-2"
             onMouseEnter={handleFetchUser}
           >
             <UserProfileHoverCard user={baseUser}>
@@ -729,7 +741,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger
-                render={<div className="flex max-w-[120px] flex-col gap-0.5" />}
+                render={<div className="flex max-w-[105px] flex-col gap-0.5" />}
               >
                 <div className="relative inline-flex w-fit items-center gap-1">
                   <StatusBadge
@@ -845,8 +857,8 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           </TooltipProvider>
         );
       },
-      size: 130,
-      maxSize: 130,
+      size: 115,
+      maxSize: 115,
     });
   }
 
@@ -874,11 +886,11 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           <>
             <button
               type="button"
-              className="group flex max-w-[200px] items-start gap-1 text-left text-xs"
+              className="group flex max-w-[190px] min-w-0 items-center gap-1 text-left text-xs"
               onClick={() => setDialogOpen(true)}
               title={t("Click to view the full conversation")}
             >
-              <span className="text-muted-foreground line-clamp-2 break-words group-hover:underline">
+              <span className="text-muted-foreground min-w-0 flex-1 truncate group-hover:underline">
                 {latestMessage}
               </span>
               {messages.length > 1 && (
@@ -898,6 +910,49 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
       size: 200,
       maxSize: 220,
     });
+
+    if (isSuperAdmin) {
+      columns.push({
+        id: "user_agent",
+        accessorFn: (row) => parseLogOther(row.other)?.user_agent ?? "",
+        header: t("User-Agent"),
+        cell: function UserAgentCell({ row }) {
+          const { sensitiveVisible } = useUsageLogsContext();
+          const log = row.original;
+          if (!isDisplayableLogType(log.type)) return null;
+
+          const other = parseLogOther(log.other);
+          const userAgent = other?.user_agent;
+          if (!userAgent) {
+            return <span className="text-muted-foreground/40">—</span>;
+          }
+
+          if (!sensitiveVisible) {
+            return <span className="text-muted-foreground/40">••••</span>;
+          }
+
+          return (
+            <TooltipProvider delay={300}>
+              <Tooltip>
+                <TooltipTrigger render={<div className="max-w-[180px]" />}>
+                  <span className="text-muted-foreground block truncate font-mono text-xs">
+                    {userAgent}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  className="max-w-md break-all font-mono text-xs"
+                >
+                  {userAgent}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        },
+        size: 180,
+        maxSize: 220,
+      });
+    }
   }
 
   columns.push(
@@ -958,7 +1013,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         }
         if (groupRatioText) metaParts.push(groupRatioText);
         return (
-          <div className="flex max-w-[120px] min-w-0 flex-col gap-0.5">
+          <div className="flex max-w-[105px] min-w-0 flex-col gap-0.5">
             <TooltipProvider delay={300}>
               <Tooltip>
                 <TooltipTrigger render={<div className="max-w-full" />}>
@@ -986,8 +1041,8 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           </div>
         );
       },
-      size: 120,
-      maxSize: 120,
+      size: 105,
+      maxSize: 105,
     },
     {
       accessorKey: "content",

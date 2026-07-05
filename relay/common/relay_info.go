@@ -105,6 +105,7 @@ type RelayInfo struct {
 	OriginModelName        string
 	RequestURLPath         string
 	RequestHeaders         map[string]string
+	ClientApp              string // 发起请求的原始 User-Agent，空串表示请求未携带
 	ShouldIncludeUsage     bool
 	DisablePing            bool // 是否禁止向下游发送自定义 Ping
 	ClientWs               *websocket.Conn
@@ -482,6 +483,7 @@ func genBaseRelayInfo(c *gin.Context, request dto.Request) *RelayInfo {
 		RelayMode:       relayconstant.Path2RelayMode(c.Request.URL.Path),
 		RequestURLPath:  c.Request.URL.String(),
 		RequestHeaders:  cloneRequestHeaders(c),
+		ClientApp:       DetectClientApp(c),
 		IsStream:        isStream,
 
 		StartTime:         startTime,
