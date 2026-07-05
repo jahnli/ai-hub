@@ -8,6 +8,7 @@ import {
   useDataTable,
 } from '@/components/data-table'
 import { useCommonLogsColumns } from '@/features/usage-logs/components/columns/common-logs-columns'
+import { RequestMessagesProvider } from '@/features/usage-logs/components/request-messages-provider'
 import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-provider'
 import { getAllLogs } from '@/features/usage-logs/api'
 
@@ -45,6 +46,9 @@ export function UserLogsSection(props: UserLogsSectionProps) {
 
   const logs = data?.data?.items ?? []
   const total = data?.data?.total ?? 0
+  const requestIds = (logs as Array<{ request_id?: string }>)
+    .map((log) => log.request_id ?? '')
+    .filter(Boolean)
 
   const { table } = useDataTable({
     data: logs as Record<string, unknown>[],
@@ -59,26 +63,28 @@ export function UserLogsSection(props: UserLogsSectionProps) {
 
   return (
     <UsageLogsProvider>
-      <div className='space-y-3 overflow-hidden'>
-        <h3 className='flex items-center gap-2 text-sm font-medium'>
-          <ScrollText className='text-primary size-4' />
-          {t('Recent Usage Logs')}
-        </h3>
-        <DataTablePage
-          table={table}
-          columns={columns as ColumnDef<Record<string, unknown>>[]}
-          isLoading={isLoading}
-          isFetching={isFetching}
-          emptyTitle={t('No Logs Found')}
-          emptyDescription={t('No usage logs in this time range.')}
-          skeletonKeyPrefix='user-stats-logs-skeleton'
-          applyHeaderSize
-          toolbarProps={null}
-          className='h-[min(42vh,420px)] min-h-[260px]'
-          paginationInFooter={false}
-          tableClassName='rounded-none border-0 [scrollbar-gutter:stable] [&_[data-slot=table]]:min-w-[1120px] [&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
-        />
-      </div>
+      <RequestMessagesProvider requestIds={requestIds} isAdmin>
+        <div className='space-y-3 overflow-hidden'>
+          <h3 className='flex items-center gap-2 text-sm font-medium'>
+            <ScrollText className='text-primary size-4' />
+            {t('Recent Usage Logs')}
+          </h3>
+          <DataTablePage
+            table={table}
+            columns={columns as ColumnDef<Record<string, unknown>>[]}
+            isLoading={isLoading}
+            isFetching={isFetching}
+            emptyTitle={t('No Logs Found')}
+            emptyDescription={t('No usage logs in this time range.')}
+            skeletonKeyPrefix='user-stats-logs-skeleton'
+            applyHeaderSize
+            toolbarProps={null}
+            className='h-[min(42vh,420px)] min-h-[260px]'
+            paginationInFooter={false}
+            tableClassName='rounded-none border-0 [scrollbar-gutter:stable] [&_[data-slot=table]]:min-w-[1120px] [&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
+          />
+        </div>
+      </RequestMessagesProvider>
     </UsageLogsProvider>
   )
 }

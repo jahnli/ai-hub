@@ -100,7 +100,7 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className='flex max-h-[calc(100vh-2rem)] w-[min(1120px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]'>
+      <DialogContent className='flex max-h-[calc(100vh-2rem)] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]'>
         <DialogHeader className='shrink-0'>
           <DialogTitle>
             {t('User Statistics')} - {displayName}

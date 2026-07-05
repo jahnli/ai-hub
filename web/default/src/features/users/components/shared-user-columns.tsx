@@ -67,7 +67,7 @@ export function formatAmountCny(value: number | undefined): string {
 export function formatUserTokens(tokens: number | undefined): string {
   const value = tokens ?? 0;
   if (value <= 0) return "-";
-  return (value / 1_0000_0000).toFixed(2) + " 亿";
+  return `${(value / 1_0000_0000).toFixed(2)} 亿`;
 }
 
 export function formatUserTokensDetail(tokens: number | undefined): string {
@@ -135,21 +135,21 @@ export function userNameColumn<T extends UserColumnRow>(
 
       return (
         <div className="flex w-[130px] min-w-0 items-center gap-2">
-          {feishuChatUrl ? (
-            <a
-              href={feishuChatUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
-              onClick={(event) => event.stopPropagation()}
-            >
-              {avatarElement}
-            </a>
-          ) : (
-            <UserProfileHoverCard user={user}>
-              {avatarElement}
-            </UserProfileHoverCard>
-          )}
+          <UserProfileHoverCard user={user}>
+            {feishuChatUrl ? (
+              <a
+                href={feishuChatUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {avatarElement}
+              </a>
+            ) : (
+              avatarElement
+            )}
+          </UserProfileHoverCard>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <LongText className="max-w-full font-medium">
               {primaryName}

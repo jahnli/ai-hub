@@ -54,12 +54,13 @@ export function LongText({
     setIsOverflown(false)
   }, [])
 
-  if (!isOverflown)
+  if (!isOverflown) {
     return (
       <div ref={ref} className={cn('truncate', className)}>
         {children}
       </div>
     )
+  }
 
   return (
     <>
@@ -80,6 +81,7 @@ export function LongText({
       <div className='sm:hidden'>
         <Popover>
           <PopoverTrigger
+            nativeButton={false}
             render={<div ref={ref} className={cn('truncate', className)} />}
           >
             {children}
