@@ -312,19 +312,7 @@ func buildDeptTree(items []feishuDeptItem) []*DeptTreeNode {
 		}
 	}
 
-	sortTree(roots)
 	return roots
-}
-
-func sortTree(nodes []*DeptTreeNode) {
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].Label < nodes[j].Label
-	})
-	for _, node := range nodes {
-		if len(node.Children) > 0 {
-			sortTree(node.Children)
-		}
-	}
 }
 
 // ── Permission trimming ───────────────────────────────────────────
