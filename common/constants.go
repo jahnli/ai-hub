@@ -29,23 +29,15 @@ func GetTheme() string {
 	return themeValue.Load().(string)
 }
 
-// SetTheme updates the frontend theme atomically.
-// Only "default" and "classic" are accepted; other values are silently ignored.
+// SetTheme keeps the frontend theme fixed to the default UI.
 func SetTheme(t string) {
-	if t == "default" || t == "classic" {
+	if t == "default" {
 		themeValue.Store(t)
 	}
 }
 
-// ThemeAwarePath rewrites legacy /console/* paths to the default-theme
-// equivalents when the active theme is "default".  For "classic" (or any
-// other theme) the path is returned unchanged.  The function only touches
-// known prefixes so it is safe to call with arbitrary suffixes and query
-// strings.
+// ThemeAwarePath rewrites legacy /console/* paths to the default-theme equivalents.
 func ThemeAwarePath(suffix string) string {
-	if GetTheme() != "default" {
-		return suffix
-	}
 	switch {
 	case strings.HasPrefix(suffix, "/console/topup"):
 		return strings.Replace(suffix, "/console/topup", "/wallet", 1)

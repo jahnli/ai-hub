@@ -4,7 +4,7 @@
 
 | 编号 | 日期 | 说明 | 详情 |
 |------|------|------|------|
-| 001 | 2026-06-18 | 启动默认主题改为 default | `common/constants.go`、`setting/system_setting/theme.go` |
+| 001 | 2026-07-05 | 默认前端固定为 default 并彻底移除 classic：后端主题切换、classic embed、Docker 构建阶段和前端 workspace 均清理 | [详情](details/001-default-frontend-only.md) |
 | 002 | 2026-06-18 | 全局品牌重命名 New API → AI Hub | [详情](details/002-brand-rename.md) |
 | 003 | 2026-06-18 ~ 06-23 | 首页定制：移除 Footer/区块/开源卡片/CTA推广区，HeroViewPricing 按钮，模型标签替换，三步上手优化与连接线动画，Hero 右侧轨道动画替换 Terminal Demo，底部飞书联系信息，统计微光动画与 glass 卡片 UI，加宽 Header 与内容区，轨道动画左移，Hero 渐变标题微光扫光，Footer/CTA/Hero 相关翻译清理 | [详情](details/003-homepage-customization.md) |
 | 004 | 2026-06-19 | 修复前端 dev server 端口冲突 | `web/default/rsbuild.config.ts` |
