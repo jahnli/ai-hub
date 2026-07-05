@@ -37,8 +37,10 @@ const (
 // injectedBlockMarkers 是无闭合结构的特征，无法界定注入范围，
 // 包含任一特征的整个文本块直接丢弃。
 var injectedTagNames = []string{
+	"environment_context",
 	"system-reminder",
 	"ide_selection",
+	"ide_opened_file",
 	"cursorRules",
 	"instructions",
 	"context_management",
@@ -49,13 +51,23 @@ var injectedTagNames = []string{
 	"available_skills",
 	"mcp_instructions",
 	"agent_transcripts",
+	"appshot",
+	"codex_internal_context",
 }
 
 var injectedBlockMarkers = []string{
 	"<|system|>",
 	"CRITICAL: Respond with TEXT ONLY",
 	"--- CONTEXT ENTRY BEGIN ---",
+	"Base directory for this skill:",
+	"# Subagent-Driven Development",
+	"This session is being continued from a previous conversation that ran out of context.",
+	"Another language model started to solve this problem",
 }
+
+const continuedSessionResumeMarker = "Pick up the last task as if the break never happened."
+
+var codexUserRequestPattern = regexp.MustCompile(`(?is)(?:^|\n)\s*(?:#{1,6}\s*)?My request for Codex:\s*(.*)\z`)
 
 // Go 的 RE2 不支持反向引用，为保证开闭标签配对，每个标签编译独立正则。
 // (?is) 忽略大小写且 . 匹配换行；`\z` 兜底处理被截断的未闭合区段。
@@ -71,6 +83,16 @@ var injectedTagPatterns = func() []*regexp.Regexp {
 // 存在该包裹时，包裹外的内容全部是注入上下文，真实输入即区段内部内容。
 var userQueryPattern = regexp.MustCompile(`(?is)<user_query(?:\s[^>]*)?>(.*?)(?:</user_query>|\z)`)
 
+// orphanInjectedClosingTagPattern 清理客户端续聊/拼接时泄露到用户区块中的孤立闭合标签。
+var orphanInjectedClosingTagPattern = func() *regexp.Regexp {
+	patterns := make([]string, 0, len(injectedTagNames)+1)
+	for _, name := range injectedTagNames {
+		patterns = append(patterns, regexp.QuoteMeta(name))
+	}
+	patterns = append(patterns, "system_reminder")
+	return regexp.MustCompile(`(?im)^\s*</(?:` + strings.Join(patterns, "|") + `)>\s*$\n?`)
+}()
+
 // filterUserText 去除文本块中客户端注入的内容，返回剩余的用户真实输入；
 // 整块均为注入内容时返回空串。
 func filterUserText(text string) string {
@@ -80,7 +102,7 @@ func filterUserText(text string) string {
 	if strings.Contains(text, "<user_query") {
 		var queries []string
 		for _, match := range userQueryPattern.FindAllStringSubmatch(text, -1) {
-			if query := strings.TrimSpace(match[1]); query != "" {
+			if query := cleanUserQueryText(match[1]); query != "" {
 				queries = append(queries, query)
 			}
 		}
@@ -91,6 +113,22 @@ func filterUserText(text string) string {
 			return ""
 		}
 	}
+	return stripInjectedTags(text)
+}
+
+func cleanUserQueryText(text string) string {
+	text = stripInjectedTags(text)
+	if markerIndex := strings.Index(text, continuedSessionResumeMarker); markerIndex >= 0 {
+		text = text[markerIndex+len(continuedSessionResumeMarker):]
+	}
+	if match := codexUserRequestPattern.FindStringSubmatch(text); len(match) == 2 {
+		text = match[1]
+	}
+	text = orphanInjectedClosingTagPattern.ReplaceAllString(text, "")
+	return strings.TrimSpace(text)
+}
+
+func stripInjectedTags(text string) string {
 	stripped := false
 	for i, name := range injectedTagNames {
 		if strings.Contains(text, "<"+name) {
@@ -98,8 +136,9 @@ func filterUserText(text string) string {
 			stripped = true
 		}
 	}
-	if stripped {
-		text = strings.TrimSpace(text)
+	cleanedText := orphanInjectedClosingTagPattern.ReplaceAllString(text, "")
+	if stripped || cleanedText != text {
+		return strings.TrimSpace(cleanedText)
 	}
 	return text
 }
