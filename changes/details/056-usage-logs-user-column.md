@@ -34,7 +34,7 @@
 - `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
 - `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
 - `model/main.go` — AutoMigrate 注册 RequestMessage 模型
-- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数
+- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距
 - `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容
 - `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent

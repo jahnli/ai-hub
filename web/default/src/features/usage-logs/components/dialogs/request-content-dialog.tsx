@@ -76,31 +76,36 @@ export function RequestContentDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={t('Request Content')}
-      description={`${requestMessage.model_name} · ${requestMessage.relay_format} · ${formatTimestampToDate(requestMessage.created_at)}`}
       contentClassName='sm:max-w-[70rem]'
       contentHeight='auto'
       bodyClassName='space-y-4'
     >
       <ScrollArea className='max-h-[70vh] pr-4'>
         <div className='space-y-3'>
-          <div className='text-muted-foreground flex items-center gap-1 text-xs'>
-            <span className='shrink-0'>{t('Request ID')}:</span>
-            <span className='truncate font-mono'>
-              {requestMessage.request_id}
-            </span>
-            <Button
-              variant='ghost'
-              size='sm'
-              className='h-6 w-6 shrink-0 p-0'
-              onClick={() => copyToClipboard(requestMessage.request_id)}
-              title={t('Copy to clipboard')}
-            >
-              {copiedText === requestMessage.request_id ? (
-                <Check className='size-3 text-green-600' />
-              ) : (
-                <Copy className='size-3' />
-              )}
-            </Button>
+          <div>
+            <div className='text-muted-foreground'>
+              {requestMessage.model_name} · {requestMessage.relay_format} ·{' '}
+              {formatTimestampToDate(requestMessage.created_at)}
+            </div>
+            <div className='text-muted-foreground flex items-center gap-1 text-sm'>
+              <span className='shrink-0'>{t('Request ID')}:</span>
+              <span className='truncate font-mono'>
+                {requestMessage.request_id}
+              </span>
+              <Button
+                variant='ghost'
+                size='sm'
+                className='h-6 w-6 shrink-0 p-0'
+                onClick={() => copyToClipboard(requestMessage.request_id)}
+                title={t('Copy to clipboard')}
+              >
+                {copiedText === requestMessage.request_id ? (
+                  <Check className='size-3 text-green-600' />
+                ) : (
+                  <Copy className='size-3' />
+                )}
+              </Button>
+            </div>
           </div>
 
           {entries.map((entry) => (
