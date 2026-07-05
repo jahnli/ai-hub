@@ -13,7 +13,7 @@
 - `relay/relay_task.go` — 任务模型转 DTO 时透传 open_id
 - `web/default/src/lib/utils.ts` — 新增 buildFeishuUserChatUrl 工具，统一构造飞书 openId 聊天链接
 - `web/default/src/features/home/components/sections/cta.tsx` — 首页底部飞书联系卡复用统一的飞书聊天链接构造函数
-- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列重写：显示头像+显示名+悬停资料卡片（UserProfileHoverCard），头像点击改为按 open_id 跳转飞书；列顺序调整（用户→模型→耗时→渠道→Token）；时间、渠道、令牌和详情列宽度微调；费用列订阅抵扣记录改为直接显示抵扣金额，悬停提示订阅来源；新增 IP 地址列，支持敏感信息隐藏、复制和完整内容悬浮提示；详情列固定在表格右侧；错误日志详情文字显示错误色；渠道标签自动配色排除红色并将 slate 映射为 neutral，避免不受支持的 Badge variant 类型错误
+- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列重写：显示头像+显示名+悬停资料卡片（UserProfileHoverCard），头像点击改为按 open_id 跳转飞书；列顺序调整（用户→模型→耗时→渠道→Token）；时间、渠道、令牌和详情列宽度微调；费用列订阅抵扣记录改为直接显示抵扣金额，悬停提示订阅来源；新增 IP 地址列，支持敏感信息隐藏、复制和完整内容悬浮提示；详情列固定在表格右侧；错误日志详情文字显示错误色；渠道标签自动配色排除红色并将 slate 映射为 neutral，避免不受支持的 Badge variant 类型错误；请求内容列仅管理员可见（isAdmin 条件守卫）
 - `web/default/src/features/usage-logs/components/columns/task-logs-columns.tsx` — 任务日志用户列头像点击改为通过 open_id 跳转飞书，不再打开用户信息弹框
 - `web/default/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框桌面端宽度调整为屏幕宽度 50%
 - `web/default/src/features/usage-logs/components/usage-logs-mobile-card.tsx` — 移动端使用日志卡片在令牌前展示 IP 地址字段
