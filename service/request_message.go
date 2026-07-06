@@ -48,6 +48,11 @@ var injectedTagNames = []string{
 	"attached_file",
 	"selected_code",
 	"linter_errors",
+	"local-command-caveat",
+	"command-name",
+	"command-message",
+	"command-args",
+	"local-command-stdout",
 	"task_notification",
 	"cursorRules",
 	"instructions",
@@ -162,7 +167,11 @@ func cleanUserQueryText(text string) string {
 		text = query
 	}
 	text = orphanInjectedClosingTagPattern.ReplaceAllString(text, "")
-	return strings.TrimSpace(text)
+	text = strings.TrimSpace(text)
+	for strings.Contains(text, "\n\n\n") {
+		text = strings.ReplaceAll(text, "\n\n\n", "\n\n")
+	}
+	return text
 }
 
 func extractCodexUserRequestText(text string) (string, bool) {
