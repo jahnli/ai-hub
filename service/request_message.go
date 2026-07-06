@@ -42,9 +42,13 @@ const (
 // 包含任一特征的整个文本块直接丢弃。
 var injectedTagNames = []string{
 	"environment_context",
-	"system-reminder",
-	"ide_selection",
-	"ide_opened_file",
+	"system-communication",
+	"system_communication",
+	"attached_files",
+	"attached_file",
+	"selected_code",
+	"linter_errors",
+	"task_notification",
 	"cursorRules",
 	"instructions",
 	"context_management",
@@ -60,6 +64,8 @@ var injectedTagNames = []string{
 	"appshot",
 	"skill",
 	"codex_internal_context",
+	"system-reminder",
+	"system_reminder",
 }
 
 var injectedBlockMarkers = []string{
