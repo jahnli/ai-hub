@@ -41,7 +41,7 @@
 | 034 | 2026-06-23 | 用户头像下拉菜单增强：头像旁显示用户名、角色标签前加图标（👑🏅🧑‍💼）、下拉菜单改为悬停触发、移除分组显示 | [详情](details/034-profile-dropdown-enhance.md) |
 | 035 | 2026-06-24 | 常见问答面板重构：移除问答列表，改为插画图标+外链按钮跳转飞书文档；经典前端注释掉 FAQ 面板 | [详情](details/035-faq-panel-redesign.md) |
 | 036 | 2026-06-24 | 系统公告弹窗宽度由 26rem 加大到 36rem | `web/default/src/components/notification-popover.tsx` |
-| 037 | 2026-06-24 | 订阅管理增强：支持全员订阅，并允许管理员按人民币金额为单个有效用户订阅增加额度 | [详情](details/037-subscribe-all-users.md) |
+| 037 | 2026-07-06 | 订阅管理增强：支持全员订阅，并允许管理员按人民币金额为单个有效用户订阅增加额度；用户订阅管理选择套餐时显示套餐额度而非价格 | [详情](details/037-subscribe-all-users.md) |
 | 038 | 2026-06-24 | 系统设置侧边栏菜单默认展开：新增 NavCollapsible.defaultOpen 属性，系统设置下所有分组设为默认展开 | `web/default/src/components/layout/types.ts`、`web/default/src/components/layout/components/nav-group.tsx`、`web/default/src/components/layout/config/system-settings.config.ts` |
 | 039 | 2026-07-05 | 用户管理表格调整：用户名列增加头像、display_name 与 username 展示位置互换，头像点击支持通过 open_id 跳转飞书且悬停仍显示资料卡片；列顺序优化；新增订阅额度、月度总消耗、Token、请求次数和常用模型统计，统计数据改从 logs 表聚合；支持服务端排序订阅额度与用量统计列；请求次数格式化统一；抽取 useSharedUserColumns hook，用户管理与数据总览部门用户表格共用同一列定义；默认排序由额度降序改为注册时间降序；操作列新增「统计」按钮打开用户统计弹窗；调整用户列表列顺序与列宽，部门列超出省略并悬停显示完整路径；修复表格长文本移动端弹出层触发器的 Base UI 警告 | [详情](details/039-user-management-table.md) |
 | 040 | 2026-06-24 | 日志筛选日期范围选择器快捷预设从 5 个扩展为 13 个（含季度、半年等），新增 dayjs quarterOfYear 插件及 6 语言翻译 | [详情](details/040-date-picker-presets.md) |
@@ -65,6 +65,6 @@
 | 058 | 2026-07-05 | 新增在线生图功能：支持图片生成/编辑、参数配置、提示词预设、历史记录和 Playground 图片中继接口；补充 gpt-image-2 参数适配、模型专属参数、4K 尺寸预设、自定义尺寸校验、最多 8 张生成、生成进度/停止按钮与结果参数翻译优化；优化加载态、历史记录选中态、弹窗遮罩和大图性能；使用日志详情支持结构化展示图片生成参数并补齐翻译；侧边栏入口及 6 语言文案调整为“在线生图”；修复 OpenAI 图生图 JSON 转 multipart 上传、历史图一键带入图生图、生成进度与重置交互；生成历史改为服务端持久化存储：新增 ImageStudioGeneration 数据库模型与文件存储控制器，图片落盘至磁盘目录并通过 API 提供访问，前端历史记录从 localStorage 迁移至服务端 API；在线生图生成数量上限收紧为最多 4 张，并在后端图片请求校验中同步限制 | [详情](details/058-online-image-generation.md) |
 | 059 | 2026-07-04 | 排行榜 Token 可见性与热门模型 Tooltip 优化：所有 Token 数字仅超级管理员可见，热门模型悬停提示右侧显示连续排行编号，并更新 Token 排行相关 6 语言文案 | [详情](details/059-rankings-token-visibility.md) |
 | 060 | 2026-07-04 | API 密钥表格名称列改用截断单元格，避免长名称撑开表格 | [详情](details/060-api-keys-name-truncate.md) |
-| 061 | 2026-07-04 | 新增普通注册后自动订阅套餐：系统设置可选择自动绑定套餐，注册成功后创建订阅并记录来源 | [详情](details/061-registration-auto-subscribe.md) |
+| 061 | 2026-07-06 | 新增用户创建后自动订阅套餐：系统设置可选择自动绑定套餐，普通注册、LDAP 首次创建和后台新增用户后创建订阅并记录来源；设置选择框回显套餐名称 | [详情](details/061-registration-auto-subscribe.md) |
 | 062 | 2026-07-05 | 渠道、模型、订阅管理、系统信息和系统设置入口权限收紧为仅超级管理员可见，普通管理员访问相关路由时跳转 403 | [详情](details/062-admin-entry-permissions.md) |
 | 063 | 2026-07-06 | 本地访问限流默认关闭：全局 API/Web、关键接口和搜索限流默认禁用 | `common/init.go` |

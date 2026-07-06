@@ -267,15 +267,7 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	autoSubscribePlanId := system_setting.GetRegistrationSettings().AutoSubscribePlanId
-	if autoSubscribePlanId > 0 {
-		msg, bindErr := model.AdminBindSubscription(insertedUser.Id, autoSubscribePlanId, "register_auto")
-		if bindErr != nil {
-			common.SysError(fmt.Sprintf("[Register] auto-subscribe failed for user %d plan %d: %v", insertedUser.Id, autoSubscribePlanId, bindErr))
-		} else {
-			common.SysLog(fmt.Sprintf("[Register] auto-subscribe succeeded for user %d plan %d: %s", insertedUser.Id, autoSubscribePlanId, msg))
-		}
-	}
+	autoSubscribeUserAfterCreate(insertedUser.Id, "register_auto")
 
 	// 生成默认令牌
 	if constant.GenerateDefaultToken {
@@ -311,6 +303,20 @@ func Register(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+func autoSubscribeUserAfterCreate(userId int, source string) {
+	autoSubscribePlanId := system_setting.GetRegistrationSettings().AutoSubscribePlanId
+	if autoSubscribePlanId <= 0 {
+		return
+	}
+
+	msg, err := model.AdminBindSubscription(userId, autoSubscribePlanId, source)
+	if err != nil {
+		common.SysError(fmt.Sprintf("[%s] auto-subscribe failed for user %d plan %d: %v", source, userId, autoSubscribePlanId, err))
+		return
+	}
+	common.SysLog(fmt.Sprintf("[%s] auto-subscribe succeeded for user %d plan %d: %s", source, userId, autoSubscribePlanId, msg))
 }
 
 func GetAllUsers(c *gin.Context) {
@@ -1103,6 +1109,7 @@ func CreateUser(c *gin.Context) {
 		}
 	}
 	cleanUser.FinishInsert(0)
+	autoSubscribeUserAfterCreate(cleanUser.Id, "admin_create_auto")
 
 	recordManageAuditFor(c, cleanUser.Id, "user.create", map[string]interface{}{
 		"username": cleanUser.Username,

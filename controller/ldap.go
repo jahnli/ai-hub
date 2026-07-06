@@ -119,6 +119,8 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		return nil, err
 	}
 
+	autoSubscribeUserAfterCreate(user.Id, "ldap_register_auto")
+
 	// 注册成功后同步飞书字段（avatar_url/open_id/display_name/departments/job_number 等）
 	// 使用同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
 	if err := service.SyncFeishuUser(user); err != nil {

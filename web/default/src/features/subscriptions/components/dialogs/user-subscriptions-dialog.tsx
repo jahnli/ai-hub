@@ -76,7 +76,7 @@ function SubscriptionStatusBadge(props: {
   const now = Date.now() / 1000
   const isExpired = (props.sub.end_time || 0) > 0 && props.sub.end_time < now
   const isActive = props.sub.status === 'active' && !isExpired
-  if (isActive)
+  if (isActive) {
     return (
       <StatusBadge
         label={props.t('Active')}
@@ -84,7 +84,8 @@ function SubscriptionStatusBadge(props: {
         copyable={false}
       />
     )
-  if (props.sub.status === 'cancelled')
+  }
+  if (props.sub.status === 'cancelled') {
     return (
       <StatusBadge
         label={props.t('Invalidated')}
@@ -92,6 +93,7 @@ function SubscriptionStatusBadge(props: {
         copyable={false}
       />
     )
+  }
   return (
     <StatusBadge
       label={props.t('Expired')}
@@ -121,6 +123,15 @@ export function UserSubscriptionsDialog(props: Props) {
     })
     return map
   }, [plans])
+
+  const formatPlanOptionLabel = useCallback(
+    (plan: PlanRecord['plan']) => {
+      const quota = Number(plan.total_amount || 0)
+      const quotaLabel = quota > 0 ? formatQuota(quota) : t('Unlimited')
+      return `${plan.title} (${quotaLabel})`
+    },
+    [t]
+  )
 
   const loadData = useCallback(async () => {
     if (!props.user?.id) return
@@ -209,6 +220,25 @@ export function UserSubscriptionsDialog(props: Props) {
     }
   }
 
+  let confirmTitle = ''
+  let confirmDesc = ''
+  let confirmText = t('Confirm')
+  if (confirmAction?.type === 'increase') {
+    confirmTitle = t('Increase quota')
+    confirmDesc = t('Enter the CNY amount to add to this subscription.')
+    confirmText = t('Increase')
+  } else if (confirmAction?.type === 'invalidate') {
+    confirmTitle = t('Confirm invalidate')
+    confirmDesc = t(
+      'After invalidating, this subscription will be immediately deactivated. Historical records are not affected. Continue?'
+    )
+  } else if (confirmAction?.type === 'delete') {
+    confirmTitle = t('Confirm delete')
+    confirmDesc = t(
+      'Deleting will permanently remove this subscription record (including benefit details). Continue?'
+    )
+  }
+
   return (
     <>
       <Sheet open={props.open} onOpenChange={props.onOpenChange}>
@@ -223,17 +253,10 @@ export function UserSubscriptionsDialog(props: Props) {
           <div className={sideDrawerFormClassName()}>
             <div className='flex gap-2'>
               <Select
-                items={[
-                  ...plans.map((p) => ({
-                    value: String(p.plan.id),
-                    label: (
-                      <>
-                        {p.plan.title}($
-                        {Number(p.plan.price_amount || 0).toFixed(2)})
-                      </>
-                    ),
-                  })),
-                ]}
+                items={plans.map((p) => ({
+                  value: String(p.plan.id),
+                  label: formatPlanOptionLabel(p.plan),
+                }))}
                 value={selectedPlanId}
                 onValueChange={(v) => v !== null && setSelectedPlanId(v)}
               >
@@ -244,8 +267,7 @@ export function UserSubscriptionsDialog(props: Props) {
                   <SelectGroup>
                     {plans.map((p) => (
                       <SelectItem key={p.plan.id} value={String(p.plan.id)}>
-                        {p.plan.title} ($
-                        {Number(p.plan.price_amount || 0).toFixed(2)})
+                        {formatPlanOptionLabel(p.plan)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -395,29 +417,11 @@ export function UserSubscriptionsDialog(props: Props) {
         <ConfirmDialog
           open
           onOpenChange={(v) => !v && setConfirmAction(null)}
-          title={
-            confirmAction.type === 'increase'
-              ? t('Increase quota')
-              : confirmAction.type === 'invalidate'
-                ? t('Confirm invalidate')
-                : t('Confirm delete')
-          }
-          desc={
-            confirmAction.type === 'increase'
-              ? t('Enter the CNY amount to add to this subscription.')
-              : confirmAction.type === 'invalidate'
-                ? t(
-                    'After invalidating, this subscription will be immediately deactivated. Historical records are not affected. Continue?'
-                  )
-              : t(
-                  'Deleting will permanently remove this subscription record (including benefit details). Continue?'
-                )
-          }
+          title={confirmTitle}
+          desc={confirmDesc}
           handleConfirm={handleConfirmAction}
           destructive={confirmAction.type === 'delete'}
-          confirmText={
-            confirmAction.type === 'increase' ? t('Increase') : t('Confirm')
-          }
+          confirmText={confirmText}
         >
           {confirmAction.type === 'increase' ? (
             <div className='grid gap-2'>

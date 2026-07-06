@@ -36,7 +36,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
@@ -100,6 +99,14 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
     }),
     [defaultValues]
   )
+
+  const planTitleById = useMemo(() => {
+    const nextPlanTitleById = new Map<number, string>()
+    plans.forEach((item) => {
+      nextPlanTitleById.set(item.plan.id, item.plan.title)
+    })
+    return nextPlanTitleById
+  }, [plans])
 
   useEffect(() => {
     let mounted = true
@@ -234,42 +241,50 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
           <FormField
             control={form.control}
             name='registration.auto_subscribe_plan_id'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {t('Auto-subscribe plan after registration')}
-                </FormLabel>
-                <Select
-                  value={String(field.value || 0)}
-                  onValueChange={(value) => field.onChange(Number(value))}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('No auto-subscription')} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value='0'>
-                      {t('No auto-subscription')}
-                    </SelectItem>
-                    {plans.map((item) => (
-                      <SelectItem
-                        key={item.plan.id}
-                        value={String(item.plan.id)}
-                      >
-                        {item.plan.title}
+            render={({ field }) => {
+              const selectedPlanLabel = field.value
+                ? planTitleById.get(field.value) || t('Loading')
+                : t('No auto-subscription')
+
+              return (
+                <FormItem>
+                  <FormLabel>
+                    {t('Auto-subscribe plan after registration')}
+                  </FormLabel>
+                  <Select
+                    value={String(field.value || 0)}
+                    onValueChange={(value) => field.onChange(Number(value))}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <span className='line-clamp-1 flex min-w-0 items-center text-left'>
+                          {selectedPlanLabel}
+                        </span>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value='0'>
+                        {t('No auto-subscription')}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  {t(
-                    'Automatically bind this subscription plan to newly registered password accounts'
-                  )}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
+                      {plans.map((item) => (
+                        <SelectItem
+                          key={item.plan.id}
+                          value={String(item.plan.id)}
+                        >
+                          {item.plan.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {t(
+                      'Automatically bind this subscription plan to newly registered password accounts'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )
+            }}
           />
 
           <FormField
