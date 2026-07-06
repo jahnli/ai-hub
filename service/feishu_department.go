@@ -269,6 +269,93 @@ func feishuRequestWithRetry(method, url string, body any, token string) ([]byte,
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
 
+func SendFeishuCardMessage(openID string, cardJSON string) error {
+	token, err := feishuGetCachedTenantAccessToken()
+	if err != nil {
+		return err
+	}
+
+	body := map[string]string{
+		"receive_id": openID,
+		"msg_type":   "interactive",
+		"content":    cardJSON,
+	}
+	respBody, err := feishuRequestWithRetry(http.MethodPost, feishuBaseURL+"/im/v1/messages?receive_id_type=open_id", body, token)
+	if err != nil {
+		return err
+	}
+
+	var result feishuAPIResult
+	if err := common.Unmarshal(respBody, &result); err != nil {
+		return fmt.Errorf("decode message response: %w", err)
+	}
+	if result.Code != 0 {
+		return fmt.Errorf("feishu code=%d msg=%s", result.Code, result.Msg)
+	}
+	return nil
+}
+
+func BuildViolationNoticeCard(requestTime string, requestID string, modelName string) (string, error) {
+	if modelName == "" {
+		modelName = "-"
+	}
+
+	card := map[string]any{
+		"config": map[string]any{
+			"wide_screen_mode": true,
+		},
+		"header": map[string]any{
+			"template": "red",
+			"title": map[string]string{
+				"tag":     "plain_text",
+				"content": "安全审计提醒",
+			},
+		},
+		"elements": []map[string]any{
+			{
+				"tag":     "markdown",
+				"content": "你的 API 请求疑似包含非工作或违规内容，请及时调整使用方式。",
+			},
+			{
+				"tag": "div",
+				"fields": []map[string]any{
+					{
+						"is_short": true,
+						"text": map[string]string{
+							"tag":     "lark_md",
+							"content": "**请求时间**\n" + requestTime,
+						},
+					},
+					{
+						"is_short": true,
+						"text": map[string]string{
+							"tag":     "lark_md",
+							"content": "**模型**\n" + modelName,
+						},
+					},
+				},
+			},
+			{
+				"tag": "div",
+				"text": map[string]string{
+					"tag":     "lark_md",
+					"content": "**Request ID**\n" + requestID,
+				},
+			},
+			{
+				"tag":     "markdown",
+				"content": "如误告警，忽略即可",
+			},
+		},
+	}
+
+	data, err := common.Marshal(card)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 // ── Tree building ─────────────────────────────────────────────────
 
 // DeptTreeNode is the frontend-ready tree node.

@@ -25,6 +25,7 @@ import type {
   GetLogStatsResponse,
   GetMidjourneyLogsParams,
   GetTaskLogsParams,
+  NotifyViolationRequest,
   RequestMessage,
   UserInfo,
 } from './types'
@@ -113,6 +114,13 @@ export async function getRequestMessages(
 ): Promise<{ success: boolean; message?: string; data?: RequestMessage[] }> {
   const path = buildApiPath('/api/request_message', isAdmin)
   const res = await api.post(`${path}/batch`, { request_ids: requestIds })
+  return res.data
+}
+
+export async function notifyRequestMessageViolation(
+  payload: NotifyViolationRequest
+): Promise<{ success: boolean; message?: string }> {
+  const res = await api.post('/api/request_message/notify-violation', payload)
   return res.data
 }
 

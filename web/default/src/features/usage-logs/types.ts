@@ -401,6 +401,13 @@ export interface RequestMessage {
   parameters: string
 }
 
+export interface NotifyViolationRequest {
+  request_id: string
+  user_id: number
+  model_name: string
+  created_at: number
+}
+
 // ============================================================================
 // User Info Types
 // ============================================================================

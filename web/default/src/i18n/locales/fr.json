@@ -5325,6 +5325,11 @@
     "User message {{index}}": "Message utilisateur {{index}}",
     "Latest": "Dernier",
     "Request Parameters": "Paramètres de la requête",
+    "Violation Notice": "Avis de violation",
+    "Confirm Violation Notice": "Confirmer l'avis de violation",
+    "Send a violation notice to this user via Feishu?": "Envoyer un avis de violation à cet utilisateur via Feishu ?",
+    "Violation notice sent": "Avis de violation envoyé",
+    "Failed to send violation notice": "Échec de l'envoi de l'avis de violation",
     "Record request content": "Enregistrer le contenu des requêtes",
     "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Stocker les invites utilisateur et les paramètres du modèle de chaque requête relayée à des fins d'audit. Cette option augmente les écritures en base de données et l'utilisation du stockage."
   }

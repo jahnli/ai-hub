@@ -5325,6 +5325,11 @@
     "User message {{index}}": "Сообщение пользователя {{index}}",
     "Latest": "Последнее",
     "Request Parameters": "Параметры запроса",
+    "Violation Notice": "Уведомление о нарушении",
+    "Confirm Violation Notice": "Подтвердить уведомление о нарушении",
+    "Send a violation notice to this user via Feishu?": "Отправить этому пользователю уведомление о нарушении через Feishu?",
+    "Violation notice sent": "Уведомление о нарушении отправлено",
+    "Failed to send violation notice": "Не удалось отправить уведомление о нарушении",
     "Record request content": "Записывать содержимое запросов",
     "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Сохранять пользовательские промпты и параметры модели каждого запроса для аудита. Включение увеличивает количество записей в базу данных и использование хранилища."
   }

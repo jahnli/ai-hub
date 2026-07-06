@@ -5325,6 +5325,11 @@
     "User message {{index}}": "ユーザーメッセージ {{index}}",
     "Latest": "最新",
     "Request Parameters": "リクエストパラメータ",
+    "Violation Notice": "違反通知",
+    "Confirm Violation Notice": "違反通知を確認",
+    "Send a violation notice to this user via Feishu?": "Feishu でこのユーザーに違反通知を送信しますか？",
+    "Violation notice sent": "違反通知を送信しました",
+    "Failed to send violation notice": "違反通知の送信に失敗しました",
     "Record request content": "リクエスト内容を記録",
     "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "監査のために各リレーリクエストのユーザープロンプトとモデルパラメータを保存します。有効にするとデータベースへの書き込みとストレージ使用量が増加します。"
   }

@@ -5325,6 +5325,11 @@
     "User message {{index}}": "Tin nhắn người dùng {{index}}",
     "Latest": "Mới nhất",
     "Request Parameters": "Tham số yêu cầu",
+    "Violation Notice": "Thông báo vi phạm",
+    "Confirm Violation Notice": "Xác nhận thông báo vi phạm",
+    "Send a violation notice to this user via Feishu?": "Gửi thông báo vi phạm cho người dùng này qua Feishu?",
+    "Violation notice sent": "Đã gửi thông báo vi phạm",
+    "Failed to send violation notice": "Không gửi được thông báo vi phạm",
     "Record request content": "Ghi lại nội dung yêu cầu",
     "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Lưu trữ prompt của người dùng và tham số mô hình của mỗi yêu cầu chuyển tiếp để kiểm toán. Bật tùy chọn này sẽ tăng ghi cơ sở dữ liệu và dung lượng lưu trữ."
   }

@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +17,13 @@ const maxRequestMessageBatchSize = 100
 
 type requestMessagesBatchRequest struct {
 	RequestIds []string `json:"request_ids"`
+}
+
+type notifyRequestMessageViolationRequest struct {
+	RequestId string `json:"request_id"`
+	UserId    int    `json:"user_id"`
+	ModelName string `json:"model_name"`
+	CreatedAt int64  `json:"created_at"`
 }
 
 func parseRequestIds(c *gin.Context) []string {
@@ -93,4 +103,45 @@ func GetUserRequestMessagesBatch(c *gin.Context) {
 		return
 	}
 	common.ApiSuccess(c, messages)
+}
+
+func NotifyRequestMessageViolation(c *gin.Context) {
+	var request notifyRequestMessageViolationRequest
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	request.RequestId = strings.TrimSpace(request.RequestId)
+	if request.RequestId == "" || request.UserId <= 0 {
+		common.ApiErrorMsg(c, "request_id and user_id are required")
+		return
+	}
+
+	var user model.User
+	if err := model.DB.Select("id, open_id").Where("id = ?", request.UserId).First(&user).Error; err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if strings.TrimSpace(user.OpenId) == "" {
+		common.ApiErrorMsg(c, "The user has not bound a Feishu account")
+		return
+	}
+
+	requestTime := "-"
+	if request.CreatedAt > 0 {
+		requestTime = time.Unix(request.CreatedAt, 0).Local().Format("2006-01-02 15:04:05")
+	}
+
+	cardJSON, err := service.BuildViolationNoticeCard(requestTime, request.RequestId, request.ModelName)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if err := service.SendFeishuCardMessage(user.OpenId, cardJSON); err != nil {
+		common.ApiError(c, fmt.Errorf("send violation notice: %w", err))
+		return
+	}
+
+	common.ApiSuccess(c, nil)
 }

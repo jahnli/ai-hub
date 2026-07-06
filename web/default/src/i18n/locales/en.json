@@ -5325,6 +5325,11 @@
     "User message {{index}}": "User message {{index}}",
     "Latest": "Latest",
     "Request Parameters": "Request Parameters",
+    "Violation Notice": "Violation Notice",
+    "Confirm Violation Notice": "Confirm Violation Notice",
+    "Send a violation notice to this user via Feishu?": "Send a violation notice to this user via Feishu?",
+    "Violation notice sent": "Violation notice sent",
+    "Failed to send violation notice": "Failed to send violation notice",
     "Record request content": "Record request content",
     "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.": "Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage."
   }
