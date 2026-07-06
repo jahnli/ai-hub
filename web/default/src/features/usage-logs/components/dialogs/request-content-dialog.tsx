@@ -116,11 +116,12 @@ export function RequestContentDialog({
         open={open}
         onOpenChange={handleOpenChange}
         title={t('Request Content')}
-        contentClassName='sm:max-w-[70rem]'
-        contentHeight='auto'
+        contentClassName='sm:max-w-[78rem]'
+        contentHeight='calc(100vh-8rem)'
+        bodyContainerClassName='max-h-[calc(100vh-8rem)]'
         bodyClassName='space-y-4'
       >
-        <ScrollArea className='max-h-[70vh] pr-4'>
+        <ScrollArea className='max-h-[92vh] pr-4'>
           <div className='space-y-3'>
             <div>
               <div className='flex flex-wrap items-center justify-between gap-2'>
@@ -162,58 +163,69 @@ export function RequestContentDialog({
               </div>
             </div>
 
-            {entries.map((entry) => (
-              <Collapsible
-                key={entry.key}
-                defaultOpen
-                className='group/message rounded-lg border'
-              >
-                <div className='flex items-center gap-1 px-3 py-2'>
-                  <CollapsibleTrigger className='flex flex-1 cursor-pointer items-center gap-2 text-left text-sm font-medium'>
-                    <ChevronDown className='text-muted-foreground size-4 shrink-0 transition-transform group-data-[closed]/message:-rotate-90' />
-                    <span>
-                      {t('User message {{index}}', { index: entry.label })}
-                    </span>
-                    {entry.isLatest && (
-                      <span className='text-muted-foreground/60 text-xs font-normal'>
-                        {t('Latest')}
-                      </span>
-                    )}
-                  </CollapsibleTrigger>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    className='h-7 w-7 shrink-0 p-0'
-                    onClick={() => copyToClipboard(entry.message)}
-                    title={t('Copy to clipboard')}
+            <div className='grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]'>
+              <div className='min-w-0 space-y-3'>
+                {entries.map((entry) => (
+                  <Collapsible
+                    key={entry.key}
+                    defaultOpen
+                    className='group/message rounded-lg border'
                   >
-                    {copiedText === entry.message ? (
-                      <Check className='size-3.5 text-green-600' />
-                    ) : (
-                      <Copy className='size-3.5' />
-                    )}
-                  </Button>
-                </div>
-                <CollapsibleContent>
-                  <p className='bg-muted/40 border-t pl-9 pr-3 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap'>
-                    {entry.message}
-                  </p>
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
+                    <div className='flex items-center gap-1 px-3 py-2'>
+                      <CollapsibleTrigger className='flex flex-1 cursor-pointer items-center gap-2 text-left text-sm font-medium'>
+                        <ChevronDown className='text-muted-foreground size-4 shrink-0 transition-transform group-data-[closed]/message:-rotate-90' />
+                        <span>
+                          {t('User message {{index}}', { index: entry.label })}
+                        </span>
+                        {entry.isLatest && (
+                          <span className='text-muted-foreground/60 text-xs font-normal'>
+                            {t('Latest')}
+                          </span>
+                        )}
+                      </CollapsibleTrigger>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        className='h-7 w-7 shrink-0 p-0'
+                        onClick={() => copyToClipboard(entry.message)}
+                        title={t('Copy to clipboard')}
+                      >
+                        {copiedText === entry.message ? (
+                          <Check className='size-3.5 text-green-600' />
+                        ) : (
+                          <Copy className='size-3.5' />
+                        )}
+                      </Button>
+                    </div>
+                    <CollapsibleContent>
+                      <p className='bg-muted/40 border-t pl-9 pr-3 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap'>
+                        {entry.message}
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
 
-            {requestMessage.parameters && (
-              <Collapsible className='rounded-lg border px-3 py-2'>
-                <CollapsibleTrigger className='cursor-pointer text-sm font-medium'>
-                  {t('Request Parameters')}
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <pre className='bg-muted mt-2 max-h-[280px] overflow-auto rounded-md p-3 text-xs'>
-                    {formatParameters(requestMessage.parameters)}
-                  </pre>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+
+              <div className='min-w-0'>
+                {requestMessage.parameters && (
+                  <Collapsible
+                    defaultOpen
+                    className='group/parameters rounded-lg border px-3 py-2'
+                  >
+                    <CollapsibleTrigger className='flex w-full cursor-pointer items-center gap-2 text-left text-sm font-medium'>
+                      <ChevronDown className='text-muted-foreground size-4 shrink-0 transition-transform group-data-[closed]/parameters:-rotate-90' />
+                      <span>{t('Request Parameters')}</span>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <pre className='bg-muted mt-2 max-h-[60vh] overflow-auto rounded-md p-3 text-xs whitespace-pre-wrap'>
+                        {formatParameters(requestMessage.parameters)}
+                      </pre>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+              </div>
+            </div>
           </div>
         </ScrollArea>
       </Dialog>
