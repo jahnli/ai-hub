@@ -7,7 +7,14 @@ import type {
   ColumnFiltersState,
 } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, CheckCircle2, Funnel, UserRoundX, Users } from 'lucide-react'
+import {
+  BarChart3,
+  CheckCircle2,
+  Funnel,
+  ScrollText,
+  UserRoundX,
+  Users,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -26,6 +33,7 @@ import {
 } from '@/components/data-table'
 import { useSharedUserColumns } from '@/features/users/components/shared-user-columns'
 import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
+import { DepartmentLogsDialog } from './department-logs-dialog'
 import { UserConsumptionCharts } from './user-consumption-charts'
 import { UserStatsDialog } from './user-stats-dialog'
 import type { DepartmentUser } from '../types'
@@ -89,6 +97,7 @@ export function DepartmentUsersTable({
   })
 
   const [statsUser, setStatsUser] = useState<DepartmentUser | null>(null)
+  const [logsOpen, setLogsOpen] = useState(false)
   const [pagination, setPagination] = usePagination()
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'quota', desc: true },
@@ -309,23 +318,35 @@ export function DepartmentUsersTable({
   return (
     <Card className='mt-4'>
       <CardHeader className='pb-3'>
-        <CardTitle className='flex flex-wrap items-center gap-2 text-base'>
-          <span className='inline-flex items-center gap-2'>
-            <Users className='text-primary size-5' />
-            {t('Department Users')}
-          </span>
-          <span className='flex flex-wrap items-center gap-1.5 text-xs font-medium'>
-            <span className='rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300'>
-              {t('Total Users')}: {totalUsers}
+        <div className='flex flex-wrap items-center gap-2'>
+          <CardTitle className='flex min-w-0 flex-1 flex-wrap items-center gap-2 text-base'>
+            <span className='inline-flex items-center gap-2'>
+              <Users className='text-primary size-5' />
+              {t('Department User List')}
             </span>
-            <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'>
-              {t('Registered')}: {registeredUsers}
+            <span className='flex flex-wrap items-center gap-1.5 text-xs font-medium'>
+              <span className='rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300'>
+                {t('Total Users')}: {totalUsers}
+              </span>
+              <span className='rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'>
+                {t('Registered')}: {registeredUsers}
+              </span>
+              <span className='rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300'>
+                {t('Unregistered')}: {unregisteredUsers}
+              </span>
             </span>
-            <span className='rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300'>
-              {t('Unregistered')}: {unregisteredUsers}
-            </span>
-          </span>
-        </CardTitle>
+          </CardTitle>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            className='h-8 gap-1.5 px-2.5 text-xs'
+            onClick={() => setLogsOpen(true)}
+          >
+            <ScrollText className='size-3.5' />
+            {t('Usage Logs')}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className='px-4 pb-4 pt-0'>
         <DataTablePage
@@ -360,6 +381,15 @@ export function DepartmentUsersTable({
           if (!open) setStatsUser(null)
         }}
         user={statsUser}
+        initialStartTimestamp={startTimestamp}
+        initialEndTimestamp={endTimestamp}
+      />
+      <DepartmentLogsDialog
+        key={`department-logs-${departmentId}-${startTimestamp}-${endTimestamp}`}
+        open={logsOpen}
+        onOpenChange={setLogsOpen}
+        departmentId={departmentId}
+        departmentName={t('Department User List')}
         initialStartTimestamp={startTimestamp}
         initialEndTimestamp={endTimestamp}
       />

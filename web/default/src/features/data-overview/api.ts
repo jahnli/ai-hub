@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import type { GetLogsParams, GetLogsResponse } from '@/features/usage-logs/types'
 import type {
   DepartmentTreeResponse,
   DepartmentStat,
@@ -52,6 +53,13 @@ export async function getUsageAnalysis(params: {
     success: boolean
     data: UsageAnalysis
   }>('/api/department/usage-analysis', params)
+  return res.data
+}
+
+export async function getDepartmentLogs(
+  params: GetLogsParams & { department_id: string }
+): Promise<GetLogsResponse> {
+  const res = await api.post<GetLogsResponse>('/api/department/logs', params)
   return res.data
 }
 

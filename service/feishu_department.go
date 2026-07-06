@@ -564,6 +564,98 @@ type DepartmentStatsRequest struct {
 	EndTimestamp   int64  `json:"end_timestamp"`
 }
 
+// DepartmentLogsRequest is the request body for department usage logs.
+type DepartmentLogsRequest struct {
+	DepartmentID      string `json:"department_id"`
+	StartTimestamp    int64  `json:"start_timestamp"`
+	EndTimestamp      int64  `json:"end_timestamp"`
+	Page              int    `json:"p"`
+	PageSize          int    `json:"page_size"`
+	LogType           int    `json:"type"`
+	Username          string `json:"username"`
+	TokenName         string `json:"token_name"`
+	ModelName         string `json:"model_name"`
+	Channel           int    `json:"channel"`
+	Group             string `json:"group"`
+	RequestID         string `json:"request_id"`
+	UpstreamRequestID string `json:"upstream_request_id"`
+}
+
+// GetDepartmentLogs fetches usage logs for registered users under a department.
+func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
+	if !system_setting.FeishuEnabled() {
+		return nil, fmt.Errorf("feishu integration is not configured")
+	}
+
+	token, err := feishuGetCachedTenantAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get tenant_access_token: %w", err)
+	}
+
+	items, err := getCachedDepartments(token)
+	if err != nil {
+		return nil, fmt.Errorf("get departments: %w", err)
+	}
+
+	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
+	pageInfo := departmentLogsPageInfo(req)
+	if len(openDeptIDs) == 0 {
+		pageInfo.SetItems([]*model.Log{})
+		return pageInfo, nil
+	}
+
+	memberOpenIDs, err := getAllMembersUnderDepts(token, openDeptIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get department members: %w", err)
+	}
+
+	userIds, err := findUserIdsByOpenIDs(memberOpenIDs)
+	if err != nil {
+		return nil, fmt.Errorf("find users by open_id: %w", err)
+	}
+	if len(userIds) == 0 {
+		pageInfo.SetItems([]*model.Log{})
+		return pageInfo, nil
+	}
+
+	logs, total, err := model.GetLogsByUserIds(
+		userIds,
+		req.LogType,
+		req.StartTimestamp,
+		req.EndTimestamp,
+		req.ModelName,
+		req.Username,
+		req.TokenName,
+		pageInfo.GetStartIdx(),
+		pageInfo.GetPageSize(),
+		req.Channel,
+		req.Group,
+		req.RequestID,
+		req.UpstreamRequestID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(logs)
+	return pageInfo, nil
+}
+
+func departmentLogsPageInfo(req *DepartmentLogsRequest) *common.PageInfo {
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = common.ItemsPerPage
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return &common.PageInfo{Page: page, PageSize: pageSize}
+}
+
 // GetDepartmentStats fetches stats for users belonging to a department (and its sub-departments).
 // It uses the Feishu Users API to get the real-time member list of each department,
 // then matches open_id against the user table to find registered usernames,

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { VChart } from "@visactor/react-vchart";
-import { Building2, PieChart, BarChart3 } from "lucide-react";
+import { Building2, PieChart, BarChart3, ScrollText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   DataTableView,
@@ -18,6 +18,7 @@ import {
 import { useChartTheme } from "@/lib/use-chart-theme";
 import { VCHART_OPTION } from "@/lib/vchart";
 import type { SubDepartmentStat } from "../types";
+import { DepartmentLogsDialog } from "./department-logs-dialog";
 import { SubDepartmentStatsDialog } from "./sub-department-stats-dialog";
 
 interface SubDepartmentStatsProps {
@@ -51,7 +52,8 @@ function formatRequests(count: number): string {
 }
 
 function useSubDepartmentColumns(
-  onViewStats: (department: SubDepartmentStat) => void
+  onViewStats: (department: SubDepartmentStat) => void,
+  onViewLogs: (department: SubDepartmentStat) => void
 ): ColumnDef<SubDepartmentStat>[] {
   const { t } = useTranslation();
 
@@ -127,23 +129,34 @@ function useSubDepartmentColumns(
       {
         id: "actions",
         header: "",
-        size: 96,
+        size: 190,
         enableSorting: false,
         meta: { pinned: "right" as const },
         cell: ({ row }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 px-2 text-xs"
-            onClick={() => onViewStats(row.original)}
-          >
-            <BarChart3 className="size-3.5" />
-            {t("Statistics")}
-          </Button>
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={() => onViewStats(row.original)}
+            >
+              <BarChart3 className="size-3.5" />
+              {t("Statistics")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={() => onViewLogs(row.original)}
+            >
+              <ScrollText className="size-3.5" />
+              {t("Usage Logs")}
+            </Button>
+          </div>
         ),
       },
     ],
-    [onViewStats, t],
+    [onViewLogs, onViewStats, t],
   );
 }
 
@@ -152,7 +165,9 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
   const { resolvedTheme, themeReady } = useChartTheme();
   const [statsDepartment, setStatsDepartment] =
     useState<SubDepartmentStat | null>(null);
-  const columns = useSubDepartmentColumns(setStatsDepartment);
+  const [logsDepartment, setLogsDepartment] =
+    useState<SubDepartmentStat | null>(null);
+  const columns = useSubDepartmentColumns(setStatsDepartment, setLogsDepartment);
 
   const sortedData = useMemo(
     () => [...props.data].sort((a, b) => b.total_amount_cny - a.total_amount_cny),
@@ -399,6 +414,21 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
         department={statsDepartment}
         startTimestamp={props.startTimestamp}
         endTimestamp={props.endTimestamp}
+      />
+      <DepartmentLogsDialog
+        key={
+          logsDepartment
+            ? `logs-${logsDepartment.department_id}-${props.startTimestamp}-${props.endTimestamp}`
+            : "logs-closed"
+        }
+        open={!!logsDepartment}
+        onOpenChange={(open) => {
+          if (!open) setLogsDepartment(null);
+        }}
+        departmentId={logsDepartment?.department_id ?? null}
+        departmentName={logsDepartment?.department_name ?? ""}
+        initialStartTimestamp={props.startTimestamp}
+        initialEndTimestamp={props.endTimestamp}
       />
     </Card>
   );

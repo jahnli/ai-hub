@@ -13,6 +13,8 @@ import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-p
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 import { getAllLogs } from '@/features/usage-logs/api'
+import type { GetLogsResponse } from '@/features/usage-logs/types'
+import { getDepartmentLogs } from '../api'
 
 interface UserLogsSectionProps {
   username: string
@@ -21,6 +23,67 @@ interface UserLogsSectionProps {
 }
 
 export function UserLogsSection(props: UserLogsSectionProps) {
+  return (
+    <LogsSection
+      queryKey={[
+        'user-stats-logs',
+        props.username,
+        props.startTimestamp,
+        props.endTimestamp,
+      ]}
+      queryFn={(pagination) =>
+        getAllLogs({
+          username: props.username,
+          start_timestamp: props.startTimestamp,
+          end_timestamp: props.endTimestamp,
+          p: pagination.pageIndex + 1,
+          page_size: pagination.pageSize,
+        })
+      }
+      enabled={!!props.username}
+      skeletonKeyPrefix='user-stats-logs-skeleton'
+    />
+  )
+}
+
+interface DepartmentLogsSectionProps {
+  departmentId: string
+  startTimestamp: number
+  endTimestamp: number
+}
+
+export function DepartmentLogsSection(props: DepartmentLogsSectionProps) {
+  return (
+    <LogsSection
+      queryKey={[
+        'department-logs',
+        props.departmentId,
+        props.startTimestamp,
+        props.endTimestamp,
+      ]}
+      queryFn={(pagination) =>
+        getDepartmentLogs({
+          department_id: props.departmentId,
+          start_timestamp: props.startTimestamp,
+          end_timestamp: props.endTimestamp,
+          p: pagination.pageIndex + 1,
+          page_size: pagination.pageSize,
+        })
+      }
+      enabled={!!props.departmentId}
+      skeletonKeyPrefix='department-logs-skeleton'
+    />
+  )
+}
+
+interface LogsSectionProps {
+  queryKey: readonly unknown[]
+  queryFn: (pagination: PaginationState) => Promise<GetLogsResponse>
+  enabled: boolean
+  skeletonKeyPrefix: string
+}
+
+function LogsSection(props: LogsSectionProps) {
   const { t } = useTranslation()
   const columns = useCommonLogsColumns(true)
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
@@ -29,22 +92,12 @@ export function UserLogsSection(props: UserLogsSectionProps) {
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
-      'user-stats-logs',
-      props.username,
-      props.startTimestamp,
-      props.endTimestamp,
+      ...props.queryKey,
       pagination.pageIndex,
       pagination.pageSize,
     ],
-    queryFn: () =>
-      getAllLogs({
-        username: props.username,
-        start_timestamp: props.startTimestamp,
-        end_timestamp: props.endTimestamp,
-        p: pagination.pageIndex + 1,
-        page_size: pagination.pageSize,
-      }),
-    enabled: !!props.username,
+    queryFn: () => props.queryFn(pagination),
+    enabled: props.enabled,
     staleTime: 60 * 1000,
   })
 
@@ -84,7 +137,7 @@ export function UserLogsSection(props: UserLogsSectionProps) {
             isFetching={isFetching}
             emptyTitle={t('No Logs Found')}
             emptyDescription={t('No usage logs in this time range.')}
-            skeletonKeyPrefix='user-stats-logs-skeleton'
+            skeletonKeyPrefix={props.skeletonKeyPrefix}
             applyHeaderSize
             toolbarProps={null}
             className='h-[min(42vh,420px)] min-h-[260px]'
