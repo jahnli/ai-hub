@@ -62,7 +62,6 @@ import {
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { useStatus } from '@/hooks/use-status'
 import { getUserModels, getUserGroups } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { cn } from '@/lib/utils'
@@ -89,6 +88,8 @@ type ApiKeyMutateDrawerProps = {
   currentRow?: ApiKey
 }
 
+const CREATE_API_KEY_DEFAULT_GROUP = 'default'
+
 export function ApiKeysMutateDrawer({
   open,
   onOpenChange,
@@ -97,10 +98,8 @@ export function ApiKeysMutateDrawer({
   const { t } = useTranslation()
   const isUpdate = !!currentRow
   const { triggerRefresh } = useApiKeys()
-  const { status } = useStatus()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const defaultUseAutoGroup = status?.default_use_auto_group === true
 
   // Fetch models
   const { data: modelsData } = useQuery({
@@ -128,12 +127,27 @@ export function ApiKeysMutateDrawer({
       ratio: info.ratio,
     })
   )
-  const backendHasAuto = groups.some((g) => g.value === 'auto')
+  const groupOptions = groups.some(
+    (group) => group.value === CREATE_API_KEY_DEFAULT_GROUP
+  )
+    ? groups
+    : [
+        {
+          value: CREATE_API_KEY_DEFAULT_GROUP,
+          label: CREATE_API_KEY_DEFAULT_GROUP,
+          desc: CREATE_API_KEY_DEFAULT_GROUP,
+        },
+        ...groups,
+      ]
   const schema = getApiKeyFormSchema(t)
 
   const form = useForm<ApiKeyFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: getApiKeyFormDefaultValues(defaultUseAutoGroup),
+    defaultValues: {
+      ...getApiKeyFormDefaultValues(false),
+      group: CREATE_API_KEY_DEFAULT_GROUP,
+      cross_group_retry: false,
+    },
   })
 
   // Load existing data when updating
@@ -146,10 +160,14 @@ export function ApiKeysMutateDrawer({
       })
     } else if (open && !isUpdate) {
       form.reset(
-        getApiKeyFormDefaultValues(defaultUseAutoGroup && backendHasAuto)
+        {
+          ...getApiKeyFormDefaultValues(false),
+          group: CREATE_API_KEY_DEFAULT_GROUP,
+          cross_group_retry: false,
+        }
       )
     }
-  }, [open, isUpdate, currentRow, form, defaultUseAutoGroup, backendHasAuto])
+  }, [open, isUpdate, currentRow, form])
 
   // Correct group after groups load: if the form value is not in available groups, fall back
   useEffect(() => {
@@ -307,7 +325,7 @@ export function ApiKeysMutateDrawer({
                     <FormLabel>{t('Group')}</FormLabel>
                     <FormControl>
                       <ApiKeyGroupCombobox
-                        options={groups}
+                        options={groupOptions}
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder={t('Select a group')}
