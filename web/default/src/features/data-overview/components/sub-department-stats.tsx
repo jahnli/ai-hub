@@ -1,9 +1,14 @@
-import { useMemo } from "react";
-import { type ColumnDef } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { VChart } from "@visactor/react-vchart";
 import { Building2, PieChart, BarChart3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { DataTableView, useDataTable } from "@/components/data-table";
+import {
+  DataTableView,
+  useDataTable,
+  type DataTablePinnedColumn,
+} from "@/components/data-table";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -13,10 +18,17 @@ import {
 import { useChartTheme } from "@/lib/use-chart-theme";
 import { VCHART_OPTION } from "@/lib/vchart";
 import type { SubDepartmentStat } from "../types";
+import { SubDepartmentStatsDialog } from "./sub-department-stats-dialog";
 
 interface SubDepartmentStatsProps {
   data: SubDepartmentStat[];
+  startTimestamp: number;
+  endTimestamp: number;
 }
+
+const SUB_DEPARTMENT_PINNED_COLUMNS = [
+  { columnId: "actions", side: "right" },
+] satisfies DataTablePinnedColumn[];
 
 function formatCNY(amount: number): string {
   if (!amount) return "¥0";
@@ -38,7 +50,9 @@ function formatRequests(count: number): string {
   return count.toLocaleString();
 }
 
-function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
+function useSubDepartmentColumns(
+  onViewStats: (department: SubDepartmentStat) => void
+): ColumnDef<SubDepartmentStat>[] {
   const { t } = useTranslation();
 
   return useMemo(
@@ -110,15 +124,35 @@ function useSubDepartmentColumns(): ColumnDef<SubDepartmentStat>[] {
         ),
         size: 120,
       },
+      {
+        id: "actions",
+        header: "",
+        size: 96,
+        enableSorting: false,
+        meta: { pinned: "right" as const },
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs"
+            onClick={() => onViewStats(row.original)}
+          >
+            <BarChart3 className="size-3.5" />
+            {t("Statistics")}
+          </Button>
+        ),
+      },
     ],
-    [t],
+    [onViewStats, t],
   );
 }
 
 export function SubDepartmentStats(props: SubDepartmentStatsProps) {
   const { t } = useTranslation();
   const { resolvedTheme, themeReady } = useChartTheme();
-  const columns = useSubDepartmentColumns();
+  const [statsDepartment, setStatsDepartment] =
+    useState<SubDepartmentStat | null>(null);
+  const columns = useSubDepartmentColumns(setStatsDepartment);
 
   const sortedData = useMemo(
     () => [...props.data].sort((a, b) => b.total_amount_cny - a.total_amount_cny),
@@ -301,6 +335,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
             table={table}
             containerClassName="border-0 shadow-none"
             applyHeaderSize
+            pinnedColumns={SUB_DEPARTMENT_PINNED_COLUMNS}
           />
         </div>
 
@@ -351,6 +386,20 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           </div>
         </div>
       </CardContent>
+      <SubDepartmentStatsDialog
+        key={
+          statsDepartment
+            ? `${statsDepartment.department_id}-${props.startTimestamp}-${props.endTimestamp}`
+            : "closed"
+        }
+        open={!!statsDepartment}
+        onOpenChange={(open) => {
+          if (!open) setStatsDepartment(null);
+        }}
+        department={statsDepartment}
+        startTimestamp={props.startTimestamp}
+        endTimestamp={props.endTimestamp}
+      />
     </Card>
   );
 }

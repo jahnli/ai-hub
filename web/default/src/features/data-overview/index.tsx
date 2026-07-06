@@ -2,26 +2,11 @@ import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertCircle,
-  AlertTriangle,
   Building2,
-  Coins,
-  DollarSign,
-  Hash,
-  Layers,
   Loader2,
   Search,
-  Timer,
-  UserCheck,
-  UserX,
-  type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import dayjs from '@/lib/dayjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -32,12 +17,13 @@ import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
 import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
 import { DepartmentTreeSelect } from './components/department-tree-select'
+import { DepartmentStatsCards } from './components/department-stats-cards'
 import { DepartmentUsersTable } from './components/department-users-table'
 import { ExportDialog } from './components/export-dialog'
 import { NotifySettingsDialog } from './components/notify-settings-dialog'
 import { SubDepartmentStats } from './components/sub-department-stats'
 import { UsageAnalysisSection } from './components/usage-analysis'
-import type { DeptTreeNode, DepartmentStat } from './types'
+import type { DeptTreeNode } from './types'
 
 const STATS_SKELETON_KEYS = Array.from(
   { length: 8 },
@@ -269,8 +255,12 @@ export function DataOverview() {
             </Card>
           )}
 
-          {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && (
-            <SubDepartmentStats data={subStatsQuery.data.data} />
+          {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && queryParams && (
+            <SubDepartmentStats
+              data={subStatsQuery.data.data}
+              startTimestamp={queryParams.start_timestamp}
+              endTimestamp={queryParams.end_timestamp}
+            />
           )}
 
           {queryParams && (
@@ -314,91 +304,6 @@ export function DataOverview() {
     </SectionPageLayout>
   )
 }
-
-function DepartmentStatsCards(props: { stat: DepartmentStat }) {
-  const { t } = useTranslation()
-  const { stat } = props
-
-  const formatTokens = (tokens: number | undefined): string => {
-    if (!tokens) return '0'
-    return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
-  }
-
-  const formatTokensDetail = (tokens: number | undefined): string => {
-    if (!tokens) return '0'
-    return tokens.toLocaleString()
-  }
-
-  const formatCNY = (amount: number | undefined): string => {
-    if (!amount) return '¥0'
-    return '¥' + amount.toFixed(2)
-  }
-
-  const formatRequests = (count: number | undefined): string => {
-    if (!count) return '0'
-    if (count >= 1_0000) {
-      return (count / 1_0000).toFixed(2) + ' 万'
-    }
-    return count.toLocaleString()
-  }
-
-  const items: { title: string; value: string; desc: string; icon: LucideIcon; valueClassName?: string; tooltip?: string }[] = [
-    { title: t('Total Tokens'), value: formatTokens(stat.total_tokens), desc: t('Statistical tokens'), icon: Layers, tooltip: formatTokensDetail(stat.total_tokens) },
-    { title: t('Total Cost'), value: formatCNY(stat.total_amount_cny), desc: t('Statistical quota'), icon: Coins },
-    { title: t('Avg Price'), value: (!stat.avg_price_per_mt ? '¥0' : '¥' + stat.avg_price_per_mt.toFixed(2)) + '/MT', desc: t('Average price per million tokens'), icon: DollarSign },
-    { title: t('Total Requests'), value: formatRequests(stat.total_requests), desc: t('Statistical count'), icon: Hash },
-    { title: t('Registered Count'), value: (stat.registered_users ?? 0).toLocaleString(), desc: t('Registered people count'), icon: UserCheck, valueClassName: 'text-emerald-600 dark:text-emerald-400' },
-    { title: t('Unregistered Count'), value: (stat.unregistered_users ?? 0).toLocaleString(), desc: t('Unregistered people count'), icon: UserX, valueClassName: 'text-amber-600 dark:text-amber-400' },
-    { title: t('Avg Response Time'), value: (stat.avg_use_time ?? 0).toFixed(1) + 's', desc: t('Average response time'), icon: Timer },
-    { title: t('Error Rate'), value: (stat.error_rate ?? 0).toFixed(1) + '%', desc: t('Request error rate'), icon: AlertTriangle },
-  ]
-
-  return (
-    <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-4'>
-        {items.map((it, idx) => {
-          const Icon = it.icon
-          return (
-            <div
-              key={it.title}
-              className={cn(
-                'min-w-0 px-3 py-2.5 sm:px-5 sm:py-4',
-                idx === items.length - 1 &&
-                  items.length % 2 !== 0 &&
-                  'col-span-2 sm:col-span-1'
-              )}
-            >
-              <div className='flex min-w-0 items-center gap-2'>
-                <Icon className='text-muted-foreground/60 size-3.5 shrink-0' />
-                <div className='text-muted-foreground truncate text-xs font-medium tracking-wider uppercase'>
-                  {it.title}
-                </div>
-              </div>
-              {it.tooltip ? (
-                <Tooltip>
-                  <TooltipTrigger render={<div className={cn('mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl', it.valueClassName || 'text-foreground')} />}>
-                    {it.value}
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <span className='font-mono text-xs'>{it.tooltip}</span>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <div className={cn('mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl', it.valueClassName || 'text-foreground')}>
-                  {it.value}
-                </div>
-              )}
-              <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
-                {it.desc}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 
 function findFirstSelectable(nodes: DeptTreeNode[]): DeptTreeNode | null {
   for (const node of nodes) {
