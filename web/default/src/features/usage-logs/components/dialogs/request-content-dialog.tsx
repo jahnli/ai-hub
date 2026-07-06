@@ -118,33 +118,20 @@ export function RequestContentDialog({
         title={t('Request Content')}
         contentClassName='sm:max-w-[78rem]'
         contentHeight='calc(100vh-8rem)'
-        bodyContainerClassName='max-h-[calc(100vh-8rem)]'
-        bodyClassName='space-y-4'
+        bodyContainerClassName='max-h-[calc(100vh-8rem)] overflow-hidden'
+        bodyClassName='h-full min-h-0'
       >
-        <ScrollArea className='max-h-[92vh] pr-4'>
-          <div className='space-y-3'>
-            <div>
-              <div className='flex flex-wrap items-center justify-between gap-2'>
-                <div className='text-muted-foreground'>
+        <div className='flex h-full min-h-0 flex-col space-y-3'>
+          <div className='shrink-0'>
+            <div className='flex flex-wrap items-center justify-between gap-2'>
+              <div className='text-muted-foreground flex min-w-0 flex-wrap items-center gap-1 text-sm'>
+                <span>
                   {requestMessage.model_name} · {requestMessage.relay_format} ·{' '}
                   {formatTimestampToDate(requestMessage.created_at)}
-                </div>
-                {canNotifyViolation && (
-                  <Button
-                    variant='destructive'
-                    size='sm'
-                    className='h-8 shrink-0 gap-1.5'
-                    onClick={() => setConfirmOpen(true)}
-                    disabled={notifyViolationMutation.isPending}
-                  >
-                    <ShieldAlert className='size-3.5' />
-                    {t('Violation Notice')}
-                  </Button>
-                )}
-              </div>
-              <div className='text-muted-foreground flex items-center gap-1 text-sm'>
+                </span>
+                <span className='text-muted-foreground/60'>·</span>
                 <span className='shrink-0'>{t('Request ID')}:</span>
-                <span className='truncate font-mono'>
+                <span className='max-w-[28rem] truncate font-mono'>
                   {requestMessage.request_id}
                 </span>
                 <Button
@@ -161,10 +148,24 @@ export function RequestContentDialog({
                   )}
                 </Button>
               </div>
+              {canNotifyViolation && (
+                <Button
+                  variant='destructive'
+                  size='sm'
+                  className='h-8 shrink-0 gap-1.5'
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={notifyViolationMutation.isPending}
+                >
+                  <ShieldAlert className='size-3.5' />
+                  {t('Violation Notice')}
+                </Button>
+              )}
             </div>
+          </div>
 
-            <div className='grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]'>
-              <div className='min-w-0 space-y-3'>
+          <div className='grid h-[calc(100vh-14rem)] min-h-0 overflow-hidden gap-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]'>
+            <div className='h-full min-h-0 overflow-y-auto pr-3'>
+              <div className='space-y-3'>
                 {entries.map((entry) => (
                   <Collapsible
                     key={entry.key}
@@ -205,29 +206,30 @@ export function RequestContentDialog({
                   </Collapsible>
                 ))}
               </div>
+            </div>
 
-
-              <div className='min-w-0'>
-                {requestMessage.parameters && (
-                  <Collapsible
-                    defaultOpen
-                    className='group/parameters rounded-lg border px-3 py-2'
-                  >
-                    <CollapsibleTrigger className='flex w-full cursor-pointer items-center gap-2 text-left text-sm font-medium'>
-                      <ChevronDown className='text-muted-foreground size-4 shrink-0 transition-transform group-data-[closed]/parameters:-rotate-90' />
-                      <span>{t('Request Parameters')}</span>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <pre className='bg-muted mt-2 max-h-[60vh] overflow-auto rounded-md p-3 text-xs whitespace-pre-wrap'>
+            <div className='h-full min-h-0 min-w-0'>
+              {requestMessage.parameters && (
+                <Collapsible
+                  defaultOpen
+                  className='group/parameters flex h-full min-h-0 flex-col rounded-lg border px-3 py-2'
+                >
+                  <CollapsibleTrigger className='flex w-full shrink-0 cursor-pointer items-center gap-2 text-left text-sm font-medium'>
+                    <ChevronDown className='text-muted-foreground size-4 shrink-0 transition-transform group-data-[closed]/parameters:-rotate-90' />
+                    <span>{t('Request Parameters')}</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className='mt-2 min-h-0 flex-1 overflow-hidden'>
+                    <ScrollArea className='h-full'>
+                      <pre className='bg-muted min-h-full overflow-x-auto rounded-md p-3 text-xs whitespace-pre'>
                         {formatParameters(requestMessage.parameters)}
                       </pre>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-              </div>
+                    </ScrollArea>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </Dialog>
       <ConfirmDialog
         open={confirmOpen}

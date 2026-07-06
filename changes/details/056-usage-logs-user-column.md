@@ -35,7 +35,7 @@
 - `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
 - `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
 - `model/main.go` — AutoMigrate 注册 RequestMessage 模型
-- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距；新增违规通知按钮和确认弹框，发送后 toast 提示结果；请求内容与请求参数改为左右并排展示，请求参数默认展开并缩窄宽度，弹框高度放大以展示更多内容
+- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距；新增违规通知按钮和确认弹框，发送后 toast 提示结果；请求内容与请求参数改为左右并排展示，请求参数默认展开并缩窄宽度，弹框高度放大以展示更多内容；请求参数区域支持独立滚动并保留 JSON 横向阅读格式
 - `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容；新增 canViewRequestContent 控制，非超级管理员不发起请求内容批量查询
 - `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用；请求内容批量查询改为 POST /batch 并通过 body 传递 request_ids，避免分页 100 时 query 过长；新增 notifyRequestMessageViolation API 调用
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent；新增 NotifyViolationRequest 类型
