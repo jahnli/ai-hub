@@ -79,6 +79,12 @@ const USER_ANALYTICS_TABS = new Set<ModelAnalyticsChartTab>([
   "userTrend",
 ]);
 
+function normalizeModelAnalyticsChartTab(
+  tab: ModelAnalyticsChartTab | undefined,
+): ModelAnalyticsChartTab {
+  return tab === "userTrend" ? "userRank" : (tab ?? "trend");
+}
+
 interface ModelChartsProps {
   data: QuotaDataItem[];
   filters?: DashboardFilters;
@@ -102,13 +108,10 @@ function UserRankAxisLabel(props: { user: UserRankProfile }) {
   const primaryName = getUserRankPrimaryName(props.user);
   const avatarFallback = getUserAvatarFallback(primaryName);
   const avatarFallbackStyle = getUserAvatarStyle(primaryName);
-  const displayLabel =
-    props.user.displayName && props.user.displayName !== props.user.username
-      ? `${primaryName} · ${props.user.username}`
-      : primaryName;
+  const displayLabel = primaryName;
 
   return (
-    <div className="flex min-w-0 items-center gap-1">
+    <div className="flex w-full min-w-0 items-center justify-end gap-1">
       <Avatar className="size-4.5 shrink-0">
         {props.user.avatarUrl ? (
           <AvatarImage src={props.user.avatarUrl} alt={primaryName} />
@@ -120,7 +123,7 @@ function UserRankAxisLabel(props: { user: UserRankProfile }) {
           {avatarFallback}
         </AvatarFallback>
       </Avatar>
-      <LongText className="max-w-full text-xs font-medium leading-tight">
+      <LongText className="min-w-0 flex-1 text-right text-xs font-medium leading-tight">
         {displayLabel}
       </LongText>
     </div>
@@ -136,7 +139,7 @@ export function ModelCharts(props: ModelChartsProps) {
     `${customization.preset}:${customization.radius}`,
   );
   const [activeTab, setActiveTab] = useState<ModelAnalyticsChartTab>(
-    props.defaultChartTab ?? "trend",
+    normalizeModelAnalyticsChartTab(props.defaultChartTab),
   );
   const [themeReady, setThemeReady] = useState(false);
   const themeManagerRef = useRef<
@@ -145,7 +148,9 @@ export function ModelCharts(props: ModelChartsProps) {
   const timeGranularity = props.timeGranularity ?? DEFAULT_TIME_GRANULARITY;
 
   useEffect(() => {
-    if (props.defaultChartTab) setActiveTab(props.defaultChartTab);
+    if (props.defaultChartTab) {
+      setActiveTab(normalizeModelAnalyticsChartTab(props.defaultChartTab));
+    }
   }, [props.defaultChartTab]);
 
   useEffect(() => {
@@ -251,8 +256,10 @@ export function ModelCharts(props: ModelChartsProps) {
   } else if (userSpecKey) {
     spec = userChartData[userSpecKey];
   }
-  const isChartLoading = props.loading || userQuotaQuery.isLoading;
-  const summaryDisplay = USER_ANALYTICS_TABS.has(activeTab)
+  const isUserAnalyticsTab = USER_ANALYTICS_TABS.has(activeTab);
+  const isChartLoading =
+    props.loading || (isUserAnalyticsTab && userQuotaQuery.isLoading);
+  const summaryDisplay = isUserAnalyticsTab
     ? chartData.totalQuotaDisplay
     : chartData.totalCountDisplay;
   const specType = typeof spec?.type === "string" ? spec.type : activeTab;
@@ -297,38 +304,63 @@ export function ModelCharts(props: ModelChartsProps) {
         </div>
       </div>
 
-      <div className="relative h-[300px] p-1.5 sm:h-96 sm:p-2">
+      <div className="h-[300px] p-1.5 sm:h-96 sm:p-2">
         {isChartLoading ? (
           <Skeleton className="h-full w-full" />
-        ) : (
-          <>
-            {activeTab === "userRank" && userRankProfiles.length > 0 ? (
-              <div className="pointer-events-none absolute top-[78px] bottom-8 left-8 z-10 w-[128px] sm:top-[100px]">
-                <div className="flex h-full flex-col">
-                  {userRankProfiles.map((userProfile) => (
-                    <div
-                      key={userProfile.username}
-                      className="flex min-h-0 flex-1 items-center pr-3"
-                    >
-                      <UserRankAxisLabel user={userProfile} />
-                    </div>
-                  ))}
+        ) : activeTab === "userRank" ? (
+          <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="relative min-h-0 rounded-md border/0">
+              {userRankProfiles.length > 0 ? (
+                <div className="pointer-events-none absolute top-[78px] bottom-8 left-8 z-10 w-[128px] sm:top-[100px]">
+                  <div className="flex h-full flex-col">
+                    {userRankProfiles.map((userProfile) => (
+                      <div
+                        key={userProfile.username}
+                        className="flex min-h-0 flex-1 items-center pr-3"
+                      >
+                        <UserRankAxisLabel user={userProfile} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-            {themeReady && spec ? (
-              <VChart
-                key={chartKey}
-                spec={{
-                  ...spec,
-                  theme: resolvedTheme === "dark" ? "dark" : "light",
-                  background: "transparent",
-                }}
-                option={VCHART_OPTION}
-              />
-            ) : null}
-          </>
-        )}
+              ) : null}
+              {themeReady ? (
+                <VChart
+                  key={`${chartKey}-rank`}
+                  spec={{
+                    ...userChartData.spec_user_rank,
+                    theme: resolvedTheme === "dark" ? "dark" : "light",
+                    background: "transparent",
+                  }}
+                  option={VCHART_OPTION}
+                />
+              ) : null}
+            </div>
+            <div className="min-h-0 rounded-md border/0">
+              {themeReady ? (
+                <VChart
+                  key={`${chartKey}-trend`}
+                  spec={{
+                    ...userChartData.spec_user_trend,
+                    theme: resolvedTheme === "dark" ? "dark" : "light",
+                    background: "transparent",
+                  }}
+                  option={VCHART_OPTION}
+                />
+              ) : null}
+            </div>
+          </div>
+        ) : themeReady && spec ? (
+          <VChart
+            key={chartKey}
+            spec={{
+              ...spec,
+              theme: resolvedTheme === "dark" ? "dark" : "light",
+              background: "transparent",
+            }}
+            option={VCHART_OPTION}
+          />
+        ) : null}
       </div>
     </div>
   );

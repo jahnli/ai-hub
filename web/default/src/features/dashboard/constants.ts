@@ -60,8 +60,7 @@ export const MODEL_ANALYTICS_CHART_OPTIONS = [
   { value: 'proportion', labelKey: 'Call Count Distribution' },
   { value: 'top', labelKey: 'Call Count Ranking' },
   { value: 'quota', labelKey: 'Quota Distribution' },
-  { value: 'userRank', labelKey: 'User Consumption Ranking' },
-  { value: 'userTrend', labelKey: 'User Consumption Trend' },
+  { value: 'userRank', labelKey: 'User Consumption' },
 ] as const
 
 export const EMPTY_DASHBOARD_FILTERS: DashboardFilters = {

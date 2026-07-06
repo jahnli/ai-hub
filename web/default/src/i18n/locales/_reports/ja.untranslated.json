@@ -13,7 +13,6 @@
   "Choose a model and parameters, then your results will appear here.": "Choose a model and parameters, then your results will appear here.",
   "Clear history": "Clear history",
   "Click, drag or paste images here": "Click, drag or paste images here",
-  "User-Agent": "User-Agent",
   "Continue with LDAP": "使用 LDAP 继续",
   "Copy failed, please download instead": "Copy failed, please download instead",
   "Copy image": "Copy image",
@@ -112,5 +111,6 @@
   "User Consumption Ranking Top 10": "User Consumption Ranking Top 10",
   "User Consumption Share Top 10": "User Consumption Share Top 10",
   "User Statistics": "User Statistics",
+  "User-Agent": "User-Agent",
   "Username or password is empty": "Username or password is empty"
 }
