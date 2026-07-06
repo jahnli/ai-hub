@@ -28,6 +28,11 @@ import { getCurrencyDisplay } from '@/lib/currency'
 import { formatChartTime, type TimeGranularity } from '@/lib/time'
 
 type TFunction = (key: string) => string
+type UserChartProfile = {
+  username: string
+  displayName?: string
+  avatarUrl?: string
+}
 type TooltipLineItem = {
   key: string
   value: string | number
@@ -705,7 +710,8 @@ export function processUserChartData(
   data: QuotaDataItem[],
   timeGranularity: TimeGranularity = 'day',
   t?: TFunction,
-  limit = 10
+  limit = 10,
+  userProfiles: UserChartProfile[] = []
 ): ProcessedUserChartData {
   const tt: TFunction = t ?? ((x) => x)
   const { config } = getCurrencyDisplay()
@@ -750,6 +756,21 @@ export function processUserChartData(
 
   if (!data || data.length === 0) return emptyResult
 
+  const profileByUsername = new Map<string, UserChartProfile>()
+  data.forEach((item) => {
+    const username = item.username || 'unknown'
+    if (profileByUsername.has(username)) return
+    profileByUsername.set(username, {
+      username,
+      displayName: item.display_name,
+      avatarUrl: item.avatar_url,
+    })
+  })
+  userProfiles.forEach((profile) => {
+    if (profile.username) {
+      profileByUsername.set(profile.username, profile)
+    }
+  })
   const userQuotaTotal = new Map<string, number>()
   data.forEach((item) => {
     const username = item.username || 'unknown'
@@ -764,11 +785,16 @@ export function processUserChartData(
   const topUserSet = new Set(topUsers)
   const totalQuota = sorted.slice(0, limit).reduce((s, [, q]) => s + q, 0)
 
-  const rankValues = sorted.slice(0, limit).map(([username, quota]) => ({
-    User: username,
-    rawQuota: quota,
-    Usage: Number((quota / quotaPerUnit).toFixed(2)),
-  }))
+  const rankValues = sorted.slice(0, limit).map(([username, quota]) => {
+    const profile = profileByUsername.get(username)
+    return {
+      User: username,
+      displayName: profile?.displayName || '',
+      avatarUrl: profile?.avatarUrl || '',
+      rawQuota: quota,
+      Usage: Number((quota / quotaPerUnit).toFixed(2)),
+    }
+  })
 
   const userColorMap = topUsers.reduce<Record<string, string>>(
     (acc, user, i) => {
@@ -836,7 +862,12 @@ export function processUserChartData(
         style: { fontSize: 11 },
       },
       axes: [
-        { orient: 'left', type: 'band' },
+        {
+          orient: 'left',
+          type: 'band',
+          width: 190,
+          label: { visible: false },
+        },
         { orient: 'bottom', type: 'linear', visible: false },
       ],
       tooltip: {
