@@ -911,41 +911,6 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
       maxSize: 220,
     });
 
-    columns.push({
-      id: "user_agent",
-      accessorFn: (row) => parseLogOther(row.other)?.user_agent ?? "",
-      header: t("User-Agent"),
-      cell: function UserAgentCell({ row }) {
-        const log = row.original;
-        if (!isDisplayableLogType(log.type)) return null;
-
-        const other = parseLogOther(log.other);
-        const userAgent = other?.user_agent;
-        if (!userAgent) {
-          return <span className="text-muted-foreground/40">—</span>;
-        }
-
-        return (
-          <TooltipProvider delay={300}>
-            <Tooltip>
-              <TooltipTrigger render={<div className="max-w-[180px]" />}>
-                <span className="text-muted-foreground block truncate font-mono text-xs">
-                  {userAgent}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                className="max-w-md break-all font-mono text-xs"
-              >
-                {userAgent}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      },
-      size: 180,
-      maxSize: 220,
-    });
   }
 
   columns.push({
