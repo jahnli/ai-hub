@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import * as React from "react";
-import { Venus } from "lucide-react";
+import { Mars, Venus, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
 import { useAuthStore } from "@/stores/auth-store";
@@ -27,6 +27,11 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { USER_ROLE, USER_ROLES } from "../constants";
 import {
   type UserColumnRow,
@@ -51,8 +56,35 @@ function ProfileField(props: { label: string; value?: string | null }) {
   );
 }
 
+function ProfileIconWithTooltip(props: {
+  icon: LucideIcon;
+  label: string;
+  className: string;
+}) {
+  const Icon = props.icon;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
+        <Icon size={14} className={props.className} />
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">{props.label}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 const DEFAULT_BANNER =
   "linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%)";
+
+const ROLE_TOOLTIP_LABELS: Partial<Record<number, string>> = {
+  [USER_ROLE.USER]: "普通用户",
+  [USER_ROLE.BU_BP]: "事业部 AI BP",
+  [USER_ROLE.CENTER_BP]: "中心 AI BP",
+  [USER_ROLE.ADMIN]: "管理员",
+  [USER_ROLE.ROOT]: "超级管理员",
+};
 
 export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
   const { t } = useTranslation();
@@ -62,11 +94,13 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
   const avatarFallback = getUserAvatarFallback(primaryName);
   const avatarFallbackStyle = getUserAvatarStyle(primaryName);
   const roleConfig = USER_ROLES[user.role as keyof typeof USER_ROLES];
-  const isFemaleUser = user.gender === 2;
-  const ProfileIcon = isFemaleUser ? Venus : roleConfig?.icon;
-  const profileIconClassName = isFemaleUser
+  const GenderIcon = user.gender === 2 ? Venus : Mars;
+  const genderIconClassName = user.gender === 2
     ? "shrink-0 text-pink-500"
-    : "text-primary shrink-0";
+    : "shrink-0 text-sky-500";
+  const RoleIcon = roleConfig?.icon;
+  const genderLabel = user.gender === 2 ? "女" : "男";
+  const roleLabel = ROLE_TOOLTIP_LABELS[user.role];
   const customFields = parseCustomFields(user.custom_field_values);
   const isRoot =
     useAuthStore((s) => s.auth.user?.role) === USER_ROLE.ROOT;
@@ -111,8 +145,17 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
               <span className="truncate text-base font-semibold">
                 {primaryName}
               </span>
-              {ProfileIcon && (
-                <ProfileIcon size={14} className={profileIconClassName} />
+              <ProfileIconWithTooltip
+                icon={GenderIcon}
+                label={genderLabel}
+                className={genderIconClassName}
+              />
+              {RoleIcon && roleLabel && (
+                <ProfileIconWithTooltip
+                  icon={RoleIcon}
+                  label={roleLabel}
+                  className="text-primary shrink-0"
+                />
               )}
             </div>
             {user.display_name && user.display_name !== user.username && (

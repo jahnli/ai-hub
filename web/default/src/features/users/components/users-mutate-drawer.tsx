@@ -274,7 +274,7 @@ export function UsersMutateDrawer({
                       <Select
                         items={[
                           { value: '1', label: t('Common User') },
-                          { value: '2', label: t('BU BP') },
+                          { value: '2', label: t('AI BP') },
                           { value: '3', label: t('Center BP') },
                           { value: '10', label: t('Admin') },
                         ]}
@@ -293,7 +293,7 @@ export function UsersMutateDrawer({
                             <SelectItem value='1'>
                               {t('Common User')}
                             </SelectItem>
-                            <SelectItem value='2'>{t('BU BP')}</SelectItem>
+                            <SelectItem value='2'>{t('AI BP')}</SelectItem>
                             <SelectItem value='3'>
                               {t('Center BP')}
                             </SelectItem>

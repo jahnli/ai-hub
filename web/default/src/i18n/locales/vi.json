@@ -723,6 +723,7 @@
     "Browse and compare": "Duyệt và so sánh",
     "Browse available models and pricing": "Duyệt mô hình khả dụng và giá",
     "Browse rankings by category": "Duyệt bảng xếp hạng theo danh mục",
+    "AI BP": "AI BP",
     "BU BP": "BP bộ phận kinh doanh",
     "Budget tokens = max tokens × ratio. Accepts a decimal between 0.002 and 1. Recommended to keep aligned with upstream billing.": "Số token ngân sách = số token tối đa × tỷ lệ. Chấp nhận một số thập phân từ 0.002 đến 1. Khuyến nghị nên giữ cho phù hợp với cách tính phí của nhà cung cấp.",
     "Budget tokens = max tokens × ratio. Accepts a decimal between 0.1 and 1.": "Số token ngân sách = số token tối đa × tỷ lệ. Chấp nhận một số thập phân từ 0.1 đến 1.",

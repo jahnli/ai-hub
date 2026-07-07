@@ -81,7 +81,7 @@ export const USER_ROLES = {
     icon: User,
   },
   [USER_ROLE.BU_BP]: {
-    labelKey: 'BU BP',
+    labelKey: 'AI BP',
     value: USER_ROLE.BU_BP,
     icon: Building2,
   },
@@ -104,7 +104,7 @@ export const USER_ROLES = {
 
 export const getUserRoleOptions = (t: (key: string) => string) => [
   { label: t('User'), value: String(USER_ROLE.USER), icon: User },
-  { label: t('BU BP'), value: String(USER_ROLE.BU_BP), icon: Building2 },
+  { label: t('AI BP'), value: String(USER_ROLE.BU_BP), icon: Building2 },
   { label: t('Center BP'), value: String(USER_ROLE.CENTER_BP), icon: Briefcase },
   { label: t('Admin'), value: String(USER_ROLE.ADMIN), icon: Users },
   { label: t('Root'), value: String(USER_ROLE.ROOT), icon: Shield },

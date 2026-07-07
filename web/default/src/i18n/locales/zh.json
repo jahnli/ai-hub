@@ -723,6 +723,7 @@
     "Browse and compare": "浏览和比较",
     "Browse available models and pricing": "浏览可用模型和价格",
     "Browse rankings by category": "按行业浏览排行",
+    "AI BP": "AI BP",
     "BU BP": "事业部 BP",
     "Budget tokens = max tokens × ratio. Accepts a decimal between 0.002 and 1. Recommended to keep aligned with upstream billing.": "预算令牌 = 最大令牌数 × 比例。接受 0.002 到 1 之间的十进制数。建议与上游计费保持一致。",
     "Budget tokens = max tokens × ratio. Accepts a decimal between 0.1 and 1.": "预算令牌 = 最大令牌数 × 比例。接受 0.1 到 1 之间的十进制数。",

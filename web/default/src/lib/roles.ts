@@ -35,7 +35,7 @@ const ROLE_LABEL_KEYS: Record<RoleValue, string> = {
   [ROLE.SUPER_ADMIN]: 'Super Admin',
   [ROLE.ADMIN]: 'Admin',
   [ROLE.CENTER_BP]: 'Center BP',
-  [ROLE.BU_BP]: 'BU BP',
+  [ROLE.BU_BP]: 'AI BP',
   [ROLE.USER]: 'User',
   [ROLE.GUEST]: 'Guest',
 }

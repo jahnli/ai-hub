@@ -394,6 +394,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
                 background_image: info.background_image,
                 mobile: info.mobile,
                 open_id: info.open_id,
+                gender: info.gender,
               });
             }
           });
@@ -437,6 +438,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           status: 1,
           role: 1,
           open_id: log.open_id || undefined,
+          gender: log.gender,
         };
 
         const avatarEl = feishuChatUrl ? (
