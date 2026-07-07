@@ -134,6 +134,19 @@ function buildDetailSegments(
   log: UsageLog,
   other: LogOtherData | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
+  isAdmin = false,
+): DetailSegment[] {
+  const segments = buildTypeDetailSegments(log, other, t);
+  if (isAdmin && other?.admin_info?.quota_saturation) {
+    return [{ text: t("Quota clamped"), danger: true }, ...segments];
+  }
+  return segments;
+}
+
+function buildTypeDetailSegments(
+  log: UsageLog,
+  other: LogOtherData | null,
+  t: (key: string, opts?: Record<string, unknown>) => string,
 ): DetailSegment[] {
   // Audit (type=3) and login (type=7) logs: render localized content from the
   // structured op descriptor instead of the raw (English-fallback) content.
