@@ -48,11 +48,11 @@ export interface CommonFilters {
  */
 export interface CommonLogFilters extends CommonFilters {
   model?: string
-  token?: string
   group?: string
   username?: string
   requestId?: string
   upstreamRequestId?: string
+  userCategory?: string
 }
 
 /**
@@ -315,6 +315,7 @@ export interface GetLogsParams {
   group?: string
   request_id?: string
   upstream_request_id?: string
+  user_category?: string
 }
 
 export interface GetLogsResponse {
@@ -339,6 +340,7 @@ export interface GetLogStatsParams {
   group?: string
   request_id?: string
   upstream_request_id?: string
+  user_category?: string
 }
 
 export interface GetLogStatsResponse {
@@ -432,6 +434,7 @@ export interface UserInfo {
   remark?: string
   email?: string
   avatar_url?: string
+  gender?: number
   role?: number
   status?: number
   department_name?: string

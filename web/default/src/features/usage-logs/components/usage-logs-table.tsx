@@ -107,7 +107,6 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
         deserialize: deserializeLogTypeFilter,
       },
       { columnId: 'model_name', searchKey: 'model', type: 'string' as const },
-      { columnId: 'token_name', searchKey: 'token', type: 'string' as const },
       { columnId: 'group', searchKey: 'group', type: 'string' as const },
       ...(isAdmin
         ? [

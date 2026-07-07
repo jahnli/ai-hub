@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -85,6 +86,37 @@ func applyLogUserKeywordFilter(tx *gorm.DB, keyword string, logUsernameColumn st
 	), nil
 }
 
+func applyLogUserCategoryFilter(tx *gorm.DB, category string) (*gorm.DB, error) {
+	category = strings.TrimSpace(category)
+	if category == "" {
+		return tx, nil
+	}
+
+	var matchedUserIds []int
+	if strings.HasPrefix(category, "role:") {
+		role, err := strconv.Atoi(strings.TrimPrefix(category, "role:"))
+		if err != nil {
+			return tx.Where("1 = 0"), nil
+		}
+		if err = DB.Table("users").Where("role = ?", role).Pluck("id", &matchedUserIds).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		gender, err := strconv.Atoi(category)
+		if err != nil || (gender != 1 && gender != 2) {
+			return tx.Where("1 = 0"), nil
+		}
+		if err = DB.Table("users").Where("gender = ?", gender).Pluck("id", &matchedUserIds).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	if len(matchedUserIds) == 0 {
+		return tx.Where("1 = 0"), nil
+	}
+	return tx.Where("logs.user_id IN ?", matchedUserIds), nil
+}
+
 func buildLogContainsCondition(column string, value string, databaseType common.DatabaseType) (string, string, error) {
 	pattern, err := sanitizeContainsLikePattern(value, databaseType)
 	if err != nil {
@@ -158,6 +190,7 @@ type Log struct {
 	DisplayName       string `json:"display_name" gorm:"->"`
 	AvatarUrl         string `json:"avatar_url" gorm:"->"`
 	OpenId            string `json:"open_id" gorm:"->"`
+	Gender            int    `json:"gender" gorm:"->"`
 	TokenId           int    `json:"token_id" gorm:"default:0;index"`
 	Group             string `json:"group" gorm:"index"`
 	Ip                string `json:"ip" gorm:"index;default:''"`
@@ -551,18 +584,18 @@ func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
 	}
 }
 
-func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
-	return getLogsWithUserIDs(nil, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId)
+func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
+	return getLogsWithUserIDs(nil, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId, userCategory)
 }
 
 func GetLogsByUserIds(userIDs []int, logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
 	if len(userIDs) == 0 {
 		return []*Log{}, 0, nil
 	}
-	return getLogsWithUserIDs(userIDs, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId)
+	return getLogsWithUserIDs(userIDs, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId, "")
 }
 
-func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
+func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB
@@ -571,6 +604,9 @@ func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTim
 	}
 	if len(userIDs) > 0 {
 		tx = tx.Where("logs.user_id IN ?", userIDs)
+	}
+	if tx, err = applyLogUserCategoryFilter(tx, userCategory); err != nil {
+		return nil, 0, err
 	}
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
@@ -668,27 +704,31 @@ func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTim
 			DisplayName string `gorm:"column:display_name"`
 			AvatarUrl   string `gorm:"column:avatar_url"`
 			OpenId      string `gorm:"column:open_id"`
+			Gender      int    `gorm:"column:gender"`
 		}
-		if err = DB.Table("users").Select("id, display_name, avatar_url, open_id").Where("id IN ?", userIds.Items()).Find(&users).Error; err != nil {
+		if err = DB.Table("users").Select("id, display_name, avatar_url, open_id, gender").Where("id IN ?", userIds.Items()).Find(&users).Error; err != nil {
 			return logs, total, err
 		}
 		userMap := make(map[int]struct {
 			DisplayName string
 			AvatarUrl   string
 			OpenId      string
+			Gender      int
 		}, len(users))
 		for _, u := range users {
 			userMap[u.Id] = struct {
 				DisplayName string
 				AvatarUrl   string
 				OpenId      string
-			}{u.DisplayName, u.AvatarUrl, u.OpenId}
+				Gender      int
+			}{u.DisplayName, u.AvatarUrl, u.OpenId, u.Gender}
 		}
 		for i := range logs {
 			if info, ok := userMap[logs[i].UserId]; ok {
 				logs[i].DisplayName = info.DisplayName
 				logs[i].AvatarUrl = info.AvatarUrl
 				logs[i].OpenId = info.OpenId
+				logs[i].Gender = info.Gender
 			}
 		}
 	}
@@ -698,7 +738,7 @@ func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTim
 
 const logSearchCountLimit = 10000
 
-func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int64, modelName string, tokenName string, startIdx int, num int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
+func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int64, modelName string, tokenName string, startIdx int, num int, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB.Where("logs.user_id = ?", userId)
@@ -707,6 +747,9 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	}
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {
+		return nil, 0, err
+	}
+	if tx, err = applyLogUserCategoryFilter(tx, userCategory); err != nil {
 		return nil, 0, err
 	}
 	if tokenName != "" {
@@ -752,7 +795,7 @@ type Stat struct {
 	Tpm   int `json:"tpm"`
 }
 
-func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string) (stat Stat, err error) {
+func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string, userCategory string) (stat Stat, err error) {
 	tx := LOG_DB.Table("logs").Select("COALESCE(sum(quota), 0) quota")
 
 	// 为rpm和tpm创建单独的查询
@@ -762,6 +805,12 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 		return stat, err
 	}
 	if rpmTpmQuery, err = applyLogUserKeywordFilter(rpmTpmQuery, username, "username"); err != nil {
+		return stat, err
+	}
+	if tx, err = applyLogUserCategoryFilter(tx, userCategory); err != nil {
+		return stat, err
+	}
+	if rpmTpmQuery, err = applyLogUserCategoryFilter(rpmTpmQuery, userCategory); err != nil {
 		return stat, err
 	}
 	if tokenName != "" {

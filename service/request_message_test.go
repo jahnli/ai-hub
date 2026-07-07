@@ -46,6 +46,25 @@ Tip: You have access to Opus 1M with 5x more context</local-command-stdout>
 	assert.Equal(t, "继续", filteredText)
 }
 
+func TestFilterUserTextStripsTranscriptFromCursorUserQuery(t *testing.T) {
+	inputText := `<user_query>
+使用日志那里过滤掉 
+
+<transcript>
+User: 
+BEST PRACTICE KPI/METRIC DATA COLLECTION (RAW — NO LEVEL L1-L5 MAPPING YET)
+
+Industry: D05 — 배터리 모듈·팩
+Search keywords: 배터리모듈 팩 BMS KPI 제조 수율, battery module pack BMS KPIs manufacturing yield EOL
+WebSearch battery module pack manufacturing KPIs yield EOL test metrics
+</transcript>
+</user_query>`
+
+	filteredText := filterUserText(inputText)
+
+	assert.Equal(t, "使用日志那里过滤掉", filteredText)
+}
+
 func TestFilterUserTextStripsAdditionalCursorInjectedTags(t *testing.T) {
 	inputText := `请检查这个问题
 <system-communication>

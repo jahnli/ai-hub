@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-06
+**日期**: 2026-07-08
 
 ## 涉及文件
 
@@ -22,7 +22,7 @@
 - `web/default/src/features/usage-logs/index.tsx` — 普通日志页不再渲染冗余页标题，任务日志仍保留任务日志标题与子分类切换
 - `web/default/src/features/usage-logs/section-registry.tsx` — 普通日志导航标题统一为 Usage Logs
 - `web/default/src/components/layout/components/section-page-layout.tsx` — 页面布局在无标题、操作区和面包屑时跳过顶部 header 容器，避免空元素继续占据空间
-- `web/default/src/features/usage-logs/data/schema.ts` — Zod schema 新增 display_name、avatar_url、open_id 字段
+- `web/default/src/features/usage-logs/data/schema.ts` — Zod schema 新增 display_name、avatar_url、open_id、gender 字段
 - `web/default/src/features/usage-logs/types.ts` — UserInfo 接口扩展完整用户详情字段并补充 open_id，TaskLog 补充 open_id
 - `web/default/src/i18n/locales/en.json` — 新增 "Timing / First Token"、"Request Content"、"Record request content" 等翻译
 - `web/default/src/i18n/locales/zh.json` — 新增 "耗时 / 首字"、"请求内容"、"记录请求内容" 等翻译
@@ -50,3 +50,11 @@
 - `service/log_info_generate.go` — 文本类使用日志 other 字段写入 user_agent，供前端表格展示
 - `web/default/src/i18n/locales/en.json`、`web/default/src/i18n/locales/zh.json`、`web/default/src/i18n/locales/fr.json`、`web/default/src/i18n/locales/ja.json`、`web/default/src/i18n/locales/ru.json`、`web/default/src/i18n/locales/vi.json` — 新增 User-Agent 表头翻译和违规通知相关文案
 - `web/default/src/components/dialog.tsx` — Dialog 组件样式调整
+- `web/default/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志高级筛选移除令牌名称条件；角色筛选前置到用户名之前，支持输入角色名称，候选下拉仅展示角色名称且不按内部 role 值过滤
+- `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 普通日志表格 URL/列筛选状态移除 token_name 与 token 查询参数映射
+- `web/default/src/features/usage-logs/lib/filter.ts` — 构造普通日志筛选 URL 参数时不再写入 token 条件
+- `web/default/src/features/usage-logs/lib/utils.ts` — 请求日志接口参数时不再从搜索参数或列筛选生成 token_name 条件
+- `web/default/src/features/usage-logs/types.ts` — CommonLogFilters 移除 token 字段
+- `web/default/src/routes/_authenticated/usage-logs/$section.tsx` — 使用日志路由搜索参数 schema 移除 token
+- `web/default/src/components/ui/combobox-input.tsx` — ComboboxInput 支持关闭自定义值提示与按 value 过滤，便于筛选输入数值时不弹出无关候选
+- `web/default/src/components/ui/combobox.tsx` — 透传 ComboboxInput 的自定义值提示和 value 过滤开关

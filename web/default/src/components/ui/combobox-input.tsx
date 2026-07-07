@@ -38,6 +38,8 @@ interface ComboboxInputProps {
   className?: string
   id?: string
   allowCustomValue?: boolean
+  showCustomValueHint?: boolean
+  filterByValue?: boolean
   openOnFocus?: boolean
 }
 
@@ -50,6 +52,8 @@ export function ComboboxInput({
   className,
   id,
   allowCustomValue = false,
+  showCustomValueHint = true,
+  filterByValue = true,
   openOnFocus = true,
 }: ComboboxInputProps) {
   const { t } = useTranslation()
@@ -69,12 +73,14 @@ export function ComboboxInput({
   const filteredOptions = React.useMemo(() => {
     if (!searchValue.trim()) return options
     const search = searchValue.toLowerCase().trim()
-    return options.filter(
-      (option) =>
-        option.label.toLowerCase().includes(search) ||
-        option.value.toLowerCase().includes(search)
-    )
-  }, [options, searchValue])
+    return options.filter((option) => {
+      const labelMatches = option.label.toLowerCase().includes(search)
+      const valueMatches = filterByValue
+        ? option.value.toLowerCase().includes(search)
+        : false
+      return labelMatches || valueMatches
+    })
+  }, [filterByValue, options, searchValue])
 
   // Reset highlight when filtered options change
   React.useEffect(() => {
@@ -156,7 +162,8 @@ export function ComboboxInput({
 
   const showDropdown =
     open &&
-    (filteredOptions.length > 0 || (allowCustomValue && searchValue.trim()))
+    (filteredOptions.length > 0 ||
+      (showCustomValueHint && allowCustomValue && searchValue.trim()))
 
   return (
     <div ref={containerRef} className='relative'>
@@ -237,7 +244,7 @@ export function ComboboxInput({
           ) : (
             <div className='px-2 py-6 text-center text-sm'>
               {t(emptyText)}
-              {allowCustomValue && searchValue.trim() && (
+              {showCustomValueHint && allowCustomValue && searchValue.trim() && (
                 <div className='text-muted-foreground mt-1 text-xs'>
                   {t('Press Enter to use "{{value}}"', {
                     value: searchValue.trim(),

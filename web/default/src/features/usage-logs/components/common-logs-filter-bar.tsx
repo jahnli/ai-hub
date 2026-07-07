@@ -24,6 +24,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Combobox } from '@/components/ui/combobox'
 import {
   Select,
   SelectContent,
@@ -38,6 +39,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useIsAdmin } from '@/hooks/use-admin'
+import { ROLE, getRoleLabelKey } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { LOG_TYPE_ALL_VALUE, LOG_TYPE_FILTERS } from '../constants'
 import { buildSearchParams } from '../lib/filter'
@@ -58,6 +61,30 @@ type LogTypeValue = (typeof LOG_TYPE_FILTERS)[number]['value']
 const logTypeValueSet = new Set<string>(
   LOG_TYPE_FILTERS.map((type) => type.value)
 )
+
+const USER_CATEGORY_ROLE_VALUES = [
+  ROLE.GUEST,
+  ROLE.USER,
+  ROLE.BU_BP,
+  ROLE.CENTER_BP,
+  ROLE.ADMIN,
+] as const
+
+type UserCategoryOption = {
+  value: string
+  label: string
+}
+
+function getUserCategoryFilterValue(
+  value: string | undefined,
+  options: UserCategoryOption[]
+): string | undefined {
+  const trimmedValue = value?.trim()
+  if (!trimmedValue) return undefined
+
+  const matchedOption = options.find((option) => option.label === trimmedValue)
+  return matchedOption?.value ?? trimmedValue
+}
 
 type CommonLogDraft = {
   sourceKey: string
@@ -83,11 +110,11 @@ function buildSearchSourceKey(values: {
   endTime?: unknown
   channel?: unknown
   model?: unknown
-  token?: unknown
   group?: unknown
   username?: unknown
   requestId?: unknown
   upstreamRequestId?: unknown
+  userCategory?: unknown
   type?: unknown
 }) {
   return [
@@ -95,11 +122,11 @@ function buildSearchSourceKey(values: {
     values.endTime,
     values.channel,
     values.model,
-    values.token,
     values.group,
     values.username,
     values.requestId,
     values.upstreamRequestId,
+    values.userCategory,
     Array.isArray(values.type) ? values.type.join(',') : values.type,
   ]
     .map((value) => String(value ?? ''))
@@ -118,6 +145,8 @@ export function CommonLogsFilterBar<TData>(
   const queryClient = useQueryClient()
   const searchParams = route.useSearch()
   const isAdmin = useIsAdmin()
+  const currentUserRole = useAuthStore((state) => state.auth.user?.role)
+  const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const { sensitiveVisible, setSensitiveVisible } = useUsageLogsContext()
   const fetchingLogs = useIsFetching({ queryKey: ['logs'] })
 
@@ -128,9 +157,9 @@ export function CommonLogsFilterBar<TData>(
       endTime: searchParams.endTime,
       channel: searchParams.channel,
       model: searchParams.model,
-      token: searchParams.token,
       group: searchParams.group,
       username: searchParams.username,
+      userCategory: searchParams.userCategory,
       requestId: searchParams.requestId,
       upstreamRequestId: searchParams.upstreamRequestId,
       type: searchParams.type,
@@ -142,9 +171,9 @@ export function CommonLogsFilterBar<TData>(
       endTime: searchParams.endTime ? new Date(searchParams.endTime) : end,
       channel: searchParams.channel || undefined,
       model: searchParams.model || undefined,
-      token: searchParams.token || undefined,
       group: searchParams.group || undefined,
       username: searchParams.username || undefined,
+      userCategory: searchParams.userCategory || undefined,
       requestId: searchParams.requestId || undefined,
       upstreamRequestId: searchParams.upstreamRequestId || undefined,
     }
@@ -158,9 +187,9 @@ export function CommonLogsFilterBar<TData>(
     searchParams.endTime,
     searchParams.channel,
     searchParams.model,
-    searchParams.token,
     searchParams.group,
     searchParams.username,
+    searchParams.userCategory,
     searchParams.requestId,
     searchParams.upstreamRequestId,
     searchParams.type,
@@ -170,6 +199,14 @@ export function CommonLogsFilterBar<TData>(
     draft.sourceKey === searchState.sourceKey ? draft : searchState
   const filters = activeDraft.filters
   const logType = activeDraft.logType
+  const userCategoryOptions = useMemo<UserCategoryOption[]>(
+    () =>
+      USER_CATEGORY_ROLE_VALUES.map((role) => ({
+        value: `role:${role}`,
+        label: t(getRoleLabelKey(role)),
+      })),
+    [t]
+  )
 
   const handleChange = useCallback(
     (field: keyof CommonLogFilters, value: Date | string | undefined) => {
@@ -187,7 +224,13 @@ export function CommonLogsFilterBar<TData>(
   )
 
   const handleApply = useCallback(() => {
-    const filterParams = buildSearchParams(filters, 'common')
+    const normalizedFilters: CommonLogFilters = {
+      ...filters,
+      userCategory: isSuperAdmin
+        ? getUserCategoryFilterValue(filters.userCategory, userCategoryOptions)
+        : undefined,
+    }
+    const filterParams = buildSearchParams(normalizedFilters, 'common')
     navigate({
       to: '/usage-logs/$section',
       params: { section: 'common' },
@@ -199,7 +242,14 @@ export function CommonLogsFilterBar<TData>(
     })
     queryClient.invalidateQueries({ queryKey: ['logs'] })
     queryClient.invalidateQueries({ queryKey: ['usage-logs-stats'] })
-  }, [filters, logType, navigate, queryClient])
+  }, [
+    filters,
+    isSuperAdmin,
+    logType,
+    navigate,
+    queryClient,
+    userCategoryOptions,
+  ])
 
   const handleReset = useCallback(() => {
     const { start, end } = getDefaultTimeRange()
@@ -235,8 +285,8 @@ export function CommonLogsFilterBar<TData>(
   )
 
   const hasExpandedFilters =
-    !!filters.token ||
     !!filters.username ||
+    (isSuperAdmin && !!filters.userCategory) ||
     !!filters.channel ||
     !!filters.requestId ||
     !!filters.upstreamRequestId
@@ -246,8 +296,8 @@ export function CommonLogsFilterBar<TData>(
     !!filters.model || !!filters.group || hasTypeFilter || hasExpandedFilters
 
   const expandedFilterCount = [
-    filters.token,
     isAdmin ? filters.username : undefined,
+    isSuperAdmin ? filters.userCategory : undefined,
     isAdmin ? filters.channel : undefined,
     filters.requestId,
     filters.upstreamRequestId,
@@ -361,15 +411,23 @@ export function CommonLogsFilterBar<TData>(
   )
   const advancedFilters = (
     <>
-      <LogsFilterField>
-        <LogsFilterInput
-          placeholder={t('Token Name')}
-          type={sensitiveType}
-          value={filters.token || ''}
-          onChange={(e) => handleChange('token', e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-      </LogsFilterField>
+      {isSuperAdmin && (
+        <LogsFilterField>
+          <Combobox
+            options={userCategoryOptions}
+            value={filters.userCategory || ''}
+            onValueChange={(value) =>
+              handleChange('userCategory', value || undefined)
+            }
+            placeholder={t('Role')}
+            searchPlaceholder={t('Role')}
+            allowCustomValue
+            showCustomValueHint={false}
+            filterByValue={false}
+            openOnFocus
+          />
+        </LogsFilterField>
+      )}
       {isAdmin && (
         <LogsFilterField>
           <LogsFilterInput
