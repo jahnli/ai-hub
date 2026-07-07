@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Check, Copy, Loader2 } from 'lucide-react'
+import { Check, Copy, Loader2, ArrowRightLeft, ChevronDown } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -24,6 +24,13 @@ import { toast } from 'sonner'
 import { BadgeCell } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuShortcut,
+} from '@/components/ui/dropdown-menu'
 import {
   Popover,
   PopoverContent,
@@ -36,7 +43,7 @@ import {
 } from '@/components/ui/tooltip'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
-import { type ApiKey } from '../types'
+import type { ApiKey } from '../types'
 import { useApiKeys } from './api-keys-provider'
 
 export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
@@ -135,20 +142,18 @@ export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
             />
           }
         >
-          {isLoading ? (
-            <Loader2 className='size-3.5 animate-spin' />
-          ) : isCopied ? (
-            <Check className='size-3.5 text-green-600' />
-          ) : (
-            <Copy className='size-3.5' />
-          )}
+          {(() => {
+            if (isLoading) return <Loader2 className='size-3.5 animate-spin' />
+            if (isCopied) return <Check className='size-3.5 text-green-600' />
+            return <Copy className='size-3.5' />
+          })()}
         </TooltipTrigger>
         <TooltipContent>
-          {isLoading
-            ? t('Loading...')
-            : isCopied
-              ? t('Copied!')
-              : t('Copy API key')}
+          {(() => {
+            if (isLoading) return t('Loading...')
+            if (isCopied) return t('Copied!')
+            return t('Copy API key')
+          })()}
         </TooltipContent>
       </Tooltip>
     </div>
@@ -232,5 +237,44 @@ export function IpRestrictionsCell({ apiKey }: { apiKey: ApiKey }) {
         </div>
       </TooltipContent>
     </Tooltip>
+  )
+}
+
+export function QuickImportCell({ apiKey }: { apiKey: ApiKey }) {
+  const { t } = useTranslation()
+  const { resolveRealKey, setResolvedKey, setCurrentRow, setOpen } =
+    useApiKeys()
+
+  const handleCCSwitchClick = useCallback(async () => {
+    const realKey = await resolveRealKey(apiKey.id)
+    if (!realKey) return
+    setResolvedKey(realKey)
+    setCurrentRow(apiKey)
+    setOpen('cc-switch')
+  }, [apiKey, resolveRealKey, setResolvedKey, setCurrentRow, setOpen])
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant='outline'
+            size='sm'
+            className='h-7 gap-1 px-2 text-xs'
+          />
+        }
+      >
+        {t('Quick Import')}
+        <ChevronDown className='size-3 opacity-60' />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='start' className='w-[160px]'>
+        <DropdownMenuItem onClick={() => void handleCCSwitchClick()}>
+          {t('CC Switch')}
+          <DropdownMenuShortcut>
+            <ArrowRightLeft size={14} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
