@@ -98,6 +98,18 @@ web/             — 前端主题容器
 
 **计费表达式系统：** 处理分级/动态计费（基于表达式的定价）时，必须先阅读 `pkg/billingexpr/expr.md`。该文档描述了设计理念、表达式语言、完整架构、token 归一化规则、配额转换和表达式版本控制。所有计费表达式的代码变更必须遵循该文档。
 
+**计费安全不变量：** 配额/计费代码绝不能因为算术溢出或未校验输入产生负扣费（即返还额度）。必须进行纵深防御：
+
+- 所有会成为计费乘数的用户可控数量（图片 `n`、视频 `seconds`/`duration`、分辨率/质量倍率、批次数量）在进入配额计算前都必须有边界限制。越界输入应在请求校验阶段以 400 拒绝。现有边界包括：图片生成数量使用 `dto.MaxImageN`，任务视频时长使用 `relaycommon.MaxTaskDurationSeconds`，所有中继格式（OpenAI、Claude、Gemini、Responses）的 `max_tokens` 系列字段使用 `relay/helper/valid_request.go` 中的 `maxTokensLimit`。复用这些常量，不要为同一概念引入临时限制。新增中继格式或请求 DTO 时，必须从一开始就在校验器中限制 max-tokens 和 count 字段。
+- 注意校验绕过路径：透传字段（例如 `Extra["parameters"]`）、任务 `metadata` map、multipart 表单字段都可能绕过标准 DTO 校验携带相同数量。任何从这些路径读取乘数的适配器都必须在本地执行相同边界限制（或钳制）。
+- 从媒体元数据解析出的时长同样是用户/上游可控的：音频文件头（转写 token 计数、TTS 响应时长）和上游扣费数字（例如 Kling `FinalUnitDeduction`）都可能声明荒谬数值。它们成为 token 数前必须使用饱和转换。
+- 不要用裸类型转换把计算出的配额或 token 数转换为 `int`，例如 `int(float64(quota) * ratio)`、对无界输入执行 `int(math.Round(...))` 或 `int(decimal.IntPart())`。所有配额舍入/转换都集中在 `common/quota_math.go`：浮点乘积截断使用 `common.QuotaFromFloat`，需要四舍五入时使用 `common.QuotaRound`（半远离零），decimal 乘积使用 `common.QuotaFromDecimal`。`billingexpr.QuotaRound` 会委托给 `common.QuotaRound`。不要重新引入局部转换 helper 或裸转换。饱和边界为 int32，因为用户/token/log 的 quota 列在数据库中是 32 位整数；每次钳制或 NaN 兜底都会通过 `common.SysError` 记录，因为单个请求不应接近这些边界。
+- 饱和事件也会审计：每个 helper 都有 `*Checked` 变体（`common.QuotaFromFloatChecked` / `QuotaRoundChecked` / `QuotaFromDecimalChecked`），发生钳制时会额外返回 `*common.QuotaClamp`。计算费用的计费路径需要把该 clamp 保存到 `relayInfo.QuotaClamp`（或传入任务结算），并在写入 consume/task 日志前调用 `service/log_info_generate.go` 中的 `attachQuotaSaturation`，将标记嵌入日志 `other.admin_info.quota_saturation`，同时输出带请求关联信息的 `logger.LogWarn`。嵌入 `admin_info` 会自然限制为仅管理员可见（非管理员日志视图会剥离 `admin_info`）。新增计费路径时，使用 `*Checked` 变体并以相同方式暴露 clamp，确保异常在管理端日志 UI 和后端日志中都可审计。
+- 乘数 map 必须通过 `types.PriceData.AddOtherRatio` 写入，该方法会拒绝非正数、NaN 和 +Inf 倍率。不要直接写 `PriceData.OtherRatios`，也不要削弱这些保护。
+- 预扣费和结算/差额都必须安全：饱和后的超大配额必须在预扣费阶段以余额不足失败，绝不能静默环绕。新增计费路径（新中继格式、新任务平台、新调整钩子）时，必须追踪完整链路：校验 → EstimateBilling/OtherRatios → 配额转换 → 预扣费 → 结算/退款，并确认每一步都保持这些不变量。
+- 解析为无符号类型（`*uint`）的字段可以接受极大的正 JSON 数字（例如 `18446744073686646784`，可能来自负数环绕）；`>= 0` 检查不够，必须设置上界。
+- 这些不变量的回归测试应放在它们保护的边界附近（请求校验器、转换 helper）。可参考 `relay/helper/openai_image_request_test.go`、`relay/common/relay_utils_test.go` 和 `common/quota_math_test.go` 的风格。
+
 **后端测试质量：** 后端测试必须保护真实行为、API 契约、计费/核算不变量、数据兼容性或回归路径。
 
 - 不要添加仅提升覆盖率数字、证明代码恰好能运行、或锁定实现细节而无用户可见或跨模块契约的测试。

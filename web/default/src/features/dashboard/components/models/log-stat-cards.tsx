@@ -31,6 +31,7 @@ import type {
   QuotaDataItem,
   DashboardFilters,
 } from '@/features/dashboard/types'
+import { toIntlLocale } from '@/i18n/languages'
 import {
   formatCompactNumber,
   formatDashboardQuota,
@@ -127,7 +128,7 @@ export function LogStatCards(props: LogStatCardsProps) {
 
   const items = statCardsConfig.map((config) => {
     const rawValue = config.getValue(adaptedStats, timeRangeMinutes)
-    const locale = i18n.resolvedLanguage || i18n.language
+    const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
     let formatted: { displayValue: string; fullValue: string }
     if (config.key === 'quota') {
       const display = formatDashboardQuota(rawValue)
@@ -138,12 +139,12 @@ export function LogStatCards(props: LogStatCardsProps) {
     } else if (config.key === 'tokens') {
       formatted = {
         displayValue: formatTokenCount(rawValue),
-        fullValue: formatNumber(rawValue),
+        fullValue: formatNumber(rawValue, locale),
       }
     } else if (config.key === 'count') {
       formatted = {
         displayValue: formatRequestCount(rawValue),
-        fullValue: formatNumber(rawValue),
+        fullValue: formatNumber(rawValue, locale),
       }
     } else {
       formatted = formatStatNumber(rawValue, locale)
