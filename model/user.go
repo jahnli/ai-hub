@@ -58,28 +58,37 @@ type User struct {
 	AdminPermissions  map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
 }
 
-// ComputeIsDeptLeader checks whether the user's OpenId appears as a leader_id
-// in any of their departments (stored as JSON in the Departments field).
-func (user *User) ComputeIsDeptLeader() bool {
+// GetLeaderDepartmentIDs returns department IDs where the user's OpenId is listed as leader_id.
+func (user *User) GetLeaderDepartmentIDs() []string {
 	if user.OpenId == "" || user.Departments == "" || user.Departments == "[]" {
-		return false
+		return nil
 	}
 	var depts []struct {
-		Leaders []struct {
-			LeaderId string `json:"leader_id"`
+		DepartmentID string `json:"department_id"`
+		Leaders      []struct {
+			LeaderID string `json:"leader_id"`
 		} `json:"leaders"`
 	}
 	if err := common.UnmarshalJsonStr(user.Departments, &depts); err != nil {
-		return false
+		return nil
 	}
+	ids := make([]string, 0)
+	seen := make(map[string]bool)
 	for _, d := range depts {
 		for _, l := range d.Leaders {
-			if l.LeaderId == user.OpenId {
-				return true
+			if l.LeaderID == user.OpenId && d.DepartmentID != "" && !seen[d.DepartmentID] {
+				seen[d.DepartmentID] = true
+				ids = append(ids, d.DepartmentID)
 			}
 		}
 	}
-	return false
+	return ids
+}
+
+// ComputeIsDeptLeader checks whether the user's OpenId appears as a leader_id
+// in any of their departments (stored as JSON in the Departments field).
+func (user *User) ComputeIsDeptLeader() bool {
+	return len(user.GetLeaderDepartmentIDs()) > 0
 }
 
 func (user *User) ToBaseUser() *UserBase {

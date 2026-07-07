@@ -1,12 +1,12 @@
-# 数据总览权限开放：BP 角色和部门负责人可访问，部门树按角色层级裁剪；部门负责人动态计算
+# 数据总览权限开放：BP 角色和部门负责人可访问，部门树按角色层级裁剪；部门负责人动态计算并按部门 ID 定位
 
-**日期**: 2026-06-30
+**日期**: 2026-07-07
 
 ## 涉及文件
 
-- `model/user.go` — User 结构体移除 `IsDeptLeader` 字段；新增 `ComputeIsDeptLeader()` 方法，从 `departments` JSON 中匹配 `open_id` 与 `leader_id` 动态判定
+- `model/user.go` — User 结构体移除 `IsDeptLeader` 字段；新增 `ComputeIsDeptLeader()` 方法，从 `departments` JSON 中匹配 `open_id` 与 `leader_id` 动态判定；新增 `GetLeaderDepartmentIDs()` 返回负责人对应的精确 `department_id`
 - `service/feishu_sync.go` — 飞书同步不再写入 `is_dept_leader` 字段，移除相关计算逻辑
-- `service/feishu_department.go` — `trimTreeForUser` 重构：支持 BP 角色和部门负责人的部门树裁剪；新增 `trimTreeForBP`（CenterBP 看第一层级、BUBP 看第二层级）、`trimTreeForDeptLeader`（看末级部门）、`splitDepartmentName`、`findNodeByLabel` 辅助函数；`GetDepartmentTree` 改用 `ComputeIsDeptLeader()`
+- `service/feishu_department.go` — `trimTreeForUser` 重构：支持 BP 角色和部门负责人的部门树裁剪；新增 `trimTreeForBP`（CenterBP 看第一层级、BUBP 看第二层级）、`trimTreeForDeptLeader`（看末级部门）、`splitDepartmentName`、`findNodeByLabel` 辅助函数；`GetDepartmentTree` 改用 `ComputeIsDeptLeader()`；部门负责人裁剪改用 `departments` 中的 `department_id`，并以飞书部门树 `LeaderUserID` 兜底，避免同名末级部门匹配到错误路径
 - `middleware/auth.go` — 新增 `BPAuth()` 中间件；`DataOverviewAccessCheck()` 改用 `ComputeIsDeptLeader()` 动态判定
 - `router/api-router.go` — 部门路由权限从 `AdminAuth()` 改为 `UserAuth() + DataOverviewAccessCheck()`
 - `controller/user.go` — GetSelf 接口 `is_dept_leader` 字段改为 `ComputeIsDeptLeader()` 动态返回

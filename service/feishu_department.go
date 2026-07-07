@@ -405,15 +405,20 @@ func buildDeptTree(items []feishuDeptItem) []*DeptTreeNode {
 // ── Permission trimming ───────────────────────────────────────────
 
 // trimTreeForUser returns the permission-trimmed tree and the list of department IDs the user leads.
-func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, departmentName string, isDeptLeader bool) ([]*DeptTreeNode, []string) {
+func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, departmentName string, leaderDeptIDs []string) ([]*DeptTreeNode, []string) {
 	// Super admin: full tree, no disabled
 	if userRole >= common.RoleRootUser {
-		return fullTree, collectAllLeaderDepts(fullTree, userOpenID)
+		if len(leaderDeptIDs) == 0 {
+			leaderDeptIDs = collectAllLeaderDepts(fullTree, userOpenID)
+		}
+		return fullTree, leaderDeptIDs
 	}
 
 	// Admin: leader-based permission trimming
 	if userRole >= common.RoleAdminUser {
-		leaderDeptIDs := collectAllLeaderDepts(fullTree, userOpenID)
+		if len(leaderDeptIDs) == 0 {
+			leaderDeptIDs = collectAllLeaderDepts(fullTree, userOpenID)
+		}
 		if len(leaderDeptIDs) == 0 {
 			return markAllDisabled(fullTree), nil
 		}
@@ -430,9 +435,17 @@ func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, 
 		return trimTreeForBP(fullTree, userRole, departmentName)
 	}
 
-	// Dept leader (role=1): sees their own department (last segment) + subtree
-	if isDeptLeader {
-		return trimTreeForDeptLeader(fullTree, departmentName)
+	// Dept leader (role=1): sees departments where their OpenId is the leader_id.
+	if len(leaderDeptIDs) == 0 {
+		leaderDeptIDs = collectAllLeaderDepts(fullTree, userOpenID)
+	}
+	if len(leaderDeptIDs) > 0 {
+		leaderSet := make(map[string]bool, len(leaderDeptIDs))
+		for _, id := range leaderDeptIDs {
+			leaderSet[id] = true
+		}
+		trimmed := trimNodes(fullTree, leaderSet)
+		return trimmed, leaderDeptIDs
 	}
 
 	return markAllDisabled(fullTree), nil
@@ -460,25 +473,6 @@ func trimTreeForBP(fullTree []*DeptTreeNode, userRole int, departmentName string
 		return markAllDisabled(fullTree), nil
 	}
 
-	targetNode := findNodeByLabel(fullTree, targetName)
-	if targetNode == nil {
-		return markAllDisabled(fullTree), nil
-	}
-
-	targetSet := map[string]bool{targetNode.Value: true}
-	trimmed := trimNodes(fullTree, targetSet)
-	return trimmed, []string{targetNode.Value}
-}
-
-// trimTreeForDeptLeader trims the tree for dept leaders.
-// A dept leader sees their own department (last segment of department_name) + subtree.
-func trimTreeForDeptLeader(fullTree []*DeptTreeNode, departmentName string) ([]*DeptTreeNode, []string) {
-	segments := splitDepartmentName(departmentName)
-	if len(segments) == 0 {
-		return markAllDisabled(fullTree), nil
-	}
-
-	targetName := segments[len(segments)-1]
 	targetNode := findNodeByLabel(fullTree, targetName)
 	if targetNode == nil {
 		return markAllDisabled(fullTree), nil
@@ -625,7 +619,7 @@ func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error
 	}
 
 	fullTree := buildDeptTree(items)
-	trimmedTree, leaderDeptIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, user.ComputeIsDeptLeader())
+	trimmedTree, leaderDeptIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, user.GetLeaderDepartmentIDs())
 
 	if tenantInfo.Name != "" {
 		tenantRoot := &DeptTreeNode{
