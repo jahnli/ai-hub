@@ -181,6 +181,7 @@ export interface UserColumnRow {
   background_image?: string
   mobile?: string
   open_id?: string
+  gender?: number
 }
 
 // ============================================================================

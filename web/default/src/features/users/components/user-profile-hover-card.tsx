@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import * as React from "react";
+import { Venus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
 import { useAuthStore } from "@/stores/auth-store";
@@ -27,7 +28,11 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { USER_ROLE, USER_ROLES } from "../constants";
-import { type UserColumnRow, parseCustomFields, CUSTOM_FIELD_KEYS } from "../types";
+import {
+  type UserColumnRow,
+  parseCustomFields,
+  CUSTOM_FIELD_KEYS,
+} from "../types";
 
 interface UserProfileHoverCardProps {
   user: UserColumnRow;
@@ -57,6 +62,11 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
   const avatarFallback = getUserAvatarFallback(primaryName);
   const avatarFallbackStyle = getUserAvatarStyle(primaryName);
   const roleConfig = USER_ROLES[user.role as keyof typeof USER_ROLES];
+  const isFemaleUser = user.gender === 2;
+  const ProfileIcon = isFemaleUser ? Venus : roleConfig?.icon;
+  const profileIconClassName = isFemaleUser
+    ? "shrink-0 text-pink-500"
+    : "text-primary shrink-0";
   const customFields = parseCustomFields(user.custom_field_values);
   const isRoot =
     useAuthStore((s) => s.auth.user?.role) === USER_ROLE.ROOT;
@@ -101,8 +111,8 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
               <span className="truncate text-base font-semibold">
                 {primaryName}
               </span>
-              {roleConfig?.icon && (
-                <roleConfig.icon size={14} className="text-primary shrink-0" />
+              {ProfileIcon && (
+                <ProfileIcon size={14} className={profileIconClassName} />
               )}
             </div>
             {user.display_name && user.display_name !== user.username && (
