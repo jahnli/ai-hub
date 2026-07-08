@@ -130,6 +130,7 @@ export type AuthSettings = {
   EmailDomainRestrictionEnabled: boolean
   EmailAliasRestrictionEnabled: boolean
   EmailDomainWhitelist: string
+  ServerAddress: string
   'oidc.enabled': boolean
   'oidc.client_id': string
   'oidc.client_secret': string
