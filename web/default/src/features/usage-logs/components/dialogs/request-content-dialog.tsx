@@ -40,6 +40,7 @@ import { parseUserMessages } from '../request-messages-provider'
 
 interface RequestContentDialogProps {
   requestMessage: RequestMessage
+  userAgent?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -54,6 +55,7 @@ function formatParameters(parameters: string): string {
 
 export function RequestContentDialog({
   requestMessage,
+  userAgent,
   open,
   onOpenChange,
 }: RequestContentDialogProps) {
@@ -161,9 +163,15 @@ export function RequestContentDialog({
                 </Button>
               )}
             </div>
+            {userAgent && (
+              <div className='text-muted-foreground mt-1 flex min-w-0 items-start gap-1 text-sm'>
+                <span className='shrink-0'>{t('User-Agent')}:</span>
+                <span className='min-w-0 break-all'>{userAgent}</span>
+              </div>
+            )}
           </div>
 
-          <div className='grid h-[calc(100vh-14rem)] min-h-0 overflow-hidden gap-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]'>
+          <div className='grid min-h-0 flex-1 overflow-hidden gap-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]'>
             <div className='h-full min-h-0 overflow-y-auto pr-3'>
               <div className='space-y-3'>
                 {entries.map((entry) => (

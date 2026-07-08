@@ -894,6 +894,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           return <span className="text-muted-foreground/40">—</span>;
         }
 
+        const userAgent = parseLogOther(log.other)?.user_agent;
         const messages = parseUserMessages(requestMessage.user_content);
         const latestMessage = messages.at(-1) ?? "";
 
@@ -916,6 +917,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
             </button>
             <RequestContentDialog
               requestMessage={requestMessage}
+              userAgent={userAgent ? String(userAgent) : undefined}
               open={dialogOpen}
               onOpenChange={setDialogOpen}
             />
