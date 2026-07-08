@@ -1368,6 +1368,7 @@ const (
 type DepartmentUserItem struct {
 	*model.User
 	TotalAmountCNY float64 `json:"total_amount_cny"`
+	AvgPricePerMT  float64 `json:"avg_price_per_mt"`
 	TotalTokens    int64   `json:"total_tokens"`
 	TotalRequests  int64   `json:"total_requests"`
 	CommonModel    string  `json:"common_model"`
@@ -1429,6 +1430,8 @@ func sortDepartmentUserItems(items []DepartmentUserItem, sortBy string, sortOrde
 			less = items[i].SubQuotaUsed < items[j].SubQuotaUsed
 		case "total_amount_cny":
 			less = items[i].TotalAmountCNY < items[j].TotalAmountCNY
+		case "avg_price_per_mt":
+			less = items[i].AvgPricePerMT < items[j].AvgPricePerMT
 		case "total_tokens":
 			less = items[i].TotalTokens < items[j].TotalTokens
 		case "total_requests":
@@ -1587,6 +1590,9 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 				allItems[i].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
 				allItems[i].TotalTokens = stat.TotalTokens
 				allItems[i].TotalRequests = stat.TotalReqs
+				if allItems[i].TotalTokens > 0 {
+					allItems[i].AvgPricePerMT = allItems[i].TotalAmountCNY / (float64(allItems[i].TotalTokens) / 1000000.0)
+				}
 			}
 			allItems[i].CommonModel = commonModels[u.Id]
 		}
@@ -1687,6 +1693,9 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 			result[i].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
 			result[i].TotalTokens = stat.TotalTokens
 			result[i].TotalRequests = stat.TotalReqs
+			if result[i].TotalTokens > 0 {
+				result[i].AvgPricePerMT = result[i].TotalAmountCNY / (float64(result[i].TotalTokens) / 1000000.0)
+			}
 		}
 		result[i].CommonModel = commonModels[u.Id]
 	}

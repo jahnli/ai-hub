@@ -29,7 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { BadgeCell } from "@/components/data-table";
+import { BadgeCell, DataTableColumnHeader } from "@/components/data-table";
 import { GroupBadge } from "@/components/group-badge";
 import { LongText } from "@/components/long-text";
 import { StatusBadge } from "@/components/status-badge";
@@ -267,6 +267,59 @@ export function userCostColumn<T extends UserColumnRow>(
       </span>
     ),
     size: 120,
+    meta: { mobileHidden: true },
+  };
+}
+
+export function userAveragePriceColumn<T extends UserColumnRow>(
+  t: (key: string) => string,
+  opts: { costAccessor: string; tokensAccessor: string },
+): ColumnDef<T> {
+  return {
+    id: "average_price",
+    accessorFn: (row) => {
+      const source = row as Record<string, unknown>;
+      const cost = Number(source[opts.costAccessor] ?? 0);
+      const tokens = Number(source[opts.tokensAccessor] ?? 0);
+
+      if (
+        !Number.isFinite(cost) ||
+        !Number.isFinite(tokens) ||
+        cost <= 0 ||
+        tokens <= 0
+      ) {
+        return 0;
+      }
+
+      return (cost / tokens) * 1_000_000;
+    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={t("Avg Price")} />
+    ),
+    cell: ({ row }) => {
+      const averagePrice = row.getValue("average_price") as number;
+
+      if (!Number.isFinite(averagePrice) || averagePrice <= 0) {
+        return <span className="text-muted-foreground text-sm">-</span>;
+      }
+
+      return (
+        <Tooltip>
+          <TooltipTrigger
+            render={<span className="text-sm tabular-nums cursor-default" />}
+          >
+            {formatAmountCny(averagePrice)}/MT
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="text-xs">
+              {t("Average price per million tokens")}
+            </span>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
+    enableSorting: true,
+    size: 110,
     meta: { mobileHidden: true },
   };
 }
@@ -606,8 +659,12 @@ export function useSharedUserColumns<T extends UserColumnRow>(
       userQuotaColumn<T>(t, {
         headerDescription: opts.quotaHeaderDescription,
       }),
-      userCostColumn<T>(t, { accessor: opts.costAccessor }),
       userTokensColumn<T>(t, { accessor: opts.tokensAccessor }),
+      userCostColumn<T>(t, { accessor: opts.costAccessor }),
+      userAveragePriceColumn<T>(t, {
+        costAccessor: opts.costAccessor,
+        tokensAccessor: opts.tokensAccessor,
+      }),
       userRequestsColumn<T>(t, { accessor: opts.requestsAccessor }),
       userDepartmentColumn<T>(t),
       userJobLevelColumn<T>(t),

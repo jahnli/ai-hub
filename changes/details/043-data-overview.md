@@ -5,7 +5,7 @@
 ## 涉及文件
 
 - `controller/department.go` — 部门树、部门统计、子部门统计、用户排行接口控制器；新增 GetUserUsageAnalysis 单用户使用分析接口；新增 GetDepartmentLogs 部门使用日志接口
-- `service/feishu_department.go` — 飞书部门树拉取/缓存/权限裁剪；部门统计聚合；新增 GetSubDepartmentStats 按直接子部门并发拉取成员并批量聚合用量、getDirectChildren 辅助函数；部门与子部门统计新增按系统汇率换算的人民币费用；部门均价改为在人民币金额换算后计算；子部门统计新增每百万 Token 均价并随接口返回；UsageAnalysisResponse 新增 ModelDailyStats 与 QuotaToCNY 字段，并发查询模型每日统计并下发配额到人民币换算率；新增 GetDepartmentUserRankings 返回部门内用户消耗 Top 10 排行；部门用户列表支持按数据库字段和计算用量列排序；新增 GetUserUsageAnalysis 单用户使用分析服务（并发查询模型/每日/模型每日统计）；新增 GetDepartmentLogs 按部门成员 user_id 拉取使用日志；新增 registration_status 参数支持按注册状态过滤用户（registered/unregistered），DepartmentUserItem 新增 IsRegistered 字段；未注册用户显示名默认为"-"；默认排序改为降序
+- `service/feishu_department.go` — 飞书部门树拉取/缓存/权限裁剪；部门统计聚合；新增 GetSubDepartmentStats 按直接子部门并发拉取成员并批量聚合用量、getDirectChildren 辅助函数；部门与子部门统计新增按系统汇率换算的人民币费用；部门均价改为在人民币金额换算后计算；子部门统计新增每百万 Token 均价并随接口返回；UsageAnalysisResponse 新增 ModelDailyStats 与 QuotaToCNY 字段，并发查询模型每日统计并下发配额到人民币换算率；新增 GetDepartmentUserRankings 返回部门内用户消耗 Top 10 排行；部门用户列表支持按数据库字段和计算用量列排序，并补充每百万 Token 均价字段与排序；新增 GetUserUsageAnalysis 单用户使用分析服务（并发查询模型/每日/模型每日统计）；新增 GetDepartmentLogs 按部门成员 user_id 拉取使用日志；新增 registration_status 参数支持按注册状态过滤用户（registered/unregistered），DepartmentUserItem 新增 IsRegistered 字段；未注册用户显示名默认为"-"；默认排序改为降序
 - `model/log.go` — 部门统计聚合查询改用主库 quota_data 表，按 token_used、quota、count 聚合 Token/费用/请求数，并移除模型层按固定 quota 比例计算部门均价的逻辑；新增 GetUserStatsBatch 按 user_id 分组批量聚合 Token/费用/请求数；新增 ModelDailyStatRow 与 GetModelDailyStats 按模型按天聚合 Token 统计（支持 MySQL/SQLite/PostgreSQL）；新增 GetLogsByUserIds 复用使用日志查询并支持部门成员过滤
 - `model/user.go` — 新增 GetUserIDAndNamesByOpenIDs 按 open_id 批量查询用户 ID 和姓名
 - `router/api-router.go` — 新增 `/api/department/tree`、`/stats`、`/sub-stats`、`/logs`、`/user-rankings`、`/user-usage-analysis` 路由
@@ -13,7 +13,7 @@
 - `web/default/src/features/data-overview/types.ts` — 部门树/统计类型；新增 SubDepartmentStat、ModelDailyStat、UserRankingItem 接口；子部门统计新增 total_amount_cny 与 avg_price_per_mt，使用分析响应新增 quota_to_cny；DepartmentUser 新增 is_registered 与 open_id 可选字段，复用共享用户列的头像飞书跳转能力
 - `web/default/src/features/data-overview/index.tsx` — 数据总览页面：查询后展示统计卡片与子部门板块；各板块加载骨架屏；Token 格式化改为中文单位（亿/万）；统计卡片从 Card 网格改为分割式紧凑布局（参照数据看板 LogStatCards 风格：单行 border 容器、divide-x 分隔、图标+大写标签+等宽数字+描述行），移除外层 Card 包裹；统计卡片费用展示改用后端按汇率换算后的人民币金额；骨架屏 key 提取为静态数组避免重复渲染；queryFn 增加参数非空断言；UsageAnalysisSection 移除时间参数传入；部门选择器提取为变量简化 JSX
 - `web/default/src/features/data-overview/components/department-tree-select.tsx` — 级联展开/搜索部门树选择器
-- `web/default/src/features/data-overview/components/department-users-table.tsx` — 部门用户表格，内嵌用户消耗排行图表；启用手动服务端排序，排序变化时重置到第一页；「已用额度/总额度」列头新增说明图标，提示额度数据固定为当前自然月且不受筛选时间影响；新增「统计」按钮列，点击打开用户统计弹窗；标题右侧新增「使用日志」按钮，打开当前部门所有员工在数据总览选中时间内的使用日志；新增注册状态列（含下拉筛选器：全部/已注册/未注册），服务端按 registration_status 参数过滤；未注册用户禁用统计按钮
+- `web/default/src/features/data-overview/components/department-users-table.tsx` — 部门用户表格，内嵌用户消耗排行图表；启用手动服务端排序，排序变化时重置到第一页；总费用右侧新增每百万 Token 均价列并映射到后端均价排序字段；「已用额度/总额度」列头新增说明图标，提示额度数据固定为当前自然月且不受筛选时间影响；新增「统计」按钮列，点击打开用户统计弹窗；标题右侧新增「使用日志」按钮，打开当前部门所有员工在数据总览选中时间内的使用日志；新增注册状态列（含下拉筛选器：全部/已注册/未注册），服务端按 registration_status 参数过滤；未注册用户禁用统计按钮
 - `web/default/src/features/data-overview/components/user-consumption-charts.tsx` — 用户消耗排行 Top 10（水平柱状图）和用户消耗占比 Top 10（环形饼图），并排展示
 - `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：柱状图改为纵向、坐标轴格式化大数值；表头「用户数」改为「已注册/总人数」居中对齐；费用列、排序和图表改用后端返回的人民币金额；总费用右侧新增均价列展示每百万 Token 均价；表格新增「统计」和「使用日志」按钮列（pinned right），可分别打开子部门统计弹窗和子部门员工使用日志弹窗
 - `web/default/src/features/data-overview/components/sub-department-stats-dialog.tsx` — 新增子部门统计弹窗：展示指定子部门的统计卡片（DepartmentStatsCards）与使用分析（UsageAnalysisSection），独立查询 stats 和 usage-analysis 接口
@@ -34,4 +34,4 @@
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 操作列 pinned right；默认按 quota 降序排序；额度列头 headerDescription 改为 undefined（tooltip 逻辑移至通用 column-header）；标题右侧新增总人数、已注册、未注册彩色统计标签
 - `web/default/src/features/data-overview/types.ts` — DepartmentUsersResponse 类型补充 total_users、registered_users、unregistered_users 字段
 - `web/default/src/components/data-table/core/column-header.tsx` — DataTableColumnHeader 新增 DescriptionTooltip，通过 column.columnDef.meta.description 渲染列头说明图标
-- `web/default/src/features/users/components/shared-user-columns.tsx` — userQuotaColumn 移除 inline header tooltip 渲染，改为 meta.description 传递
+- `web/default/src/features/users/components/shared-user-columns.tsx` — userQuotaColumn 移除 inline header tooltip 渲染，改为 meta.description 传递；共享列新增均价列，显示 `/MT` 单位并使用 DataTableColumnHeader 展示排序入口

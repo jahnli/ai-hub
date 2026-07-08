@@ -426,6 +426,8 @@ func sortUserWithSubQuota(items []userWithSubQuota, sortBy string, sortOrder str
 			less = items[i].SubQuotaUsed < items[j].SubQuotaUsed
 		case "monthly_total_amount_cny":
 			less = items[i].MonthlyTotalAmountCNY < items[j].MonthlyTotalAmountCNY
+		case "monthly_avg_price_per_mt":
+			less = items[i].MonthlyAvgPricePerMT < items[j].MonthlyAvgPricePerMT
 		case "monthly_total_tokens":
 			less = items[i].MonthlyTotalTokens < items[j].MonthlyTotalTokens
 		case "monthly_total_requests":
@@ -445,6 +447,7 @@ type userWithSubQuota struct {
 	SubQuotaUsed          int64   `json:"sub_quota_used"`
 	SubQuotaTotal         int64   `json:"sub_quota_total"`
 	MonthlyTotalAmountCNY float64 `json:"monthly_total_amount_cny"`
+	MonthlyAvgPricePerMT  float64 `json:"monthly_avg_price_per_mt"`
 	MonthlyTotalTokens    int64   `json:"monthly_total_tokens"`
 	MonthlyTotalRequests  int64   `json:"monthly_total_requests"`
 	MonthlyCommonModel    string  `json:"monthly_common_model"`
@@ -506,6 +509,9 @@ func attachSubscriptionQuota(users []*model.User) []userWithSubQuota {
 			item.MonthlyTotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
 			item.MonthlyTotalTokens = stat.TotalTokens
 			item.MonthlyTotalRequests = stat.TotalReqs
+			if item.MonthlyTotalTokens > 0 {
+				item.MonthlyAvgPricePerMT = item.MonthlyTotalAmountCNY / (float64(item.MonthlyTotalTokens) / 1000000.0)
+			}
 		}
 		item.MonthlyCommonModel = commonModels[u.Id]
 		result[i] = item

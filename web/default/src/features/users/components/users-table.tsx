@@ -53,6 +53,7 @@ function isDisabledUserRow(user: User) {
 const USER_COLUMN_SORT_MAP: Record<string, string> = {
   quota: 'sub_quota_used',
   monthly_total_amount_cny: 'monthly_total_amount_cny',
+  average_price: 'monthly_avg_price_per_mt',
   monthly_total_tokens: 'monthly_total_tokens',
   monthly_total_requests: 'monthly_total_requests',
   id: 'id',
