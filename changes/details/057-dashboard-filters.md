@@ -13,6 +13,7 @@
 - `web/default/src/features/dashboard/lib/filters.ts` — 数据看板默认时间范围从滚动 1 天改为当天 00:00:00 到 23:59:59。
 - `model/usedata.go` — 模型调用分析用户名筛选支持通过用户表匹配 username 与 display_name 后回查 quota_data；用户消耗分组查询关联 users 表返回 display_name 与 avatar_url。
 - `model/usedata_flow.go` — Flow 数据查询复用用户名/display_name 筛选逻辑，保持与模型分析筛选行为一致。
+- `controller/usedata.go` — 移除普通用户模型分析与 Flow 数据接口的 1 个月时间跨度限制，允许按所选时间范围查询。
 - `web/default/src/i18n/locales/en.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关英文翻译。
 - `web/default/src/i18n/locales/zh.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关中文翻译。
 - `web/default/src/i18n/locales/fr.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关法文翻译。
