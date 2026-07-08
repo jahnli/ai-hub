@@ -78,6 +78,7 @@ var injectedTagNames = []string{
 var injectedBlockMarkers = []string{
 	"<|system|>",
 	"CRITICAL: Respond with TEXT ONLY",
+	"EXTREMELY_IMPORTANT",
 	"--- CONTEXT ENTRY BEGIN ---",
 	"Base directory for this skill:",
 	"# Subagent-Driven Development",
