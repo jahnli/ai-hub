@@ -33,6 +33,7 @@ const defaultAuthSettings: AuthSettings = {
   EmailDomainRestrictionEnabled: false,
   EmailAliasRestrictionEnabled: false,
   EmailDomainWhitelist: '',
+  ServerAddress: '',
   'oidc.enabled': false,
   'oidc.client_id': '',
   'oidc.client_secret': '',

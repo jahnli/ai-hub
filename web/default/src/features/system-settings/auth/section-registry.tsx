@@ -49,6 +49,7 @@ const AUTH_SECTIONS = [
     titleKey: 'OAuth Integrations',
     build: (settings: AuthSettings) => (
       <OAuthSection
+        serverAddress={settings.ServerAddress}
         defaultValues={{
           'oidc.enabled': settings['oidc.enabled'],
           'oidc.client_id': settings['oidc.client_id'],
@@ -117,7 +118,9 @@ const AUTH_SECTIONS = [
   {
     id: 'custom-oauth',
     titleKey: 'Custom OAuth',
-    build: () => <CustomOAuthSection />,
+    build: (settings: AuthSettings) => (
+      <CustomOAuthSection serverAddress={settings.ServerAddress} />
+    ),
   },
 ] as const
 
