@@ -132,7 +132,6 @@ export type ManageUserAction =
   | 'demote'
   | 'enable'
   | 'disable'
-  | 'delete'
   | 'add_quota'
 
 export type QuotaAdjustMode = 'add' | 'subtract' | 'override'
@@ -148,7 +147,7 @@ export interface ManageUserQuotaPayload {
 // Dialog Types
 // ============================================================================
 
-export type UsersDialogType = 'create' | 'update' | 'delete'
+export type UsersDialogType = 'create' | 'update'
 
 // ============================================================================
 // Shared Column Row Interface

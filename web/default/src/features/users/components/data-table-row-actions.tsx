@@ -19,7 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 import type { Row } from '@tanstack/react-table'
 import {
   Pencil,
-  Trash2,
   Power,
   PowerOff,
   ArrowUp,
@@ -81,12 +80,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
     setOpen('update')
   }
 
-  const handleDelete = () => {
-    setCurrentRow(user)
-    setOpen('delete')
-  }
-
-  const handleManage = async (action: Exclude<ManageUserAction, 'delete'>) => {
+  const handleManage = async (
+    action: Exclude<ManageUserAction, 'add_quota'>
+  ) => {
     try {
       const result = await manageUser(user.id, action)
       if (result.success) {
@@ -269,18 +265,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuShortcut>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem
-          onClick={handleDelete}
-          className='text-destructive focus:text-destructive'
-          disabled={isRoot}
-        >
-          {t('Delete')}
-          <DropdownMenuShortcut>
-            <Trash2 size={16} />
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
       </DataTableRowActionMenu>
 
       <ConfirmDialog

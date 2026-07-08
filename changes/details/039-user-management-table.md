@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30 ~ 07-05（最后更新 07-05）
+**日期**: 2026-06-30 ~ 07-08（最后更新 07-08）
 
 ## 涉及文件
 
@@ -10,7 +10,7 @@
 - `model/log.go` — 新增按用户和模型从 `logs` 表聚合月度用量的查询，支撑常用模型统计。
 - `model/subscription.go` — 新增按用户批量查询有效订阅额度汇总，用于用户管理表格展示订阅额度进度。
 - `model/user.go` — 用户查询支持安全排序字段白名单和排序方向参数。
-- `web/default/src/features/users/api.ts` — 用户列表 API 透传排序字段和方向。
+- `web/default/src/features/users/api.ts` — 用户列表 API 透传排序字段和方向；移除用户删除 API 封装。
 - `web/default/src/features/users/components/users-table.tsx` — 用户管理表格启用手动服务端排序，排序变化时重置到第一页。
 - `web/default/src/features/users/types.ts` — 用户列表查询参数补充 sort_by/sort_order。
 - `web/default/src/features/users/components/users-columns.tsx` — 用户管理表格新增月度总消耗、Token、请求次数、常用模型列，并将请求数提示改为使用 `logs` 聚合结果。
@@ -18,8 +18,11 @@
 - `web/default/src/components/long-text.tsx` — 移动端长文本弹出层使用非按钮元素作为触发器时显式关闭 nativeButton，消除 Base UI 可访问性警告
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 改用 `useSharedUserColumns` hook，移除独立的列定义
 - `web/default/src/features/users/components/users-table.tsx` — 默认排序由 quota 降序改为 created_at 降序；getRowClassName 改为 early-return 写法
-- `web/default/src/features/users/components/data-table-row-actions.tsx` — 操作列新增「统计」按钮（BarChart3 图标），点击打开 UserStatsDialog 查看用户使用分析
-- `web/default/src/features/users/types.ts` — 用户类型补充订阅额度与月度统计字段。
+- `web/default/src/features/users/components/data-table-row-actions.tsx` — 操作列新增「统计」按钮（BarChart3 图标），点击打开 UserStatsDialog 查看用户使用分析；移除三点菜单中的删除项。
+- `web/default/src/features/users/index.tsx` — 不再挂载用户删除确认弹窗。
+- `web/default/src/features/users/components/users-delete-dialog.tsx` — 删除用户删除确认弹窗组件。
+- `web/default/src/features/users/types.ts` — 用户类型补充订阅额度与月度统计字段；用户弹窗类型与管理动作类型移除 delete。
+- `web/default/src/features/users/lib/user-actions.ts` — 删除用户删除成功提示动作映射。
 - `web/default/src/i18n/locales/en.json` — 补充用户管理新增统计列英文文案。
 - `web/default/src/i18n/locales/fr.json` — 补充用户管理新增统计列法文文案。
 - `web/default/src/i18n/locales/ja.json` — 补充用户管理新增统计列日文文案。
