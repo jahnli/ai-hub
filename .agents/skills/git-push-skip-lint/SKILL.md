@@ -1,13 +1,13 @@
 ---
 name: git-push-skip-lint
 description: >-
-  当执行 git push 到 GitHub 或 GitLab 因提交信息不规范、commit message lint、commitlint、push rule、server-side hook
-  等提交信息校验失败时使用。先正常推送；仅在失败原因明确是提交信息/lint 校验时，自动使用 `-o skip-lint` 重试同一远程和分支。
+  当执行 git push 到 GitLab 因提交信息不规范、commit message lint、commitlint、push rule、server-side hook
+  等提交信息校验失败时使用。只有 GitLab 远端会执行该校验；先正常推送；仅在失败原因明确是提交信息/lint 校验时，自动使用 `git push origin 当前分支名 -o skip-lint` 重试。
 ---
 
 # Git Push Skip Lint Fallback
 
-用于处理 GitHub/GitLab 推送时因为提交信息不规范或远端 lint/push rule 拒绝导致的失败。
+用于处理 GitLab 推送时因为提交信息不规范或远端 lint/push rule 拒绝导致的失败。
 
 ## 适用场景
 
@@ -30,9 +30,25 @@ description: >-
 
 这些情况应按正常 Git 流程处理，不要跳过校验。
 
+## GitLab lint 远端
+
+只有 GitLab 远端会执行提交信息/lint 校验。遇到该校验失败时，重试命令应使用 `origin` remote，把 `当前分支名` 替换为实际分支名，并附加 `-o skip-lint`：
+
+```bash
+git push origin 当前分支名 -o skip-lint
+```
+
+对应 GitLab 地址：
+
+```ini
+[remote "gitlab"]
+	url = https://gitlab.semi-tech.com/eed/ai-hub
+	fetch = +refs/heads/*:refs/remotes/origin/*
+```
+
 ## 工作流程
 
-1. 先执行普通推送命令，保持用户指定的 remote、branch 和 refspec 不变。
+1. 先执行普通推送命令，保持用户指定的 branch 和 refspec 不变。
 
    示例：
 
@@ -44,7 +60,7 @@ description: >-
 
 3. 如果普通推送失败，读取完整错误输出，判断是否明确是提交信息不规范或 lint/push rule 拒绝。
 
-4. 只有在确认是提交信息/lint 校验失败时，使用同一 remote、branch/refspec，加上 `-o skip-lint` 重试。
+4. 只有在确认是提交信息/lint 校验失败时，使用 `origin` remote、同一 branch/refspec，并加上 `-o skip-lint` 重试。
 
    示例：
 
