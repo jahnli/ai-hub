@@ -65,6 +65,31 @@ WebSearch battery module pack manufacturing KPIs yield EOL test metrics
 	assert.Equal(t, "使用日志那里过滤掉", filteredText)
 }
 
+func TestFilterUserTextDropsExtremelyImportantInjectedBlock(t *testing.T) {
+	inputText := `EXTREMELY_IMPORTANT
+System-only injected content.`
+
+	filteredText := filterUserText(inputText)
+
+	assert.Empty(t, filteredText)
+}
+
+func TestFilterUserTextStripsAgentNotificationTag(t *testing.T) {
+	inputText := `<user_query>
+继续处理日志过滤
+
+<agent_notification>
+Another agent completed a background task with verbose details.
+</agent_notification>
+
+确认一下
+</user_query>`
+
+	filteredText := filterUserText(inputText)
+
+	assert.Equal(t, "继续处理日志过滤\n\n确认一下", filteredText)
+}
+
 func TestFilterUserTextStripsAdditionalCursorInjectedTags(t *testing.T) {
 	inputText := `请检查这个问题
 <system-communication>
