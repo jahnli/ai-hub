@@ -14,7 +14,7 @@
 - `web/default/src/features/users/components/users-table.tsx` — 用户管理表格启用手动服务端排序，排序变化时重置到第一页，并将均价列映射到后端月度均价排序字段。
 - `web/default/src/features/users/types.ts` — 用户列表查询参数补充 sort_by/sort_order。
 - `web/default/src/features/users/components/users-columns.tsx` — 用户管理表格新增月度总消耗、Token、请求次数、常用模型列，并将请求数提示改为使用 `logs` 聚合结果。
-- `web/default/src/features/users/components/shared-user-columns.tsx` — 请求次数格式化统一（与数据总览保持一致）；抽取 `useSharedUserColumns` hook 统一用户管理与数据总览部门用户表格列定义；用户名列头像点击支持通过 open_id 跳转飞书且悬停仍显示资料卡片；调整用户列表 ID、用户名、总费用、Token、请求次数、部门、最后登录等列宽；部门列超出省略并悬停显示完整路径；调整列顺序为部门、职级、最后登录、常用模型；总费用右侧新增每百万 Token 均价列，显示 `/MT` 单位并接入排序表头
+- `web/default/src/features/users/components/shared-user-columns.tsx` — 请求次数格式化统一（与数据总览保持一致）；抽取 `useSharedUserColumns` hook 统一用户管理与数据总览部门用户表格列定义；用户名列头像点击支持通过 open_id 跳转飞书且悬停仍显示资料卡片；调整用户列表 ID、用户名、总费用、Token、请求次数、部门、最后登录等列宽；部门列超出省略并悬停显示完整路径；调整列顺序为部门、职级、最后登录、常用模型；总费用右侧新增每百万 Token 均价列，显示 `/MT` 单位并接入排序表头；额度和均价列头新增贴近列名的说明图标，悬停表头可查看当前自然月额度统计说明和每百万 Token 均价说明
 - `web/default/src/components/long-text.tsx` — 移动端长文本弹出层使用非按钮元素作为触发器时显式关闭 nativeButton，消除 Base UI 可访问性警告
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 改用 `useSharedUserColumns` hook，移除独立的列定义
 - `web/default/src/features/users/components/users-table.tsx` — 默认排序由 quota 降序改为 created_at 降序；getRowClassName 改为 early-return 写法

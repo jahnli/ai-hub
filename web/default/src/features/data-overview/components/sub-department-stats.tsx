@@ -1,7 +1,16 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { VChart } from "@visactor/react-vchart";
-import { Building2, PieChart, BarChart3, ScrollText } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  Building2,
+  ChevronsUpDown,
+  Info,
+  PieChart,
+  ScrollText,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   DataTableView,
@@ -123,7 +132,40 @@ function useSubDepartmentColumns(
       },
       {
         accessorKey: "avg_price_per_mt",
-        header: t("Avg Price"),
+        header: ({ column }) => {
+          const description = t("Average price per million tokens");
+          const sorted = column.getIsSorted();
+          const SortIcon =
+            sorted === "desc"
+              ? ArrowDown
+              : sorted === "asc"
+                ? ArrowUp
+                : ChevronsUpDown;
+
+          return (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    className="hover:bg-accent hover:text-accent-foreground -ms-3 inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium transition-colors"
+                    onClick={() => column.toggleSorting(sorted === "asc")}
+                    aria-label={description}
+                  />
+                }
+              >
+                <span className="inline-flex items-center gap-1">
+                  <span>{t("Avg Price")}</span>
+                  <Info className="text-muted-foreground size-3.5 shrink-0 translate-y-px" />
+                </span>
+                <SortIcon className="ms-1 size-4" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                <p className="text-xs leading-relaxed">{description}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        },
         cell: ({ row }) => (
           <span className="text-muted-foreground font-mono">
             {formatAvgPricePerMT(row.original.avg_price_per_mt)}

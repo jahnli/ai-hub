@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useTranslation } from "react-i18next";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info } from "lucide-react";
 import { formatQuota, formatTimestamp } from "@/lib/format";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
 import { buildFeishuUserChatUrl, cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { BadgeCell, DataTableColumnHeader } from "@/components/data-table";
+import { BadgeCell } from "@/components/data-table";
 import { GroupBadge } from "@/components/group-badge";
 import { LongText } from "@/components/long-text";
 import { StatusBadge } from "@/components/status-badge";
@@ -188,10 +189,47 @@ export function userQuotaColumn<T extends UserColumnRow>(
   opts?: { width?: number; headerDescription?: string },
 ): ColumnDef<T> {
   const headerText = t("Used Quota / Total Quota");
+  const headerDescription =
+    opts?.headerDescription ??
+    t(
+      "Used quota and total quota data are fixed to the current calendar month and are not affected by the selected time range.",
+    );
   return {
     id: "quota",
     accessorKey: "quota",
-    header: headerText,
+    header: ({ column }) => {
+      const sorted = column.getIsSorted();
+      const SortIcon =
+        sorted === "desc"
+          ? ArrowDown
+          : sorted === "asc"
+            ? ArrowUp
+            : ChevronsUpDown;
+
+      return (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className="hover:bg-accent hover:text-accent-foreground -ms-3 inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium transition-colors"
+                onClick={() => column.toggleSorting(sorted === "asc")}
+                aria-label={headerDescription}
+              />
+            }
+          >
+            <span className="inline-flex items-center gap-1">
+              <span>{headerText}</span>
+              <Info className="text-muted-foreground size-3.5 shrink-0 translate-y-px" />
+            </span>
+            <SortIcon className="ms-1 size-4" />
+          </TooltipTrigger>
+          <TooltipContent className="max-w-64">
+            <p className="text-xs leading-relaxed">{headerDescription}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
     cell: ({ row }) => {
       const user = row.original as UserColumnRow;
       const used = user.sub_quota_used ?? 0;
@@ -246,7 +284,7 @@ export function userQuotaColumn<T extends UserColumnRow>(
       );
     },
     size: opts?.width ? opts.width + 20 : 170,
-    meta: { description: opts?.headerDescription },
+    meta: {},
   };
 }
 
@@ -293,9 +331,36 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
 
       return (cost / tokens) * 1_000_000;
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t("Avg Price")} />
-    ),
+    header: ({ column }) => {
+      const description = t("Average price per million tokens");
+      const sorted = column.getIsSorted();
+      const SortIcon =
+        sorted === "desc" ? ArrowDown : sorted === "asc" ? ArrowUp : ChevronsUpDown;
+
+      return (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className="hover:bg-accent hover:text-accent-foreground -ms-3 inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium transition-colors"
+                onClick={() => column.toggleSorting(sorted === "asc")}
+                aria-label={description}
+              />
+            }
+          >
+            <span className="inline-flex items-center gap-1">
+              <span>{t("Avg Price")}</span>
+              <Info className="text-muted-foreground size-3.5 shrink-0 translate-y-px" />
+            </span>
+            <SortIcon className="ms-1 size-4" />
+          </TooltipTrigger>
+          <TooltipContent className="max-w-64">
+            <p className="text-xs leading-relaxed">{description}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
     cell: ({ row }) => {
       const averagePrice = row.getValue("average_price") as number;
 

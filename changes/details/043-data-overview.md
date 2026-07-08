@@ -15,7 +15,7 @@
 - `web/default/src/features/data-overview/components/department-tree-select.tsx` — 级联展开/搜索部门树选择器
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 部门用户表格，内嵌用户消耗排行图表；启用手动服务端排序，排序变化时重置到第一页；总费用右侧新增每百万 Token 均价列并映射到后端均价排序字段；「已用额度/总额度」列头新增说明图标，提示额度数据固定为当前自然月且不受筛选时间影响；新增「统计」按钮列，点击打开用户统计弹窗；标题右侧新增「使用日志」按钮，打开当前部门所有员工在数据总览选中时间内的使用日志；新增注册状态列（含下拉筛选器：全部/已注册/未注册），服务端按 registration_status 参数过滤；未注册用户禁用统计按钮
 - `web/default/src/features/data-overview/components/user-consumption-charts.tsx` — 用户消耗排行 Top 10（水平柱状图）和用户消耗占比 Top 10（环形饼图），并排展示
-- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：柱状图改为纵向、坐标轴格式化大数值；表头「用户数」改为「已注册/总人数」居中对齐；费用列、排序和图表改用后端返回的人民币金额；总费用右侧新增均价列展示每百万 Token 均价；表格新增「统计」和「使用日志」按钮列（pinned right），可分别打开子部门统计弹窗和子部门员工使用日志弹窗
+- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计组件：柱状图改为纵向、坐标轴格式化大数值；表头「用户数」改为「已注册/总人数」居中对齐；费用列、排序和图表改用后端返回的人民币金额；总费用右侧新增均价列展示每百万 Token 均价；均价列头新增贴近列名的说明图标，悬停表头可查看每百万 Token 均价说明；表格新增「统计」和「使用日志」按钮列（pinned right），可分别打开子部门统计弹窗和子部门员工使用日志弹窗
 - `web/default/src/features/data-overview/components/sub-department-stats-dialog.tsx` — 新增子部门统计弹窗：展示指定子部门的统计卡片（DepartmentStatsCards）与使用分析（UsageAnalysisSection），独立查询 stats 和 usage-analysis 接口
 - `web/default/src/features/data-overview/components/department-stats-cards.tsx` — 从 index.tsx 提取为独立组件，展示部门统计指标卡片（Token/费用/均价/请求数/注册数/未注册数/响应时间/错误率），支持 Tooltip 展示 Token 详情
 - `web/default/src/features/data-overview/components/usage-analysis.tsx` — 使用分析组件：模型排行/费用占比（tab 切换条形图/饼图）改为纵向柱状图；新增模型使用趋势折线图（ModelUsageTrend，按 Top N 模型展示每日 Token 量）；每日用量趋势新增「费用」指标切换；新增均价趋势折线图（AvgPriceTrendChart，计算每日平均单价并补全无数据日期）；费用和均价计算改用后端返回的 quota_to_cny 换算率；请求趋势图高度调整；重构为纯展示组件（移除 startTimestamp/endTimestamp 参数），移除均价趋势和 Token 分布图表，模型调用排行改为饼图分布，费用排行标题改为「模型消耗排行」，费用趋势标题改为「额度消耗趋势」
@@ -34,4 +34,4 @@
 - `web/default/src/features/data-overview/components/department-users-table.tsx` — 操作列 pinned right；默认按 quota 降序排序；额度列头 headerDescription 改为 undefined（tooltip 逻辑移至通用 column-header）；标题右侧新增总人数、已注册、未注册彩色统计标签
 - `web/default/src/features/data-overview/types.ts` — DepartmentUsersResponse 类型补充 total_users、registered_users、unregistered_users 字段
 - `web/default/src/components/data-table/core/column-header.tsx` — DataTableColumnHeader 新增 DescriptionTooltip，通过 column.columnDef.meta.description 渲染列头说明图标
-- `web/default/src/features/users/components/shared-user-columns.tsx` — userQuotaColumn 移除 inline header tooltip 渲染，改为 meta.description 传递；共享列新增均价列，显示 `/MT` 单位并使用 DataTableColumnHeader 展示排序入口
+- `web/default/src/features/users/components/shared-user-columns.tsx` — userQuotaColumn 与共享均价列改为贴近列名的内联说明图标，悬停表头可查看当前自然月额度统计说明和每百万 Token 均价说明；共享列新增均价列，显示 `/MT` 单位并保留排序入口
