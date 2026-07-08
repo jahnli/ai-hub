@@ -36,6 +36,11 @@ function formatCNY(amount: number): string {
   return "¥" + amount.toFixed(2);
 }
 
+function formatAvgPricePerMT(amount: number): string {
+  if (!amount) return "¥0/MT";
+  return `¥${amount.toFixed(2)}/MT`;
+}
+
 function formatTokens(tokens: number): string {
   if (!tokens) return "0";
   return (tokens / 1_0000_0000).toFixed(2) + " 亿";
@@ -112,6 +117,16 @@ function useSubDepartmentColumns(
         cell: ({ row }) => (
           <span className="font-medium font-mono">
             {formatCNY(row.original.total_amount_cny)}
+          </span>
+        ),
+        size: 120,
+      },
+      {
+        accessorKey: "avg_price_per_mt",
+        header: t("Avg Price"),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono">
+            {formatAvgPricePerMT(row.original.avg_price_per_mt)}
           </span>
         ),
         size: 120,

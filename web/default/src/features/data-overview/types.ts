@@ -23,6 +23,7 @@ export interface SubDepartmentStat {
   total_users: number
   total_quota: number
   total_amount_cny: number
+  avg_price_per_mt: number
   total_tokens: number
   total_requests: number
 }

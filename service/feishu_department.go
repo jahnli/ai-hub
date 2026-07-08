@@ -803,6 +803,7 @@ type SubDepartmentStatItem struct {
 	TotalUsers      int64   `json:"total_users"`
 	TotalQuota      int64   `json:"total_quota"`
 	TotalAmountCNY  float64 `json:"total_amount_cny"`
+	AvgPricePerMT   float64 `json:"avg_price_per_mt"`
 	TotalTokens     int64   `json:"total_tokens"`
 	TotalRequests   int64   `json:"total_requests"`
 }
@@ -909,13 +910,20 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 
 	results := make([]SubDepartmentStatItem, len(children))
 	for i, child := range children {
+		totalAmountCNY := float64(agg[i].totalQuota) / quotaPerUnit * usdExchangeRate
+		avgPricePerMT := 0.0
+		if agg[i].totalTokens > 0 {
+			avgPricePerMT = totalAmountCNY / (float64(agg[i].totalTokens) / 1000000.0)
+		}
+
 		results[i] = SubDepartmentStatItem{
 			DepartmentID:    child.OpenDepartmentID,
 			DepartmentName:  child.Name,
 			RegisteredUsers: int64(len(deptData[i].userIDs)),
 			TotalUsers:      int64(len(deptData[i].memberOpenIDs)),
 			TotalQuota:      agg[i].totalQuota,
-			TotalAmountCNY:  float64(agg[i].totalQuota) / quotaPerUnit * usdExchangeRate,
+			TotalAmountCNY:  totalAmountCNY,
+			AvgPricePerMT:   avgPricePerMT,
 			TotalTokens:     agg[i].totalTokens,
 			TotalRequests:   agg[i].totalRequests,
 		}

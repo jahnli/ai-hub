@@ -587,7 +587,7 @@
     "Average latency": "Latence moyenne",
     "Average latency, TTFT, and success rate by group": "Latence moyenne, TTFT et taux de réussite par groupe",
     "Average latency, TTFT, TPS, and success rate": "Latence moyenne, TTFT, TPS et taux de réussite",
-    "Average price per million tokens": "Average price per million tokens",
+    "Average price per million tokens": "Prix moyen par million de tokens",
     "Average response time": "Average response time",
     "Average RPM": "RPM moyen",
     "Average time-to-first-token (TTFT) by group": "Temps moyen jusqu’au premier token (TTFT) par groupe",
