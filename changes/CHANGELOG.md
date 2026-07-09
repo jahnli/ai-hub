@@ -26,7 +26,7 @@
 | 020 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
 | 021 | 2026-07-01 | 个人资料页订阅列表重构：从 ProfileHeader 内嵌改为独立卡片组件，横向网格布局（sm:2列 lg:3列），每个订阅独立圆角卡片展示状态、剩余天数、配额进度；进度条按用量分阶段变色（绿→橙→红） | `web/default/src/features/profile/components/subscription-card.tsx`、`web/default/src/features/profile/components/profile-header.tsx`、`web/default/src/features/profile/index.tsx` |
 | 022 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
-| 023 | 2026-06-22 | 新增 LDAP 登录与用户同步（飞书同步）：后端 LDAP 认证/绑定/解绑、飞书用户同步服务、前端登录弹窗与系统设置、6 语言翻译 | [详情](details/024-ldap-login.md) |
+| 023 | 2026-07-09 | 新增 LDAP 登录与用户同步（飞书同步）：后端 LDAP 认证/绑定/解绑、飞书用户同步服务、前端登录弹窗与系统设置、6 语言翻译；支持按公司 OU 读取 LDAP 用户公司并配置飞书/钉钉同步参数、邮箱后缀和自动订阅套餐 | [详情](details/024-ldap-login.md) |
 | 024 | 2026-06-23 | 登录页默认使用 LDAP 登录：LDAP 表单内联展示替代弹窗，视图切换（LDAP/密码/OAuth）布局；用户名输入框下添加示例提示；删除未使用的 LDAPLoginDialog 组件 | [详情](details/025-ldap-default-login.md) |
 | 025 | 2026-06-22 | 移除 User 表 name 字段，飞书同步的姓名改写入 display_name；LDAP 注册 email 改为 username + FEISHU_EMAIL_SUFFIX 拼接 | `model/user.go`、`service/feishu_sync.go`、`controller/ldap.go` |
 | 026 | 2026-06-23 | Feishu 凭据改为惰性读取（sync.OnceValue），避免包导入时 .env 未加载导致同步失败 | `setting/system_setting/feishu.go`、`service/feishu_sync.go`、`controller/ldap.go` |
@@ -41,7 +41,7 @@
 | 034 | 2026-06-23 | 用户头像下拉菜单增强：头像旁显示用户名、角色标签前加图标（👑🏅🧑‍💼）、下拉菜单改为悬停触发、移除分组显示 | [详情](details/034-profile-dropdown-enhance.md) |
 | 035 | 2026-06-24 | 常见问答面板重构：移除问答列表，改为插画图标+外链按钮跳转飞书文档；经典前端注释掉 FAQ 面板 | [详情](details/035-faq-panel-redesign.md) |
 | 036 | 2026-06-24 | 系统公告弹窗宽度由 26rem 加大到 36rem | `web/default/src/components/notification-popover.tsx` |
-| 037 | 2026-07-06 | 订阅管理增强：支持全员订阅，并允许管理员按人民币金额为单个有效用户订阅增加额度；用户订阅管理选择套餐时显示套餐额度而非价格 | [详情](details/037-subscribe-all-users.md) |
+| 037 | 2026-07-09 | 订阅管理增强：支持全员订阅，并允许管理员按人民币金额为单个有效用户订阅增加额度；用户订阅管理选择套餐时显示套餐额度而非价格；订阅套餐支持按公司限制可见范围，购买入口同步校验用户公司 | [详情](details/037-subscribe-all-users.md) |
 | 038 | 2026-06-24 | 系统设置侧边栏菜单默认展开：新增 NavCollapsible.defaultOpen 属性，系统设置下所有分组设为默认展开 | `web/default/src/components/layout/types.ts`、`web/default/src/components/layout/components/nav-group.tsx`、`web/default/src/components/layout/config/system-settings.config.ts` |
 | 039 | 2026-07-08 | 用户管理表格调整：用户名列增加头像、display_name 与 username 展示位置互换，头像点击支持通过 open_id 跳转飞书且悬停仍显示资料卡片；列顺序优化；新增订阅额度、月度总消耗、Token、请求次数和常用模型统计，统计数据改从 logs 表聚合；支持服务端排序订阅额度与用量统计列；总费用右侧新增每百万 Token 均价列并支持服务端排序，均价列头新增说明图标；请求次数格式化统一；抽取 useSharedUserColumns hook，用户管理与数据总览部门用户表格共用同一列定义；默认排序由额度降序改为注册时间降序；操作列新增「统计」按钮打开用户统计弹窗；移除用户管理三点菜单中的删除入口及删除弹窗；调整用户列表列顺序与列宽，部门列超出省略并悬停显示完整路径；修复表格长文本移动端弹出层触发器的 Base UI 警告 | [详情](details/039-user-management-table.md) |
 | 040 | 2026-06-24 | 日志筛选日期范围选择器快捷预设从 5 个扩展为 13 个（含季度、半年等），新增 dayjs quarterOfYear 插件及 6 语言翻译 | [详情](details/040-date-picker-presets.md) |

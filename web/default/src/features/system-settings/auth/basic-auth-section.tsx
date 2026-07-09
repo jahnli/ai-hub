@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
@@ -31,16 +31,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { getAdminPlans } from '@/features/subscriptions/api'
-import type { PlanRecord } from '@/features/subscriptions/types'
 
 import {
   SettingsForm,
@@ -60,16 +52,11 @@ const basicAuthSchema = z.object({
   EmailDomainRestrictionEnabled: z.boolean(),
   EmailAliasRestrictionEnabled: z.boolean(),
   EmailDomainWhitelist: z.string(),
-  registration: z.object({
-    auto_subscribe_plan_id: z.number(),
-  }),
 })
 
 type BasicAuthFormValues = z.infer<typeof basicAuthSchema>
 
-type BasicAuthDefaults = Omit<BasicAuthFormValues, 'registration'> & {
-  'registration.auto_subscribe_plan_id': number
-}
+type BasicAuthDefaults = BasicAuthFormValues
 
 type BasicAuthSectionProps = {
   defaultValues: BasicAuthDefaults
@@ -78,7 +65,6 @@ type BasicAuthSectionProps = {
 export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const [plans, setPlans] = useState<PlanRecord[]>([])
 
   const formDefaults = useMemo<BasicAuthFormValues>(
     () => ({
@@ -86,50 +72,16 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
       PasswordRegisterEnabled: defaultValues.PasswordRegisterEnabled,
       EmailVerificationEnabled: defaultValues.EmailVerificationEnabled,
       RegisterEnabled: defaultValues.RegisterEnabled,
-      EmailDomainRestrictionEnabled: defaultValues.EmailDomainRestrictionEnabled,
+      EmailDomainRestrictionEnabled:
+        defaultValues.EmailDomainRestrictionEnabled,
       EmailAliasRestrictionEnabled: defaultValues.EmailAliasRestrictionEnabled,
       EmailDomainWhitelist: defaultValues.EmailDomainWhitelist.split(',')
         .map((domain) => domain.trim())
         .filter(Boolean)
         .join('\n'),
-      registration: {
-        auto_subscribe_plan_id:
-          defaultValues['registration.auto_subscribe_plan_id'] || 0,
-      },
     }),
     [defaultValues]
   )
-
-  const planTitleById = useMemo(() => {
-    const nextPlanTitleById = new Map<number, string>()
-    plans.forEach((item) => {
-      nextPlanTitleById.set(item.plan.id, item.plan.title)
-    })
-    return nextPlanTitleById
-  }, [plans])
-
-  useEffect(() => {
-    let mounted = true
-
-    const loadPlans = async () => {
-      try {
-        const res = await getAdminPlans()
-        if (mounted && res.success) {
-          setPlans(res.data ?? [])
-        }
-      } catch {
-        if (mounted) {
-          setPlans([])
-        }
-      }
-    }
-
-    loadPlans()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
 
   const form = useForm<BasicAuthFormValues>({
     resolver: zodResolver(basicAuthSchema),
@@ -152,8 +104,6 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
       EmailDomainRestrictionEnabled: data.EmailDomainRestrictionEnabled,
       EmailAliasRestrictionEnabled: data.EmailAliasRestrictionEnabled,
       EmailDomainWhitelist: domains,
-      'registration.auto_subscribe_plan_id':
-        data.registration.auto_subscribe_plan_id,
     }
 
     Object.entries(normalized).forEach(([key, value]) => {
@@ -236,55 +186,6 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
                 </FormControl>
               </SettingsSwitchItem>
             )}
-          />
-
-          <FormField
-            control={form.control}
-            name='registration.auto_subscribe_plan_id'
-            render={({ field }) => {
-              const selectedPlanLabel = field.value
-                ? planTitleById.get(field.value) || t('Loading')
-                : t('No auto-subscription')
-
-              return (
-                <FormItem>
-                  <FormLabel>
-                    {t('Auto-subscribe plan after registration')}
-                  </FormLabel>
-                  <Select
-                    value={String(field.value || 0)}
-                    onValueChange={(value) => field.onChange(Number(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <span className='line-clamp-1 flex min-w-0 items-center text-left'>
-                          {selectedPlanLabel}
-                        </span>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='0'>
-                        {t('No auto-subscription')}
-                      </SelectItem>
-                      {plans.map((item) => (
-                        <SelectItem
-                          key={item.plan.id}
-                          value={String(item.plan.id)}
-                        >
-                          {item.plan.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {t(
-                      'Automatically bind this subscription plan to newly registered password accounts'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )
-            }}
           />
 
           <FormField

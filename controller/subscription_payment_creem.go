@@ -69,6 +69,10 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		common.ApiErrorMsg(c, "用户不存在")
 		return
 	}
+	if err := model.EnsureSubscriptionPlanVisibleToUser(userId, plan); err != nil {
+		common.ApiError(c, err)
+		return
+	}
 
 	if plan.MaxPurchasePerUser > 0 {
 		count, err := model.CountUserSubscriptionsByPlan(userId, plan.Id)

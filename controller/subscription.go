@@ -40,9 +40,18 @@ func GetSubscriptionPlans(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	userCompany := ""
+	if userId := c.GetInt("id"); userId > 0 {
+		if user, err := model.GetUserById(userId, false); err == nil && user != nil {
+			userCompany = user.Company
+		}
+	}
 	result := make([]SubscriptionPlanDTO, 0, len(plans))
 	for _, p := range plans {
 		p.NormalizeDefaults()
+		if !model.IsSubscriptionPlanVisibleToCompany(&p, userCompany) {
+			continue
+		}
 		result = append(result, SubscriptionPlanDTO{
 			Plan: p,
 		})

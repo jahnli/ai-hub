@@ -15,6 +15,8 @@ type LDAPUserInfo struct {
 	Username    string
 	Email       string
 	DisplayName string
+	DN          string
+	Company     string
 }
 
 func dialLDAP(settings *system_setting.LDAPSettings) (*ldapv3.Conn, error) {
@@ -90,7 +92,7 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 		settings.SearchBase,
 		ldapv3.ScopeWholeSubtree,
 		ldapv3.NeverDerefAliases,
-		1, // SizeLimit: only need one result
+		2, // SizeLimit: username is expected to be unique; fetch two to detect violations
 		10,
 		false,
 		filter,
@@ -106,6 +108,9 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 	if len(sr.Entries) == 0 {
 		return nil, fmt.Errorf("user not found in LDAP")
 	}
+	if len(sr.Entries) > 1 {
+		return nil, fmt.Errorf("multiple LDAP users found for username %s", username)
+	}
 
 	entry := sr.Entries[0]
 
@@ -114,7 +119,7 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 		return nil, fmt.Errorf("LDAP authentication failed")
 	}
 
-	info := &LDAPUserInfo{}
+	info := &LDAPUserInfo{DN: entry.DN}
 
 	if settings.UsernameAttribute != "" {
 		info.Username = entry.GetAttributeValue(settings.UsernameAttribute)
@@ -129,8 +134,68 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 	if info.Username == "" {
 		info.Username = username
 	}
+	company, err := ExtractLDAPCompanyFromDN(entry.DN, settings.SearchBase)
+	if err != nil {
+		return nil, err
+	}
+	info.Company = company
 
 	return info, nil
+}
+
+// ExtractLDAPCompanyFromDN returns the OU directly under the configured LDAP search base.
+func ExtractLDAPCompanyFromDN(userDN, searchBase string) (string, error) {
+	userDN = strings.TrimSpace(userDN)
+	searchBase = strings.TrimSpace(searchBase)
+	if userDN == "" || searchBase == "" {
+		return "", fmt.Errorf("LDAP user DN or search base is empty")
+	}
+
+	parsedUserDN, err := ldapv3.ParseDN(userDN)
+	if err != nil {
+		return "", fmt.Errorf("parse LDAP user DN: %w", err)
+	}
+	parsedSearchBase, err := ldapv3.ParseDN(searchBase)
+	if err != nil {
+		return "", fmt.Errorf("parse LDAP search base DN: %w", err)
+	}
+
+	userRDNs := parsedUserDN.RDNs
+	baseRDNs := parsedSearchBase.RDNs
+	if len(userRDNs) <= len(baseRDNs) {
+		return "", fmt.Errorf("LDAP user DN is not under search base")
+	}
+
+	baseOffset := len(userRDNs) - len(baseRDNs)
+	for i := range baseRDNs {
+		if !sameRDN(userRDNs[baseOffset+i], baseRDNs[i]) {
+			return "", fmt.Errorf("LDAP user DN is not under search base")
+		}
+	}
+
+	companyRDN := userRDNs[baseOffset-1]
+	if len(companyRDN.Attributes) != 1 {
+		return "", fmt.Errorf("LDAP company RDN is not a single OU")
+	}
+	attr := companyRDN.Attributes[0]
+	if !strings.EqualFold(attr.Type, "OU") || strings.TrimSpace(attr.Value) == "" {
+		return "", fmt.Errorf("LDAP company RDN is not an OU")
+	}
+	return strings.TrimSpace(attr.Value), nil
+}
+
+func sameRDN(a, b *ldapv3.RelativeDN) bool {
+	if len(a.Attributes) != len(b.Attributes) {
+		return false
+	}
+	for i := range a.Attributes {
+		left := a.Attributes[i]
+		right := b.Attributes[i]
+		if !strings.EqualFold(left.Type, right.Type) || !strings.EqualFold(strings.TrimSpace(left.Value), strings.TrimSpace(right.Value)) {
+			return false
+		}
+	}
+	return true
 }
 
 // TestLDAPConnection 用服务账号 bind 并对 SearchBase 做一次 base-object 搜索，用于后台连通性测试。

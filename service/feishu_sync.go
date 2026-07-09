@@ -21,6 +21,12 @@ const (
 	feishuHTTPTimeout = 10 * time.Second
 )
 
+type feishuSyncConfig struct {
+	AppID       string
+	AppSecret   string
+	EmailSuffix string
+}
+
 // SyncFeishuUserAsync 在 goroutine 中同步飞书字段，不阻塞登录流程。失败仅记日志。
 func SyncFeishuUserAsync(user *model.User) {
 	if user == nil || user.Id == 0 {
@@ -100,19 +106,20 @@ type deptLeaderSimple struct {
 
 // SyncFeishuUser 以用户名拼邮箱 → 查 open_id → 通过 directory API 拉取员工信息 → 写回数据库。
 func SyncFeishuUser(user *model.User) error {
-	if !system_setting.FeishuEnabled() {
-		return nil
-	}
 	if user == nil || user.Username == "" {
 		return nil
 	}
+	cfg, ok := resolveFeishuSyncConfig(user)
+	if !ok {
+		return nil
+	}
 
-	token, err := feishuGetTenantAccessToken()
+	token, err := feishuGetTenantAccessToken(cfg)
 	if err != nil {
 		return fmt.Errorf("get tenant_access_token: %w", err)
 	}
 
-	email := buildFeishuEmail(user.Username)
+	email := buildFeishuEmail(user.Username, cfg.EmailSuffix)
 	openId, err := feishuGetOpenIDByEmail(token, email)
 	if err != nil {
 		return fmt.Errorf("lookup open_id by email %s: %w", email, err)
@@ -223,9 +230,38 @@ func SyncFeishuUser(user *model.User) error {
 	return nil
 }
 
+func resolveFeishuSyncConfig(user *model.User) (feishuSyncConfig, bool) {
+	company := model.NormalizeCompany(user.Company)
+	if company != "" {
+		cfg, ok := system_setting.GetLDAPCompanySyncConfig(company)
+		if ok {
+			if cfg.SyncPlatform != system_setting.LDAPSyncPlatformFeishu {
+				return feishuSyncConfig{}, false
+			}
+			if cfg.FeishuAppID == "" || cfg.FeishuAppSecret == "" {
+				return feishuSyncConfig{}, false
+			}
+			return feishuSyncConfig{
+				AppID:       cfg.FeishuAppID,
+				AppSecret:   cfg.FeishuAppSecret,
+				EmailSuffix: cfg.FeishuEmailSuffix,
+			}, true
+		}
+	}
+
+	if !system_setting.FeishuEnabled() {
+		return feishuSyncConfig{}, false
+	}
+	return feishuSyncConfig{
+		AppID:       system_setting.FeishuAppID(),
+		AppSecret:   system_setting.FeishuAppSecret(),
+		EmailSuffix: system_setting.FeishuEmailSuffix(),
+	}, true
+}
+
 // buildFeishuEmail 用用户名拼接飞书邮箱后缀。
-func buildFeishuEmail(username string) string {
-	return username + system_setting.FeishuEmailSuffix()
+func buildFeishuEmail(username string, suffix string) string {
+	return username + suffix
 }
 
 func feishuHTTPClient() *http.Client {
@@ -282,10 +318,10 @@ func feishuCheckResult(respBody []byte, status int) (*feishuAPIResult, error) {
 	return &r, nil
 }
 
-func feishuGetTenantAccessToken() (string, error) {
+func feishuGetTenantAccessToken(cfg feishuSyncConfig) (string, error) {
 	body := map[string]string{
-		"app_id":     system_setting.FeishuAppID(),
-		"app_secret": system_setting.FeishuAppSecret(),
+		"app_id":     cfg.AppID,
+		"app_secret": cfg.AppSecret,
 	}
 	respBody, _, err := feishuDoRequest(http.MethodPost, feishuBaseURL+"/auth/v3/tenant_access_token/internal", body, "")
 	if err != nil {

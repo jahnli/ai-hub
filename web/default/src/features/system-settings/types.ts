@@ -126,7 +126,6 @@ export type AuthSettings = {
   PasswordRegisterEnabled: boolean
   EmailVerificationEnabled: boolean
   RegisterEnabled: boolean
-  'registration.auto_subscribe_plan_id': number
   EmailDomainRestrictionEnabled: boolean
   EmailAliasRestrictionEnabled: boolean
   EmailDomainWhitelist: string
@@ -150,6 +149,7 @@ export type AuthSettings = {
   'ldap.start_tls': boolean
   'ldap.skip_tls_verify': boolean
   'ldap.login_label': string
+  'ldap.company_sync_configs': string
   WeChatAuthEnabled: boolean
   WeChatServerAddress: string
   WeChatServerToken: string

@@ -267,7 +267,7 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	autoSubscribeUserAfterCreate(insertedUser.Id, "register_auto")
+	autoSubscribeUserAfterCreate(insertedUser.Id, insertedUser.Company, "register_auto")
 
 	// 生成默认令牌
 	if constant.GenerateDefaultToken {
@@ -305,8 +305,8 @@ func Register(c *gin.Context) {
 	return
 }
 
-func autoSubscribeUserAfterCreate(userId int, source string) {
-	autoSubscribePlanId := system_setting.GetRegistrationSettings().AutoSubscribePlanId
+func autoSubscribeUserAfterCreate(userId int, company string, source string) {
+	autoSubscribePlanId := system_setting.GetLDAPAutoSubscribePlanId(company)
 	if autoSubscribePlanId <= 0 {
 		return
 	}
@@ -1115,7 +1115,7 @@ func CreateUser(c *gin.Context) {
 		}
 	}
 	cleanUser.FinishInsert(0)
-	autoSubscribeUserAfterCreate(cleanUser.Id, "admin_create_auto")
+	autoSubscribeUserAfterCreate(cleanUser.Id, cleanUser.Company, "admin_create_auto")
 
 	recordManageAuditFor(c, cleanUser.Id, "user.create", map[string]interface{}{
 		"username": cleanUser.Username,

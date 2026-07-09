@@ -149,6 +149,7 @@ type SubscriptionPlan struct {
 
 	Title    string `json:"title" gorm:"type:varchar(128);not null"`
 	Subtitle string `json:"subtitle" gorm:"type:varchar(255);default:''"`
+	Company  string `json:"company" gorm:"type:varchar(128);column:company;default:'';index"`
 
 	// Display money amount (follow existing code style: float64 for money)
 	PriceAmount float64 `json:"price_amount" gorm:"type:decimal(10,6);not null;default:0"`
@@ -203,12 +204,53 @@ func (p *SubscriptionPlan) BeforeUpdate(tx *gorm.DB) error {
 }
 
 func (p *SubscriptionPlan) NormalizeDefaults() {
+	p.Company = NormalizeCompany(p.Company)
 	if p.AllowBalancePay == nil {
 		p.AllowBalancePay = common.GetPointer(true)
 	}
 	if p.AllowWalletOverflow == nil {
 		p.AllowWalletOverflow = common.GetPointer(true)
 	}
+}
+
+func NormalizeCompany(company string) string {
+	return strings.TrimSpace(company)
+}
+
+func IsSubscriptionPlanVisibleToCompany(plan *SubscriptionPlan, company string) bool {
+	if plan == nil {
+		return false
+	}
+	planCompany := NormalizeCompany(plan.Company)
+	if planCompany == "" {
+		return true
+	}
+	return planCompany == NormalizeCompany(company)
+}
+
+func getUserCompanyByIdTx(tx *gorm.DB, userId int) (string, error) {
+	if userId <= 0 {
+		return "", errors.New("invalid userId")
+	}
+	if tx == nil {
+		tx = DB
+	}
+	var company string
+	if err := tx.Model(&User{}).Where("id = ?", userId).Select("company").Find(&company).Error; err != nil {
+		return "", err
+	}
+	return NormalizeCompany(company), nil
+}
+
+func EnsureSubscriptionPlanVisibleToUser(userId int, plan *SubscriptionPlan) error {
+	company, err := getUserCompanyByIdTx(nil, userId)
+	if err != nil {
+		return err
+	}
+	if !IsSubscriptionPlanVisibleToCompany(plan, company) {
+		return errors.New("套餐不适用于当前用户所属公司")
+	}
+	return nil
 }
 
 // Subscription order (payment -> webhook -> create UserSubscription)
@@ -708,8 +750,15 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 		source = "admin"
 	}
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		_, err := CreateUserSubscriptionFromPlanTx(tx, userId, plan, source)
-		return err
+		company, err := getUserCompanyByIdTx(tx, userId)
+		if err != nil {
+			return err
+		}
+		if !IsSubscriptionPlanVisibleToCompany(plan, company) {
+			return errors.New("套餐不适用于该用户所属公司")
+		}
+		_, createErr := CreateUserSubscriptionFromPlanTx(tx, userId, plan, source)
+		return createErr
 	})
 	if err != nil {
 		return "", err
@@ -812,6 +861,9 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 		var user User
 		if err := lockForUpdate(tx).Where("id = ?", userId).First(&user).Error; err != nil {
 			return err
+		}
+		if !IsSubscriptionPlanVisibleToCompany(plan, user.Company) {
+			return errors.New("套餐不适用于当前用户所属公司")
 		}
 		if requiredQuota > 0 && user.Quota < requiredQuota {
 			return errors.New("余额不足")

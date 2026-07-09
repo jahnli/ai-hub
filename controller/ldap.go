@@ -90,6 +90,13 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		if existing.DeletedAt.Valid {
 			return nil, &LDAPUserDeletedError{}
 		}
+		company := model.NormalizeCompany(ldapUser.Company)
+		if company != "" && existing.Company != company {
+			if err := model.DB.Model(&model.User{}).Where("id = ?", existing.Id).Update("company", company).Error; err != nil {
+				return nil, err
+			}
+			existing.Company = company
+		}
 		return existing, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -111,7 +118,14 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	} else {
 		user.DisplayName = user.Username
 	}
-	user.Email = user.Username + system_setting.FeishuEmailSuffix()
+	user.Company = model.NormalizeCompany(ldapUser.Company)
+	if ldapUser.Email != "" {
+		user.Email = ldapUser.Email
+	} else if cfg, ok := system_setting.GetLDAPCompanySyncConfig(user.Company); ok && cfg.FeishuEmailSuffix != "" {
+		user.Email = user.Username + cfg.FeishuEmailSuffix
+	} else {
+		user.Email = user.Username + system_setting.FeishuEmailSuffix()
+	}
 	user.Role = common.RoleCommonUser
 	user.Status = common.UserStatusEnabled
 
@@ -119,7 +133,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		return nil, err
 	}
 
-	autoSubscribeUserAfterCreate(user.Id, "ldap_register_auto")
+	autoSubscribeUserAfterCreate(user.Id, user.Company, "ldap_register_auto")
 
 	// 注册成功后同步飞书字段（avatar_url/open_id/display_name/departments/job_number 等）
 	// 使用同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
@@ -180,6 +194,9 @@ func LDAPBind(c *gin.Context) {
 
 	if ldapUser.DisplayName != "" {
 		user.DisplayName = ldapUser.DisplayName
+	}
+	if ldapUser.Company != "" {
+		user.Company = model.NormalizeCompany(ldapUser.Company)
 	}
 
 	if err := user.Edit(false); err != nil {

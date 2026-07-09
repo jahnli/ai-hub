@@ -35,8 +35,6 @@ const AUTH_SECTIONS = [
           PasswordRegisterEnabled: settings.PasswordRegisterEnabled,
           EmailVerificationEnabled: settings.EmailVerificationEnabled,
           RegisterEnabled: settings.RegisterEnabled,
-          'registration.auto_subscribe_plan_id':
-            settings['registration.auto_subscribe_plan_id'],
           EmailDomainRestrictionEnabled: settings.EmailDomainRestrictionEnabled,
           EmailAliasRestrictionEnabled: settings.EmailAliasRestrictionEnabled,
           EmailDomainWhitelist: settings.EmailDomainWhitelist,
@@ -72,6 +70,7 @@ const AUTH_SECTIONS = [
           'ldap.start_tls': settings['ldap.start_tls'],
           'ldap.skip_tls_verify': settings['ldap.skip_tls_verify'],
           'ldap.login_label': settings['ldap.login_label'],
+          'ldap.company_sync_configs': settings['ldap.company_sync_configs'],
           WeChatAuthEnabled: settings.WeChatAuthEnabled,
           WeChatServerAddress: settings.WeChatServerAddress,
           WeChatServerToken: settings.WeChatServerToken,

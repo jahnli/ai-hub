@@ -19,13 +19,14 @@ For commercial licensing, please contact support@quantumnous.com
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useForm } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import * as z from 'zod'
 
 import { CopyButton } from '@/components/copy-button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -36,10 +37,18 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { getAdminPlans } from '@/features/subscriptions/api'
+import type { PlanRecord } from '@/features/subscriptions/types'
 import { api } from '@/lib/api'
+
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
 import {
@@ -84,6 +93,16 @@ const oauthSchema = z.object({
     start_tls: z.boolean(),
     skip_tls_verify: z.boolean(),
     login_label: z.string(),
+    company_sync_configs: z.array(
+      z.object({
+        company: z.string(),
+        sync_platform: z.enum(['none', 'feishu', 'dingtalk']),
+        auto_subscribe_plan_id: z.number().int().nonnegative(),
+        feishu_app_id: z.string(),
+        feishu_app_secret: z.string(),
+        feishu_email_suffix: z.string(),
+      })
+    ),
   }),
   WeChatAuthEnabled: z.boolean(),
   WeChatServerAddress: z.string(),
@@ -92,6 +111,9 @@ const oauthSchema = z.object({
 })
 
 type OAuthFormValues = z.infer<typeof oauthSchema>
+
+type LDAPCompanySyncConfig =
+  OAuthFormValues['ldap']['company_sync_configs'][number]
 
 type FlatOAuthDefaults = {
   'oidc.enabled': boolean
@@ -113,6 +135,7 @@ type FlatOAuthDefaults = {
   'ldap.start_tls': boolean
   'ldap.skip_tls_verify': boolean
   'ldap.login_label': string
+  'ldap.company_sync_configs': string
   WeChatAuthEnabled: boolean
   WeChatServerAddress: string
   WeChatServerToken: string
@@ -121,6 +144,37 @@ type FlatOAuthDefaults = {
 
 const oauthTabContentClassName =
   'grid min-w-0 gap-x-5 gap-y-6 lg:grid-cols-2 [&>[data-slot=form-item]]:min-w-0 lg:[&>[data-slot=form-item]:has([data-slot=switch])]:col-span-2'
+
+const emptyLDAPCompanySyncConfig = (): LDAPCompanySyncConfig => ({
+  company: '',
+  sync_platform: 'none',
+  auto_subscribe_plan_id: 0,
+  feishu_app_id: '',
+  feishu_app_secret: '',
+  feishu_email_suffix: '',
+})
+
+const parseLDAPCompanySyncConfigs = (
+  value: string | LDAPCompanySyncConfig[]
+): LDAPCompanySyncConfig[] => {
+  if (Array.isArray(value)) return value
+  if (!value) return []
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((item) => ({
+      ...emptyLDAPCompanySyncConfig(),
+      ...(item as Partial<LDAPCompanySyncConfig>),
+      sync_platform:
+        item?.sync_platform === 'feishu' || item?.sync_platform === 'dingtalk'
+          ? item.sync_platform
+          : 'none',
+      auto_subscribe_plan_id: Number(item?.auto_subscribe_plan_id ?? 0),
+    }))
+  } catch {
+    return []
+  }
+}
 
 type OAuthSetupGuideRow = {
   label: ReactNode
@@ -194,6 +248,9 @@ const buildFormDefaults = (defaults: FlatOAuthDefaults): OAuthFormValues => ({
     start_tls: defaults['ldap.start_tls'],
     skip_tls_verify: defaults['ldap.skip_tls_verify'],
     login_label: defaults['ldap.login_label'] ?? '',
+    company_sync_configs: parseLDAPCompanySyncConfigs(
+      defaults['ldap.company_sync_configs']
+    ),
   },
   WeChatAuthEnabled: defaults.WeChatAuthEnabled,
   WeChatServerAddress: defaults.WeChatServerAddress ?? '',
@@ -221,6 +278,7 @@ const normalizeFormValues = (values: OAuthFormValues): FlatOAuthDefaults => ({
   'ldap.start_tls': values.ldap.start_tls,
   'ldap.skip_tls_verify': values.ldap.skip_tls_verify,
   'ldap.login_label': values.ldap.login_label,
+  'ldap.company_sync_configs': JSON.stringify(values.ldap.company_sync_configs),
   WeChatAuthEnabled: values.WeChatAuthEnabled,
   WeChatServerAddress: values.WeChatServerAddress,
   WeChatServerToken: values.WeChatServerToken,
@@ -236,6 +294,7 @@ export function OAuthSection(props: OAuthSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
   const [activeTab, setActiveTab] = useState('oidc')
+  const [plans, setPlans] = useState<PlanRecord[]>([])
   const siteUrl = resolveOAuthSiteUrl(props.serverAddress, t('Site URL'))
   const oidcCallbackUrl = buildOAuthCallbackUrl(
     props.serverAddress,
@@ -252,6 +311,42 @@ export function OAuthSection(props: OAuthSectionProps) {
     resolver: zodResolver(oauthSchema),
     defaultValues: formDefaults,
   })
+
+  const companySyncConfigs = useFieldArray({
+    control: form.control,
+    name: 'ldap.company_sync_configs',
+  })
+
+  const planTitleById = useMemo(() => {
+    const nextPlanTitleById = new Map<number, string>()
+    plans.forEach((item) => {
+      nextPlanTitleById.set(item.plan.id, item.plan.title)
+    })
+    return nextPlanTitleById
+  }, [plans])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadPlans = async () => {
+      try {
+        const res = await getAdminPlans()
+        if (mounted && res.success) {
+          setPlans(res.data ?? [])
+        }
+      } catch {
+        if (mounted) {
+          setPlans([])
+        }
+      }
+    }
+
+    loadPlans()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const baselineRef = useRef<FlatOAuthDefaults>(props.defaultValues)
   const baselineSerializedRef = useRef<string>(
@@ -711,7 +806,9 @@ export function OAuthSection(props: OAuthSectionProps) {
                       <FormLabel>{t('Server URL')}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t('ldap://host:port or ldaps://host:port')}
+                          placeholder={t(
+                            'ldap://host:port or ldaps://host:port'
+                          )}
                           autoComplete='off'
                           value={field.value ?? ''}
                           onChange={(event) =>
@@ -820,7 +917,9 @@ export function OAuthSection(props: OAuthSectionProps) {
                         />
                       </FormControl>
                       <FormDescription>
-                        {t('Use {{username}} as the placeholder for the login username')}
+                        {t(
+                          'Use {{username}} as the placeholder for the login username'
+                        )}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -955,7 +1054,9 @@ export function OAuthSection(props: OAuthSectionProps) {
                       <SettingsSwitchContent>
                         <FormLabel>{t('Skip TLS Verify')}</FormLabel>
                         <FormDescription>
-                          {t('Skip TLS certificate verification (not recommended)')}
+                          {t(
+                            'Skip TLS certificate verification (not recommended)'
+                          )}
                         </FormDescription>
                       </SettingsSwitchContent>
                       <FormControl>
@@ -968,6 +1069,223 @@ export function OAuthSection(props: OAuthSectionProps) {
                   )}
                 />
 
+                <div className='space-y-4 rounded-md border p-4 lg:col-span-2'>
+                  <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+                    <div className='space-y-1'>
+                      <FormLabel>{t('Company Sync Configurations')}</FormLabel>
+                      <FormDescription>
+                        {t(
+                          'Map LDAP company OUs to directory sync providers and default subscription plans'
+                        )}
+                      </FormDescription>
+                    </div>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() =>
+                        companySyncConfigs.append(emptyLDAPCompanySyncConfig())
+                      }
+                    >
+                      {t('Add Configuration')}
+                    </Button>
+                  </div>
+
+                  {companySyncConfigs.fields.length === 0 ? (
+                    <p className='text-muted-foreground text-sm'>
+                      {t('No company sync configurations added')}
+                    </p>
+                  ) : null}
+
+                  <div className='space-y-4'>
+                    {companySyncConfigs.fields.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className='grid gap-4 rounded-md border p-4 lg:grid-cols-2'
+                      >
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.company`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Company')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t('Company OU name')}
+                                  autoComplete='off'
+                                  value={field.value ?? ''}
+                                  onChange={(event) =>
+                                    field.onChange(event.target.value)
+                                  }
+                                  name={field.name}
+                                  onBlur={field.onBlur}
+                                  ref={field.ref}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.sync_platform`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Sync Platform')}</FormLabel>
+                              <FormControl>
+                                <select
+                                  className='border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+                                  value={field.value}
+                                  onChange={(event) =>
+                                    field.onChange(event.target.value)
+                                  }
+                                  name={field.name}
+                                  onBlur={field.onBlur}
+                                  ref={field.ref}
+                                >
+                                  <option value='none'>{t('None')}</option>
+                                  <option value='feishu'>{t('Feishu')}</option>
+                                  <option value='dingtalk'>
+                                    {t('DingTalk')}
+                                  </option>
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.feishu_app_id`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Application ID')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  autoComplete='off'
+                                  value={field.value ?? ''}
+                                  onChange={(event) =>
+                                    field.onChange(event.target.value)
+                                  }
+                                  name={field.name}
+                                  onBlur={field.onBlur}
+                                  ref={field.ref}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.feishu_app_secret`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Application Secret')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type='password'
+                                  autoComplete='new-password'
+                                  value={field.value ?? ''}
+                                  onChange={(event) =>
+                                    field.onChange(event.target.value)
+                                  }
+                                  name={field.name}
+                                  onBlur={field.onBlur}
+                                  ref={field.ref}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.feishu_email_suffix`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Feishu Email Suffix')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder='@example.com'
+                                  autoComplete='off'
+                                  value={field.value ?? ''}
+                                  onChange={(event) =>
+                                    field.onChange(event.target.value)
+                                  }
+                                  name={field.name}
+                                  onBlur={field.onBlur}
+                                  ref={field.ref}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.auto_subscribe_plan_id`}
+                          render={({ field }) => {
+                            const selectedPlanLabel = field.value
+                              ? planTitleById.get(field.value) || t('Loading')
+                              : t('No auto-subscription')
+
+                            return (
+                              <FormItem>
+                                <FormLabel>
+                                  {t('Auto-subscribe plan after registration')}
+                                </FormLabel>
+                                <Select
+                                  value={String(field.value || 0)}
+                                  onValueChange={(value) =>
+                                    field.onChange(Number(value))
+                                  }
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className='h-9 w-full'>
+                                      <span className='line-clamp-1 min-w-0 flex-1 text-left'>
+                                        {selectedPlanLabel}
+                                      </span>
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value='0'>
+                                      {t('No auto-subscription')}
+                                    </SelectItem>
+                                    {plans.map((item) => (
+                                      <SelectItem
+                                        key={item.plan.id}
+                                        value={String(item.plan.id)}
+                                      >
+                                        {item.plan.title}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )
+                          }}
+                        />
+
+                        <div className='flex items-end justify-end'>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            onClick={() => companySyncConfigs.remove(index)}
+                          >
+                            {t('Remove')}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <FormItem className='lg:col-span-2'>
                   <Button
                     type='button'
@@ -975,9 +1293,7 @@ export function OAuthSection(props: OAuthSectionProps) {
                     onClick={handleTestLDAP}
                     disabled={isTestingLDAP}
                   >
-                    {isTestingLDAP
-                      ? t('Testing...')
-                      : t('Test Connection')}
+                    {isTestingLDAP ? t('Testing...') : t('Test Connection')}
                   </Button>
                   <FormDescription>
                     {t('Save configuration before testing the LDAP connection')}
