@@ -55,7 +55,7 @@ func main() {
 		return
 	}
 
-	common.SysLog("AI Hub " + common.Version + " started")
+	common.SysLog("AI Gateway " + common.Version + " started")
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -168,7 +168,7 @@ func main() {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
 				"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/QuantumNous/ai-hub", err),
-				"type":    "ai_hub_panic",
+				"type":    "ai_gateway_panic",
 			},
 		})
 	}))

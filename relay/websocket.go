@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func WssHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func WssHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 
 	adaptor := GetAdaptor(info.ApiType)
@@ -35,11 +35,11 @@ func WssHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.A
 		defer info.TargetWs.Close()
 	}
 
-	usage, AIHubError := adaptor.DoResponse(c, nil, info)
-	if AIHubError != nil {
+	usage, AIGatewayError := adaptor.DoResponse(c, nil, info)
+	if AIGatewayError != nil {
 		// reset status code 重置状态码
-		service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-		return AIHubError
+		service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+		return AIGatewayError
 	}
 	service.PostWssConsumeQuota(c, info, info.UpstreamModelName, usage.(*dto.RealtimeUsage), "")
 	return nil

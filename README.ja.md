@@ -1,8 +1,8 @@
 <div align="center">
 
-![AI Hub](/web/default/public/logo.png)
+![AI Gateway](/web/default/public/logo.png)
 
-# AI Hub
+# AI Gateway
 
 🍥 **次世代大規模モデルゲートウェイとAI資産管理システム**
 

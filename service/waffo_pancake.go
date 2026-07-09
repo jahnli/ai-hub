@@ -30,7 +30,7 @@ type WaffoPancakeCreateSessionParams struct {
 
 // WaffoPancakeCheckoutSession is the response of CreateWaffoPancakeCheckoutSession.
 // CheckoutURL already carries the `#token=...` fragment; Token / TokenExpiresAt
-// are exposed separately for self-service flows driven from AI Hub's own UI.
+// are exposed separately for self-service flows driven from AI Gateway's own UI.
 type WaffoPancakeCheckoutSession struct {
 	SessionID      string
 	CheckoutURL    string
@@ -275,8 +275,8 @@ func CreateWaffoPancakePrimaryStore(ctx context.Context, merchantID, privateKey 
 // OnetimeProduct priced at `amount` USD, used as a subscription plan's
 // SubscriptionPlan.WaffoPancakeProductId.
 //
-// OnetimeProduct (not SubscriptionProduct) because AI Hub has no renewal-
-// event handling; Pancake auto-renewing without AI Hub extending user
+// OnetimeProduct (not SubscriptionProduct) because AI Gateway has no renewal-
+// event handling; Pancake auto-renewing without AI Gateway extending user
 // access would be a UX divergence. Revisit if renewal handling is added.
 func CreateWaffoPancakeProductForPlan(ctx context.Context, merchantID, privateKey, storeID, name, amount, returnURL string) (string, error) {
 	storeID = strings.TrimSpace(storeID)

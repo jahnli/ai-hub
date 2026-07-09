@@ -1,6 +1,6 @@
-# AI Hub Electron Desktop App
+# AI Gateway Electron Desktop App
 
-This directory contains the Electron wrapper for AI Hub, providing a native desktop application with system tray support for Windows, macOS, and Linux.
+This directory contains the Electron wrapper for AI Gateway, providing a native desktop application with system tray support for Windows, macOS, and Linux.
 
 ## Prerequisites
 

@@ -1,7 +1,7 @@
 {
   "name": "ai-hub-electron",
   "version": "1.0.0",
-  "description": "AI Hub - AI Model Gateway Desktop Application",
+  "description": "AI Gateway - AI Model Gateway Desktop Application",
   "main": "main.js",
   "scripts": {
     "start-app": "electron .",
@@ -29,7 +29,7 @@
     "electron-builder": "^26.7.0"
   },
   "build": {
-    "appId": "com.aihub.desktop",
+    "appId": "com.aigateway.desktop",
     "productName": "AI-Hub-App",
     "publish": null,
     "directories": {

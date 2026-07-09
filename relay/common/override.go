@@ -94,7 +94,7 @@ func AsParamOverrideReturnError(err error) (*ParamOverrideReturnError, bool) {
 	return nil, false
 }
 
-func AIHubErrorFromParamOverride(err *ParamOverrideReturnError) *types.AIHubError {
+func AIGatewayErrorFromParamOverride(err *ParamOverrideReturnError) *types.AIGatewayError {
 	if err == nil {
 		return types.NewError(
 			errors.New("param override return error is nil"),
@@ -123,7 +123,7 @@ func AIHubErrorFromParamOverride(err *ParamOverrideReturnError) *types.AIHubErro
 		message = "request blocked by param override"
 	}
 
-	opts := make([]types.AIHubErrorOptions, 0, 1)
+	opts := make([]types.AIGatewayErrorOptions, 0, 1)
 	if err.SkipRetry {
 		opts = append(opts, types.ErrOptionWithSkipRetry())
 	}

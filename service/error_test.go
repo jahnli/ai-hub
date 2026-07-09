@@ -55,11 +55,11 @@ func TestResetStatusCode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			AIHubError := &types.AIHubError{
+			AIGatewayError := &types.AIGatewayError{
 				StatusCode: tc.statusCode,
 			}
-			ResetStatusCode(AIHubError, tc.statusCodeConfig)
-			require.Equal(t, tc.expectedCode, AIHubError.StatusCode)
+			ResetStatusCode(AIGatewayError, tc.statusCodeConfig)
+			require.Equal(t, tc.expectedCode, AIGatewayError.StatusCode)
 		})
 	}
 }
@@ -85,10 +85,10 @@ func TestRelayErrorHandlerTruncatesInvalidJSONBodyInLog(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 
-	AIHubError := RelayErrorHandler(context.Background(), resp, false)
+	AIGatewayError := RelayErrorHandler(context.Background(), resp, false)
 
-	require.NotNil(t, AIHubError)
-	require.Equal(t, "bad response status code 500", AIHubError.Error())
+	require.NotNil(t, AIGatewayError)
+	require.Equal(t, "bad response status code 500", AIGatewayError.Error())
 	require.Contains(t, logBuffer.String(), "[truncated")
 	require.Contains(t, logBuffer.String(), fmt.Sprintf("original_length=%d", len(body)))
 	require.NotContains(t, logBuffer.String(), strings.Repeat("b", common.LocalLogContentLimit+1))
@@ -102,10 +102,10 @@ func TestRelayErrorHandlerKeepsStructuredErrorMessage(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 
-	AIHubError := RelayErrorHandler(context.Background(), resp, false)
+	AIGatewayError := RelayErrorHandler(context.Background(), resp, false)
 
-	require.NotNil(t, AIHubError)
-	require.Equal(t, message, AIHubError.Error())
+	require.NotNil(t, AIGatewayError)
+	require.Equal(t, message, AIGatewayError.Error())
 }
 
 func TestRelayErrorHandlerKeepsOpenAIErrorMessage(t *testing.T) {
@@ -116,10 +116,10 @@ func TestRelayErrorHandlerKeepsOpenAIErrorMessage(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 
-	AIHubError := RelayErrorHandler(context.Background(), resp, false)
+	AIGatewayError := RelayErrorHandler(context.Background(), resp, false)
 
-	require.NotNil(t, AIHubError)
-	require.Equal(t, message, AIHubError.Error())
+	require.NotNil(t, AIGatewayError)
+	require.Equal(t, message, AIGatewayError.Error())
 }
 
 func TestRelayErrorHandlerKeepsInvalidJSONBodyInDebugLog(t *testing.T) {
@@ -143,9 +143,9 @@ func TestRelayErrorHandlerKeepsInvalidJSONBodyInDebugLog(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 
-	AIHubError := RelayErrorHandler(context.Background(), resp, false)
+	AIGatewayError := RelayErrorHandler(context.Background(), resp, false)
 
-	require.NotNil(t, AIHubError)
+	require.NotNil(t, AIGatewayError)
 	require.NotContains(t, logBuffer.String(), "[truncated")
 	require.Contains(t, logBuffer.String(), body)
 }

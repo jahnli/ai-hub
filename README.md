@@ -1,8 +1,8 @@
 <div align="center">
 
-![AI Hub](/web/default/public/logo.png)
+![AI Gateway](/web/default/public/logo.png)
 
-# AI Hub
+# AI Gateway
 
 🍥 **Next-Generation LLM Gateway and AI Asset Management System**
 

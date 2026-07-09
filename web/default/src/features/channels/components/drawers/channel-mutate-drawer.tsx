@@ -1288,7 +1288,7 @@ export function ChannelMutateDrawer({
     const timer = setTimeout(() => {
       toast.warning(
         t(
-          'Warning: Base URL should not end with /v1. AI Hub will handle it automatically. This may cause request failures.'
+          'Warning: Base URL should not end with /v1. AI Gateway will handle it automatically. This may cause request failures.'
         ),
         { duration: 5000 }
       )
@@ -2743,7 +2743,7 @@ export function ChannelMutateDrawer({
                                     </FormControl>
                                     <FormDescription>
                                       {t(
-                                        'Custom API base URL. For official channels, AI Hub has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.'
+                                        'Custom API base URL. For official channels, AI Gateway has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.'
                                       )}
                                     </FormDescription>
                                     <FormMessage />

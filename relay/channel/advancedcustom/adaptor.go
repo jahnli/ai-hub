@@ -209,7 +209,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
 
-func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIHubError) {
+func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIGatewayError) {
 	if err := a.resolve(c, info); err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}
@@ -251,7 +251,7 @@ func (a *Adaptor) GetChannelName() string {
 	return ChannelName
 }
 
-func (a *Adaptor) doNativeResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (any, *types.AIHubError) {
+func (a *Adaptor) doNativeResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (any, *types.AIGatewayError) {
 	switch info.RelayFormat {
 	case types.RelayFormatClaude:
 		return a.claudeAdaptor.DoResponse(c, resp, info)

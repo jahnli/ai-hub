@@ -42,7 +42,7 @@ func EnableChannel(channelId int, usingKey string, channelName string) {
 	}
 }
 
-func ShouldDisableChannel(err *types.AIHubError) bool {
+func ShouldDisableChannel(err *types.AIGatewayError) bool {
 	if !common.AutomaticDisableChannelEnabled {
 		return false
 	}
@@ -64,11 +64,11 @@ func ShouldDisableChannel(err *types.AIHubError) bool {
 	return search
 }
 
-func ShouldEnableChannel(AIHubError *types.AIHubError, status int) bool {
+func ShouldEnableChannel(AIGatewayError *types.AIGatewayError, status int) bool {
 	if !common.AutomaticEnableChannelEnabled {
 		return false
 	}
-	if AIHubError != nil {
+	if AIGatewayError != nil {
 		return false
 	}
 	if status != common.ChannelStatusAutoDisabled {

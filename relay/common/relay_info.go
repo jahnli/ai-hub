@@ -150,7 +150,7 @@ type RelayInfo struct {
 	IsClaudeBetaQuery                     bool // /v1/messages?beta=true
 	IsChannelTest                         bool // channel test request
 	RetryIndex                            int
-	LastError                             *types.AIHubError
+	LastError                             *types.AIGatewayError
 	RuntimeHeadersOverride                map[string]interface{}
 	UseRuntimeHeadersOverride             bool
 	ParamOverrideAudit                    []string

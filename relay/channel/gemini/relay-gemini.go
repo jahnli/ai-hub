@@ -1341,7 +1341,7 @@ func handleFinalStream(c *gin.Context, info *relaycommon.RelayInfo, resp *dto.Ch
 	return nil
 }
 
-func geminiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response, callback func(data string, geminiResponse *dto.GeminiChatResponse) bool) (*dto.Usage, *types.AIHubError) {
+func geminiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response, callback func(data string, geminiResponse *dto.GeminiChatResponse) bool) (*dto.Usage, *types.AIGatewayError) {
 	var usage = &dto.Usage{}
 	var imageCount int
 	responseText := strings.Builder{}
@@ -1397,7 +1397,7 @@ func geminiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 	return usage, nil
 }
 
-func GeminiChatStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIHubError) {
+func GeminiChatStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIGatewayError) {
 	id := helper.GetResponseID(c)
 	createAt := common.GetTimestamp()
 	finishReason := constant.FinishReasonStop
@@ -1501,7 +1501,7 @@ func GeminiChatStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *
 	return usage, nil
 }
 
-func GeminiChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIHubError) {
+func GeminiChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIGatewayError) {
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
@@ -1516,34 +1516,34 @@ func GeminiChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.R
 	if len(geminiResponse.Candidates) == 0 {
 		usage := buildUsageFromGeminiMetadata(geminiResponse.UsageMetadata, info.GetEstimatePromptTokens())
 
-		var AIHubError *types.AIHubError
+		var AIGatewayError *types.AIGatewayError
 		if geminiResponse.PromptFeedback != nil && geminiResponse.PromptFeedback.BlockReason != nil {
 			common.SetContextKey(c, constant.ContextKeyAdminRejectReason, fmt.Sprintf("gemini_block_reason=%s", *geminiResponse.PromptFeedback.BlockReason))
-			AIHubError = types.NewOpenAIError(
+			AIGatewayError = types.NewOpenAIError(
 				errors.New("request blocked by Gemini API: "+*geminiResponse.PromptFeedback.BlockReason),
 				types.ErrorCodePromptBlocked,
 				http.StatusBadRequest,
 			)
 		} else {
 			common.SetContextKey(c, constant.ContextKeyAdminRejectReason, "gemini_empty_candidates")
-			AIHubError = types.NewOpenAIError(
+			AIGatewayError = types.NewOpenAIError(
 				errors.New("empty response from Gemini API"),
 				types.ErrorCodeEmptyResponse,
 				http.StatusInternalServerError,
 			)
 		}
 
-		service.ResetStatusCode(AIHubError, c.GetString("status_code_mapping"))
+		service.ResetStatusCode(AIGatewayError, c.GetString("status_code_mapping"))
 
 		switch info.RelayFormat {
 		case types.RelayFormatClaude:
-			c.JSON(AIHubError.StatusCode, gin.H{
+			c.JSON(AIGatewayError.StatusCode, gin.H{
 				"type":  "error",
-				"error": AIHubError.ToClaudeError(),
+				"error": AIGatewayError.ToClaudeError(),
 			})
 		default:
-			c.JSON(AIHubError.StatusCode, gin.H{
-				"error": AIHubError.ToOpenAIError(),
+			c.JSON(AIGatewayError.StatusCode, gin.H{
+				"error": AIGatewayError.ToOpenAIError(),
 			})
 		}
 		return &usage, nil
@@ -1576,7 +1576,7 @@ func GeminiChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.R
 	return &usage, nil
 }
 
-func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIHubError) {
+func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIGatewayError) {
 	defer service.CloseResponseBodyGracefully(resp)
 
 	responseBody, readErr := io.ReadAll(resp.Body)
@@ -1621,7 +1621,7 @@ func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *h
 	return usage, nil
 }
 
-func GeminiImageHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIHubError) {
+func GeminiImageHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIGatewayError) {
 	responseBody, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, types.NewOpenAIError(readErr, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)

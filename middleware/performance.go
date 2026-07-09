@@ -38,7 +38,7 @@ func SystemPerformanceCheck() gin.HandlerFunc {
 }
 
 // checkSystemPerformance 检查系统性能是否超过阈值
-func checkSystemPerformance() *types.AIHubError {
+func checkSystemPerformance() *types.AIGatewayError {
 	config := common.GetPerformanceMonitorConfig()
 	if !config.Enabled {
 		return nil

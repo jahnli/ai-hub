@@ -27,7 +27,7 @@ import {
 const defaultSiteSettings: SiteSettings = {
   'theme.frontend': 'default',
   Notice: '',
-  SystemName: 'AI Hub',
+  SystemName: 'AI Gateway',
   Logo: '',
   Footer: '',
   About: '',

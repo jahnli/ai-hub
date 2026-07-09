@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 
 	audioReq, ok := info.Request.(*dto.AudioRequest)
@@ -54,18 +54,18 @@ func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		if httpResp.StatusCode != http.StatusOK {
-			AIHubError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			AIGatewayError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
-			service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-			return AIHubError
+			service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+			return AIGatewayError
 		}
 	}
 
-	usage, AIHubError := adaptor.DoResponse(c, httpResp, info)
-	if AIHubError != nil {
+	usage, AIGatewayError := adaptor.DoResponse(c, httpResp, info)
+	if AIGatewayError != nil {
 		// reset status code 重置状态码
-		service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-		return AIHubError
+		service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+		return AIGatewayError
 	}
 	if usage.(*dto.Usage).CompletionTokenDetails.AudioTokens > 0 || usage.(*dto.Usage).PromptTokensDetails.AudioTokens > 0 {
 		service.PostAudioConsumeQuota(c, info, usage.(*dto.Usage), "")

@@ -116,7 +116,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
 
-func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIHubError) {
+func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIGatewayError) {
 	info.FinalRequestRelayFormat = types.RelayFormatClaude
 	if info.IsStream {
 		return ClaudeStreamHandler(c, resp, info)

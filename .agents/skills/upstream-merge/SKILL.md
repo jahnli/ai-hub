@@ -256,7 +256,7 @@ git diff HEAD upstream/main -- <file-path>
    典型案例：上游将 `testChannel()` 添加了 `ctx` 参数并重构了调用链，冲突解决时保留本地版本导致新函数 `runChannelTestTask` 未定义、编译失败
 
 2. **上游在同一文件中同时包含品牌重命名和功能改动**
-   冲突解决时容易只关注品牌差异（如 `NewAPIError` → `AIHubError`）而忽略同文件中的逻辑变更（如删除旧函数、新增替代函数）
+   冲突解决时容易只关注品牌差异（如 `NewAPIError` → `AIGatewayError`）而忽略同文件中的逻辑变更（如删除旧函数、新增替代函数）
 
 3. **跨文件依赖断裂**
    文件 A（如 `system_task_handlers.go`）无冲突被自动合并，其中调用了新函数 `runChannelTestTask`。但定义该函数的文件 B（如 `channel-test.go`）有冲突，解决冲突时保留了旧版本，导致函数定义缺失

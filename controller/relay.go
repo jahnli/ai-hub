@@ -32,8 +32,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func relayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.AIHubError {
-	var err *types.AIHubError
+func relayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.AIGatewayError {
+	var err *types.AIGatewayError
 	switch info.RelayMode {
 	case relayconstant.RelayModeImagesGenerations, relayconstant.RelayModeImagesEdits:
 		err = relay.ImageHelper(c, info)
@@ -55,8 +55,8 @@ func relayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.AIHubError
 	return err
 }
 
-func geminiRelayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.AIHubError {
-	var err *types.AIHubError
+func geminiRelayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.AIGatewayError {
+	var err *types.AIGatewayError
 	if strings.Contains(c.Request.URL.Path, "embed") {
 		err = relay.GeminiEmbeddingHandler(c, info)
 	} else {
@@ -72,7 +72,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	//originalModel := common.GetContextKeyString(c, constant.ContextKeyOriginalModel)
 
 	var (
-		AIHubError *types.AIHubError
+		AIGatewayError *types.AIGatewayError
 		ws          *websocket.Conn
 	)
 
@@ -87,20 +87,20 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	defer func() {
-		if AIHubError != nil {
-			logger.LogError(c, fmt.Sprintf("relay error: %s", common.LocalLogPreview(AIHubError.Error())))
-			AIHubError.SetMessage(common.MessageWithRequestId(AIHubError.Error(), requestId))
+		if AIGatewayError != nil {
+			logger.LogError(c, fmt.Sprintf("relay error: %s", common.LocalLogPreview(AIGatewayError.Error())))
+			AIGatewayError.SetMessage(common.MessageWithRequestId(AIGatewayError.Error(), requestId))
 			switch relayFormat {
 			case types.RelayFormatOpenAIRealtime:
-				helper.WssError(c, ws, AIHubError.ToOpenAIError())
+				helper.WssError(c, ws, AIGatewayError.ToOpenAIError())
 			case types.RelayFormatClaude:
-				c.JSON(AIHubError.StatusCode, gin.H{
+				c.JSON(AIGatewayError.StatusCode, gin.H{
 					"type":  "error",
-					"error": AIHubError.ToClaudeError(),
+					"error": AIGatewayError.ToClaudeError(),
 				})
 			default:
-				c.JSON(AIHubError.StatusCode, gin.H{
-					"error": AIHubError.ToOpenAIError(),
+				c.JSON(AIGatewayError.StatusCode, gin.H{
+					"error": AIGatewayError.ToOpenAIError(),
 				})
 			}
 		}
@@ -110,16 +110,16 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	if err != nil {
 		// Map "request body too large" to 413 so clients can handle it correctly
 		if common.IsRequestBodyTooLargeError(err) || errors.Is(err, common.ErrRequestBodyTooLarge) {
-			AIHubError = types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusRequestEntityTooLarge, types.ErrOptionWithSkipRetry())
+			AIGatewayError = types.NewErrorWithStatusCode(err, types.ErrorCodeReadRequestBodyFailed, http.StatusRequestEntityTooLarge, types.ErrOptionWithSkipRetry())
 		} else {
-			AIHubError = types.NewError(err, types.ErrorCodeInvalidRequest)
+			AIGatewayError = types.NewError(err, types.ErrorCodeInvalidRequest)
 		}
 		return
 	}
 
 	relayInfo, err := relaycommon.GenRelayInfo(c, relayFormat, request, ws)
 	if err != nil {
-		AIHubError = types.NewError(err, types.ErrorCodeGenRelayInfoFailed)
+		AIGatewayError = types.NewError(err, types.ErrorCodeGenRelayInfoFailed)
 		return
 	}
 
@@ -139,14 +139,14 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		contains, words := service.CheckSensitiveText(meta.CombineText)
 		if contains {
 			logger.LogWarn(c, fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", ")))
-			AIHubError = types.NewError(err, types.ErrorCodeSensitiveWordsDetected)
+			AIGatewayError = types.NewError(err, types.ErrorCodeSensitiveWordsDetected)
 			return
 		}
 	}
 
 	tokens, err := service.EstimateRequestToken(c, meta, relayInfo)
 	if err != nil {
-		AIHubError = types.NewError(err, types.ErrorCodeCountTokenFailed)
+		AIGatewayError = types.NewError(err, types.ErrorCodeCountTokenFailed)
 		return
 	}
 
@@ -154,7 +154,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	priceData, err := helper.ModelPriceHelper(c, relayInfo, tokens, meta)
 	if err != nil {
-		AIHubError = types.NewError(err, types.ErrorCodeModelPriceError, types.ErrOptionWithStatusCode(http.StatusBadRequest))
+		AIGatewayError = types.NewError(err, types.ErrorCodeModelPriceError, types.ErrOptionWithStatusCode(http.StatusBadRequest))
 		return
 	}
 
@@ -163,20 +163,20 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	if priceData.FreeModel {
 		logger.LogInfo(c, fmt.Sprintf("模型 %s 免费，跳过预扣费", relayInfo.OriginModelName))
 	} else {
-		AIHubError = service.PreConsumeBilling(c, priceData.QuotaToPreConsume, relayInfo)
-		if AIHubError != nil {
+		AIGatewayError = service.PreConsumeBilling(c, priceData.QuotaToPreConsume, relayInfo)
+		if AIGatewayError != nil {
 			return
 		}
 	}
 
 	defer func() {
 		// Only return quota if downstream failed and quota was actually pre-consumed
-		if AIHubError != nil {
-			AIHubError = service.NormalizeViolationFeeError(AIHubError)
+		if AIGatewayError != nil {
+			AIGatewayError = service.NormalizeViolationFeeError(AIGatewayError)
 			if relayInfo.Billing != nil {
 				relayInfo.Billing.Refund(c)
 			}
-			service.ChargeViolationFeeIfNeeded(c, relayInfo, AIHubError)
+			service.ChargeViolationFeeIfNeeded(c, relayInfo, AIGatewayError)
 		}
 	}()
 
@@ -195,7 +195,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		channel, channelErr := getChannel(c, relayInfo, retryParam)
 		if channelErr != nil {
 			logger.LogError(c, channelErr.Error())
-			AIHubError = channelErr
+			AIGatewayError = channelErr
 			break
 		}
 
@@ -204,9 +204,9 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		if bodyErr != nil {
 			// Ensure consistent 413 for oversized bodies even when error occurs later (e.g., retry path)
 			if common.IsRequestBodyTooLargeError(bodyErr) || errors.Is(bodyErr, common.ErrRequestBodyTooLarge) {
-				AIHubError = types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusRequestEntityTooLarge, types.ErrOptionWithSkipRetry())
+				AIGatewayError = types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusRequestEntityTooLarge, types.ErrOptionWithSkipRetry())
 			} else {
-				AIHubError = types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+				AIGatewayError = types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 			}
 			break
 		}
@@ -214,26 +214,26 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 		switch relayFormat {
 		case types.RelayFormatOpenAIRealtime:
-			AIHubError = relay.WssHelper(c, relayInfo)
+			AIGatewayError = relay.WssHelper(c, relayInfo)
 		case types.RelayFormatClaude:
-			AIHubError = relay.ClaudeHelper(c, relayInfo)
+			AIGatewayError = relay.ClaudeHelper(c, relayInfo)
 		case types.RelayFormatGemini:
-			AIHubError = geminiRelayHandler(c, relayInfo)
+			AIGatewayError = geminiRelayHandler(c, relayInfo)
 		default:
-			AIHubError = relayHandler(c, relayInfo)
+			AIGatewayError = relayHandler(c, relayInfo)
 		}
 
-		if AIHubError == nil {
+		if AIGatewayError == nil {
 			relayInfo.LastError = nil
 			return
 		}
 
-		AIHubError = service.NormalizeViolationFeeError(AIHubError)
-		relayInfo.LastError = AIHubError
+		AIGatewayError = service.NormalizeViolationFeeError(AIGatewayError)
+		relayInfo.LastError = AIGatewayError
 
-		processChannelError(c, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, common.GetContextKeyString(c, constant.ContextKeyChannelKey), channel.GetAutoBan()), AIHubError)
+		processChannelError(c, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, common.GetContextKeyString(c, constant.ContextKeyChannelKey), channel.GetAutoBan()), AIGatewayError)
 
-		if !shouldRetry(c, AIHubError, common.RetryTimes-retryParam.GetRetry()) {
+		if !shouldRetry(c, AIGatewayError, common.RetryTimes-retryParam.GetRetry()) {
 			break
 		}
 	}
@@ -243,7 +243,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		retryLogStr := fmt.Sprintf("重试：%s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
 		logger.LogInfo(c, retryLogStr)
 	}
-	if AIHubError != nil {
+	if AIGatewayError != nil {
 		gopool.Go(func() {
 			perfmetrics.RecordRelaySample(relayInfo, false, 0)
 		})
@@ -292,7 +292,7 @@ func fastTokenCountMetaForPricing(request dto.Request) *types.TokenCountMeta {
 	return meta
 }
 
-func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service.RetryParam) (*model.Channel, *types.AIHubError) {
+func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service.RetryParam) (*model.Channel, *types.AIGatewayError) {
 	if info.ChannelMeta == nil {
 		autoBan := c.GetBool("auto_ban")
 		autoBanInt := 1
@@ -317,14 +317,14 @@ func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service
 		return nil, types.NewError(fmt.Errorf("分组 %s 下模型 %s 的可用渠道不存在（retry）", selectGroup, info.OriginModelName), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
 	}
 
-	AIHubError := middleware.SetupContextForSelectedChannel(c, channel, info.OriginModelName)
-	if AIHubError != nil {
-		return nil, AIHubError
+	AIGatewayError := middleware.SetupContextForSelectedChannel(c, channel, info.OriginModelName)
+	if AIGatewayError != nil {
+		return nil, AIGatewayError
 	}
 	return channel, nil
 }
 
-func shouldRetry(c *gin.Context, openaiErr *types.AIHubError, retryTimes int) bool {
+func shouldRetry(c *gin.Context, openaiErr *types.AIGatewayError, retryTimes int) bool {
 	if openaiErr == nil {
 		return false
 	}
@@ -356,7 +356,7 @@ func shouldRetry(c *gin.Context, openaiErr *types.AIHubError, retryTimes int) bo
 	return operation_setting.ShouldRetryByStatusCode(code)
 }
 
-func processChannelError(c *gin.Context, channelError types.ChannelError, err *types.AIHubError) {
+func processChannelError(c *gin.Context, channelError types.ChannelError, err *types.AIGatewayError) {
 	logger.LogError(c, fmt.Sprintf("channel error (channel #%d, status code: %d): %s", channelError.ChannelId, err.StatusCode, common.LocalLogPreview(err.Error())))
 	// 不要使用context获取渠道信息，异步处理时可能会出现渠道信息不一致的情况
 	// do not use context to get channel info, there may be inconsistent channel info when processing asynchronously
@@ -449,7 +449,7 @@ func RelayMidjourney(c *gin.Context) {
 func RelayNotImplemented(c *gin.Context) {
 	err := types.OpenAIError{
 		Message: "API not implemented",
-		Type:    "ai_hub_error",
+		Type:    "ai_gateway_error",
 		Param:   "",
 		Code:    "api_not_implemented",
 	}
@@ -529,7 +529,7 @@ func RelayTask(c *gin.Context) {
 				}
 			}
 		} else {
-			var channelErr *types.AIHubError
+			var channelErr *types.AIGatewayError
 			channel, channelErr = getChannel(c, relayInfo, retryParam)
 			if channelErr != nil {
 				logger.LogError(c, channelErr.Error())

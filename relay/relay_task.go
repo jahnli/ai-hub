@@ -90,9 +90,9 @@ func ResolveOriginTask(c *gin.Context, info *relaycommon.RelayInfo) *dto.TaskErr
 	info.LockedChannel = ch
 
 	if originTask.ChannelId != info.ChannelId {
-		key, _, AIHubError := ch.GetNextEnabledKey()
-		if AIHubError != nil {
-			return service.TaskErrorWrapper(AIHubError, "channel_no_available_key", AIHubError.StatusCode)
+		key, _, AIGatewayError := ch.GetNextEnabledKey()
+		if AIGatewayError != nil {
+			return service.TaskErrorWrapper(AIGatewayError, "channel_no_available_key", AIGatewayError.StatusCode)
 		}
 		common.SetContextKey(c, constant.ContextKeyChannelKey, key)
 		common.SetContextKey(c, constant.ContextKeyChannelType, ch.Type)

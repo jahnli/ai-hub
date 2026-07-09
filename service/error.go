@@ -43,7 +43,7 @@ func MidjourneyErrorWithStatusCodeWrapper(code int, desc string, statusCode int)
 //	}
 //	openAIError := dto.OpenAIError{
 //		Message: text,
-//		Type:    "ai_hub_error",
+//		Type:    "ai_gateway_error",
 //		Code:    code,
 //	}
 //	return &dto.OpenAIErrorWithStatusCode{
@@ -69,7 +69,7 @@ func ClaudeErrorWrapper(err error, code string, statusCode int) *dto.ClaudeError
 	}
 	claudeError := types.ClaudeError{
 		Message: text,
-		Type:    "ai_hub_error",
+		Type:    "ai_gateway_error",
 	}
 	return &dto.ClaudeErrorWithStatusCode{
 		Error:      claudeError,
@@ -83,7 +83,7 @@ func ClaudeErrorWrapperLocal(err error, code string, statusCode int) *dto.Claude
 	return claudeErr
 }
 
-func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFail bool) (newApiErr *types.AIHubError) {
+func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFail bool) (newApiErr *types.AIGatewayError) {
 	newApiErr = types.InitOpenAIError(types.ErrorCodeBadResponseStatusCode, resp.StatusCode)
 
 	responseBody, err := io.ReadAll(resp.Body)
@@ -130,7 +130,7 @@ func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFai
 	return
 }
 
-func ResetStatusCode(newApiErr *types.AIHubError, statusCodeMappingStr string) {
+func ResetStatusCode(newApiErr *types.AIGatewayError, statusCodeMappingStr string) {
 	if newApiErr == nil {
 		return
 	}
@@ -209,8 +209,8 @@ func TaskErrorWrapper(err error, code string, statusCode int) *dto.TaskError {
 	return taskError
 }
 
-// TaskErrorFromAPIError 将 PreConsumeBilling 返回的 AIHubError 转换为 TaskError。
-func TaskErrorFromAPIError(apiErr *types.AIHubError) *dto.TaskError {
+// TaskErrorFromAPIError 将 PreConsumeBilling 返回的 AIGatewayError 转换为 TaskError。
+func TaskErrorFromAPIError(apiErr *types.AIGatewayError) *dto.TaskError {
 	if apiErr == nil {
 		return nil
 	}

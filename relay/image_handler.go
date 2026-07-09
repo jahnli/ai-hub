@@ -69,7 +69,7 @@ func buildImageGenerationDetails(request *dto.ImageRequest, imageCount uint, qua
 	return details
 }
 
-func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 
 	imageReq, ok := info.Request.(*dto.ImageRequest)
@@ -121,7 +121,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types
 			if len(info.ParamOverride) > 0 {
 				jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 				if err != nil {
-					return AIHubErrorFromParamOverride(err)
+					return AIGatewayErrorFromParamOverride(err)
 				}
 			}
 
@@ -152,19 +152,19 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types
 				// replicate channel returns 201 Created when using Prefer: wait, treat it as success.
 				httpResp.StatusCode = http.StatusOK
 			} else {
-				AIHubError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+				AIGatewayError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 				// reset status code 重置状态码
-				service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-				return AIHubError
+				service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+				return AIGatewayError
 			}
 		}
 	}
 
-	usage, AIHubError := adaptor.DoResponse(c, httpResp, info)
-	if AIHubError != nil {
+	usage, AIGatewayError := adaptor.DoResponse(c, httpResp, info)
+	if AIGatewayError != nil {
 		// reset status code 重置状态码
-		service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-		return AIHubError
+		service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+		return AIGatewayError
 	}
 
 	imageN := uint(1)

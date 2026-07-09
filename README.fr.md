@@ -1,8 +1,8 @@
 <div align="center">
 
-![AI Hub](/web/default/public/logo.png)
+![AI Gateway](/web/default/public/logo.png)
 
-# AI Hub
+# AI Gateway
 
 🍥 **Passerelle de modèles étendus de nouvelle génération et système de gestion d'actifs d'IA**
 

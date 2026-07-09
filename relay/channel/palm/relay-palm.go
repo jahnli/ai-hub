@@ -50,7 +50,7 @@ func streamResponsePaLM2OpenAI(palmResponse *PaLMChatResponse) *dto.ChatCompleti
 	return &response
 }
 
-func palmStreamHandler(c *gin.Context, resp *http.Response) (*types.AIHubError, string) {
+func palmStreamHandler(c *gin.Context, resp *http.Response) (*types.AIGatewayError, string) {
 	responseText := ""
 	responseId := helper.GetResponseID(c)
 	createdTime := common.GetTimestamp()
@@ -101,7 +101,7 @@ func palmStreamHandler(c *gin.Context, resp *http.Response) (*types.AIHubError, 
 	return nil, responseText
 }
 
-func palmHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIHubError) {
+func palmHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIGatewayError) {
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)

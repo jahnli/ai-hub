@@ -123,7 +123,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	return resp, nil
 }
 
-func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIHubError) {
+func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIGatewayError) {
 	if info.RelayMode == relayconstant.RelayModeImagesGenerations {
 		usage, err = jimengImageHandler(c, resp, info)
 	} else if info.IsStream {

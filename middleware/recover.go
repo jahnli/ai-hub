@@ -18,7 +18,7 @@ func RelayPanicRecover() gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": gin.H{
 						"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/QuantumNous/ai-hub", err),
-						"type":    "ai_hub_panic",
+						"type":    "ai_gateway_panic",
 					},
 				})
 				c.Abort()

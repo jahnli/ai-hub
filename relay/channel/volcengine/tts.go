@@ -142,7 +142,7 @@ func getContentTypeByEncoding(encoding string) string {
 	return "application/octet-stream"
 }
 
-func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, encoding string) (usage any, err *types.AIHubError) {
+func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, encoding string) (usage any, err *types.AIGatewayError) {
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, types.NewErrorWithStatusCode(
@@ -196,7 +196,7 @@ func generateRequestID() string {
 	return uuid.New().String()
 }
 
-func handleTTSWebSocketResponse(c *gin.Context, requestURL string, volcRequest VolcengineTTSRequest, info *relaycommon.RelayInfo, encoding string) (usage any, err *types.AIHubError) {
+func handleTTSWebSocketResponse(c *gin.Context, requestURL string, volcRequest VolcengineTTSRequest, info *relaycommon.RelayInfo, encoding string) (usage any, err *types.AIGatewayError) {
 	_, token, parseErr := parseVolcengineAuth(info.ApiKey)
 	if parseErr != nil {
 		return nil, types.NewErrorWithStatusCode(

@@ -154,7 +154,7 @@ const skipPatterns = [
   /^"default/, /^\/status\//, /^\/your\//, /^example\.com/,
   /^AZURE_/, /^AccessKey/, /^OAuth/, /^Client /, /^Webhook URL/,
   /^API URL$/, /^Well-Known/, /^Worker URL$/, /^Uptime Kuma/,
-  /^AI Hub/, /^Baidu V2$/, /^Zhipu V4$/, /^Quota:$/,
+  /^AI Gateway/, /^Baidu V2$/, /^Zhipu V4$/, /^Quota:$/,
 ]
 
 const brandNames = new Set([

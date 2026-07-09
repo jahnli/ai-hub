@@ -21,25 +21,25 @@ func PlaygroundImage(c *gin.Context) {
 }
 
 func playgroundRelay(c *gin.Context, relayFormat types.RelayFormat) {
-	var AIHubError *types.AIHubError
+	var AIGatewayError *types.AIGatewayError
 
 	defer func() {
-		if AIHubError != nil {
-			c.JSON(AIHubError.StatusCode, gin.H{
-				"error": AIHubError.ToOpenAIError(),
+		if AIGatewayError != nil {
+			c.JSON(AIGatewayError.StatusCode, gin.H{
+				"error": AIGatewayError.ToOpenAIError(),
 			})
 		}
 	}()
 
 	useAccessToken := c.GetBool("use_access_token")
 	if useAccessToken {
-		AIHubError = types.NewError(errors.New("暂不支持使用 access token"), types.ErrorCodeAccessDenied, types.ErrOptionWithSkipRetry())
+		AIGatewayError = types.NewError(errors.New("暂不支持使用 access token"), types.ErrorCodeAccessDenied, types.ErrOptionWithSkipRetry())
 		return
 	}
 
 	relayInfo, err := relaycommon.GenRelayInfo(c, relayFormat, nil, nil)
 	if err != nil {
-		AIHubError = types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+		AIGatewayError = types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 		return
 	}
 
@@ -48,7 +48,7 @@ func playgroundRelay(c *gin.Context, relayFormat types.RelayFormat) {
 	// Write user context to ensure acceptUnsetRatio is available
 	userCache, err := model.GetUserCache(userId)
 	if err != nil {
-		AIHubError = types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
+		AIGatewayError = types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
 		return
 	}
 	userCache.WriteContext(c)

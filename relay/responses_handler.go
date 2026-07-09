@@ -20,7 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 	if info.RelayMode == relayconstant.RelayModeResponsesCompact {
 		switch info.ApiType {
@@ -98,7 +98,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *t
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 			if err != nil {
-				return AIHubErrorFromParamOverride(err)
+				return AIGatewayErrorFromParamOverride(err)
 			}
 		}
 
@@ -125,18 +125,18 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *t
 		httpResp = resp.(*http.Response)
 
 		if httpResp.StatusCode != http.StatusOK {
-			AIHubError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			AIGatewayError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
-			service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-			return AIHubError
+			service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+			return AIGatewayError
 		}
 	}
 
-	usage, AIHubError := adaptor.DoResponse(c, httpResp, info)
-	if AIHubError != nil {
+	usage, AIGatewayError := adaptor.DoResponse(c, httpResp, info)
+	if AIGatewayError != nil {
 		// reset status code 重置状态码
-		service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-		return AIHubError
+		service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+		return AIGatewayError
 	}
 
 	usageDto := usage.(*dto.Usage)

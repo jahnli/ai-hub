@@ -51,7 +51,7 @@ func trimModelThinking(modelName string) string {
 	return modelName
 }
 
-func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 
 	geminiReq, ok := info.Request.(*dto.GeminiChatRequest)
@@ -158,7 +158,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *type
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 			if err != nil {
-				return AIHubErrorFromParamOverride(err)
+				return AIGatewayErrorFromParamOverride(err)
 			}
 		}
 
@@ -187,10 +187,10 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *type
 		httpResp = resp.(*http.Response)
 		info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
 		if httpResp.StatusCode != http.StatusOK {
-			AIHubError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			AIGatewayError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
-			service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-			return AIHubError
+			service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+			return AIGatewayError
 		}
 	}
 
@@ -204,7 +204,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *type
 	return nil
 }
 
-func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 
 	isBatch := strings.HasSuffix(c.Request.URL.Path, "batchEmbedContents")
@@ -265,7 +265,7 @@ func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (AIHubE
 	if len(info.ParamOverride) > 0 {
 		jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 		if err != nil {
-			return AIHubErrorFromParamOverride(err)
+			return AIGatewayErrorFromParamOverride(err)
 		}
 	}
 	logger.LogDebug(c, "Gemini embedding request body: %s", jsonData)
@@ -289,9 +289,9 @@ func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (AIHubE
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		if httpResp.StatusCode != http.StatusOK {
-			AIHubError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
-			service.ResetStatusCode(AIHubError, statusCodeMappingStr)
-			return AIHubError
+			AIGatewayError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			service.ResetStatusCode(AIGatewayError, statusCodeMappingStr)
+			return AIGatewayError
 		}
 	}
 

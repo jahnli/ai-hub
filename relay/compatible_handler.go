@@ -22,7 +22,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.AIHubError) {
+func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *types.AIGatewayError) {
 	info.InitChannelMeta(c)
 
 	textReq, ok := info.Request.(*dto.GeneralOpenAIRequest)
@@ -169,7 +169,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIHubError *types.
 		if len(info.ParamOverride) > 0 {
 			jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
 			if err != nil {
-				return AIHubErrorFromParamOverride(err)
+				return AIGatewayErrorFromParamOverride(err)
 			}
 		}
 

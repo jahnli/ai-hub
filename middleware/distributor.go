@@ -440,7 +440,7 @@ func getTaskOriginModelName(c *gin.Context) string {
 	return ""
 }
 
-func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) *types.AIHubError {
+func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) *types.AIGatewayError {
 	c.Set("original_model", modelName) // for retry
 	if channel == nil {
 		return types.NewError(errors.New("channel is nil"), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
@@ -465,9 +465,9 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	common.SetContextKey(c, constant.ContextKeyChannelModelMapping, channel.GetModelMapping())
 	common.SetContextKey(c, constant.ContextKeyChannelStatusCodeMapping, channel.GetStatusCodeMapping())
 
-	key, index, AIHubError := channel.GetNextEnabledKey()
-	if AIHubError != nil {
-		return AIHubError
+	key, index, AIGatewayError := channel.GetNextEnabledKey()
+	if AIGatewayError != nil {
+		return AIGatewayError
 	}
 	if channel.ChannelInfo.IsMultiKey {
 		common.SetContextKey(c, constant.ContextKeyChannelIsMultiKey, true)

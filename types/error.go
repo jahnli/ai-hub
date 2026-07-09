@@ -26,7 +26,7 @@ type ClaudeError struct {
 type ErrorType string
 
 const (
-	ErrorTypeAIHubError     ErrorType = "ai_hub_error"
+	ErrorTypeAIGatewayError     ErrorType = "ai_gateway_error"
 	ErrorTypeOpenAIError     ErrorType = "openai_error"
 	ErrorTypeClaudeError     ErrorType = "claude_error"
 	ErrorTypeMidjourneyError ErrorType = "midjourney_error"
@@ -87,7 +87,7 @@ const (
 	ErrorCodePreConsumeTokenQuotaFailed ErrorCode = "pre_consume_token_quota_failed"
 )
 
-type AIHubError struct {
+type AIGatewayError struct {
 	Err            error
 	RelayError     any
 	skipRetry      bool
@@ -98,29 +98,29 @@ type AIHubError struct {
 	Metadata       json.RawMessage
 }
 
-// Unwrap enables errors.Is / errors.As to work with AIHubError by exposing the underlying error.
-func (e *AIHubError) Unwrap() error {
+// Unwrap enables errors.Is / errors.As to work with AIGatewayError by exposing the underlying error.
+func (e *AIGatewayError) Unwrap() error {
 	if e == nil {
 		return nil
 	}
 	return e.Err
 }
 
-func (e *AIHubError) GetErrorCode() ErrorCode {
+func (e *AIGatewayError) GetErrorCode() ErrorCode {
 	if e == nil {
 		return ""
 	}
 	return e.errorCode
 }
 
-func (e *AIHubError) GetErrorType() ErrorType {
+func (e *AIGatewayError) GetErrorType() ErrorType {
 	if e == nil {
 		return ""
 	}
 	return e.errorType
 }
 
-func (e *AIHubError) Error() string {
+func (e *AIGatewayError) Error() string {
 	if e == nil {
 		return ""
 	}
@@ -131,7 +131,7 @@ func (e *AIHubError) Error() string {
 	return e.Err.Error()
 }
 
-func (e *AIHubError) ErrorWithStatusCode() string {
+func (e *AIGatewayError) ErrorWithStatusCode() string {
 	if e == nil {
 		return ""
 	}
@@ -145,7 +145,7 @@ func (e *AIHubError) ErrorWithStatusCode() string {
 	return fmt.Sprintf("status_code=%d, %s", e.StatusCode, msg)
 }
 
-func (e *AIHubError) MaskSensitiveError() string {
+func (e *AIGatewayError) MaskSensitiveError() string {
 	if e == nil {
 		return ""
 	}
@@ -159,7 +159,7 @@ func (e *AIHubError) MaskSensitiveError() string {
 	return common.MaskSensitiveInfo(errStr)
 }
 
-func (e *AIHubError) MaskSensitiveErrorWithStatusCode() string {
+func (e *AIGatewayError) MaskSensitiveErrorWithStatusCode() string {
 	if e == nil {
 		return ""
 	}
@@ -173,11 +173,11 @@ func (e *AIHubError) MaskSensitiveErrorWithStatusCode() string {
 	return fmt.Sprintf("status_code=%d, %s", e.StatusCode, msg)
 }
 
-func (e *AIHubError) SetMessage(message string) {
+func (e *AIGatewayError) SetMessage(message string) {
 	e.Err = errors.New(message)
 }
 
-func (e *AIHubError) ToOpenAIError() OpenAIError {
+func (e *AIGatewayError) ToOpenAIError() OpenAIError {
 	var result OpenAIError
 	switch e.errorType {
 	case ErrorTypeOpenAIError:
@@ -210,7 +210,7 @@ func (e *AIHubError) ToOpenAIError() OpenAIError {
 	return result
 }
 
-func (e *AIHubError) ToClaudeError() ClaudeError {
+func (e *AIGatewayError) ToClaudeError() ClaudeError {
 	var result ClaudeError
 	switch e.errorType {
 	case ErrorTypeOpenAIError:
@@ -239,10 +239,10 @@ func (e *AIHubError) ToClaudeError() ClaudeError {
 	return result
 }
 
-type AIHubErrorOptions func(*AIHubError)
+type AIGatewayErrorOptions func(*AIGatewayError)
 
-func NewError(err error, errorCode ErrorCode, ops ...AIHubErrorOptions) *AIHubError {
-	var newErr *AIHubError
+func NewError(err error, errorCode ErrorCode, ops ...AIGatewayErrorOptions) *AIGatewayError {
+	var newErr *AIGatewayError
 	// 保留深层传递的 new err
 	if errors.As(err, &newErr) {
 		for _, op := range ops {
@@ -250,10 +250,10 @@ func NewError(err error, errorCode ErrorCode, ops ...AIHubErrorOptions) *AIHubEr
 		}
 		return newErr
 	}
-	e := &AIHubError{
+	e := &AIGatewayError{
 		Err:        err,
 		RelayError: nil,
-		errorType:  ErrorTypeAIHubError,
+		errorType:  ErrorTypeAIGatewayError,
 		StatusCode: http.StatusInternalServerError,
 		errorCode:  errorCode,
 	}
@@ -263,8 +263,8 @@ func NewError(err error, errorCode ErrorCode, ops ...AIHubErrorOptions) *AIHubEr
 	return e
 }
 
-func NewOpenAIError(err error, errorCode ErrorCode, statusCode int, ops ...AIHubErrorOptions) *AIHubError {
-	var newErr *AIHubError
+func NewOpenAIError(err error, errorCode ErrorCode, statusCode int, ops ...AIGatewayErrorOptions) *AIGatewayError {
+	var newErr *AIGatewayError
 	// 保留深层传递的 new err
 	if errors.As(err, &newErr) {
 		if newErr.RelayError == nil {
@@ -288,7 +288,7 @@ func NewOpenAIError(err error, errorCode ErrorCode, statusCode int, ops ...AIHub
 	return WithOpenAIError(openaiError, statusCode, ops...)
 }
 
-func InitOpenAIError(errorCode ErrorCode, statusCode int, ops ...AIHubErrorOptions) *AIHubError {
+func InitOpenAIError(errorCode ErrorCode, statusCode int, ops ...AIGatewayErrorOptions) *AIGatewayError {
 	openaiError := OpenAIError{
 		Type: string(errorCode),
 		Code: errorCode,
@@ -296,14 +296,14 @@ func InitOpenAIError(errorCode ErrorCode, statusCode int, ops ...AIHubErrorOptio
 	return WithOpenAIError(openaiError, statusCode, ops...)
 }
 
-func NewErrorWithStatusCode(err error, errorCode ErrorCode, statusCode int, ops ...AIHubErrorOptions) *AIHubError {
-	e := &AIHubError{
+func NewErrorWithStatusCode(err error, errorCode ErrorCode, statusCode int, ops ...AIGatewayErrorOptions) *AIGatewayError {
+	e := &AIGatewayError{
 		Err: err,
 		RelayError: OpenAIError{
 			Message: err.Error(),
 			Type:    string(errorCode),
 		},
-		errorType:  ErrorTypeAIHubError,
+		errorType:  ErrorTypeAIGatewayError,
 		StatusCode: statusCode,
 		errorCode:  errorCode,
 	}
@@ -314,7 +314,7 @@ func NewErrorWithStatusCode(err error, errorCode ErrorCode, statusCode int, ops 
 	return e
 }
 
-func WithOpenAIError(openAIError OpenAIError, statusCode int, ops ...AIHubErrorOptions) *AIHubError {
+func WithOpenAIError(openAIError OpenAIError, statusCode int, ops ...AIGatewayErrorOptions) *AIGatewayError {
 	code, ok := openAIError.Code.(string)
 	if !ok {
 		if openAIError.Code != nil {
@@ -326,7 +326,7 @@ func WithOpenAIError(openAIError OpenAIError, statusCode int, ops ...AIHubErrorO
 	if openAIError.Type == "" {
 		openAIError.Type = "upstream_error"
 	}
-	e := &AIHubError{
+	e := &AIGatewayError{
 		RelayError: openAIError,
 		errorType:  ErrorTypeOpenAIError,
 		StatusCode: statusCode,
@@ -346,11 +346,11 @@ func WithOpenAIError(openAIError OpenAIError, statusCode int, ops ...AIHubErrorO
 	return e
 }
 
-func WithClaudeError(claudeError ClaudeError, statusCode int, ops ...AIHubErrorOptions) *AIHubError {
+func WithClaudeError(claudeError ClaudeError, statusCode int, ops ...AIGatewayErrorOptions) *AIGatewayError {
 	if claudeError.Type == "" {
 		claudeError.Type = "upstream_error"
 	}
-	e := &AIHubError{
+	e := &AIGatewayError{
 		RelayError: claudeError,
 		errorType:  ErrorTypeClaudeError,
 		StatusCode: statusCode,
@@ -363,14 +363,14 @@ func WithClaudeError(claudeError ClaudeError, statusCode int, ops ...AIHubErrorO
 	return e
 }
 
-func IsChannelError(err *AIHubError) bool {
+func IsChannelError(err *AIGatewayError) bool {
 	if err == nil {
 		return false
 	}
 	return strings.HasPrefix(string(err.errorCode), "channel:")
 }
 
-func IsSkipRetryError(err *AIHubError) bool {
+func IsSkipRetryError(err *AIGatewayError) bool {
 	if err == nil {
 		return false
 	}
@@ -378,26 +378,26 @@ func IsSkipRetryError(err *AIHubError) bool {
 	return err.skipRetry
 }
 
-func ErrOptionWithSkipRetry() AIHubErrorOptions {
-	return func(e *AIHubError) {
+func ErrOptionWithSkipRetry() AIGatewayErrorOptions {
+	return func(e *AIGatewayError) {
 		e.skipRetry = true
 	}
 }
 
-func ErrOptionWithNoRecordErrorLog() AIHubErrorOptions {
-	return func(e *AIHubError) {
+func ErrOptionWithNoRecordErrorLog() AIGatewayErrorOptions {
+	return func(e *AIGatewayError) {
 		e.recordErrorLog = common.GetPointer(false)
 	}
 }
 
-func ErrOptionWithStatusCode(statusCode int) AIHubErrorOptions {
-	return func(e *AIHubError) {
+func ErrOptionWithStatusCode(statusCode int) AIGatewayErrorOptions {
+	return func(e *AIGatewayError) {
 		e.StatusCode = statusCode
 	}
 }
 
-func ErrOptionWithHideErrMsg(replaceStr string) AIHubErrorOptions {
-	return func(e *AIHubError) {
+func ErrOptionWithHideErrMsg(replaceStr string) AIGatewayErrorOptions {
+	return func(e *AIGatewayError) {
 		if common.DebugEnabled {
 			fmt.Printf("ErrOptionWithHideErrMsg: %s, origin error: %s", replaceStr, e.Err)
 		}
@@ -405,7 +405,7 @@ func ErrOptionWithHideErrMsg(replaceStr string) AIHubErrorOptions {
 	}
 }
 
-func IsRecordErrorLog(e *AIHubError) bool {
+func IsRecordErrorLog(e *AIGatewayError) bool {
 	if e == nil {
 		return false
 	}
