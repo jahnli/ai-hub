@@ -24,6 +24,6 @@
 - `web/default/src/features/auth/sign-in/components/user-auth-form.tsx` — 登录表单集成 LDAP 按钮
 - `web/default/src/features/auth/types.ts` — 新增 LDAP 相关类型定义
 - `web/default/src/features/system-settings/auth/index.tsx` — 系统设置认证页新增 LDAP 配置区并调整认证分区
-- `web/default/src/features/system-settings/auth/oauth-section.tsx` — OAuth 设置区适配 LDAP/飞书同步配置；新增公司同步配置表单，支持配置飞书/钉钉应用、邮箱后缀和自动订阅套餐
+- `web/default/src/features/system-settings/auth/oauth-section.tsx` — OAuth 设置区适配 LDAP/飞书同步配置；新增公司同步配置表单，支持配置飞书/钉钉应用、邮箱后缀和自动订阅套餐；为 LDAP 页签补充底部留白，避免添加配置按钮滚动到底部时被页面底部区域遮挡而无法点击
 - `web/default/src/features/system-settings/types.ts` — 系统设置类型新增 LDAP 字段与公司同步配置字段
 - `web/default/src/i18n/locales/{en,zh,fr,ja,ru,vi}.json` — 前端 6 语言翻译同步更新

@@ -776,7 +776,10 @@ export function OAuthSection(props: OAuthSectionProps) {
                 />
               </TabsContent>
 
-              <TabsContent value='ldap' className={oauthTabContentClassName}>
+              <TabsContent
+                value='ldap'
+                className={`${oauthTabContentClassName} pb-16`}
+              >
                 <FormField
                   control={form.control}
                   name='ldap.enabled'
