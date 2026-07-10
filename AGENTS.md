@@ -80,6 +80,7 @@ web/             — 前端主题容器
 
 - 优先使用 GORM 方法（`Create`、`Find`、`Where`、`Updates` 等），避免裸 SQL。
 - 让 GORM 处理主键生成；不要直接使用 `AUTO_INCREMENT` 或 `SERIAL`。
+- 在 `model/` 中使用 GORM 查询方法实现标准 `SELECT ... FOR UPDATE` 行锁时，必须调用 `lockForUpdate(tx)`。禁止使用旧版 GORM v1 写法 `tx.Set("gorm:query_option", "FOR UPDATE")`，因为 GORM v2 会静默忽略该设置，实际不会获取锁。不要在调用处重复使用 `clause.Locking{Strength: "UPDATE"}`；共享辅助函数会为 MySQL/PostgreSQL 生成 `FOR UPDATE`，并为不支持该语法的 SQLite 跳过锁定。语义不同的方言专用锁（例如 MySQL next-key/gap lock）只有在针对数据库类型设置明确分支且为每种受支持数据库提供有效兜底时，才可使用裸 SQL。
 - 当裸 SQL 不可避免时，需考虑方言差异：
   - PostgreSQL 使用 `"column"` 引用，MySQL/SQLite 使用 `` `column` ``。
   - 对 `group` 和 `key` 等保留字列，使用 `model/main.go` 中的 `commonGroupCol`、`commonKeyCol`。

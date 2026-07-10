@@ -1615,7 +1615,6 @@
     "Each tier supports up to 2 conditions; the last tier is the catch-all without conditions. Use full input length for tier conditions to avoid mis-routing when cache hits reduce billable input tokens.": "Each tier supports up to 2 conditions; the last tier is the catch-all without conditions. Use full input length for tier conditions to avoid mis-routing when cache hits reduce billable input tokens.",
     "Each tier supports up to 2 conditions. The last tier without conditions is the fallback.": "Each tier supports up to 2 conditions. The last tier without conditions is the fallback.",
     "EAP 设备自动化系统概念图，半导体设备、机械手和工厂主机系统通过高速数据链路连接，控制指令以发光脉冲形式传递，洁净室科技视觉": "EAP equipment automation system concept, semiconductor equipment, robotic handlers, and factory host systems connected through high-speed data links, control commands transmitted as glowing pulses, cleanroom technology visual",
-    "Earn rewards when your referrals add funds. Transfer accumulated rewards to your balance anytime.": "Earn rewards when your referrals add funds. Transfer accumulated rewards to your balance anytime.",
     "Edit": "Edit",
     "Edit {{title}}": "Edit {{title}}",
     "Edit all channels with tag:": "Edit all channels with tag:",
