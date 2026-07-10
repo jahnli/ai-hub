@@ -64,7 +64,9 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { getUserModels, getUserGroups } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
+import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { createApiKey, updateApiKey, getApiKey } from '../api'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
@@ -75,7 +77,7 @@ import {
   transformFormDataToPayload,
   transformApiKeyToFormDefaults,
 } from '../lib'
-import { type ApiKey } from '../types'
+import type { ApiKey } from '../types'
 import {
   ApiKeyGroupCombobox,
   type ApiKeyGroupOption,
@@ -88,7 +90,7 @@ type ApiKeyMutateDrawerProps = {
   currentRow?: ApiKey
 }
 
-const CREATE_API_KEY_DEFAULT_GROUP = 'default'
+const CREATE_API_KEY_FALLBACK_GROUP = 'default'
 
 export function ApiKeysMutateDrawer({
   open,
@@ -97,6 +99,11 @@ export function ApiKeysMutateDrawer({
 }: ApiKeyMutateDrawerProps) {
   const { t } = useTranslation()
   const isUpdate = !!currentRow
+  const currentUserGroup = useAuthStore((state) => state.auth.user?.group)
+  const currentUserRole = useAuthStore((state) => state.auth.user?.role)
+  const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const createApiKeyDefaultGroup =
+    currentUserGroup?.trim() || CREATE_API_KEY_FALLBACK_GROUP
   const { triggerRefresh } = useApiKeys()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -124,18 +131,18 @@ export function ApiKeysMutateDrawer({
       value: key,
       label: key,
       desc: info.desc || key,
-      ratio: info.ratio,
+      ratio: isSuperAdmin ? info.ratio : undefined,
     })
   )
   const groupOptions = groups.some(
-    (group) => group.value === CREATE_API_KEY_DEFAULT_GROUP
+    (group) => group.value === createApiKeyDefaultGroup
   )
     ? groups
     : [
         {
-          value: CREATE_API_KEY_DEFAULT_GROUP,
-          label: CREATE_API_KEY_DEFAULT_GROUP,
-          desc: CREATE_API_KEY_DEFAULT_GROUP,
+          value: createApiKeyDefaultGroup,
+          label: createApiKeyDefaultGroup,
+          desc: createApiKeyDefaultGroup,
         },
         ...groups,
       ]
@@ -145,7 +152,7 @@ export function ApiKeysMutateDrawer({
     resolver: zodResolver(schema),
     defaultValues: {
       ...getApiKeyFormDefaultValues(false),
-      group: CREATE_API_KEY_DEFAULT_GROUP,
+      group: createApiKeyDefaultGroup,
       cross_group_retry: false,
     },
   })
@@ -153,21 +160,25 @@ export function ApiKeysMutateDrawer({
   // Load existing data when updating
   useEffect(() => {
     if (open && isUpdate && currentRow) {
-      getApiKey(currentRow.id).then((result) => {
-        if (result.success && result.data) {
-          form.reset(transformApiKeyToFormDefaults(result.data))
-        }
-      })
+      getApiKey(currentRow.id)
+        .then((result) => {
+          if (result.success && result.data) {
+            form.reset(transformApiKeyToFormDefaults(result.data))
+          }
+        })
+        .catch(() => {
+          toast.error(t(ERROR_MESSAGES.LOAD_FAILED))
+        })
     } else if (open && !isUpdate) {
       form.reset(
         {
           ...getApiKeyFormDefaultValues(false),
-          group: CREATE_API_KEY_DEFAULT_GROUP,
+          group: createApiKeyDefaultGroup,
           cross_group_retry: false,
         }
       )
     }
-  }, [open, isUpdate, currentRow, form])
+  }, [open, isUpdate, currentRow, form, createApiKeyDefaultGroup, t])
 
   // Correct group after groups load: if the form value is not in available groups, fall back
   useEffect(() => {
@@ -175,7 +186,8 @@ export function ApiKeysMutateDrawer({
     const currentGroup = form.getValues('group')
     if (currentGroup && !groups.some((g) => g.value === currentGroup)) {
       const fallback =
-        groups.find((g) => g.value === 'default')?.value ??
+        groups.find((g) => g.value === createApiKeyDefaultGroup)?.value ??
+        groups.find((g) => g.value === CREATE_API_KEY_FALLBACK_GROUP)?.value ??
         groups[0]?.value ??
         ''
       form.setValue('group', fallback)
@@ -183,7 +195,7 @@ export function ApiKeysMutateDrawer({
         form.setValue('cross_group_retry', false)
       }
     }
-  }, [groups, form])
+  }, [groups, form, createApiKeyDefaultGroup])
 
   const onSubmit = async (data: ApiKeyFormValues) => {
     setIsSubmitting(true)
@@ -233,7 +245,7 @@ export function ApiKeysMutateDrawer({
           triggerRefresh()
         }
       }
-    } catch (_error) {
+    } catch {
       toast.error(t(ERROR_MESSAGES.UNEXPECTED))
     } finally {
       setIsSubmitting(false)
