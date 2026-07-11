@@ -181,14 +181,12 @@ func TestResetUserPasswordByEmailRequiresSingleActiveMatch(t *testing.T) {
 		Username: "duplicate-1",
 		Password: "old-1",
 		Email:    "legacy@example.com",
-		AffCode:  "dupe1",
 		Status:   common.UserStatusEnabled,
 	}).Error)
 	require.NoError(t, DB.Create(&User{
 		Username: "duplicate-2",
 		Password: "old-2",
 		Email:    "LEGACY@example.com",
-		AffCode:  "dupe2",
 		Status:   common.UserStatusEnabled,
 	}).Error)
 
@@ -205,7 +203,6 @@ func TestResetUserPasswordByEmailRequiresSingleActiveMatch(t *testing.T) {
 		Username: "unique",
 		Password: "old",
 		Email:    "unique@example.com",
-		AffCode:  "unique",
 		Status:   common.UserStatusEnabled,
 	}).Error)
 

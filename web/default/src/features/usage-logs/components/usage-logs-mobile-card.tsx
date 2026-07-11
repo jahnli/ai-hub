@@ -25,7 +25,7 @@ import {
   textColorMap,
   type StatusVariant,
 } from '@/components/status-badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Empty,
   EmptyDescription,
@@ -36,7 +36,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatTimestampToDate } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
 import { LOG_TYPE_ENUM } from '../constants'
 import type { UsageLog } from '../data/schema'
@@ -247,33 +247,54 @@ function MobileUserField({ log }: { log: UsageLog }) {
 
   if (!log.username) return null
 
+  const primaryName = log.display_name || log.username
+  const feishuChatUrl = buildFeishuUserChatUrl(log.open_id)
+  const avatar = (
+    <Avatar className='ring-border/60 size-6 shrink-0 ring-1'>
+      {sensitiveVisible && log.avatar_url && (
+        <AvatarImage src={log.avatar_url} alt={primaryName} />
+      )}
+      <AvatarFallback
+        className={cn(
+          'text-[11px] font-semibold',
+          !sensitiveVisible && 'bg-muted text-muted-foreground'
+        )}
+        style={sensitiveVisible ? getUserAvatarStyle(primaryName) : undefined}
+      >
+        {sensitiveVisible ? getUserAvatarFallback(primaryName) : '•'}
+      </AvatarFallback>
+    </Avatar>
+  )
+
   return (
-    <button
-      type='button'
-      className='bg-muted/20 flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-left'
-      onClick={(e) => {
-        e.stopPropagation()
-        setSelectedUserId(log.user_id)
-        setUserInfoDialogOpen(true)
-      }}
-    >
-      <Avatar className='ring-border/60 size-6 shrink-0 ring-1'>
-        <AvatarFallback
-          className={cn(
-            'text-[11px] font-semibold',
-            !sensitiveVisible && 'bg-muted text-muted-foreground'
-          )}
-          style={
-            sensitiveVisible ? getUserAvatarStyle(log.username) : undefined
-          }
+    <div className='bg-muted/20 flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-left'>
+      {sensitiveVisible && feishuChatUrl ? (
+        <a
+          href={feishuChatUrl}
+          target='_blank'
+          rel='noopener noreferrer'
+          className='focus-visible:ring-ring rounded-full focus-visible:ring-2 focus-visible:outline-none'
+          onClick={(event) => event.stopPropagation()}
         >
-          {sensitiveVisible ? getUserAvatarFallback(log.username) : '•'}
-        </AvatarFallback>
-      </Avatar>
+          {avatar}
+        </a>
+      ) : (
+        <button
+          type='button'
+          className='rounded-full'
+          onClick={(event) => {
+            event.stopPropagation()
+            setSelectedUserId(log.user_id)
+            setUserInfoDialogOpen(true)
+          }}
+        >
+          {avatar}
+        </button>
+      )}
       <span className='text-foreground min-w-0 truncate text-sm'>
-        {sensitiveVisible ? log.username : '••••'}
+        {sensitiveVisible ? primaryName : '••••'}
       </span>
-    </button>
+    </div>
   )
 }
 
@@ -329,7 +350,7 @@ function CommonLogsCard<TData>({
         />
       </div>
 
-      <div className='grid grid-cols-[minmax(0,1.35fr)_minmax(0,0.75fr)] gap-1.5'>
+      <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] gap-1.5'>
         <div className='bg-muted/20 min-w-0 rounded-md px-2 py-1.5'>
           <MobileLogTimeStatus
             createdAt={rowData?.created_at}
