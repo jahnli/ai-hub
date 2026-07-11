@@ -38,7 +38,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useIsAdmin } from '@/hooks/use-admin'
 import { ROLE, getRoleLabelKey } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -53,7 +52,7 @@ import {
   LogsFilterInput,
   LogsFilterToolbar,
 } from './logs-filter-toolbar'
-import { useUsageLogsContext } from './usage-logs-provider'
+import { useLogsViewScope, useUsageLogsContext } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
 
@@ -144,7 +143,7 @@ export function CommonLogsFilterBar<TData>(
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const searchParams = route.useSearch()
-  const isAdmin = useIsAdmin()
+  const { isAdminView: isAdmin } = useLogsViewScope()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const { sensitiveVisible, setSensitiveVisible } = useUsageLogsContext()

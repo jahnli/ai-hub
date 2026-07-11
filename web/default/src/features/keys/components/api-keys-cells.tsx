@@ -19,7 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 import { Check, Copy, Loader2, ArrowRightLeft, ChevronDown } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 
 import { BadgeCell } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
@@ -73,17 +72,22 @@ export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
   )
 
   const handleCopy = useCallback(async () => {
-    const realKey = resolvedFullKey
-    if (!realKey) {
-      void resolveRealKey(apiKey.id)
-      toast.info(t('API key is loading, please try again in a moment'))
-      return
-    }
-    if (realKey) {
-      const ok = await copyToClipboard(realKey)
-      if (ok) markKeyCopied(apiKey.id)
-    }
-  }, [resolvedFullKey, resolveRealKey, apiKey.id, markKeyCopied, t])
+    const realKey = resolvedFullKey || (await resolveRealKey(apiKey.id))
+    if (!realKey) return
+
+    const ok = await copyToClipboard(realKey)
+    if (ok) markKeyCopied(apiKey.id)
+  }, [resolvedFullKey, resolveRealKey, apiKey.id, markKeyCopied])
+
+  let copyIcon = <Copy className='size-3.5' />
+  let copyTooltip = t('Copy API key')
+  if (isLoading) {
+    copyIcon = <Loader2 className='size-3.5 animate-spin' />
+    copyTooltip = t('Loading...')
+  } else if (isCopied) {
+    copyIcon = <Check className='size-3.5 text-green-600' />
+    copyTooltip = t('Copied!')
+  }
 
   return (
     <div className='flex max-w-full min-w-0 items-center'>
@@ -132,29 +136,13 @@ export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
               size='icon'
               className='size-7 shrink-0'
               onClick={handleCopy}
-              onFocus={() => {
-                if (!resolvedFullKey) void resolveRealKey(apiKey.id)
-              }}
-              onPointerEnter={() => {
-                if (!resolvedFullKey) void resolveRealKey(apiKey.id)
-              }}
               disabled={isLoading}
             />
           }
         >
-          {(() => {
-            if (isLoading) return <Loader2 className='size-3.5 animate-spin' />
-            if (isCopied) return <Check className='size-3.5 text-green-600' />
-            return <Copy className='size-3.5' />
-          })()}
+          {copyIcon}
         </TooltipTrigger>
-        <TooltipContent>
-          {(() => {
-            if (isLoading) return t('Loading...')
-            if (isCopied) return t('Copied!')
-            return t('Copy API key')
-          })()}
-        </TooltipContent>
+        <TooltipContent>{copyTooltip}</TooltipContent>
       </Tooltip>
     </div>
   )

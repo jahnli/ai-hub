@@ -36,6 +36,7 @@ import { useTranslation } from 'react-i18next'
 import { Dialog } from '@/components/dialog'
 import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
+import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
 import { Label } from '@/components/ui/label'
 import { DynamicPricingBreakdown } from '@/features/pricing/components/dynamic-pricing-breakdown'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
@@ -108,11 +109,13 @@ function DetailRow(props: {
 
 function DetailSection(props: {
   icon?: React.ReactNode
+  iconTone?: IconBadgeTone
   label: string
   variant?: 'default' | 'danger'
   children: React.ReactNode
 }) {
   const isDanger = props.variant === 'danger'
+  const iconTone = isDanger ? 'destructive' : props.iconTone
   return (
     <div className='min-w-0 space-y-1.5'>
       <Label
@@ -121,7 +124,11 @@ function DetailSection(props: {
           isDanger && 'text-red-500'
         )}
       >
-        {props.icon}
+        {props.icon && (
+          <IconBadge tone={iconTone} size='xs'>
+            {props.icon}
+          </IconBadge>
+        )}
         {props.label}
       </Label>
       <div
@@ -620,11 +627,12 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const useChannel = other?.admin_info?.use_channel
   const channelChain =
     useChannel && useChannel.length > 0 ? useChannel.join(' → ') : undefined
-  const reasoningEffortVariant: StatusBadgeProps['variant'] = (() => {
-    if (other?.reasoning_effort === 'high') return 'orange'
-    if (other?.reasoning_effort === 'medium') return 'yellow'
-    return 'green'
-  })()
+  let reasoningEffortVariant: StatusBadgeProps['variant'] = 'green'
+  if (other?.reasoning_effort === 'high') {
+    reasoningEffortVariant = 'orange'
+  } else if (other?.reasoning_effort === 'medium') {
+    reasoningEffortVariant = 'yellow'
+  }
 
   return (
     <Dialog
@@ -885,6 +893,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {showTopupAuditSection && (
           <DetailSection
             icon={<ShieldCheck className='size-3.5' aria-hidden='true' />}
+            iconTone='success'
             label={t('Top-up Audit Info')}
           >
             {topupAuditFields.map((field) => (
@@ -929,6 +938,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {showManageAuditSection && (
           <DetailSection
             icon={<ShieldCheck className='size-3.5' aria-hidden='true' />}
+            iconTone='info'
             label={t('Operation Audit Info')}
           >
             {operationText != null && (
@@ -971,6 +981,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {isLogin && loginAuditFields.length > 0 && (
           <DetailSection
             icon={<LogIn className='size-3.5' aria-hidden='true' />}
+            iconTone='info'
             label={t('Login Info')}
           >
             {operationText != null && (
@@ -991,6 +1002,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {hasAudioTokens && other && (
           <DetailSection
             icon={<Headphones className='size-3.5' aria-hidden='true' />}
+            iconTone='chart-4'
             label={t('Audio Tokens')}
           >
             {other.audio_input != null && other.audio_input > 0 && (
@@ -1219,6 +1231,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         {other?.po && Array.isArray(other.po) && other.po.length > 0 && (
           <DetailSection
             icon={<Settings2 className='size-3.5' aria-hidden='true' />}
+            iconTone='chart-3'
             label={`${t('Param Override')} (${other.po.length})`}
           >
             {other.po.filter(Boolean).map((line) => {
@@ -1226,7 +1239,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
               if (!parsed) return null
               return (
                 <div
-                  key={line}
+                  key={`${parsed.action}-${parsed.content}`}
                   className='bg-background/60 flex min-w-0 flex-col gap-1.5 rounded border p-2 sm:flex-row sm:items-start sm:gap-2'
                 >
                   <StatusBadge

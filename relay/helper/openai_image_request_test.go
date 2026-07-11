@@ -104,9 +104,19 @@ func TestGetAndValidOpenAIImageRequestNBounds(t *testing.T) {
 			wantErr: boundErr,
 		},
 		{
-			name:  "n at max is accepted",
-			body:  fmt.Sprintf(`{"model":"gpt-image-1","prompt":"a cat","n":%d}`, dto.MaxImageN),
-			wantN: dto.MaxImageN,
+			name:    "n at max is rejected by OpenAI limit",
+			body:    fmt.Sprintf(`{"model":"gpt-image-1","prompt":"a cat","n":%d}`, dto.MaxImageN),
+			wantErr: "n must be less than or equal to 4",
+		},
+		{
+			name:  "explicit n is accepted",
+			body:  `{"model":"gpt-image-1","prompt":"a cat","n":3}`,
+			wantN: 3,
+		},
+		{
+			name:  "zero n defaults to 1",
+			body:  `{"model":"gpt-image-1","prompt":"a cat","n":0}`,
+			wantN: 1,
 		},
 		{
 			name:  "absent n defaults to 1",
@@ -127,6 +137,7 @@ func TestGetAndValidOpenAIImageRequestNBounds(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, req.N)
 			require.Equal(t, tt.wantN, *req.N)
+			require.Equal(t, float64(tt.wantN), req.GetTokenCountMeta().BillingRatios["n"])
 		})
 	}
 

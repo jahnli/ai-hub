@@ -45,6 +45,8 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayErro
 			Input:              req.Input,
 			Instructions:       req.Instructions,
 			PreviousResponseID: req.PreviousResponseID,
+			ParallelToolCalls:  req.ParallelToolCalls,
+			ServiceTier:        req.ServiceTier,
 		}
 	default:
 		return types.NewErrorWithStatusCode(

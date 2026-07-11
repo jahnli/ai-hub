@@ -30,14 +30,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { toIntlLocale } from '@/i18n/languages'
 import { getUserGroups } from '@/lib/api'
-import { formatQuota, formatTimestampToDate } from '@/lib/format'
+import dayjs from '@/lib/dayjs'
+import { formatQuota } from '@/lib/format'
 import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { API_KEY_STATUSES } from '../constants'
 import type { ApiKey } from '../types'
+import { ApiKeyTimestampCell } from './api-key-timestamp-cell'
 import {
   ApiKeyCell,
   ModelLimitsCell,
@@ -73,11 +76,14 @@ function useGroupRatios(enabled: boolean): Record<string, number> {
   return data ?? {}
 }
 
-export function useApiKeysColumns(): ColumnDef<ApiKey>[] {
-  const { t } = useTranslation()
+export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
+  const { t, i18n } = useTranslation()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const groupRatios = useGroupRatios(isSuperAdmin)
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  const justNowLabel = t('Just now')
+  const staleAccessThreshold = dayjs(now).subtract(3, 'month').valueOf()
   return [
     {
       id: 'select',
@@ -276,9 +282,13 @@ export function useApiKeysColumns(): ColumnDef<ApiKey>[] {
       accessorKey: 'created_time',
       header: t('Created'),
       cell: ({ row }) => (
-        <span className='text-muted-foreground block truncate font-mono text-xs tabular-nums'>
-          {formatTimestampToDate(row.getValue('created_time'))}
-        </span>
+        <ApiKeyTimestampCell
+          timestamp={row.getValue('created_time')}
+          now={now}
+          locale={locale}
+          justNowLabel={justNowLabel}
+          className='text-muted-foreground'
+        />
       ),
       size: 180,
       meta: { mobileHidden: true },
@@ -288,13 +298,17 @@ export function useApiKeysColumns(): ColumnDef<ApiKey>[] {
       header: t('Last Used'),
       cell: ({ row }) => {
         const accessedTime = row.getValue('accessed_time') as number
-        if (!accessedTime) {
-          return <span className='text-muted-foreground text-xs'>-</span>
-        }
+        const isStale =
+          accessedTime > 0 && accessedTime * 1000 < staleAccessThreshold
+
         return (
-          <span className='text-muted-foreground block truncate font-mono text-xs tabular-nums'>
-            {formatTimestampToDate(accessedTime)}
-          </span>
+          <ApiKeyTimestampCell
+            timestamp={accessedTime}
+            now={now}
+            locale={locale}
+            justNowLabel={justNowLabel}
+            className={isStale ? 'text-warning' : 'text-muted-foreground'}
+          />
         )
       },
       size: 180,
@@ -315,16 +329,17 @@ export function useApiKeysColumns(): ColumnDef<ApiKey>[] {
             />
           )
         }
-        const isExpired = expiredTime * 1000 < Date.now()
+        const isExpired = expiredTime * 1000 < now
         return (
-          <span
+          <ApiKeyTimestampCell
+            timestamp={expiredTime}
+            now={now}
+            locale={locale}
+            justNowLabel={justNowLabel}
             className={cn(
-              'block truncate font-mono text-xs tabular-nums',
               isExpired ? 'text-destructive' : 'text-muted-foreground'
             )}
-          >
-            {formatTimestampToDate(expiredTime)}
-          </span>
+          />
         )
       },
       size: 180,

@@ -123,6 +123,38 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *t
 				if err != nil {
 					return AIGatewayErrorFromParamOverride(err)
 				}
+
+				var overriddenQuantity struct {
+					N *uint `json:"n"`
+				}
+				if err = common.Unmarshal(jsonData, &overriddenQuantity); err != nil {
+					return types.NewErrorWithStatusCode(
+						fmt.Errorf("invalid image count after parameter override: %w", err),
+						types.ErrorCodeConvertRequestFailed,
+						http.StatusBadRequest,
+						types.ErrOptionWithSkipRetry(),
+					)
+				}
+				requestedQuantity := uint(1)
+				if request.N != nil && *request.N > 0 {
+					requestedQuantity = *request.N
+				}
+				if overriddenQuantity.N != nil && (*overriddenQuantity.N == 0 || *overriddenQuantity.N > dto.MaxImageN) {
+					return types.NewErrorWithStatusCode(
+						fmt.Errorf("image count after parameter override must be between 1 and %d", dto.MaxImageN),
+						types.ErrorCodeConvertRequestFailed,
+						http.StatusBadRequest,
+						types.ErrOptionWithSkipRetry(),
+					)
+				}
+				if overriddenQuantity.N != nil && *overriddenQuantity.N != requestedQuantity {
+					return types.NewErrorWithStatusCode(
+						fmt.Errorf("parameter override cannot change image count from %d to %d", requestedQuantity, *overriddenQuantity.N),
+						types.ErrorCodeConvertRequestFailed,
+						http.StatusBadRequest,
+						types.ErrOptionWithSkipRetry(),
+					)
+				}
 			}
 
 			logger.LogDebug(c, "image request body: %s", jsonData)
@@ -170,16 +202,6 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *t
 	imageN := uint(1)
 	if request.N != nil {
 		imageN = *request.N
-	}
-
-	// n is handled via OtherRatio so it is applied exactly once in quota
-	// calculation (both price-based and ratio-based paths).
-	// Adaptors may have already set a more accurate count from the
-	// upstream response; only set the default when they haven't.
-	if info.PriceData.UsePrice { // only price model use N ratio
-		if !info.PriceData.HasOtherRatio("n") {
-			info.PriceData.AddOtherRatio("n", float64(imageN))
-		}
 	}
 
 	if usage.(*dto.Usage).TotalTokens == 0 {

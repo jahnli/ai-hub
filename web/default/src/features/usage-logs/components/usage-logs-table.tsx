@@ -27,7 +27,7 @@ import {
   DataTableRow,
   useDataTable,
 } from '@/components/data-table'
-import { useIsAdmin } from '@/hooks/use-admin'
+import { useMediaQuery } from '@/hooks'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
@@ -46,6 +46,7 @@ import { CommonLogsFilterBar } from './common-logs-filter-bar'
 import { RequestMessagesProvider } from './request-messages-provider'
 import { TaskLogsFilterBar } from './task-logs-filter-bar'
 import { UsageLogsMobileList } from './usage-logs-mobile-card'
+import { useLogsViewScope } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
 
@@ -83,7 +84,8 @@ interface UsageLogsTableProps {
 
 export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { t } = useTranslation()
-  const isAdmin = useIsAdmin()
+  const { isAdminView: isAdmin } = useLogsViewScope()
+  const isMobile = useMediaQuery('(max-width: 640px)')
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const searchParams = route.useSearch()
@@ -97,7 +99,7 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   } = useTableUrlState({
     search: route.useSearch(),
     navigate: route.useNavigate(),
-    pagination: { defaultPage: 1, defaultPageSize: 10 },
+    pagination: { defaultPage: 1, defaultPageSize: isMobile ? 10 : 20 },
     globalFilter: { enabled: false },
     columnFilters: [
       {

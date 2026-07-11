@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import type { IconBadgeTone } from '@/components/ui/icon-badge'
 import { safeDivide } from '@/features/dashboard/lib'
 
 interface StatCardConfig {
@@ -37,6 +38,7 @@ interface StatCardConfig {
   title: string
   description: string
   icon: LucideIcon
+  iconTone: IconBadgeTone
   getValue: (stat: Record<string, number>, days?: number) => number
 }
 
@@ -49,6 +51,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Total Tokens'),
       description: t('Statistical tokens'),
       icon: Layers,
+      iconTone: 'chart-4',
       getValue: (stat) => stat?.tpm ?? 0,
     },
     {
@@ -56,6 +59,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Total Cost'),
       description: t('Statistical cost'),
       icon: Coins,
+      iconTone: 'success',
       getValue: (stat) => stat?.quota ?? 0,
     },
     {
@@ -63,6 +67,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Avg Price'),
       description: t('Average price per million tokens'),
       icon: DollarSign,
+      iconTone: 'warning',
       getValue: (stat) =>
         safeDivide(stat?.quota ?? 0, stat?.tpm ?? 0) * 1_000_000,
     },
@@ -71,6 +76,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Total Requests'),
       description: t('Statistical count'),
       icon: Hash,
+      iconTone: 'info',
       getValue: (stat) => stat?.rpm ?? 0,
     },
     {
@@ -78,6 +84,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Average RPM'),
       description: t('Requests per minute'),
       icon: Gauge,
+      iconTone: 'chart-2',
       getValue: (stat, timeRangeMinutes = 1) =>
         safeDivide(stat?.rpm ?? 0, timeRangeMinutes),
     },
@@ -86,6 +93,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       title: t('Average TPM'),
       description: t('Tokens per minute'),
       icon: Zap,
+      iconTone: 'warning',
       getValue: (stat, timeRangeMinutes = 1) =>
         safeDivide(stat?.tpm ?? 0, timeRangeMinutes),
     },

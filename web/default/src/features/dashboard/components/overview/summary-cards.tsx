@@ -260,7 +260,7 @@ export function SummaryCards() {
     currencyEnabled,
     currencyLabel,
   }).map((config, index) => {
-    const tones = ['rose', 'teal', 'gray'] as const
+    const tones = ['accent-1', 'accent-2', 'accent-3'] as const
 
     return {
       key: config.key,
@@ -268,7 +268,7 @@ export function SummaryCards() {
       value: config.value,
       desc: config.description,
       icon: config.icon,
-      tone: tones[index] ?? 'gray',
+      tone: tones[index] ?? 'accent-3',
       sparkline:
         config.key === 'todayUsage'
           ? sparklineData.usage
@@ -284,6 +284,16 @@ export function SummaryCards() {
     isUnlimited || subAmountTotal === 0
       ? 0
       : Math.min(100, (subAmountUsed / subAmountTotal) * 100)
+
+  const activePlanTitle = activeSub
+    ? planMap.get(activeSub.plan_id)?.title
+    : undefined
+  let usageProgressClassName = 'bg-emerald-500'
+  if (usagePercent >= 80) {
+    usageProgressClassName = 'bg-red-500'
+  } else if (usagePercent >= 50) {
+    usageProgressClassName = 'bg-amber-500'
+  }
 
   return (
     <div className='bg-card overflow-hidden rounded-2xl border shadow-xs'>
@@ -320,16 +330,16 @@ export function SummaryCards() {
           </StaggerContainer>
         </div>
 
-        <div className='bg-muted/40 flex flex-col justify-center gap-4 border-t p-4 sm:p-5 xl:border-t-0 xl:border-l'>
+        <div className='flex flex-col justify-center gap-4 border-t bg-[linear-gradient(135deg,color-mix(in_oklch,var(--overview-accent-2)_12%,var(--background))_0%,color-mix(in_oklch,oklch(0.82_0.04_155)_8%,var(--background))_48%,color-mix(in_oklch,var(--overview-accent-1)_7%,var(--background))_100%)] p-4 sm:p-5 xl:border-t-0 xl:border-l'>
           {activeSub ? (
             <div className='flex flex-col gap-3'>
               <div className='flex items-center justify-between gap-2'>
                 <span className='text-muted-foreground text-xs font-medium'>
                   {t('Current Subscription')}
                 </span>
-                {planMap.get(activeSub.plan_id)?.title && (
+                {activePlanTitle && (
                   <span className='bg-primary/10 text-primary truncate rounded-md px-2 py-0.5 text-xs font-medium'>
-                    {planMap.get(activeSub.plan_id)!.title}
+                    {activePlanTitle}
                   </span>
                 )}
               </div>
@@ -348,11 +358,7 @@ export function SummaryCards() {
                     <div
                       className={cn(
                         'h-full rounded-full transition-all duration-500',
-                        usagePercent >= 80
-                          ? 'bg-red-500'
-                          : usagePercent >= 50
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500'
+                        usageProgressClassName
                       )}
                       style={{ width: `${usagePercent}%` }}
                     />

@@ -117,10 +117,13 @@ function LogStatCardsFallback() {
     <div className='overflow-hidden rounded-lg border'>
       <div className='divide-border/60 grid grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-6'>
         {LOG_STAT_CARD_FALLBACK_ITEMS.map((fallbackItem) => (
-          <div key={fallbackItem} className='px-4 py-3.5 sm:px-5 sm:py-4'>
-            <Skeleton className='h-3.5 w-16' />
-            <Skeleton className='mt-2 h-7 w-20' />
-            <Skeleton className='mt-1.5 h-3.5 w-28' />
+          <div key={fallbackItem} className='px-2.5 py-1.5 sm:px-5 sm:py-4'>
+            <div className='flex items-center gap-1.5 sm:gap-2'>
+              <Skeleton className='size-4 rounded-sm sm:size-7 sm:rounded-md' />
+              <Skeleton className='h-4 w-16' />
+            </div>
+            <Skeleton className='mt-1 h-5 w-16 sm:mt-2 sm:h-7 sm:w-20' />
+            <Skeleton className='mt-1 hidden h-3.5 w-28 md:block' />
           </div>
         ))}
       </div>
