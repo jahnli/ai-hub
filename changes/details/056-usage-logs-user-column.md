@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-08
+**日期**: 2026-07-12
 
 ## 涉及文件
 
@@ -50,7 +50,9 @@
 - `service/log_info_generate.go` — 文本类使用日志 other 字段写入 user_agent，供前端表格展示
 - `web/default/src/i18n/locales/en.json`、`web/default/src/i18n/locales/zh.json`、`web/default/src/i18n/locales/fr.json`、`web/default/src/i18n/locales/ja.json`、`web/default/src/i18n/locales/ru.json`、`web/default/src/i18n/locales/vi.json` — 新增 User-Agent 表头翻译和违规通知相关文案
 - `web/default/src/components/dialog.tsx` — Dialog 组件样式调整
-- `web/default/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志高级筛选移除令牌名称条件；角色筛选前置到用户名之前，支持输入角色名称，候选下拉仅展示角色名称且不按内部 role 值过滤
+- `web/default/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志高级筛选移除令牌名称条件；角色筛选支持输入角色名称，候选下拉仅展示角色名称且不按内部 role 值过滤；筛选区重排为两排紧凑布局，第一排依次展示时间、模型、类型、用户名和请求 ID，第二排依次展示分组、上游请求 ID、角色、渠道 ID 和日志范围切换，并微调时间与类型控件宽度
+- `web/default/src/features/usage-logs/components/logs-filter-toolbar.tsx` — 支持为主筛选网格传入自定义列宽样式，以便普通日志页加宽时间选择器并保持其他筛选项紧凑排列
+- `web/default/src/features/usage-logs/index.tsx` — 将全部/仅自己日志范围切换从页面操作区移入普通日志筛选区
 - `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 普通日志表格 URL/列筛选状态移除 token_name 与 token 查询参数映射
 - `web/default/src/features/usage-logs/lib/filter.ts` — 构造普通日志筛选 URL 参数时不再写入 token 条件
 - `web/default/src/features/usage-logs/lib/utils.ts` — 请求日志接口参数时不再从搜索参数或列筛选生成 token_name 条件
