@@ -1,4 +1,4 @@
-name: Docker Build
+name: Docker Relase
 
 on:
   workflow_dispatch:
