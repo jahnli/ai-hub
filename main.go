@@ -171,7 +171,7 @@ func main() {
 		common.SysLog(fmt.Sprintf("panic detected: %v", err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
-				"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/QuantumNous/ai-hub", err),
+				"message": fmt.Sprintf("Panic detected, error: %v.", err),
 				"type":    "ai_gateway_panic",
 			},
 		})

@@ -1,4 +1,4 @@
-name: Docker Build
+name: Docker Relase
 
 on:
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/ai-hub:latest
-            ${{ secrets.DOCKER_USERNAME }}/ai-hub:${{ env.VERSION }}
+            ${{ secrets.DOCKER_USERNAME }}/ai-gateway:latest
+            ${{ secrets.DOCKER_USERNAME }}/ai-gateway:${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -71,7 +71,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: quantumnous/ai-hub
+          images: jahnlis/ai-gateway
 
       - name: Build & push
         id: build
@@ -81,8 +81,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            quantumnous/ai-hub:${{ env.TAG }}-${{ matrix.arch }}
-            quantumnous/ai-hub:latest-${{ matrix.arch }}
+            jahnlis/ai-gateway:${{ env.TAG }}-${{ matrix.arch }}
+            jahnlis/ai-gateway:latest-${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -93,13 +93,13 @@ jobs:
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign image with cosign
-        run: cosign sign --yes quantumnous/ai-hub@${{ steps.build.outputs.digest }}
+        run: cosign sign --yes jahnlis/ai-gateway@${{ steps.build.outputs.digest }}
 
       - name: Image summary
         run: |
           echo "### Docker Image Digest (${{ matrix.arch }})" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "quantumnous/ai-hub:${TAG}-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
+          echo "jahnlis/ai-gateway:${TAG}-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
@@ -125,28 +125,28 @@ jobs:
       - name: Create & push manifest (version)
         run: |
           docker buildx imagetools create \
-            -t quantumnous/ai-hub:${TAG} \
-            quantumnous/ai-hub:${TAG}-amd64 \
-            quantumnous/ai-hub:${TAG}-arm64
+            -t jahnlis/ai-gateway:${TAG} \
+            jahnlis/ai-gateway:${TAG}-amd64 \
+            jahnlis/ai-gateway:${TAG}-arm64
 
       - name: Create & push manifest (latest)
         run: |
           docker buildx imagetools create \
-            -t quantumnous/ai-hub:latest \
-            quantumnous/ai-hub:latest-amd64 \
-            quantumnous/ai-hub:latest-arm64
+            -t jahnlis/ai-gateway:latest \
+            jahnlis/ai-gateway:latest-amd64 \
+            jahnlis/ai-gateway:latest-arm64
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
 
       - name: Sign manifests with cosign
         run: |
-          cosign sign --yes calciumion/new-api:${TAG}
-          cosign sign --yes calciumion/new-api:latest
+          cosign sign --yes jahnlis/ai-gateway:${TAG}
+          cosign sign --yes jahnlis/ai-gateway:latest
 
       - name: Manifest summary
         run: |
           echo "### Multi-arch Manifest" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          docker buildx imagetools inspect quantumnous/ai-hub:${TAG} >> $GITHUB_STEP_SUMMARY
+          docker buildx imagetools inspect jahnlis/ai-gateway:${TAG} >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

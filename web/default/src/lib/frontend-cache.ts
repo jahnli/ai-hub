@@ -17,43 +17,43 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-const FRONTEND_CACHE_VERSION = 'default-v1'
-const FRONTEND_CACHE_VERSION_KEY = 'ai-hub:default:cache-version'
+const FRONTEND_CACHE_VERSION = "default-v1";
+const FRONTEND_CACHE_VERSION_KEY = "ai-gateway:default:cache-version";
 const PRESERVED_LOCAL_STORAGE_KEYS = new Set([
   FRONTEND_CACHE_VERSION_KEY,
-  'user',
-  'uid',
-  'aff',
-  'oauth:binding:result',
-])
+  "user",
+  "uid",
+  "aff",
+  "oauth:binding:result",
+]);
 
 export function initializeFrontendCache(): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === "undefined") return;
 
   try {
     const currentVersion = window.localStorage.getItem(
-      FRONTEND_CACHE_VERSION_KEY
-    )
-    if (currentVersion === FRONTEND_CACHE_VERSION) return
+      FRONTEND_CACHE_VERSION_KEY,
+    );
+    if (currentVersion === FRONTEND_CACHE_VERSION) return;
 
-    clearLocalUiCache()
+    clearLocalUiCache();
     window.localStorage.setItem(
       FRONTEND_CACHE_VERSION_KEY,
-      FRONTEND_CACHE_VERSION
-    )
+      FRONTEND_CACHE_VERSION,
+    );
   } catch {
     // Storage can be unavailable in private mode; the app should still boot.
   }
 }
 
 function clearLocalUiCache(): void {
-  const keysToRemove: string[] = []
+  const keysToRemove: string[] = [];
   for (let index = 0; index < window.localStorage.length; index += 1) {
-    const key = window.localStorage.key(index)
+    const key = window.localStorage.key(index);
     if (key && !PRESERVED_LOCAL_STORAGE_KEYS.has(key)) {
-      keysToRemove.push(key)
+      keysToRemove.push(key);
     }
   }
 
-  keysToRemove.forEach((key) => window.localStorage.removeItem(key))
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
 }

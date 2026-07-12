@@ -21,7 +21,7 @@
   --><a href="https://github.com/Calcium-Ion/new-api/releases/latest">
     <img src="https://img.shields.io/github/v/release/Calcium-Ion/new-api?color=brightgreen&include_prereleases" alt="release">
   </a><!--
-  --><a href="https://hub.docker.com/r/quantumnous/ai-hub">
+  -->
     <img src="https://img.shields.io/badge/docker-dockerHub-blue" alt="docker">
   </a><!--
   --><a href="https://goreportcard.com/report/github.com/Calcium-Ion/new-api">
@@ -126,22 +126,22 @@ docker-compose up -d
 
 ```bash
 # Pull the latest image
-docker pull quantumnous/ai-hub:latest
+docker pull quantumnous/ai-gateway:latest
 
 # Using SQLite (default)
-docker run --name ai-hub -d --restart always \
+docker run --name ai-gateway -d --restart always \
   -p 3000:3000 \
   -e TZ=Asia/Shanghai \
   -v ./data:/data \
-  quantumnous/ai-hub:latest
+  quantumnous/ai-gateway:latest
 
 # Using MySQL
-docker run --name ai-hub -d --restart always \
+docker run --name ai-gateway -d --restart always \
   -p 3000:3000 \
   -e SQL_DSN="root:123456@tcp(localhost:3306)/oneapi" \
   -e TZ=Asia/Shanghai \
   -v ./data:/data \
-  quantumnous/ai-hub:latest
+  quantumnous/ai-gateway:latest
 ```
 
 > **💡 Tip:** `-v ./data:/data` will save data in the `data` folder of the current directory, you can also change it to an absolute path like `-v /your/custom/path:/data`
@@ -295,7 +295,7 @@ docker run --name ai-hub -d --restart always \
 ## 🚢 Deployment
 
 > [!TIP]
-> **Latest Docker image:** `quantumnous/ai-hub:latest`
+> **Latest Docker image:** `quantumnous/ai-gateway:latest`
 
 ### 📋 Deployment Requirements
 
@@ -359,21 +359,21 @@ docker-compose up -d
 
 **Using SQLite:**
 ```bash
-docker run --name ai-hub -d --restart always \
+docker run --name ai-gateway -d --restart always \
   -p 3000:3000 \
   -e TZ=Asia/Shanghai \
   -v ./data:/data \
-  quantumnous/ai-hub:latest
+  quantumnous/ai-gateway:latest
 ```
 
 **Using MySQL:**
 ```bash
-docker run --name ai-hub -d --restart always \
+docker run --name ai-gateway -d --restart always \
   -p 3000:3000 \
   -e SQL_DSN="root:123456@tcp(localhost:3306)/oneapi" \
   -e TZ=Asia/Shanghai \
   -v ./data:/data \
-  quantumnous/ai-hub:latest
+  quantumnous/ai-gateway:latest
 ```
 
 > **💡 Path explanation:**
