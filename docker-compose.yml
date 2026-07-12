@@ -11,7 +11,6 @@ services:
     volumes:
       - ./data:/data
       - ./logs:/app/logs
-      - /home/work/generated-images:/data/image-studio
     environment:
       - SQL_DSN=${SQL_DSN}
       - REDIS_CONN_STRING=${REDIS_CONN_STRING}
@@ -22,7 +21,10 @@ services:
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true # 是否启用错误日志记录 (Whether to enable error log recording)
       - BATCH_UPDATE_ENABLED=true # 是否启用批量更新 (Whether to enable batch update)
-      - IMAGE_STUDIO_STORAGE_DIR=/data/image-studio
+      - IMAGE_STUDIO_MINIO_ENDPOINT=${IMAGE_STUDIO_MINIO_ENDPOINT:-}
+      - IMAGE_STUDIO_MINIO_ACCESS_KEY=${IMAGE_STUDIO_MINIO_ACCESS_KEY:-}
+      - IMAGE_STUDIO_MINIO_SECRET_KEY=${IMAGE_STUDIO_MINIO_SECRET_KEY:-}
+      - IMAGE_STUDIO_MINIO_BUCKET=${IMAGE_STUDIO_MINIO_BUCKET:-}
       - PORT=3002
       - NODE_NAME=ai-hub-node-1 # 节点名称，用于审计日志中标识节点身份；多节点/容器部署时建议设置 (Node name used in audit logs; recommended when running multiple instances or in containers)
     #      - STREAMING_TIMEOUT=300  # 流模式无响应超时时间，单位秒，默认120秒，如果出现空补全可以尝试改为更大值 （Streaming timeout in seconds, default is 120s. Increase if experiencing empty completions）

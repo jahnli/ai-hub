@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-07-04
+**日期**: 2026-07-12
 
 ## 涉及文件
 
@@ -22,7 +22,10 @@
 - `web/default/src/features/image-studio/components/generate-panel.tsx`、`web/default/src/features/image-studio/components/result-grid.tsx` — 生成进度文案移除单图预估时间，思考动画加快，清空按钮改为重置。
 - `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补齐图片参数日志详情相关 6 语言翻译并更新同步报告。
 - `model/image_studio.go` — 新增 ImageStudioGeneration 数据库模型，含图片元数据（尺寸、格式、大小）和收藏/用量字段，CRUD 方法支持按用户分页查询、收藏标记、用量更新和删除。
-- `controller/image_studio_storage.go` — 新增图片存储控制器：接收 base64/URL 图片并落盘至 IMAGE_STUDIO_STORAGE_DIR 目录，提供静态文件访问、列表查询、收藏/用量更新和删除等 API。
+- `controller/image_studio_storage.go`、`controller/image_studio_storage_backend.go` — 图片存储由本地磁盘迁移至 MinIO，支持通过环境变量配置 Bucket，对象统一写入 `image` 目录，并继续通过 API 提供访问、删除等能力。
+- `controller/image_studio_storage_backend_test.go` — 验证 MinIO 对象目录为 `image`，并验证使用环境变量配置的 Bucket。
+- `.env.example`、`docker-compose.yml` — 补充在线生图 MinIO 连接信息和 Bucket 环境变量配置。
+- `go.mod`、`go.sum` — 引入 MinIO Go SDK 依赖。
 - `model/main.go` — 注册 ImageStudioGeneration 模型的数据库迁移。
 - `router/api-router.go` — 注册 /api/image-studio 路由组（CRUD + 静态文件访问）。
 - `web/default/src/features/image-studio/api.ts` — 新增服务端存储相关 API 调用函数（store/list/delete/clear/favorite/usage）。

@@ -13,13 +13,10 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"mime"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -30,8 +27,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
-const imageStudioDefaultStorageDir = "./data/image-studio"
 
 const imageStudioMaxImageBytes int64 = 50 << 20
 
@@ -120,7 +115,7 @@ func StoreImageStudioImages(c *gin.Context) {
 			common.ApiError(c, err)
 			return
 		}
-		stored, err := writeImageStudioImage(folderName, data, mimeType)
+		stored, err := writeImageStudioImage(c.Request.Context(), folderName, data, mimeType)
 		if err != nil {
 			deleteImageStudioStoredImages(results)
 			common.ApiError(c, err)
@@ -176,21 +171,27 @@ func GetImageStudioImage(c *gin.Context) {
 		return
 	}
 
-	filePath, err := imageStudioAssetFilePath(asset.Path)
+	storage, err := getImageStudioStorage()
 	if err != nil {
-		c.Status(http.StatusBadRequest)
+		common.ApiError(c, err)
 		return
 	}
-	if _, err := os.Stat(filePath); err != nil {
+	storedObject, err := storage.Open(c.Request.Context(), asset.Path)
+	if err != nil {
 		c.Status(http.StatusNotFound)
 		return
 	}
+	defer storedObject.Body.Close()
 
-	if contentType := mime.TypeByExtension(filepath.Ext(filePath)); contentType != "" {
+	contentType := storedObject.ContentType
+	if contentType == "" {
+		contentType = asset.MimeType
+	}
+	if contentType != "" {
 		c.Header("Content-Type", contentType)
 	}
 	c.Header("Cache-Control", "private, max-age=31536000, immutable")
-	c.File(filePath)
+	http.ServeContent(c.Writer, c.Request, path.Base(relPath), storedObject.ModTime, storedObject.Body)
 }
 
 func UpdateImageStudioGenerationFavorite(c *gin.Context) {
@@ -250,12 +251,12 @@ func DeleteImageStudioImage(c *gin.Context) {
 		return
 	}
 
-	filePath, err := imageStudioAssetFilePath(relPath)
+	storage, err := getImageStudioStorage()
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+	if err := storage.Delete(c.Request.Context(), relPath); err != nil {
 		common.ApiError(c, err)
 		return
 	}
@@ -399,20 +400,17 @@ func isImageStudioForbiddenIP(ip net.IP) bool {
 		ip.IsLinkLocalMulticast()
 }
 
-func writeImageStudioImage(folderName string, data []byte, mimeType string) (imageStudioStoredImage, error) {
+func writeImageStudioImage(ctx context.Context, folderName string, data []byte, mimeType string) (imageStudioStoredImage, error) {
 	name, err := randomImageStudioFileName(mimeType)
 	if err != nil {
 		return imageStudioStoredImage{}, err
 	}
 	relPath := path.Join(folderName, name)
-	filePath, err := imageStudioAssetFilePath(relPath)
+	storage, err := getImageStudioStorage()
 	if err != nil {
 		return imageStudioStoredImage{}, err
 	}
-	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		return imageStudioStoredImage{}, err
-	}
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
+	if err := storage.Put(ctx, relPath, data, mimeType); err != nil {
 		return imageStudioStoredImage{}, err
 	}
 	width, height := imageStudioImageDimensions(data)
@@ -435,21 +433,29 @@ func imageStudioImageDimensions(data []byte) (int, int) {
 }
 
 func deleteImageStudioGenerationFiles(records []model.ImageStudioGeneration) {
+	storage, err := getImageStudioStorage()
+	if err != nil {
+		common.SysLog("failed to initialize image studio storage: " + err.Error())
+		return
+	}
 	for _, record := range records {
 		for _, image := range record.Images {
-			filePath, err := imageStudioAssetFilePath(image.Path)
-			if err == nil {
-				_ = os.Remove(filePath)
+			if err := storage.Delete(context.Background(), image.Path); err != nil {
+				common.SysLog("failed to delete image studio asset: " + err.Error())
 			}
 		}
 	}
 }
 
 func deleteImageStudioStoredImages(images []imageStudioStoredImage) {
+	storage, err := getImageStudioStorage()
+	if err != nil {
+		common.SysLog("failed to initialize image studio storage: " + err.Error())
+		return
+	}
 	for _, image := range images {
-		filePath, err := imageStudioAssetFilePath(image.ID)
-		if err == nil {
-			_ = os.Remove(filePath)
+		if err := storage.Delete(context.Background(), image.ID); err != nil {
+			common.SysLog("failed to delete image studio asset: " + err.Error())
 		}
 	}
 }
@@ -518,27 +524,6 @@ func imageStudioExtension(mimeType string) string {
 	default:
 		return ".png"
 	}
-}
-
-func imageStudioStorageRoot() (string, error) {
-	dir := common.GetEnvOrDefaultString("IMAGE_STUDIO_STORAGE_DIR", imageStudioDefaultStorageDir)
-	return filepath.Abs(dir)
-}
-
-func imageStudioAssetFilePath(relPath string) (string, error) {
-	root, err := imageStudioStorageRoot()
-	if err != nil {
-		return "", err
-	}
-	fullPath := filepath.Join(root, filepath.FromSlash(relPath))
-	absFullPath, err := filepath.Abs(fullPath)
-	if err != nil {
-		return "", err
-	}
-	if absFullPath != root && !strings.HasPrefix(absFullPath, root+string(os.PathSeparator)) {
-		return "", errors.New("invalid image path")
-	}
-	return absFullPath, nil
 }
 
 func cleanImageStudioAssetPath(rawPath string) (string, error) {
