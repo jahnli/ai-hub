@@ -67,7 +67,7 @@ jobs:
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: |
-            quantumnous/ai-hub
+            quantumnous/ai-gateway
             ghcr.io/${{ env.GHCR_REPOSITORY }}
 
       - name: Build & push single-arch (to both registries)
@@ -78,8 +78,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            quantumnous/ai-hub:alpha-${{ matrix.arch }}
-            quantumnous/ai-hub:${{ steps.version.outputs.value }}-${{ matrix.arch }}
+            quantumnous/ai-gateway:alpha-${{ matrix.arch }}
+            quantumnous/ai-gateway:${{ steps.version.outputs.value }}-${{ matrix.arch }}
             ghcr.io/${{ env.GHCR_REPOSITORY }}:alpha-${{ matrix.arch }}
             ghcr.io/${{ env.GHCR_REPOSITORY }}:${{ steps.version.outputs.value }}-${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -93,14 +93,14 @@ jobs:
 
       - name: Sign image with cosign
         run: |
-          cosign sign --yes quantumnous/ai-hub@${{ steps.build.outputs.digest }}
+          cosign sign --yes quantumnous/ai-gateway@${{ steps.build.outputs.digest }}
           cosign sign --yes ghcr.io/${{ env.GHCR_REPOSITORY }}@${{ steps.build.outputs.digest }}
 
       - name: Output digest
         run: |
           echo "### Docker Image Digest (${{ matrix.arch }})" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "quantumnous/ai-hub:alpha-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
+          echo "quantumnous/ai-gateway:alpha-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
           echo "ghcr.io/${{ env.GHCR_REPOSITORY }}:alpha-${{ matrix.arch }}" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -137,16 +137,16 @@ jobs:
       - name: Create & push manifest (Docker Hub - alpha)
         run: |
           docker buildx imagetools create \
-            -t quantumnous/ai-hub:alpha \
-            quantumnous/ai-hub:alpha-amd64 \
-            quantumnous/ai-hub:alpha-arm64
+            -t quantumnous/ai-gateway:alpha \
+            quantumnous/ai-gateway:alpha-amd64 \
+            quantumnous/ai-gateway:alpha-arm64
 
       - name: Create & push manifest (Docker Hub - versioned alpha)
         run: |
           docker buildx imagetools create \
-            -t quantumnous/ai-hub:${VERSION} \
-            quantumnous/ai-hub:${VERSION}-amd64 \
-            quantumnous/ai-hub:${VERSION}-arm64
+            -t quantumnous/ai-gateway:${VERSION} \
+            quantumnous/ai-gateway:${VERSION}-amd64 \
+            quantumnous/ai-gateway:${VERSION}-arm64
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
@@ -173,7 +173,7 @@ jobs:
         run: |
           echo "### Multi-arch Manifest Digests" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          docker buildx imagetools inspect quantumnous/ai-hub:alpha >> $GITHUB_STEP_SUMMARY
+          docker buildx imagetools inspect quantumnous/ai-gateway:alpha >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           docker buildx imagetools inspect ghcr.io/${GHCR_REPOSITORY}:alpha >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

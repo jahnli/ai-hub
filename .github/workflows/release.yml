@@ -54,21 +54,21 @@ jobs:
       - name: Build Backend (amd64)
         run: |
           go mod download
-          go build -ldflags "-s -w -X 'new-api/common.Version=$VERSION' -extldflags '-static'" -o ai-hub-$VERSION
+          go build -ldflags "-s -w -X 'new-api/common.Version=$VERSION' -extldflags '-static'" -o ai-gateway-$VERSION
       - name: Build Backend (arm64)
         run: |
           sudo apt-get update
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y gcc-aarch64-linux-gnu
-          CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X 'new-api/common.Version=$VERSION' -extldflags '-static'" -o ai-hub-arm64-$VERSION
+          CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X 'new-api/common.Version=$VERSION' -extldflags '-static'" -o ai-gateway-arm64-$VERSION
       - name: Generate checksums
-        run: sha256sum ai-hub-* > checksums-linux.txt
+        run: sha256sum ai-gateway-* > checksums-linux.txt
 
       - name: Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ai-hub-*
+            ai-gateway-*
             checksums-linux.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,16 +114,16 @@ jobs:
       - name: Build Backend
         run: |
           go mod download
-          go build -ldflags "-X 'new-api/common.Version=$VERSION'" -o ai-hub-macos-$VERSION
+          go build -ldflags "-X 'new-api/common.Version=$VERSION'" -o ai-gateway-macos-$VERSION
       - name: Generate checksums
-        run: shasum -a 256 ai-hub-macos-* > checksums-macos.txt
+        run: shasum -a 256 ai-gateway-macos-* > checksums-macos.txt
 
       - name: Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ai-hub-macos-*
+            ai-gateway-macos-*
             checksums-macos.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -171,16 +171,16 @@ jobs:
       - name: Build Backend
         run: |
           go mod download
-          go build -ldflags "-s -w -X 'new-api/common.Version=$VERSION'" -o ai-hub-$VERSION.exe
+          go build -ldflags "-s -w -X 'new-api/common.Version=$VERSION'" -o ai-gateway-$VERSION.exe
       - name: Generate checksums
-        run: sha256sum ai-hub-*.exe > checksums-windows.txt
+        run: sha256sum ai-gateway-*.exe > checksums-windows.txt
 
       - name: Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ai-hub-*.exe
+            ai-gateway-*.exe
             checksums-windows.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

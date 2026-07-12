@@ -42,7 +42,7 @@ git push origin 当前分支名 -o skip-lint
 
 ```ini
 [remote "gitlab"]
-	url = https://gitlab.semi-tech.com/eed/ai-hub
+	url = https://gitlab.semi-tech.com/eed/ai-gateway
 	fetch = +refs/heads/*:refs/remotes/origin/*
 ```
 

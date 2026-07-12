@@ -40,8 +40,8 @@ var (
 )
 
 const (
-	subscriptionPlanCacheNamespace     = "ai-hub:subscription_plan:v1"
-	subscriptionPlanInfoCacheNamespace = "ai-hub:subscription_plan_info:v1"
+	subscriptionPlanCacheNamespace     = "ai-gateway:subscription_plan:v1"
+	subscriptionPlanInfoCacheNamespace = "ai-gateway:subscription_plan_info:v1"
 )
 
 var (

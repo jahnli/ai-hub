@@ -13,10 +13,10 @@ func StartPyroScope() error {
 		return nil
 	}
 
-	pyroscopeAppName := GetEnvOrDefaultString("PYROSCOPE_APP_NAME", "ai-hub")
+	pyroscopeAppName := GetEnvOrDefaultString("PYROSCOPE_APP_NAME", "ai-gateway")
 	pyroscopeBasicAuthUser := GetEnvOrDefaultString("PYROSCOPE_BASIC_AUTH_USER", "")
 	pyroscopeBasicAuthPassword := GetEnvOrDefaultString("PYROSCOPE_BASIC_AUTH_PASSWORD", "")
-	pyroscopeHostname := GetEnvOrDefaultString("HOSTNAME", "ai-hub")
+	pyroscopeHostname := GetEnvOrDefaultString("HOSTNAME", "ai-gateway")
 
 	mutexRate := GetEnvOrDefault("PYROSCOPE_MUTEX_RATE", 5)
 	blockRate := GetEnvOrDefault("PYROSCOPE_BLOCK_RATE", 5)

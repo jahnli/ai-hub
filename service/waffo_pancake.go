@@ -156,7 +156,7 @@ func optionalString(s string) *string {
 // for checkout. Webhook handlers compare against the value rendered here to
 // reject identity mismatches, so both call sites must use this function.
 func WaffoPancakeBuyerIdentityFromUserID(userID int) string {
-	return fmt.Sprintf("ai-hub-user-%d", userID)
+	return fmt.Sprintf("ai-gateway-user-%d", userID)
 }
 
 // VerifyConfiguredWaffoPancakeWebhook verifies the signature header. The SDK
@@ -251,8 +251,8 @@ func ResolveWaffoPancakeSubscriptionTradeNo(event *WaffoPancakeWebhookEvent) (st
 // Deterministic default names for "+ Create": stable bodies mean stable
 // X-Idempotency-Key, which lets Pancake dedupe retries server-side.
 const (
-	defaultWaffoPancakeStoreName   = "ai-hub-store"
-	defaultWaffoPancakeProductName = "ai-hub-charge-product"
+	defaultWaffoPancakeStoreName   = "ai-gateway-store"
+	defaultWaffoPancakeProductName = "ai-gateway-charge-product"
 )
 
 // CreateWaffoPancakePrimaryStore creates a Pancake Store using in-flight

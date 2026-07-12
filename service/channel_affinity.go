@@ -26,8 +26,8 @@ const (
 	ginKeyChannelAffinityLogInfo    = "channel_affinity_log_info"
 	ginKeyChannelAffinitySkipRetry  = "channel_affinity_skip_retry_on_failure"
 
-	channelAffinityCacheNamespace           = "ai-hub:channel_affinity:v1"
-	channelAffinityUsageCacheStatsNamespace = "ai-hub:channel_affinity_usage_cache_stats:v1"
+	channelAffinityCacheNamespace           = "ai-gateway:channel_affinity:v1"
+	channelAffinityUsageCacheStatsNamespace = "ai-gateway:channel_affinity_usage_cache_stats:v1"
 )
 
 var (

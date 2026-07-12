@@ -17,26 +17,26 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 export function sendToFluent(apiKey: string, serverAddress?: string): boolean {
-  if (typeof window === 'undefined') {
-    return false
+  if (typeof window === "undefined") {
+    return false;
   }
 
-  const container = document.getElementById('fluent-ai-hub-container')
+  const container = document.getElementById("fluent-ai-gateway-container");
   if (!container) {
-    return false
+    return false;
   }
 
   const payload = {
-    id: 'ai-hub',
+    id: "ai-gateway",
     baseUrl: serverAddress || window.location.origin,
     apiKey: `sk-${apiKey}`,
-  }
+  };
 
   container.dispatchEvent(
-    new CustomEvent('fluent:prefill', {
+    new CustomEvent("fluent:prefill", {
       detail: payload,
-    })
-  )
+    }),
+  );
 
-  return true
+  return true;
 }
