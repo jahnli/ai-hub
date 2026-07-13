@@ -26,7 +26,7 @@ const (
 	queryTimeout        = 30 * time.Minute
 	reportPeriodName    = "20260706-20260710"
 	reportStartTime     = "2026-07-06 00:00:00"
-	reportEndTime       = "2026-07-10 17:40:00"
+	reportEndTime       = "2026-07-10 17:53:00"
 	reportTimeLayout    = "2006-01-02 15:04:05"
 )
 
@@ -288,7 +288,7 @@ func getCacheOutputCostCNY(other logOther, baseInputPriceUSD float64, groupRatio
 
 func writeExcel(outputPath string, statistics []modelStatistics, quotaPerUnit float64, usdToCNYRate float64) error {
 	const sheetName = "模型费用统计"
-	header := []any{"大模型", "输入Token(亿)", "输入花费(元)", "输出Token(亿)", "输出花费(元)", "缓存输入Token(亿)", "缓存输入花费(元)", "缓存输出Token(亿)", "缓存输出花费(元)", "总Token(亿)", "总花费(元)", "模型输入价格(元/MT)", "模型输出价格(元/MT)", "模型缓存输入价格(元/MT)", "模型缓存输出价格(元/MT)"}
+	header := []any{"大模型", "输入Token(亿)", "输入花费(元)", "输出Token(亿)", "输出花费(元)", "缓存输入Token(亿)", "缓存输入花费(元)", "缓存输出Token(亿)", "缓存输出花费(元)", "总Token(亿)", "总花费(元)", "单价/百万Token（不带缓存）", "单价/百万Token（带缓存）", "模型输入价格(元/MT)", "模型输出价格(元/MT)", "模型缓存输入价格(元/MT)", "模型缓存输出价格(元/MT)"}
 
 	workbook := excelize.NewFile()
 	defer workbook.Close()
@@ -301,6 +301,7 @@ func writeExcel(outputPath string, statistics []modelStatistics, quotaPerUnit fl
 
 	for itemIndex, item := range statistics {
 		totalTokens := item.InputTokens + item.OutputTokens + item.CacheInputTokens + item.CacheOutputTokens
+		nonCacheTokens := item.InputTokens + item.OutputTokens
 		totalCostCNY := float64(item.TotalQuota) / quotaPerUnit * usdToCNYRate
 		row := []any{
 			item.ModelName,
@@ -314,6 +315,8 @@ func writeExcel(outputPath string, statistics []modelStatistics, quotaPerUnit fl
 			item.CacheOutputCostCNY,
 			float64(totalTokens) / tokensPerHundredM,
 			totalCostCNY,
+			getUnitPrice(totalCostCNY, nonCacheTokens),
+			getUnitPrice(totalCostCNY, totalTokens),
 			getUnitPrice(item.InputCostCNY, item.InputTokens),
 			getUnitPrice(item.OutputCostCNY, item.OutputTokens),
 			getUnitPrice(item.CacheInputCostCNY, item.CacheInputTokens),
@@ -341,11 +344,11 @@ func writeExcel(outputPath string, statistics []modelStatistics, quotaPerUnit fl
 		return fmt.Errorf("创建 Excel 数值样式失败: %w", err)
 	}
 	lastRow := len(statistics) + 1
-	if err := workbook.SetCellStyle(sheetName, "A1", "O1", headerStyle); err != nil {
+	if err := workbook.SetCellStyle(sheetName, "A1", "Q1", headerStyle); err != nil {
 		return fmt.Errorf("设置 Excel 表头样式失败: %w", err)
 	}
 	if lastRow >= 2 {
-		if err := workbook.SetCellStyle(sheetName, "B2", fmt.Sprintf("O%d", lastRow), numberStyle); err != nil {
+		if err := workbook.SetCellStyle(sheetName, "B2", fmt.Sprintf("Q%d", lastRow), numberStyle); err != nil {
 			return fmt.Errorf("设置 Excel 数值格式失败: %w", err)
 		}
 	}
@@ -355,7 +358,10 @@ func writeExcel(outputPath string, statistics []modelStatistics, quotaPerUnit fl
 	if err := workbook.SetColWidth(sheetName, "B", "K", 18); err != nil {
 		return fmt.Errorf("设置 Token 与金额列宽失败: %w", err)
 	}
-	if err := workbook.SetColWidth(sheetName, "L", "O", 25); err != nil {
+	if err := workbook.SetColWidth(sheetName, "L", "M", 28); err != nil {
+		return fmt.Errorf("设置平均单价列宽失败: %w", err)
+	}
+	if err := workbook.SetColWidth(sheetName, "N", "Q", 25); err != nil {
 		return fmt.Errorf("设置模型价格列宽失败: %w", err)
 	}
 	if err := workbook.SetRowHeight(sheetName, 1, 24); err != nil {
@@ -364,7 +370,7 @@ func writeExcel(outputPath string, statistics []modelStatistics, quotaPerUnit fl
 	if err := workbook.SetPanes(sheetName, &excelize.Panes{Freeze: true, YSplit: 1, TopLeftCell: "A2", ActivePane: "bottomLeft"}); err != nil {
 		return fmt.Errorf("冻结 Excel 表头失败: %w", err)
 	}
-	if err := workbook.AutoFilter(sheetName, fmt.Sprintf("A1:O%d", lastRow), []excelize.AutoFilterOptions{}); err != nil {
+	if err := workbook.AutoFilter(sheetName, fmt.Sprintf("A1:Q%d", lastRow), []excelize.AutoFilterOptions{}); err != nil {
 		return fmt.Errorf("设置 Excel 筛选失败: %w", err)
 	}
 	if err := workbook.SaveAs(outputPath); err != nil {
