@@ -18,6 +18,7 @@ import (
 )
 
 func applyExplicitLogTextFilter(tx *gorm.DB, column string, value string) (*gorm.DB, error) {
+	value = strings.TrimSpace(value)
 	if value == "" {
 		return tx, nil
 	}
@@ -28,7 +29,11 @@ func applyExplicitLogTextFilter(tx *gorm.DB, column string, value string) (*gorm
 		}
 		return tx.Where(condition, pattern), nil
 	}
-	return tx.Where(column+" = ?", value), nil
+	condition, pattern, err := buildLogContainsCondition(column, value, common.LogDatabaseType())
+	if err != nil {
+		return nil, err
+	}
+	return tx.Where(condition, pattern), nil
 }
 
 func applyLogUserKeywordFilter(tx *gorm.DB, keyword string, logUsernameColumn string) (*gorm.DB, error) {

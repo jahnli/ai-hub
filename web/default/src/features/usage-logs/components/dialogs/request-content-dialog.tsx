@@ -30,7 +30,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { formatTimestampToDate } from '@/lib/format'
 
@@ -119,7 +118,7 @@ export function RequestContentDialog({
         onOpenChange={handleOpenChange}
         title={t('Request Content')}
         contentClassName='sm:max-w-[78rem]'
-        contentHeight='calc(100vh-8rem)'
+        contentHeight='calc(100vh - 8rem)'
         bodyContainerClassName='max-h-[calc(100vh-8rem)] overflow-hidden'
         bodyClassName='h-full min-h-0'
       >
@@ -171,8 +170,8 @@ export function RequestContentDialog({
             )}
           </div>
 
-          <div className='grid min-h-0 flex-1 overflow-hidden gap-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)]'>
-            <div className='h-full min-h-0 overflow-y-auto pr-3'>
+          <div className='grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-4 overflow-hidden md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)] md:grid-rows-[minmax(0,1fr)]'>
+            <div className='h-full min-h-0 overflow-y-scroll overscroll-contain pr-3 [scrollbar-gutter:stable]'>
               <div className='space-y-3'>
                 {entries.map((entry) => (
                   <Collapsible
@@ -206,8 +205,8 @@ export function RequestContentDialog({
                         )}
                       </Button>
                     </div>
-                    <CollapsibleContent>
-                      <p className='bg-muted/40 border-t pl-9 pr-3 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap'>
+                    <CollapsibleContent className='CollapsibleContent'>
+                      <p className='bg-muted/40 border-t py-2.5 pr-3 pl-9 text-sm leading-relaxed break-words whitespace-pre-wrap'>
                         {entry.message}
                       </p>
                     </CollapsibleContent>
@@ -216,22 +215,20 @@ export function RequestContentDialog({
               </div>
             </div>
 
-            <div className='h-full min-h-0 min-w-0'>
+            <div className='h-full min-h-0 min-w-0 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]'>
               {requestMessage.parameters && (
                 <Collapsible
                   defaultOpen
-                  className='group/parameters flex h-full min-h-0 flex-col rounded-lg border px-3 py-2'
+                  className='group/parameters rounded-lg border px-3 py-2'
                 >
                   <CollapsibleTrigger className='flex w-full shrink-0 cursor-pointer items-center gap-2 text-left text-sm font-medium'>
                     <ChevronDown className='text-muted-foreground size-4 shrink-0 transition-transform group-data-[closed]/parameters:-rotate-90' />
                     <span>{t('Request Parameters')}</span>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className='mt-2 min-h-0 flex-1 overflow-hidden'>
-                    <ScrollArea className='h-full'>
-                      <pre className='bg-muted min-h-full overflow-x-auto rounded-md p-3 text-xs whitespace-pre'>
-                        {formatParameters(requestMessage.parameters)}
-                      </pre>
-                    </ScrollArea>
+                  <CollapsibleContent className='CollapsibleContent mt-2'>
+                    <pre className='bg-muted overflow-x-auto rounded-md p-3 text-xs whitespace-pre'>
+                      {formatParameters(requestMessage.parameters)}
+                    </pre>
                   </CollapsibleContent>
                 </Collapsible>
               )}

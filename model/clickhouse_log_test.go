@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestIsClickHouseDSN(t *testing.T) {
@@ -127,6 +128,26 @@ func TestBuildLogLikeConditionUsesClickHouseEscaping(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "logs.model_name LIKE ?", condition)
 	assert.Equal(t, `gpt\_4\\mini%`, pattern)
+}
+
+func TestApplyExplicitLogTextFilterUsesContainsMatch(t *testing.T) {
+	originalLogDatabaseType := common.LogDatabaseType()
+	t.Cleanup(func() {
+		common.SetLogDatabaseType(originalLogDatabaseType)
+	})
+	common.SetLogDatabaseType(common.DatabaseTypeSQLite)
+
+	filtered, err := applyExplicitLogTextFilter(
+		DB.Session(&gorm.Session{DryRun: true}).Model(&Log{}),
+		"logs.model_name",
+		" gpt_4 ",
+	)
+	require.NoError(t, err)
+	query := filtered.Find(&[]Log{})
+	require.NoError(t, query.Error)
+
+	assert.Contains(t, query.Statement.SQL.String(), "logs.model_name LIKE ? ESCAPE '!'")
+	assert.Equal(t, []interface{}{"%gpt!_4%"}, query.Statement.Vars)
 }
 
 func TestEnsureLogRequestId(t *testing.T) {
