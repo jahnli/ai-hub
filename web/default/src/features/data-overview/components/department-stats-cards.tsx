@@ -48,6 +48,14 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return count.toLocaleString()
   }
 
+  const activeUserRate = stat.active_user_rate ?? 0
+  let activeUserRateClassName = 'text-destructive'
+  if (activeUserRate >= 90) {
+    activeUserRateClassName = 'text-success'
+  } else if (activeUserRate >= 50) {
+    activeUserRateClassName = 'text-warning'
+  }
+
   const items: {
     title: string
     value: string
@@ -94,21 +102,21 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: (stat.registered_users ?? 0).toLocaleString(),
       desc: t('Registered people count'),
       icon: UserCheck,
-      valueClassName: 'text-emerald-600 dark:text-emerald-400',
+      valueClassName: 'text-success',
     },
     {
       title: t('Unregistered Count'),
       value: (stat.unregistered_users ?? 0).toLocaleString(),
       desc: t('Unregistered people count'),
       icon: UserX,
-      valueClassName: 'text-amber-600 dark:text-amber-400',
+      valueClassName: 'text-warning',
     },
     {
       title: t('Active Users / Share'),
-      value: `${(stat.active_users ?? 0).toLocaleString()} / ${(stat.active_user_rate ?? 0).toFixed(1)}%`,
+      value: `${(stat.active_users ?? 0).toLocaleString()} / ${activeUserRate.toFixed(1)}%`,
       desc: t('Active Users / Share'),
       icon: Users,
-      valueClassName: 'text-primary',
+      valueClassName: activeUserRateClassName,
     },
     {
       title: t('Tokens per Active User'),
