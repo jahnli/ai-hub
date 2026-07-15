@@ -1,6 +1,6 @@
 # 登录页默认使用 LDAP 登录，视图切换布局
 
-**日期**: 2026-06-22 ~ 06-23
+**日期**: 2026-06-22 ~ 07-15（最后更新 07-15）
 
 ## 涉及文件
 
@@ -13,3 +13,4 @@
 - `web/default/src/i18n/locales/ja.json` — 新增对应日语翻译
 - `web/default/src/i18n/locales/ru.json` — 新增对应俄语翻译
 - `web/default/src/i18n/locales/vi.json` — 新增对应越南语翻译
+- `web/default/src/features/auth/sign-in/index.tsx` — 移除“没有账号？注册”提示及注册链接，并将登录标题简化为左对齐布局

@@ -26,6 +26,9 @@ export interface SubDepartmentStat {
   avg_price_per_mt: number
   total_tokens: number
   total_requests: number
+  active_users: number
+  active_user_rate: number
+  avg_tokens_per_active_user_mt: number
 }
 
 export interface ModelStat {
@@ -67,6 +70,10 @@ export interface DepartmentStat {
   avg_price_per_mt: number
   registered_users: number
   unregistered_users: number
+  active_users: number
+  active_user_rate: number
+  avg_tokens_per_active_user_mt: number
+  active_user_request_threshold: number
 }
 
 export interface ReportNotifySetting {

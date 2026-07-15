@@ -638,6 +638,20 @@ func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error
 	}, nil
 }
 
+const defaultActiveUserRequestThreshold = 10
+
+func getActiveUserRequestThreshold() int {
+	threshold := common.GetEnvOrDefault(
+		"DATA_OVERVIEW_ACTIVE_USER_REQUEST_THRESHOLD",
+		defaultActiveUserRequestThreshold,
+	)
+	if threshold < 0 {
+		common.SysError("DATA_OVERVIEW_ACTIVE_USER_REQUEST_THRESHOLD must not be negative, using default value: 10")
+		return defaultActiveUserRequestThreshold
+	}
+	return threshold
+}
+
 // DepartmentStatsRequest is the request body for department stats.
 type DepartmentStatsRequest struct {
 	DepartmentID   string `json:"department_id"`
@@ -771,7 +785,14 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 		return nil, fmt.Errorf("find users by open_id: %w", err)
 	}
 
-	stat, err := model.GetDepartmentStats(userIds, req.StartTimestamp, req.EndTimestamp)
+	activeUserRequestThreshold := getActiveUserRequestThreshold()
+
+	stat, err := model.GetDepartmentStats(
+		userIds,
+		req.StartTimestamp,
+		req.EndTimestamp,
+		activeUserRequestThreshold,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -791,21 +812,31 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 	if stat.TotalTokens > 0 {
 		stat.AvgPricePerMT = stat.TotalAmountCNY / (float64(stat.TotalTokens) / 1000000.0)
 	}
+	totalUsers := stat.RegisteredUsers + stat.UnregisteredUsers
+	if totalUsers > 0 {
+		stat.ActiveUserRate = float64(stat.ActiveUsers) / float64(totalUsers) * 100
+	}
+	if stat.ActiveUsers > 0 {
+		stat.AvgTokensPerActiveUserMT = float64(stat.TotalTokens) / float64(stat.ActiveUsers) / 1000000.0
+	}
 
 	return stat, nil
 }
 
 // SubDepartmentStatItem holds stats for one sub-department.
 type SubDepartmentStatItem struct {
-	DepartmentID    string  `json:"department_id"`
-	DepartmentName  string  `json:"department_name"`
-	RegisteredUsers int64   `json:"registered_users"`
-	TotalUsers      int64   `json:"total_users"`
-	TotalQuota      int64   `json:"total_quota"`
-	TotalAmountCNY  float64 `json:"total_amount_cny"`
-	AvgPricePerMT   float64 `json:"avg_price_per_mt"`
-	TotalTokens     int64   `json:"total_tokens"`
-	TotalRequests   int64   `json:"total_requests"`
+	DepartmentID             string  `json:"department_id"`
+	DepartmentName           string  `json:"department_name"`
+	RegisteredUsers          int64   `json:"registered_users"`
+	TotalUsers               int64   `json:"total_users"`
+	TotalQuota               int64   `json:"total_quota"`
+	TotalAmountCNY           float64 `json:"total_amount_cny"`
+	AvgPricePerMT            float64 `json:"avg_price_per_mt"`
+	TotalTokens              int64   `json:"total_tokens"`
+	TotalRequests            int64   `json:"total_requests"`
+	ActiveUsers              int64   `json:"active_users"`
+	ActiveUserRate           float64 `json:"active_user_rate"`
+	AvgTokensPerActiveUserMT float64 `json:"avg_tokens_per_active_user_mt"`
 }
 
 // GetSubDepartmentStats returns per-child-department statistics for the given parent department.
@@ -887,8 +918,10 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 		totalTokens   int64
 		totalQuota    int64
 		totalRequests int64
+		activeUsers   int64
 	}
 	agg := make([]aggResult, len(children))
+	activeUserRequestThreshold := getActiveUserRequestThreshold()
 	for _, row := range rows {
 		idx, ok := userToDeptIdx[row.UserID]
 		if !ok {
@@ -897,6 +930,9 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 		agg[idx].totalTokens += row.TotalTokens
 		agg[idx].totalQuota += row.TotalQuota
 		agg[idx].totalRequests += row.TotalReqs
+		if row.TotalReqs > int64(activeUserRequestThreshold) {
+			agg[idx].activeUsers++
+		}
 	}
 
 	quotaPerUnit := common.QuotaPerUnit
@@ -915,17 +951,28 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 		if agg[i].totalTokens > 0 {
 			avgPricePerMT = totalAmountCNY / (float64(agg[i].totalTokens) / 1000000.0)
 		}
+		activeUserRate := 0.0
+		if len(deptData[i].memberOpenIDs) > 0 {
+			activeUserRate = float64(agg[i].activeUsers) / float64(len(deptData[i].memberOpenIDs)) * 100
+		}
+		avgTokensPerActiveUserMT := 0.0
+		if agg[i].activeUsers > 0 {
+			avgTokensPerActiveUserMT = float64(agg[i].totalTokens) / float64(agg[i].activeUsers) / 1000000.0
+		}
 
 		results[i] = SubDepartmentStatItem{
-			DepartmentID:    child.OpenDepartmentID,
-			DepartmentName:  child.Name,
-			RegisteredUsers: int64(len(deptData[i].userIDs)),
-			TotalUsers:      int64(len(deptData[i].memberOpenIDs)),
-			TotalQuota:      agg[i].totalQuota,
-			TotalAmountCNY:  totalAmountCNY,
-			AvgPricePerMT:   avgPricePerMT,
-			TotalTokens:     agg[i].totalTokens,
-			TotalRequests:   agg[i].totalRequests,
+			DepartmentID:             child.OpenDepartmentID,
+			DepartmentName:           child.Name,
+			RegisteredUsers:          int64(len(deptData[i].userIDs)),
+			TotalUsers:               int64(len(deptData[i].memberOpenIDs)),
+			TotalQuota:               agg[i].totalQuota,
+			TotalAmountCNY:           totalAmountCNY,
+			AvgPricePerMT:            avgPricePerMT,
+			TotalTokens:              agg[i].totalTokens,
+			TotalRequests:            agg[i].totalRequests,
+			ActiveUsers:              agg[i].activeUsers,
+			ActiveUserRate:           activeUserRate,
+			AvgTokensPerActiveUserMT: avgTokensPerActiveUserMT,
 		}
 	}
 

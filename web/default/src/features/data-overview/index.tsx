@@ -1,23 +1,25 @@
-import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  AlertCircle,
-  Building2,
-  Loader2,
-  Search,
-} from 'lucide-react'
+import { AlertCircle, Building2, Loader2, Search } from 'lucide-react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import dayjs from '@/lib/dayjs'
+
+import { SectionPageLayout } from '@/components/layout'
+import { FadeIn } from '@/components/page-transition'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SectionPageLayout } from '@/components/layout'
-import { FadeIn } from '@/components/page-transition'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
-import { getDepartmentTree, getDepartmentStats, getSubDepartmentStats, getUsageAnalysis } from './api'
-import { DepartmentTreeSelect } from './components/department-tree-select'
+import dayjs from '@/lib/dayjs'
+
+import {
+  getDepartmentTree,
+  getDepartmentStats,
+  getSubDepartmentStats,
+  getUsageAnalysis,
+} from './api'
 import { DepartmentStatsCards } from './components/department-stats-cards'
+import { DepartmentTreeSelect } from './components/department-tree-select'
 import { DepartmentUsersTable } from './components/department-users-table'
 import { ExportDialog } from './components/export-dialog'
 import { NotifySettingsDialog } from './components/notify-settings-dialog'
@@ -26,7 +28,7 @@ import { UsageAnalysisSection } from './components/usage-analysis'
 import type { DeptTreeNode } from './types'
 
 const STATS_SKELETON_KEYS = Array.from(
-  { length: 8 },
+  { length: 10 },
   (_, index) => `stats-skeleton-${index}`
 )
 const USAGE_ANALYSIS_SKELETON_KEYS = Array.from(
@@ -117,7 +119,13 @@ export function DataOverview() {
         })
       }
     }
-  }, [displayTreeData, treeData, selectedDeptId, dateRange.start, dateRange.end])
+  }, [
+    displayTreeData,
+    treeData,
+    selectedDeptId,
+    dateRange.start,
+    dateRange.end,
+  ])
 
   const handleDeptChange = (deptId: string, _node: DeptTreeNode) => {
     setSelectedDeptId(deptId)
@@ -224,9 +232,12 @@ export function DataOverview() {
 
           {statsQuery.isFetching && !statsQuery.data && (
             <div className='overflow-hidden rounded-lg border'>
-              <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-4'>
+              <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
                 {STATS_SKELETON_KEYS.map((key) => (
-                  <div key={key} className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'>
+                  <div
+                    key={key}
+                    className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'
+                  >
                     <Skeleton className='h-3.5 w-20' />
                     <Skeleton className='mt-2 h-7 w-24' />
                   </div>
@@ -255,13 +266,15 @@ export function DataOverview() {
             </Card>
           )}
 
-          {subStatsQuery.data?.data && subStatsQuery.data.data.length > 0 && queryParams && (
-            <SubDepartmentStats
-              data={subStatsQuery.data.data}
-              startTimestamp={queryParams.start_timestamp}
-              endTimestamp={queryParams.end_timestamp}
-            />
-          )}
+          {subStatsQuery.data?.data &&
+            subStatsQuery.data.data.length > 0 &&
+            queryParams && (
+              <SubDepartmentStats
+                data={subStatsQuery.data.data}
+                startTimestamp={queryParams.start_timestamp}
+                endTimestamp={queryParams.end_timestamp}
+              />
+            )}
 
           {queryParams && (
             <DepartmentUsersTable
@@ -282,11 +295,17 @@ export function DataOverview() {
               <CardContent className='p-0'>
                 <div className='grid grid-cols-1 lg:grid-cols-2'>
                   {USAGE_ANALYSIS_SKELETON_KEYS.map((key) => (
-                    <div key={key} className='border-border/60 border-b lg:odd:border-r'>
+                    <div
+                      key={key}
+                      className='border-border/60 border-b lg:odd:border-r'
+                    >
                       <div className='px-5 py-3'>
                         <Skeleton className='h-4 w-32' />
                       </div>
-                      <div className='flex items-center justify-center p-2' style={{ height: 300 }}>
+                      <div
+                        className='flex items-center justify-center p-2'
+                        style={{ height: 300 }}
+                      >
                         <Loader2 className='text-muted-foreground size-6 animate-spin' />
                       </div>
                     </div>

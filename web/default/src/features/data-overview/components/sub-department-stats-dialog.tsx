@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, Loader2 } from 'lucide-react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+
 import { getDepartmentStats, getUsageAnalysis } from '../api'
 import type { SubDepartmentStat } from '../types'
 import { DepartmentStatsCards } from './department-stats-cards'
@@ -28,9 +30,7 @@ const USAGE_ANALYSIS_SKELETON_KEYS = Array.from(
   (_, index) => `sub-department-usage-analysis-skeleton-${index}`
 )
 
-export function SubDepartmentStatsDialog(
-  props: SubDepartmentStatsDialogProps
-) {
+export function SubDepartmentStatsDialog(props: SubDepartmentStatsDialogProps) {
   const { t } = useTranslation()
   const departmentId = props.department?.department_id
 
@@ -70,7 +70,8 @@ export function SubDepartmentStatsDialog(
       <DialogContent className='flex max-h-[calc(100vh-2rem)] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]'>
         <DialogHeader className='shrink-0'>
           <DialogTitle>
-            {t('Sub-department Statistics')} - {props.department.department_name}
+            {t('Sub-department Statistics')} -{' '}
+            {props.department.department_name}
           </DialogTitle>
         </DialogHeader>
 
@@ -89,8 +90,8 @@ export function SubDepartmentStatsDialog(
 
           {statsQuery.isFetching && !statsQuery.data && (
             <div className='overflow-hidden rounded-lg border'>
-              <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-4'>
-                {Array.from({ length: 8 }, (_, index) => (
+              <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
+                {Array.from({ length: 10 }, (_, index) => (
                   <div
                     key={`sub-department-stats-skeleton-${index}`}
                     className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'
