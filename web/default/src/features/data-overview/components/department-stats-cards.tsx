@@ -108,7 +108,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: `${(stat.active_users ?? 0).toLocaleString()} / ${(stat.active_user_rate ?? 0).toFixed(1)}%`,
       desc: t('Active Users / Share'),
       icon: Users,
-      valueClassName: 'text-sky-600 dark:text-sky-400',
+      valueClassName: 'text-primary',
     },
     {
       title: t('Tokens per Active User'),
