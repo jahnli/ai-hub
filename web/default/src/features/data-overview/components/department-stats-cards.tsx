@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
+import { getActiveUserRateClassName } from '../lib/active-user-rate'
 import type { DepartmentStat } from '../types'
 
 export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
@@ -51,12 +52,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
   const activeUserRate = stat.active_user_rate ?? 0
   const tokensPerActiveUser =
     (stat.avg_tokens_per_active_user_mt ?? 0) * 1_000_000
-  let activeUserRateClassName = 'text-destructive'
-  if (activeUserRate >= 90) {
-    activeUserRateClassName = 'text-success'
-  } else if (activeUserRate >= 50) {
-    activeUserRateClassName = 'text-warning'
-  }
+  const activeUserRateClassName = getActiveUserRateClassName(activeUserRate)
 
   const items: {
     title: string

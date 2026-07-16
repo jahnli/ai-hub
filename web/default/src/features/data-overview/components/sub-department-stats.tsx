@@ -28,6 +28,7 @@ import {
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
 
+import { getActiveUserRateClassName } from '../lib/active-user-rate'
 import type { SubDepartmentStat } from '../types'
 import { DepartmentLogsDialog } from './department-logs-dialog'
 import { SubDepartmentStatsDialog } from './sub-department-stats-dialog'
@@ -195,7 +196,9 @@ function useSubDepartmentColumns(
         accessorKey: 'active_users',
         header: t('Active Users / Active Rate'),
         cell: ({ row }) => (
-          <span className='text-muted-foreground font-mono whitespace-nowrap'>
+          <span
+            className={`${getActiveUserRateClassName(row.original.active_user_rate)} font-mono whitespace-nowrap`}
+          >
             {row.original.active_users.toLocaleString()} /{' '}
             {row.original.active_user_rate.toFixed(1)}%
           </span>
