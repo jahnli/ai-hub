@@ -47,3 +47,7 @@
 - `web/default/src/features/data-overview/types.ts` — 部门与子部门统计类型补充使用人数、占比、人均 Token 和阈值字段
 - `web/default/src/i18n/locales/*.json` — 补齐使用人数、使用占比、人均 Token、请求阈值说明等各语言文案
 - `model/log_user_filter_test.go` — 覆盖按 user_id 精确过滤、排除相似用户名用户及起止时间边界包含行为
+- `.env.example` — 新增 `DATA_OVERVIEW_MODEL_MAPPING` 数组映射格式说明，以展示模型名关联多个原始模型别名
+- `docker-compose.yml` — 将 `DATA_OVERVIEW_MODEL_MAPPING` 注入服务环境变量
+- `model/log.go` — 模型统计支持获取完整聚合结果，并按合并后的 Top N 模型集合查询每日趋势数据
+- `service/feishu_department.go` — 解析“展示模型名 → 原始模型名数组”映射，统一合并模型 Token、额度、调用次数和每日趋势，并在合并后执行 Top 10 排名

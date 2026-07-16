@@ -1033,7 +1033,8 @@ func GetUserModelStatsBatch(userIds []int, startTimestamp, endTimestamp int64) (
 	return rows, nil
 }
 
-// GetModelStats returns per-model aggregated stats for the given user IDs, ordered by quota desc, limited to top N.
+// GetModelStats returns per-model aggregated stats for the given user IDs, ordered by quota desc.
+// A non-positive limit returns all models.
 func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int) ([]ModelStatRow, error) {
 	if len(userIds) == 0 {
 		return nil, nil
@@ -1054,7 +1055,11 @@ func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int)
 		tx = tx.Where("created_at <= ?", endTimestamp)
 	}
 
-	if err := tx.Group("model_name").Order("total_quota DESC").Limit(limit).Scan(&rows).Error; err != nil {
+	tx = tx.Group("model_name").Order("total_quota DESC")
+	if limit > 0 {
+		tx = tx.Limit(limit)
+	}
+	if err := tx.Scan(&rows).Error; err != nil {
 		return nil, errors.New("查询模型统计数据失败")
 	}
 	return rows, nil
@@ -1115,13 +1120,6 @@ func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN 
 		return nil, nil
 	}
 
-	dateExpr := "DATE(FROM_UNIXTIME(created_at))"
-	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
-		dateExpr = "DATE(created_at, 'unixepoch')"
-	} else if common.UsingMainDatabase(common.DatabaseTypePostgreSQL) {
-		dateExpr = "TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD')"
-	}
-
 	topModels, err := GetModelStats(userIds, startTimestamp, endTimestamp, topN)
 	if err != nil {
 		return nil, err
@@ -1132,6 +1130,21 @@ func GetModelDailyStats(userIds []int, startTimestamp, endTimestamp int64, topN 
 	modelNames := make([]string, len(topModels))
 	for i, m := range topModels {
 		modelNames[i] = m.ModelName
+	}
+	return GetModelDailyStatsForModels(userIds, startTimestamp, endTimestamp, modelNames)
+}
+
+// GetModelDailyStatsForModels returns per-model per-day token stats for the specified model names.
+func GetModelDailyStatsForModels(userIds []int, startTimestamp, endTimestamp int64, modelNames []string) ([]ModelDailyStatRow, error) {
+	if len(userIds) == 0 || len(modelNames) == 0 {
+		return nil, nil
+	}
+
+	dateExpr := "DATE(FROM_UNIXTIME(created_at))"
+	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
+		dateExpr = "DATE(created_at, 'unixepoch')"
+	} else if common.UsingMainDatabase(common.DatabaseTypePostgreSQL) {
+		dateExpr = "TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD')"
 	}
 
 	var rows []ModelDailyStatRow
