@@ -116,7 +116,7 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
           />
 
           <UserLogsSection
-            username={props.user.username}
+            userId={props.user.id}
             startTimestamp={startTimestamp}
             endTimestamp={endTimestamp}
           />

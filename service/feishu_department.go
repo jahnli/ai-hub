@@ -676,6 +676,15 @@ type DepartmentLogsRequest struct {
 	UpstreamRequestID string `json:"upstream_request_id"`
 }
 
+// DepartmentUserLogsRequest is the request body for one user's usage logs.
+type DepartmentUserLogsRequest struct {
+	UserID         int   `json:"user_id"`
+	StartTimestamp int64 `json:"start_timestamp"`
+	EndTimestamp   int64 `json:"end_timestamp"`
+	Page           int   `json:"p"`
+	PageSize       int   `json:"page_size"`
+}
+
 // GetDepartmentLogs fetches usage logs for registered users under a department.
 func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 	if !system_setting.FeishuEnabled() {
@@ -693,7 +702,7 @@ func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 	}
 
 	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
-	pageInfo := departmentLogsPageInfo(req)
+	pageInfo := departmentLogsPageInfo(req.Page, req.PageSize)
 	if len(openDeptIDs) == 0 {
 		pageInfo.SetItems([]*model.Log{})
 		return pageInfo, nil
@@ -736,12 +745,36 @@ func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 	return pageInfo, nil
 }
 
-func departmentLogsPageInfo(req *DepartmentLogsRequest) *common.PageInfo {
-	page := req.Page
+// GetDepartmentUserLogs fetches logs by immutable user ID for the user statistics dialog.
+func GetDepartmentUserLogs(req *DepartmentUserLogsRequest) (*common.PageInfo, error) {
+	pageInfo := departmentLogsPageInfo(req.Page, req.PageSize)
+	logs, total, err := model.GetLogsByUserIds(
+		[]int{req.UserID},
+		model.LogTypeUnknown,
+		req.StartTimestamp,
+		req.EndTimestamp,
+		"",
+		"",
+		"",
+		pageInfo.GetStartIdx(),
+		pageInfo.GetPageSize(),
+		0,
+		"",
+		"",
+		"",
+	)
+	if err != nil {
+		return nil, err
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(logs)
+	return pageInfo, nil
+}
+
+func departmentLogsPageInfo(page int, pageSize int) *common.PageInfo {
 	if page < 1 {
 		page = 1
 	}
-	pageSize := req.PageSize
 	if pageSize <= 0 {
 		pageSize = common.ItemsPerPage
 	}
