@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""按 main.go 的模型映射和计费口径生成 AI 中转站周报。"""
+"""逐条按使用日志的历史计费快照生成 AI 中转站周报。"""
 
 from __future__ import annotations
 
+import ast
+import base64
 import json
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from typing import Any
 
 import psycopg2
@@ -23,31 +26,31 @@ DEFAULT_USD_TO_CNY_RATE = 6.8
 DEFAULT_QUOTA_PER_UNIT = 500_000.0
 TOKENS_PER_MILLION = 1_000_000.0
 TOKENS_PER_HUNDRED_MILLION = 100_000_000.0
+CONSUME_LOG_TYPE = 2
+ALLOCATION_BUCKETS = ("input", "output", "cache_input", "cache_output")
 
-# 每项可在第三个位置配置四类价格：输入、输出、缓存输入、缓存输出（元/百万 Token）。
-# 没有第三项时，使用第一个别名查询模型广场价格。
-ModelMapping = tuple[str, list[str]] | tuple[str, list[str], tuple[float, float, float, float]]
+ModelMapping = tuple[str, list[str]]
 BUILTIN_MODEL_MAPPING: list[ModelMapping] = [
-    ("Kimi-K2.5", ["kimi-k2.5"], (4.0, 21.0, 0.7, 0.0)),
+    ("Kimi-K2.5", ["kimi-k2.5"]),
     ("Kimi-K2.6", ["kimi-k2.6"]),
     ("Kimi-K2.7", ["kimi-k2.7-code"]),
     ("Qwen3-Reranker-8B", ["Qwen3-Reranker-8B"]),
     ("Qwen3-Embedding-8B", ["Qwen3-Embedding-8B"]),
-    ("Claude Haiku 4.5", ["claude-haiku-4-5-20251001", "claude-haiku-4-5", "claude-haiku-4.5"], (1.0, 5.0, 0.1, 1.25)),
-    ("Claude Sonnet 5", ["claude-sonnet-5"], (2.0, 10.0, 0.2, 2.5)),
+    ("Claude Haiku 4.5", ["claude-haiku-4-5-20251001", "claude-haiku-4-5", "claude-haiku-4.5"]),
+    ("Claude Sonnet 5", ["claude-sonnet-5"]),
     ("Claude Sonnet 4.6", ["claude-sonnet-4-6", "claude-sonnet-4.6", "anthropic/claude-sonnet-4.6"]),
     ("Claude Opus 4.6", ["claude-opus-4-6", "claude-opus-4.6", "anthropic/claude-opus-4.6"]),
-    ("Claude Opus 4.7", ["claude-opus-4-7", "claude-opus-4.7", "anthropic/claude-opus-4.7"], (5.0, 25.0, 0.5, 6.25)),
+    ("Claude Opus 4.7", ["claude-opus-4-7", "claude-opus-4.7", "anthropic/claude-opus-4.7"]),
     ("Claude Opus 4.8", ["claude-opus-4-8", "claude-opus-4.8", "anthropic/claude-opus-4.8"]),
     ("Deepseek-v4-flash", ["deepseek-v4-flash"]),
     ("Deepseek-v4-pro", ["deepseek-v4-pro"]),
-    ("GLM-4.7", ["glm-4.7"], (2.0, 8.0, 0.4, 0.0)),
-    ("GLM-5", ["glm-5"], (4.0, 18.0, 1.0, 0.0)),
-    ("GLM-5-Turbo", ["glm-5-turbo"], (5.0, 22.0, 1.2, 0.0)),
-    ("GLM-5.1", ["glm-5.1"], (5.5, 25.0, 1.3, 0.0)),
+    ("GLM-4.7", ["glm-4.7"]),
+    ("GLM-5", ["glm-5"]),
+    ("GLM-5-Turbo", ["glm-5-turbo"]),
+    ("GLM-5.1", ["glm-5.1"]),
     ("GLM-5.2", ["glm-5.2"]),
     ("GPT-5.4-mini", ["gpt-5.4-mini"]),
-    ("GPT-5.4", ["gpt-5.4"], (0.5, 2.7, 0.05, 0.05)),
+    ("GPT-5.4", ["gpt-5.4"]),
     ("GPT-5.5", ["gpt-5.5"]),
     ("GPT-5.6-luna", ["gpt-5.6-luna"]),
     ("GPT-5.6-terra", ["gpt-5.6-terra"]),
@@ -63,14 +66,6 @@ MODEL_LOOKUP = {
 
 
 @dataclass
-class ModelPrices:
-    input: float = 0.0
-    output: float = 0.0
-    cache_input: float = 0.0
-    cache_output: float = 0.0
-
-
-@dataclass
 class ModelStats:
     name: str
     input_tokens: int = 0
@@ -78,8 +73,11 @@ class ModelStats:
     cache_input_tokens: int = 0
     cache_output_tokens: int = 0
     quota: int = 0
+    input_quota: int = 0
+    output_quota: int = 0
+    cache_input_quota: int = 0
+    cache_output_quota: int = 0
     quota_cost_cny: float = 0.0
-    # 对应 main.go 最终表格的四个费用列。
     input_cost_cny: float = 0.0
     output_cost_cny: float = 0.0
     cache_input_cost_cny: float = 0.0
@@ -89,253 +87,510 @@ class ModelStats:
     def total_tokens(self) -> int:
         return self.input_tokens + self.output_tokens + self.cache_input_tokens + self.cache_output_tokens
 
-@dataclass
-class PriceConfig:
-    model_price: dict[str, float] = field(default_factory=dict)
-    model_ratio: dict[str, float] = field(default_factory=dict)
-    completion_ratio: dict[str, float] = field(default_factory=dict)
-    cache_ratio: dict[str, float] = field(default_factory=dict)
-    create_cache_ratio: dict[str, float] = field(default_factory=dict)
-    group_ratio: dict[str, float] = field(default_factory=dict)
-    billing_mode: dict[str, str] = field(default_factory=dict)
-    billing_expr: dict[str, str] = field(default_factory=dict)
-    marketplace_groups: dict[str, list[str]] = field(default_factory=dict)
-
 
 def normalize_model_name(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
-def parse_float_map(value: Any) -> dict[str, float]:
-    result: dict[str, float] = {}
+@dataclass
+class TokenCategories:
+    prompt: int
+    input: int
+    output: int
+    cache_input: int
+    cache_output: int
+    cache_creation: int
+    cache_creation_5m: int
+    cache_creation_1h: int
+    anthropic_semantic: bool
+
+
+def parse_log_other(raw_other: Any) -> tuple[dict[str, Any], bool]:
+    if isinstance(raw_other, dict):
+        return raw_other, False
+    if raw_other in (None, ""):
+        return {}, False
     try:
-        data = value if isinstance(value, dict) else json.loads(str(value or "{}"))
-    except (TypeError, ValueError):
-        return result
-    if not isinstance(data, dict):
-        return result
-    for key, raw_value in data.items():
-        try:
-            result[normalize_model_name(key)] = float(raw_value)
-        except (TypeError, ValueError):
-            continue
-    return result
+        parsed = json.loads(
+            str(raw_other),
+            parse_float=Decimal,
+            parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)),
+        )
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}, True
+    return (parsed, False) if isinstance(parsed, dict) else ({}, True)
 
 
-def parse_text_map(value: Any) -> dict[str, str]:
-    try:
-        data = value if isinstance(value, dict) else json.loads(str(value or "{}"))
-    except (TypeError, ValueError):
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return {
-        normalize_model_name(key): str(raw_value)
-        for key, raw_value in data.items()
-        if raw_value is not None
-    }
-
-
-def first_row_value(row: dict[str, Any], keys: tuple[str, ...]) -> Any:
-    lowered = {str(key).lower(): value for key, value in row.items()}
-    return next((lowered[key.lower()] for key in keys if lowered.get(key.lower()) not in (None, "")), None)
-
-
-def load_price_config(conn: Any) -> tuple[dict[str, Any], PriceConfig]:
-    with conn.cursor() as cur:
-        cur.execute('SELECT "key", value FROM options')
-        options = {str(key): value for key, value in cur.fetchall() if value is not None}
-        config = PriceConfig()
-        for key, value in options.items():
-            normalized_key = key.replace("_", "").lower()
-            if "billingmode" in normalized_key:
-                config.billing_mode.update(parse_text_map(value))
-                continue
-            if "billingexpr" in normalized_key:
-                config.billing_expr.update(parse_text_map(value))
-                continue
-            parsed = parse_float_map(value)
-            if "modelprice" in normalized_key:
-                config.model_price.update(parsed)
-            elif "modelratio" in normalized_key:
-                config.model_ratio.update(parsed)
-            elif "completionratio" in normalized_key:
-                config.completion_ratio.update(parsed)
-            elif "createcache" in normalized_key and "ratio" in normalized_key:
-                config.create_cache_ratio.update(parsed)
-            elif normalized_key == "groupratio":
-                config.group_ratio.update(parsed)
-            elif "cache" in normalized_key and "ratio" in normalized_key:
-                config.cache_ratio.update(parsed)
-
-        cur.execute("SELECT row_to_json(model_row)::text FROM models AS model_row")
-        for (row_json,) in cur.fetchall():
-            row = json.loads(row_json)
-            model_name = first_row_value(row, ("model_name", "name", "id"))
-            if not model_name:
-                continue
-            model_key = normalize_model_name(model_name)
-            for fields, destination in (
-                (("model_ratio", "ratio"), config.model_ratio),
-                (("completion_ratio", "output_ratio"), config.completion_ratio),
-                (("cache_ratio", "cached_ratio", "cache_token_ratio", "cached_token_ratio"), config.cache_ratio),
-                (("create_cache_ratio", "cache_creation_ratio", "cache_write_ratio", "cache_output_ratio"), config.create_cache_ratio),
-            ):
-                raw_value = first_row_value(row, fields)
-                if raw_value is not None:
-                    try:
-                        destination[model_key] = float(raw_value)
-                    except (TypeError, ValueError):
-                        pass
-
-        cur.execute('SELECT model, "group" FROM abilities WHERE enabled = TRUE')
-        for model_name, group_name in cur.fetchall():
-            group_name = str(group_name or "").strip()
-            if not group_name:
-                continue
-            model_key = normalize_model_name(model_name)
-            groups = config.marketplace_groups.setdefault(model_key, [])
-            if group_name not in groups:
-                groups.append(group_name)
-
-    return options, config
-
-
-def parse_lowest_tier_prices(expression: str) -> ModelPrices | None:
-    body = re.sub(r"^v\d+:", "", str(expression or "").strip(), count=1)
-    match = re.search(r'tier\("[^"]*",\s*([^)]*)\)', body)
-    if not match:
+def decimal_field(data: dict[str, Any], key: str) -> Decimal | None:
+    value = data.get(key)
+    if value is None or isinstance(value, bool):
         return None
-    values = {"p": 0.0, "c": 0.0, "cr": 0.0, "cc": 0.0}
-    for key, raw_value in re.findall(r"\b(p|c|cr|cc)\s*\*\s*([\d.eE+-]+)", match.group(1)):
-        try:
-            values[key] = float(raw_value)
-        except ValueError:
-            continue
-    return ModelPrices(values["p"], values["c"], values["cr"], values["cc"])
+    try:
+        parsed = value if isinstance(value, Decimal) else Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return parsed if parsed.is_finite() and parsed >= 0 else None
 
 
-def get_marketplace_price(model_name: str, config: PriceConfig, exchange_rate: float) -> ModelPrices:
-    model_key = normalize_model_name(model_name)
-    if model_key not in config.marketplace_groups:
-        return ModelPrices()
+def nonnegative_int(value: Any) -> int:
+    if value is None or isinstance(value, bool):
+        return 0
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return 0
+    if not parsed.is_finite() or parsed < 0 or parsed != parsed.to_integral_value():
+        return 0
+    return int(parsed)
 
-    groups = config.marketplace_groups[model_key]
-    group_ratios = [config.group_ratio[group] for group in groups if group in config.group_ratio]
-    group_ratio = min(group_ratios) if group_ratios else 1.0
 
-    # main.go 对按次计费模型只返回请求单价，四类 Token 单价为 0。
-    if model_key in config.model_price:
-        return ModelPrices()
+def first_token_count(data: dict[str, Any], *keys: str) -> int:
+    for key in keys:
+        if key in data:
+            return nonnegative_int(data[key])
+    return 0
 
-    if config.billing_mode.get(model_key, "").lower() == "tiered_expr":
-        prices = parse_lowest_tier_prices(config.billing_expr.get(model_key, ""))
-        if prices is not None:
-            factor = group_ratio * exchange_rate
-            return ModelPrices(
-                prices.input * factor,
-                prices.output * factor,
-                prices.cache_input * factor,
-                prices.cache_output * factor,
-            )
 
-    model_ratio = config.model_ratio.get(model_key)
-    if model_ratio is None:
-        return ModelPrices()
-    input_price = model_ratio * 2 * group_ratio * exchange_rate
-    return ModelPrices(
-        input=input_price,
-        output=input_price * config.completion_ratio.get(model_key, 1.0),
-        cache_input=input_price * config.cache_ratio.get(model_key, 0.0),
-        cache_output=input_price * config.create_cache_ratio.get(model_key, 0.0),
+def extract_token_categories(prompt_tokens: Any, completion_tokens: Any, other: dict[str, Any]) -> TokenCategories:
+    prompt = nonnegative_int(prompt_tokens)
+    completion = nonnegative_int(completion_tokens)
+    cache_input = first_token_count(other, "cache_tokens")
+    cache_write = first_token_count(other, "cache_write_tokens")
+    cache_creation = first_token_count(other, "cache_creation_tokens")
+    cache_creation_5m = first_token_count(other, "cache_creation_tokens_5m")
+    cache_creation_1h = first_token_count(other, "cache_creation_tokens_1h")
+    cache_output = max(
+        cache_write,
+        cache_creation,
+        cache_creation_5m + cache_creation_1h,
+    )
+
+    semantic = str(other.get("usage_semantic") or "").strip().lower()
+    anthropic_semantic = semantic == "anthropic"
+    if not semantic and other.get("claude") is True and (cache_creation_5m or cache_creation_1h):
+        anthropic_semantic = True
+
+    input_tokens = prompt
+    if not anthropic_semantic:
+        input_tokens = max(prompt - cache_input - cache_output, 0)
+    return TokenCategories(
+        prompt=prompt,
+        input=input_tokens,
+        output=completion,
+        cache_input=cache_input,
+        cache_output=cache_output,
+        cache_creation=cache_creation,
+        cache_creation_5m=cache_creation_5m,
+        cache_creation_1h=cache_creation_1h,
+        anthropic_semantic=anthropic_semantic,
     )
 
 
-def collect_statistics(conn: Any, start_ts: int, end_ts: int, prices: dict[str, ModelPrices]) -> list[ModelStats]:
-    statistics = {mapping[0]: ModelStats(mapping[0]) for mapping in BUILTIN_MODEL_MAPPING}
+def add_logged_surcharges(weights: dict[str, Decimal], other: dict[str, Any]) -> None:
+    for count_key, price_key in (
+        ("web_search_call_count", "web_search_price"),
+        ("file_search_call_count", "file_search_price"),
+    ):
+        count = nonnegative_int(other.get(count_key))
+        price = decimal_field(other, price_key)
+        if count and price is not None:
+            weights["input"] += Decimal(count) * price * Decimal(1000)
 
-    # 在 PostgreSQL 内按 main.go 的公式完成拆分和聚合，避免向 Python 搬运整周明细日志。
-    with conn.cursor() as cur:
+    image_generation_price = decimal_field(other, "image_generation_call_price")
+    if image_generation_price is not None:
+        weights["output"] += image_generation_price * Decimal(1_000_000)
+
+    if other.get("audio_input_seperate_price") is True:
+        audio_input_price = decimal_field(other, "audio_input_price")
+        if audio_input_price is not None:
+            weights["input"] += audio_input_price * Decimal(1_000_000)
+
+
+def standard_cost_weights(other: dict[str, Any], tokens: TokenCategories) -> dict[str, Decimal] | None:
+    weights = {bucket: Decimal(0) for bucket in ALLOCATION_BUCKETS}
+    model_price = decimal_field(other, "model_price")
+    if model_price is not None and model_price > 0:
+        weights["input"] = model_price * Decimal(1_000_000)
+        add_logged_surcharges(weights, other)
+        return weights
+
+    model_ratio = decimal_field(other, "model_ratio")
+    if model_ratio is None:
+        return None
+    base_input_price = model_ratio * 2
+    completion_ratio = decimal_field(other, "completion_ratio")
+    cache_ratio = decimal_field(other, "cache_ratio")
+    cache_creation_ratio = decimal_field(other, "cache_creation_ratio")
+    cache_creation_ratio_5m = decimal_field(other, "cache_creation_ratio_5m")
+    cache_creation_ratio_1h = decimal_field(other, "cache_creation_ratio_1h")
+
+    completion_ratio = Decimal(1) if completion_ratio is None else completion_ratio
+    cache_ratio = Decimal(1) if cache_ratio is None else cache_ratio
+    cache_creation_ratio = Decimal(1) if cache_creation_ratio is None else cache_creation_ratio
+    cache_creation_ratio_5m = cache_creation_ratio if cache_creation_ratio_5m is None else cache_creation_ratio_5m
+    cache_creation_ratio_1h = cache_creation_ratio if cache_creation_ratio_1h is None else cache_creation_ratio_1h
+
+    weights["input"] = Decimal(tokens.input) * base_input_price
+    weights["output"] = Decimal(tokens.output) * base_input_price * completion_ratio
+    weights["cache_input"] = Decimal(tokens.cache_input) * base_input_price * cache_ratio
+
+    split_cache_creation = tokens.cache_creation_5m + tokens.cache_creation_1h
+    generic_cache_creation = max(tokens.cache_output - split_cache_creation, 0)
+    weights["cache_output"] = base_input_price * (
+        Decimal(generic_cache_creation) * cache_creation_ratio
+        + Decimal(tokens.cache_creation_5m) * cache_creation_ratio_5m
+        + Decimal(tokens.cache_creation_1h) * cache_creation_ratio_1h
+    )
+
+    text_input = first_token_count(other, "text_input")
+    audio_input = first_token_count(other, "audio_input", "audio_input_token_count")
+    text_output = first_token_count(other, "text_output")
+    audio_output = first_token_count(other, "audio_output")
+    if text_input or audio_input:
+        audio_ratio = decimal_field(other, "audio_ratio")
+        audio_ratio = Decimal(1) if audio_ratio is None else audio_ratio
+        weights["input"] = base_input_price * (
+            Decimal(text_input) + Decimal(audio_input) * audio_ratio
+        )
+    if text_output or audio_output:
+        audio_ratio = decimal_field(other, "audio_ratio")
+        audio_completion_ratio = decimal_field(other, "audio_completion_ratio")
+        audio_ratio = Decimal(1) if audio_ratio is None else audio_ratio
+        audio_completion_ratio = Decimal(1) if audio_completion_ratio is None else audio_completion_ratio
+        weights["output"] = base_input_price * (
+            Decimal(text_output) * completion_ratio
+            + Decimal(audio_output) * audio_ratio * audio_completion_ratio
+        )
+
+    add_logged_surcharges(weights, other)
+    return weights
+
+
+def extract_tier_cost(expression: str, matched_tier: str) -> str | None:
+    matches: list[tuple[str, str]] = []
+    cursor = 0
+    while True:
+        match = re.search(r"\btier\s*\(", expression[cursor:])
+        if match is None:
+            break
+        call_start = cursor + match.end()
+        quote_start = call_start
+        while quote_start < len(expression) and expression[quote_start].isspace():
+            quote_start += 1
+        if quote_start >= len(expression) or expression[quote_start] not in ('"', "'"):
+            cursor = call_start
+            continue
+        quote = expression[quote_start]
+        quote_end = quote_start + 1
+        escaped = False
+        while quote_end < len(expression):
+            char = expression[quote_end]
+            if char == quote and not escaped:
+                break
+            escaped = char == "\\" and not escaped
+            if char != "\\":
+                escaped = False
+            quote_end += 1
+        if quote_end >= len(expression):
+            break
+        try:
+            label = ast.literal_eval(expression[quote_start : quote_end + 1])
+        except (SyntaxError, ValueError):
+            cursor = quote_end + 1
+            continue
+        comma = quote_end + 1
+        while comma < len(expression) and expression[comma].isspace():
+            comma += 1
+        if comma >= len(expression) or expression[comma] != ",":
+            cursor = comma
+            continue
+
+        value_start = comma + 1
+        depth = 1
+        index = value_start
+        string_quote = ""
+        escaped = False
+        while index < len(expression):
+            char = expression[index]
+            if string_quote:
+                if char == string_quote and not escaped:
+                    string_quote = ""
+                escaped = char == "\\" and not escaped
+                if char != "\\":
+                    escaped = False
+            elif char in ('"', "'"):
+                string_quote = char
+            elif char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    matches.append((str(label), expression[value_start:index].strip()))
+                    cursor = index + 1
+                    break
+            index += 1
+        else:
+            break
+
+    selected = [cost for label, cost in matches if label == matched_tier]
+    if len(selected) == 1:
+        return selected[0]
+    if not matched_tier and len(matches) == 1:
+        return matches[0][1]
+    return None
+
+
+def parse_affine_cost(expression: str) -> tuple[Decimal, dict[str, Decimal]] | None:
+    allowed_variables = {"p", "c", "cr", "cc", "cc1h", "img", "img_o", "ai", "ao"}
+
+    def evaluate(node: ast.AST) -> tuple[Decimal, dict[str, Decimal]]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+            return Decimal(str(node.value)), {}
+        if isinstance(node, ast.Name) and node.id in allowed_variables:
+            return Decimal(0), {node.id: Decimal(1)}
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            constant, coefficients = evaluate(node.operand)
+            factor = Decimal(-1) if isinstance(node.op, ast.USub) else Decimal(1)
+            return constant * factor, {key: value * factor for key, value in coefficients.items()}
+        if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub)):
+            left_constant, left_coefficients = evaluate(node.left)
+            right_constant, right_coefficients = evaluate(node.right)
+            factor = Decimal(-1) if isinstance(node.op, ast.Sub) else Decimal(1)
+            coefficients = dict(left_coefficients)
+            for key, value in right_coefficients.items():
+                coefficients[key] = coefficients.get(key, Decimal(0)) + value * factor
+            return left_constant + right_constant * factor, coefficients
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+            left_constant, left_coefficients = evaluate(node.left)
+            right_constant, right_coefficients = evaluate(node.right)
+            if left_coefficients and right_coefficients:
+                raise ValueError("non-affine multiplication")
+            if left_coefficients:
+                return left_constant * right_constant, {
+                    key: value * right_constant for key, value in left_coefficients.items()
+                }
+            if right_coefficients:
+                return right_constant * left_constant, {
+                    key: value * left_constant for key, value in right_coefficients.items()
+                }
+            return left_constant * right_constant, {}
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            numerator_constant, numerator_coefficients = evaluate(node.left)
+            denominator_constant, denominator_coefficients = evaluate(node.right)
+            if denominator_coefficients or denominator_constant == 0:
+                raise ValueError("non-affine division")
+            return numerator_constant / denominator_constant, {
+                key: value / denominator_constant for key, value in numerator_coefficients.items()
+            }
+        raise ValueError("unsupported expression")
+
+    try:
+        parsed = ast.parse(expression, mode="eval")
+        constant, coefficients = evaluate(parsed.body)
+    except (SyntaxError, ValueError, InvalidOperation, ZeroDivisionError):
+        return None
+    if constant < 0 or any(value < 0 for value in coefficients.values()):
+        return None
+    return constant, coefficients
+
+
+def tiered_cost_weights(other: dict[str, Any], tokens: TokenCategories) -> dict[str, Decimal] | None:
+    encoded_expression = str(other.get("expr_b64") or "").strip()
+    if not encoded_expression:
+        return None
+    try:
+        expression = base64.b64decode(encoded_expression, validate=True).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+    billing_expression = expression.split("|||", 1)[0]
+    billing_expression = re.sub(r"^v\d+:", "", billing_expression.strip(), count=1)
+    matched_tier = str(other.get("matched_tier") or "")
+    tier_cost = extract_tier_cost(billing_expression, matched_tier)
+    if tier_cost is None:
+        return None
+    affine = parse_affine_cost(tier_cost)
+    if affine is None:
+        return None
+    constant, coefficients = affine
+    used_variables = set(re.findall(r"\b(?:p|c|cr|cc|cc1h|img|img_o|ai|ao)\b", billing_expression))
+
+    cache_creation_1h = tokens.cache_creation_1h
+    cache_creation = tokens.cache_creation_5m
+    if cache_creation == 0:
+        cache_creation = max(tokens.cache_output - cache_creation_1h, 0)
+    image_input = first_token_count(other, "image_input", "image_input_tokens")
+    image_output = first_token_count(other, "image_output", "image_output_tokens")
+    audio_input = first_token_count(other, "audio_input", "audio_input_token_count")
+    audio_output = first_token_count(other, "audio_output", "audio_output_token_count")
+
+    prompt = tokens.prompt
+    completion = tokens.output
+    normalized_prompt = prompt
+    normalized_completion = completion
+    if not tokens.anthropic_semantic:
+        if "cr" in used_variables:
+            normalized_prompt -= tokens.cache_input
+        if "cc" in used_variables:
+            normalized_prompt -= cache_creation
+        if "cc1h" in used_variables:
+            normalized_prompt -= cache_creation_1h
+        if "img" in used_variables:
+            normalized_prompt -= image_input
+        if "ai" in used_variables:
+            normalized_prompt -= audio_input
+        if "img_o" in used_variables:
+            normalized_completion -= image_output
+        if "ao" in used_variables:
+            normalized_completion -= audio_output
+    normalized_prompt = max(normalized_prompt, 0)
+    normalized_completion = max(normalized_completion, 0)
+
+    input_prompt_tokens = normalized_prompt
+    implicit_cache_input = 0
+    implicit_cache_output = 0
+    if not tokens.anthropic_semantic:
+        if "cr" not in used_variables:
+            implicit_cache_input = min(tokens.cache_input, input_prompt_tokens)
+            input_prompt_tokens -= implicit_cache_input
+        implicit_write_tokens = 0
+        if "cc" not in used_variables:
+            implicit_write_tokens += cache_creation
+        if "cc1h" not in used_variables:
+            implicit_write_tokens += cache_creation_1h
+        implicit_cache_output = min(implicit_write_tokens, input_prompt_tokens)
+        input_prompt_tokens -= implicit_cache_output
+
+    p_coefficient = coefficients.get("p", Decimal(0))
+    weights = {bucket: Decimal(0) for bucket in ALLOCATION_BUCKETS}
+    weights["input"] = constant + p_coefficient * Decimal(input_prompt_tokens)
+    weights["input"] += coefficients.get("img", Decimal(0)) * Decimal(image_input)
+    weights["input"] += coefficients.get("ai", Decimal(0)) * Decimal(audio_input)
+    weights["output"] = coefficients.get("c", Decimal(0)) * Decimal(normalized_completion)
+    weights["output"] += coefficients.get("img_o", Decimal(0)) * Decimal(image_output)
+    weights["output"] += coefficients.get("ao", Decimal(0)) * Decimal(audio_output)
+    weights["cache_input"] = coefficients.get("cr", Decimal(0)) * Decimal(tokens.cache_input)
+    weights["cache_input"] += p_coefficient * Decimal(implicit_cache_input)
+    weights["cache_output"] = coefficients.get("cc", Decimal(0)) * Decimal(cache_creation)
+    weights["cache_output"] += coefficients.get("cc1h", Decimal(0)) * Decimal(cache_creation_1h)
+    weights["cache_output"] += p_coefficient * Decimal(implicit_cache_output)
+    add_logged_surcharges(weights, other)
+    return weights
+
+
+def token_fallback_weights(tokens: TokenCategories) -> dict[str, Decimal]:
+    return {
+        "input": Decimal(tokens.input),
+        "output": Decimal(tokens.output),
+        "cache_input": Decimal(tokens.cache_input),
+        "cache_output": Decimal(tokens.cache_output),
+    }
+
+
+def allocate_quota(quota: int, weights: dict[str, Decimal]) -> dict[str, int]:
+    sign = -1 if quota < 0 else 1
+    target = abs(quota)
+    clean_weights = {
+        bucket: weight if weight.is_finite() and weight >= 0 else Decimal(0)
+        for bucket, weight in weights.items()
+    }
+    total_weight = sum(clean_weights.values(), Decimal(0))
+    if target == 0:
+        return {bucket: 0 for bucket in ALLOCATION_BUCKETS}
+    if total_weight == 0:
+        return {"input": quota, "output": 0, "cache_input": 0, "cache_output": 0}
+
+    exact = {
+        bucket: Decimal(target) * clean_weights[bucket] / total_weight
+        for bucket in ALLOCATION_BUCKETS
+    }
+    allocated = {
+        bucket: int(exact[bucket].to_integral_value(rounding=ROUND_FLOOR))
+        for bucket in ALLOCATION_BUCKETS
+    }
+    remainder = target - sum(allocated.values())
+    order = sorted(
+        ALLOCATION_BUCKETS,
+        key=lambda bucket: (
+            -(exact[bucket] - Decimal(allocated[bucket])),
+            ALLOCATION_BUCKETS.index(bucket),
+        ),
+    )
+    for bucket in order[:remainder]:
+        allocated[bucket] += 1
+    return {bucket: sign * allocated[bucket] for bucket in ALLOCATION_BUCKETS}
+
+
+def collect_statistics(
+    conn: Any,
+    start_ts: int,
+    end_ts: int,
+) -> tuple[list[ModelStats], int, int]:
+    statistics: dict[str, ModelStats] = {}
+    total_quota = 0
+    fallback_rows = 0
+    with conn.cursor(name="weekly_report_log_rows") as cur:
+        cur.itersize = 2_000
         cur.execute(
             """
-            WITH normalized AS MATERIALIZED (
-                SELECT
-                    log.model_name,
-                    COALESCE(log.prompt_tokens, 0) AS prompt_tokens,
-                    COALESCE(log.completion_tokens, 0) AS completion_tokens,
-                    COALESCE(log.quota, 0) AS quota,
-                    COALESCE(other.usage_semantic, '') AS usage_semantic,
-                    COALESCE(other.cache_tokens, 0) AS cache_input_tokens,
-                    COALESCE(other.cache_write_tokens, 0) AS cache_write_tokens,
-                    COALESCE(other.cache_creation_tokens, 0) AS cache_creation_tokens,
-                    COALESCE(other.cache_creation_tokens_5m, 0) AS cache_creation_tokens_5m,
-                    COALESCE(other.cache_creation_tokens_1h, 0) AS cache_creation_tokens_1h
-                FROM logs AS log
-                CROSS JOIN LATERAL jsonb_to_record(
-                    CASE WHEN BTRIM(COALESCE(log.other, '')) <> ''
-                         THEN log.other::jsonb ELSE '{}'::jsonb END
-                ) AS other(
-                    usage_semantic text,
-                    cache_tokens bigint,
-                    cache_write_tokens bigint,
-                    cache_creation_tokens bigint,
-                    cache_creation_tokens_5m bigint,
-                    cache_creation_tokens_1h bigint
-                )
-                WHERE log.type = %s
-                  AND log.created_at >= %s
-                  AND log.created_at <= %s
-                  AND LOWER(BTRIM(log.model_name)) = ANY(%s)
-            ), classified AS (
-                SELECT
-                    *,
-                    CASE
-                        WHEN cache_write_tokens > 0 THEN cache_write_tokens
-                        WHEN cache_creation_tokens_5m + cache_creation_tokens_1h > 0
-                            THEN GREATEST(
-                                cache_creation_tokens_5m + cache_creation_tokens_1h,
-                                cache_creation_tokens
-                            )
-                        ELSE cache_creation_tokens
-                    END AS cache_output_tokens
-                FROM normalized
-            )
-            SELECT
-                model_name,
-                COALESCE(SUM(
-                    CASE
-                        WHEN usage_semantic = 'anthropic' THEN GREATEST(prompt_tokens, 0)
-                        ELSE GREATEST(prompt_tokens - cache_input_tokens - cache_output_tokens, 0)
-                    END
-                ), 0) AS input_tokens,
-                COALESCE(SUM(completion_tokens), 0) AS output_tokens,
-                COALESCE(SUM(cache_input_tokens), 0) AS cache_input_tokens,
-                COALESCE(SUM(cache_output_tokens), 0) AS cache_output_tokens,
-                COALESCE(SUM(quota), 0) AS quota
-            FROM classified
-            GROUP BY model_name
+            SELECT id, model_name, prompt_tokens, completion_tokens, quota, other
+            FROM logs
+            WHERE type = %s AND created_at >= %s AND created_at <= %s
             """,
-            (2, start_ts, end_ts, list(MODEL_LOOKUP)),
+            (CONSUME_LOG_TYPE, start_ts, end_ts),
         )
-        for model_name, input_tokens, output_tokens, cache_input_tokens, cache_output_tokens, quota in cur.fetchall():
-            category = MODEL_LOOKUP.get(normalize_model_name(model_name))
-            if category is None:
-                continue
-            stat = statistics[category]
-            stat.input_tokens += int(input_tokens)
-            stat.output_tokens += int(output_tokens)
-            stat.cache_input_tokens += int(cache_input_tokens)
-            stat.cache_output_tokens += int(cache_output_tokens)
-            stat.quota += int(quota)
+        for _log_id, model_name, prompt_tokens, completion_tokens, quota_value, raw_other in cur:
+            quota = int(quota_value or 0)
+            other, malformed_other = parse_log_other(raw_other)
+            tokens = extract_token_categories(prompt_tokens, completion_tokens, other)
 
-    result = [statistics[mapping[0]] for mapping in BUILTIN_MODEL_MAPPING if statistics[mapping[0]].total_tokens > 0]
-    for stat in result:
-        price = prices[stat.name]
-        stat.input_cost_cny = stat.input_tokens / TOKENS_PER_MILLION * price.input
-        stat.output_cost_cny = stat.output_tokens / TOKENS_PER_MILLION * price.output
-        stat.cache_input_cost_cny = stat.cache_input_tokens / TOKENS_PER_MILLION * price.cache_input
-        stat.cache_output_cost_cny = stat.cache_output_tokens / TOKENS_PER_MILLION * price.cache_output
-    return result
+            is_tiered = str(other.get("billing_mode") or "").strip().lower() == "tiered_expr"
+            weights = tiered_cost_weights(other, tokens) if is_tiered else standard_cost_weights(other, tokens)
+            used_fallback = malformed_other or weights is None
+            if weights is None or (quota != 0 and sum(weights.values(), Decimal(0)) == 0):
+                weights = token_fallback_weights(tokens)
+                used_fallback = True
+            if used_fallback:
+                fallback_rows += 1
+            allocation = allocate_quota(quota, weights)
+
+            normalized_model = normalize_model_name(model_name)
+            category = MODEL_LOOKUP.get(normalized_model)
+            if category is None:
+                category = str(model_name or "未标注模型").strip() or "未标注模型"
+            stat = statistics.setdefault(category, ModelStats(category))
+            stat.input_tokens += tokens.input
+            stat.output_tokens += tokens.output
+            stat.cache_input_tokens += tokens.cache_input
+            stat.cache_output_tokens += tokens.cache_output
+            stat.quota += quota
+            stat.input_quota += allocation["input"]
+            stat.output_quota += allocation["output"]
+            stat.cache_input_quota += allocation["cache_input"]
+            stat.cache_output_quota += allocation["cache_output"]
+            total_quota += quota
+
+    for stat in statistics.values():
+        allocated_quota = (
+            stat.input_quota
+            + stat.output_quota
+            + stat.cache_input_quota
+            + stat.cache_output_quota
+        )
+        if allocated_quota != stat.quota:
+            raise RuntimeError(f"模型 {stat.name} 的四类费用拆分未与日志 quota 对齐")
+
+    model_order = {mapping[0]: index for index, mapping in enumerate(BUILTIN_MODEL_MAPPING)}
+    result = sorted(
+        statistics.values(),
+        key=lambda stat: (model_order.get(stat.name, len(model_order)), stat.name.lower()),
+    )
+    return result, total_quota, fallback_rows
+
+
+def load_options(conn: Any) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute('SELECT "key", value FROM options')
+        return {str(key): value for key, value in cur.fetchall() if value is not None}
 
 
 def get_positive_option(options: dict[str, Any], keys: tuple[str, ...], default: float) -> float:
@@ -349,20 +604,10 @@ def get_positive_option(options: dict[str, Any], keys: tuple[str, ...], default:
     return default
 
 
-def fetch_totals(conn: Any, start_ts: int, end_ts: int) -> tuple[int, int]:
+def fetch_total_users(conn: Any) -> int:
     with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT
-                (SELECT COUNT(*) FROM users),
-                (SELECT COALESCE(SUM(quota), 0)
-                 FROM logs
-                 WHERE type = %s AND created_at >= %s AND created_at <= %s)
-            """,
-            (2, start_ts, end_ts),
-        )
-        total_users, total_quota = cur.fetchone()
-        return int(total_users), int(total_quota)
+        cur.execute("SELECT COUNT(*) FROM users")
+        return int(cur.fetchone()[0])
 
 
 def format_token_amount(tokens: int) -> str:
@@ -370,8 +615,21 @@ def format_token_amount(tokens: int) -> str:
     return f"{text} 亿"
 
 
+def displayed_token_amount(tokens: int) -> Decimal:
+    return Decimal(f"{tokens / TOKENS_PER_HUNDRED_MILLION:.2f}")
+
+
+def format_displayed_token_amount(tokens: Decimal) -> str:
+    text = format(tokens, "f").rstrip("0").rstrip(".")
+    return f"{text} 亿"
+
+
 def format_cost(cost: float) -> str:
     return f"{cost:,.0f}"
+
+
+def displayed_cost(cost: float) -> Decimal:
+    return Decimal(f"{cost:.0f}")
 
 
 def unit_price(cost: float, tokens: int) -> float:
@@ -384,18 +642,39 @@ def print_report(
     end: datetime,
     total_users: int,
     stats: list[ModelStats],
-    quota_total_cost: float,
 ) -> None:
     input_tokens = sum(item.input_tokens for item in stats)
     output_tokens = sum(item.output_tokens for item in stats)
     cache_input_tokens = sum(item.cache_input_tokens for item in stats)
     cache_output_tokens = sum(item.cache_output_tokens for item in stats)
-    # 四项费用严格等于 main.go 最终表格四个费用列各自的合计。
+    # 四项费用来自逐条日志 quota 的精确拆分，合计严格等于最终日志费用。
     input_cost = sum(item.input_cost_cny for item in stats)
     output_cost = sum(item.output_cost_cny for item in stats)
     cache_input_cost = sum(item.cache_input_cost_cny for item in stats)
     cache_output_cost = sum(item.cache_output_cost_cny for item in stats)
-    total_tokens = input_tokens + output_tokens + cache_input_tokens + cache_output_tokens
+    displayed_total_tokens = sum(
+        (
+            displayed_token_amount(input_tokens),
+            displayed_token_amount(output_tokens),
+            displayed_token_amount(cache_input_tokens),
+            displayed_token_amount(cache_output_tokens),
+        ),
+        Decimal(0),
+    )
+    displayed_total_cost = sum(
+        (
+            displayed_cost(input_cost),
+            displayed_cost(output_cost),
+            displayed_cost(cache_input_cost),
+            displayed_cost(cache_output_cost),
+        ),
+        Decimal(0),
+    )
+    displayed_average_price = (
+        displayed_total_cost / (displayed_total_tokens * Decimal(100))
+        if displayed_total_tokens > 0
+        else Decimal(0)
+    )
     total_input_tokens = input_tokens + cache_input_tokens
     total_output_tokens = output_tokens + cache_output_tokens
     input_output_ratio = total_input_tokens / total_output_tokens if total_output_tokens else 0.0
@@ -411,7 +690,7 @@ AI 中转站{label}统计
 缓存输入，Token 量 {format_token_amount(cache_input_tokens)}，费用 {format_cost(cache_input_cost)} 元，单价 {unit_price(cache_input_cost, cache_input_tokens):.2f} 元
 缓存输出，Token 量 {format_token_amount(cache_output_tokens)}，费用 {format_cost(cache_output_cost)} 元，单价 {unit_price(cache_output_cost, cache_output_tokens):.2f} 元
 
-Token 总量 {format_token_amount(total_tokens)}，总费用 {format_cost(quota_total_cost)} 元，均价 {unit_price(quota_total_cost, total_tokens):.2f} 元
+Token 总量 {format_displayed_token_amount(displayed_total_tokens)}，总费用 {displayed_total_cost:,.0f} 元，均价 {displayed_average_price:.2f} 元
 输入输出倍数：{input_output_ratio:.1f} 倍，综合缓存命中率：{cache_hit_rate:.0f}%
 
 Top 5 费用的模型：""")
@@ -447,8 +726,8 @@ def main() -> int:
     end_ts = int(end.timestamp())
     conn = psycopg2.connect(DEFAULT_DSN)
     try:
-        total_users, total_quota = fetch_totals(conn, start_ts, end_ts)
-        options, price_config = load_price_config(conn)
+        total_users = fetch_total_users(conn)
+        options = load_options(conn)
         exchange_rate = get_positive_option(
             options,
             ("Price", "USDExchangeRate", "usd_exchange_rate", "price"),
@@ -459,22 +738,25 @@ def main() -> int:
             ("QuotaPerUnit", "quota_per_unit"),
             DEFAULT_QUOTA_PER_UNIT,
         )
-        quota_total_cost = total_quota / quota_per_unit * exchange_rate
-        category_prices: dict[str, ModelPrices] = {}
-        for mapping in BUILTIN_MODEL_MAPPING:
-            category, aliases, *configured_price = mapping
-            category_prices[category] = (
-                ModelPrices(*configured_price[0])
-                if configured_price
-                else get_marketplace_price(aliases[0], price_config, exchange_rate)
-            )
-        stats = collect_statistics(conn, start_ts, end_ts, category_prices)
+        stats, total_quota, fallback_rows = collect_statistics(conn, start_ts, end_ts)
         for stat in stats:
             stat.quota_cost_cny = stat.quota / quota_per_unit * exchange_rate
+            stat.input_cost_cny = stat.input_quota / quota_per_unit * exchange_rate
+            stat.output_cost_cny = stat.output_quota / quota_per_unit * exchange_rate
+            stat.cache_input_cost_cny = stat.cache_input_quota / quota_per_unit * exchange_rate
+            stat.cache_output_cost_cny = stat.cache_output_quota / quota_per_unit * exchange_rate
+        if sum(stat.quota for stat in stats) != total_quota:
+            raise RuntimeError("模型汇总 quota 与日志总 quota 不一致")
     finally:
         conn.close()
 
-    print_report(label, start, end, total_users, stats, quota_total_cost)
+    if fallback_rows:
+        print(
+            f"提示：{fallback_rows:,} 条日志因历史计费快照不完整或表达式无法线性拆分，"
+            "已按该条日志的四类 Token 占比分配最终 quota。",
+            file=sys.stderr,
+        )
+    print_report(label, start, end, total_users, stats)
     return 0
 
 

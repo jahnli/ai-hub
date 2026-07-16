@@ -2228,6 +2228,7 @@
     "Generate new backup codes for account recovery": "Tạo mã dự phòng mới để khôi phục tài khoản",
     "Generate New Codes": "Tạo mã mới",
     "Generate tokens from the Tokens page; you can scope them to specific models, groups, IPs, and rate-limits.": "Tạo token tại trang Tokens; bạn có thể giới hạn theo model, nhóm, IP và rate-limit.",
+    "Generated {{successCount}} images; {{failureCount}} requests failed": "Đã tạo {{successCount}} ảnh; {{failureCount}} yêu cầu thất bại",
     "Generated image": "Ảnh được tạo",
     "Generated Images": "Số ảnh đã tạo",
     "Generated images will appear here": "Generated images will appear here",

@@ -2228,6 +2228,7 @@
     "Generate new backup codes for account recovery": "Generate new backup codes for account recovery",
     "Generate New Codes": "Generate New Codes",
     "Generate tokens from the Tokens page; you can scope them to specific models, groups, IPs, and rate-limits.": "Generate tokens from the Tokens page; you can scope them to specific models, groups, IPs, and rate-limits.",
+    "Generated {{successCount}} images; {{failureCount}} requests failed": "Generated {{successCount}} images; {{failureCount}} requests failed",
     "Generated image": "Generated image",
     "Generated Images": "Generated Images",
     "Generated images will appear here": "Generated images will appear here",

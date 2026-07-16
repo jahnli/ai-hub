@@ -2228,6 +2228,7 @@
     "Generate new backup codes for account recovery": "Сгенерировать новые резервные коды для восстановления аккаунта",
     "Generate New Codes": "Сгенерировать новые коды",
     "Generate tokens from the Tokens page; you can scope them to specific models, groups, IPs, and rate-limits.": "Создавайте токены на странице «Токены». Их можно ограничить моделями, группами, IP и лимитами частоты.",
+    "Generated {{successCount}} images; {{failureCount}} requests failed": "Создано изображений: {{successCount}}; не удалось выполнить запросов: {{failureCount}}",
     "Generated image": "Сгенерированное изображение",
     "Generated Images": "Сгенерированные изображения",
     "Generated images will appear here": "Generated images will appear here",
