@@ -143,12 +143,12 @@ function useSubDepartmentColumns(
         header: ({ column }) => {
           const description = t('Average price per million tokens')
           const sorted = column.getIsSorted()
-          const SortIcon =
-            sorted === 'desc'
-              ? ArrowDown
-              : sorted === 'asc'
-                ? ArrowUp
-                : ChevronsUpDown
+          let SortIcon = ChevronsUpDown
+          if (sorted === 'desc') {
+            SortIcon = ArrowDown
+          } else if (sorted === 'asc') {
+            SortIcon = ArrowUp
+          }
 
           return (
             <Tooltip>
@@ -193,7 +193,7 @@ function useSubDepartmentColumns(
       },
       {
         accessorKey: 'active_users',
-        header: t('Active Users / Share'),
+        header: t('Active Users / Active Rate'),
         cell: ({ row }) => (
           <span className='text-muted-foreground font-mono whitespace-nowrap'>
             {row.original.active_users.toLocaleString()} /{' '}
@@ -207,9 +207,9 @@ function useSubDepartmentColumns(
         header: t('Tokens per Active User'),
         cell: ({ row }) => (
           <span className='text-muted-foreground font-mono whitespace-nowrap'>
-            {t('{{value}} million', {
-              value: row.original.avg_tokens_per_active_user_mt.toFixed(2),
-            })}
+            {formatTokens(
+              row.original.avg_tokens_per_active_user_mt * 1_000_000
+            )}
           </span>
         ),
         size: 160,
