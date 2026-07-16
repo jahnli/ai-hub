@@ -63,6 +63,20 @@ export async function getDepartmentLogs(
   return res.data
 }
 
+export async function getDepartmentUserLogs(params: {
+  user_id: number
+  start_timestamp: number
+  end_timestamp: number
+  p: number
+  page_size: number
+}): Promise<GetLogsResponse> {
+  const res = await api.post<GetLogsResponse>(
+    '/api/department/user-logs',
+    params
+  )
+  return res.data
+}
+
 export async function getReportNotifySetting(): Promise<{
   success: boolean
   data: ReportNotifySetting

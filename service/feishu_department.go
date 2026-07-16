@@ -676,6 +676,15 @@ type DepartmentLogsRequest struct {
 	UpstreamRequestID string `json:"upstream_request_id"`
 }
 
+// DepartmentUserLogsRequest is the request body for one user's usage logs.
+type DepartmentUserLogsRequest struct {
+	UserID         int   `json:"user_id"`
+	StartTimestamp int64 `json:"start_timestamp"`
+	EndTimestamp   int64 `json:"end_timestamp"`
+	Page           int   `json:"p"`
+	PageSize       int   `json:"page_size"`
+}
+
 // GetDepartmentLogs fetches usage logs for registered users under a department.
 func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 	if !system_setting.FeishuEnabled() {
@@ -693,7 +702,7 @@ func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 	}
 
 	openDeptIDs := collectOpenDeptIDsUnder(items, req.DepartmentID)
-	pageInfo := departmentLogsPageInfo(req)
+	pageInfo := departmentLogsPageInfo(req.Page, req.PageSize)
 	if len(openDeptIDs) == 0 {
 		pageInfo.SetItems([]*model.Log{})
 		return pageInfo, nil
@@ -736,12 +745,36 @@ func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 	return pageInfo, nil
 }
 
-func departmentLogsPageInfo(req *DepartmentLogsRequest) *common.PageInfo {
-	page := req.Page
+// GetDepartmentUserLogs fetches logs by immutable user ID for the user statistics dialog.
+func GetDepartmentUserLogs(req *DepartmentUserLogsRequest) (*common.PageInfo, error) {
+	pageInfo := departmentLogsPageInfo(req.Page, req.PageSize)
+	logs, total, err := model.GetLogsByUserIds(
+		[]int{req.UserID},
+		model.LogTypeUnknown,
+		req.StartTimestamp,
+		req.EndTimestamp,
+		"",
+		"",
+		"",
+		pageInfo.GetStartIdx(),
+		pageInfo.GetPageSize(),
+		0,
+		"",
+		"",
+		"",
+	)
+	if err != nil {
+		return nil, err
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(logs)
+	return pageInfo, nil
+}
+
+func departmentLogsPageInfo(page int, pageSize int) *common.PageInfo {
 	if page < 1 {
 		page = 1
 	}
-	pageSize := req.PageSize
 	if pageSize <= 0 {
 		pageSize = common.ItemsPerPage
 	}
@@ -1243,6 +1276,197 @@ type UsageAnalysisResponse struct {
 	QuotaToCNY      float64                   `json:"quota_to_cny"`
 }
 
+const usageAnalysisModelLimit = 10
+
+var dataOverviewModelMapping = sync.OnceValue(func() map[string]string {
+	raw := common.GetEnvOrDefaultString("DATA_OVERVIEW_MODEL_MAPPING", "")
+	mapping, err := parseDataOverviewModelMapping(raw)
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to parse DATA_OVERVIEW_MODEL_MAPPING: %s, model names will not be merged", err.Error()))
+		return nil
+	}
+	return mapping
+})
+
+func parseDataOverviewModelMapping(raw string) (map[string]string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+
+	var configured map[string][]string
+	if err := common.UnmarshalJsonStr(raw, &configured); err != nil {
+		return nil, err
+	}
+
+	canonicalNames := make(map[string]string, len(configured))
+	for displayName := range configured {
+		displayName = strings.TrimSpace(displayName)
+		if displayName == "" {
+			return nil, fmt.Errorf("mapping display name cannot be empty")
+		}
+		normalizedDisplayName := strings.ToLower(displayName)
+		if existing, ok := canonicalNames[normalizedDisplayName]; ok && existing != displayName {
+			return nil, fmt.Errorf("mapping display names %q and %q differ only by case", existing, displayName)
+		}
+		canonicalNames[normalizedDisplayName] = displayName
+	}
+
+	mapping := make(map[string]string, len(configured))
+	for displayName, aliases := range configured {
+		canonicalName := canonicalNames[strings.ToLower(strings.TrimSpace(displayName))]
+		names := make([]string, 0, len(aliases)+1)
+		names = append(names, canonicalName)
+		names = append(names, aliases...)
+		for _, source := range names {
+			source = strings.TrimSpace(source)
+			if source == "" {
+				return nil, fmt.Errorf("model alias for %q cannot be empty", canonicalName)
+			}
+
+			normalizedSource := strings.ToLower(source)
+			if existing, ok := mapping[normalizedSource]; ok && existing != canonicalName {
+				return nil, fmt.Errorf("model alias %q is assigned to both %q and %q", source, existing, canonicalName)
+			}
+			mapping[normalizedSource] = canonicalName
+		}
+	}
+
+	return mapping, nil
+}
+
+func usageAnalysisModelName(modelName string, mapping map[string]string) string {
+	modelName = strings.TrimSpace(modelName)
+	if mapped, ok := mapping[strings.ToLower(modelName)]; ok {
+		return mapped
+	}
+	return modelName
+}
+
+func mergeUsageAnalysisModelStats(rows []model.ModelStatRow, mapping map[string]string, limit int) []model.ModelStatRow {
+	aggregated := make(map[string]*model.ModelStatRow, len(rows))
+	for _, row := range rows {
+		modelName := usageAnalysisModelName(row.ModelName, mapping)
+		current, ok := aggregated[modelName]
+		if !ok {
+			current = &model.ModelStatRow{ModelName: modelName}
+			aggregated[modelName] = current
+		}
+		current.TotalTokens += row.TotalTokens
+		current.TotalQuota += row.TotalQuota
+		current.TotalReqs += row.TotalReqs
+	}
+
+	merged := make([]model.ModelStatRow, 0, len(aggregated))
+	for _, row := range aggregated {
+		merged = append(merged, *row)
+	}
+	sort.Slice(merged, func(i, j int) bool {
+		if merged[i].TotalQuota != merged[j].TotalQuota {
+			return merged[i].TotalQuota > merged[j].TotalQuota
+		}
+		return merged[i].ModelName < merged[j].ModelName
+	})
+	if limit > 0 && len(merged) > limit {
+		merged = merged[:limit]
+	}
+	return merged
+}
+
+func mergeUsageAnalysisModelDailyStats(rows []model.ModelDailyStatRow, mapping map[string]string) []model.ModelDailyStatRow {
+	type dailyModelKey struct {
+		date      string
+		modelName string
+	}
+
+	aggregated := make(map[dailyModelKey]int64, len(rows))
+	for _, row := range rows {
+		key := dailyModelKey{
+			date:      row.Date,
+			modelName: usageAnalysisModelName(row.ModelName, mapping),
+		}
+		aggregated[key] += row.TotalTokens
+	}
+
+	merged := make([]model.ModelDailyStatRow, 0, len(aggregated))
+	for key, totalTokens := range aggregated {
+		merged = append(merged, model.ModelDailyStatRow{
+			Date:        key.date,
+			ModelName:   key.modelName,
+			TotalTokens: totalTokens,
+		})
+	}
+	sort.Slice(merged, func(i, j int) bool {
+		if merged[i].Date != merged[j].Date {
+			return merged[i].Date < merged[j].Date
+		}
+		return merged[i].ModelName < merged[j].ModelName
+	})
+	return merged
+}
+
+func buildUsageAnalysisForUsers(userIds []int, startTimestamp, endTimestamp int64) (*UsageAnalysisResponse, error) {
+	var (
+		rawModelStats []model.ModelStatRow
+		dailyStats    []model.DailyStatRow
+		modelErr      error
+		dailyErr      error
+		wg            sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		rawModelStats, modelErr = model.GetModelStats(userIds, startTimestamp, endTimestamp, 0)
+	}()
+	go func() {
+		defer wg.Done()
+		dailyStats, dailyErr = model.GetDailyStats(userIds, startTimestamp, endTimestamp)
+	}()
+	wg.Wait()
+
+	if modelErr != nil {
+		return nil, modelErr
+	}
+	if dailyErr != nil {
+		return nil, dailyErr
+	}
+
+	mapping := dataOverviewModelMapping()
+	modelStats := mergeUsageAnalysisModelStats(rawModelStats, mapping, usageAnalysisModelLimit)
+	topModels := make(map[string]struct{}, len(modelStats))
+	for _, row := range modelStats {
+		topModels[row.ModelName] = struct{}{}
+	}
+	selectedRawModelNames := make([]string, 0, len(rawModelStats))
+	for _, row := range rawModelStats {
+		if _, ok := topModels[usageAnalysisModelName(row.ModelName, mapping)]; ok {
+			selectedRawModelNames = append(selectedRawModelNames, row.ModelName)
+		}
+	}
+
+	rawModelDailyStats, err := model.GetModelDailyStatsForModels(userIds, startTimestamp, endTimestamp, selectedRawModelNames)
+	if err != nil {
+		return nil, err
+	}
+	modelDailyStats := mergeUsageAnalysisModelDailyStats(rawModelDailyStats, mapping)
+
+	quotaPerUnit := common.QuotaPerUnit
+	if quotaPerUnit <= 0 {
+		quotaPerUnit = 500000
+	}
+	usdExchangeRate := operation_setting.USDExchangeRate
+	if usdExchangeRate <= 0 {
+		usdExchangeRate = 1
+	}
+
+	return &UsageAnalysisResponse{
+		ModelStats:      modelStats,
+		DailyStats:      dailyStats,
+		ModelDailyStats: modelDailyStats,
+		QuotaToCNY:      usdExchangeRate / quotaPerUnit,
+	}, nil
+}
+
 // GetUsageAnalysis fetches model ranking and daily trend for the selected department.
 func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, error) {
 	if !system_setting.FeishuEnabled() {
@@ -1278,56 +1502,7 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 		return &UsageAnalysisResponse{}, nil
 	}
 
-	var (
-		modelStats      []model.ModelStatRow
-		dailyStats      []model.DailyStatRow
-		modelDailyStats []model.ModelDailyStatRow
-		modelErr        error
-		dailyErr        error
-		modelDailyErr   error
-		wg              sync.WaitGroup
-	)
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		modelStats, modelErr = model.GetModelStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
-	}()
-	go func() {
-		defer wg.Done()
-		dailyStats, dailyErr = model.GetDailyStats(userIds, req.StartTimestamp, req.EndTimestamp)
-	}()
-	go func() {
-		defer wg.Done()
-		modelDailyStats, modelDailyErr = model.GetModelDailyStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
-	}()
-	wg.Wait()
-
-	if modelErr != nil {
-		return nil, modelErr
-	}
-	if dailyErr != nil {
-		return nil, dailyErr
-	}
-	if modelDailyErr != nil {
-		return nil, modelDailyErr
-	}
-
-	quotaPerUnit := common.QuotaPerUnit
-	if quotaPerUnit <= 0 {
-		quotaPerUnit = 500000
-	}
-	usdExchangeRate := operation_setting.USDExchangeRate
-	if usdExchangeRate <= 0 {
-		usdExchangeRate = 1
-	}
-	quotaToCNY := usdExchangeRate / quotaPerUnit
-
-	return &UsageAnalysisResponse{
-		ModelStats:      modelStats,
-		DailyStats:      dailyStats,
-		ModelDailyStats: modelDailyStats,
-		QuotaToCNY:      quotaToCNY,
-	}, nil
+	return buildUsageAnalysisForUsers(userIds, req.StartTimestamp, req.EndTimestamp)
 }
 
 // UserUsageAnalysisRequest holds the request params for single-user usage analysis.
@@ -1339,58 +1514,7 @@ type UserUsageAnalysisRequest struct {
 
 // GetUserUsageAnalysis fetches model ranking and daily trend for a single user.
 func GetUserUsageAnalysis(req *UserUsageAnalysisRequest) (*UsageAnalysisResponse, error) {
-	userIds := []int{req.UserID}
-
-	var (
-		modelStats      []model.ModelStatRow
-		dailyStats      []model.DailyStatRow
-		modelDailyStats []model.ModelDailyStatRow
-		modelErr        error
-		dailyErr        error
-		modelDailyErr   error
-		wg              sync.WaitGroup
-	)
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-		modelStats, modelErr = model.GetModelStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
-	}()
-	go func() {
-		defer wg.Done()
-		dailyStats, dailyErr = model.GetDailyStats(userIds, req.StartTimestamp, req.EndTimestamp)
-	}()
-	go func() {
-		defer wg.Done()
-		modelDailyStats, modelDailyErr = model.GetModelDailyStats(userIds, req.StartTimestamp, req.EndTimestamp, 10)
-	}()
-	wg.Wait()
-
-	if modelErr != nil {
-		return nil, modelErr
-	}
-	if dailyErr != nil {
-		return nil, dailyErr
-	}
-	if modelDailyErr != nil {
-		return nil, modelDailyErr
-	}
-
-	quotaPerUnit := common.QuotaPerUnit
-	if quotaPerUnit <= 0 {
-		quotaPerUnit = 500000
-	}
-	usdExchangeRate := operation_setting.USDExchangeRate
-	if usdExchangeRate <= 0 {
-		usdExchangeRate = 1
-	}
-	quotaToCNY := usdExchangeRate / quotaPerUnit
-
-	return &UsageAnalysisResponse{
-		ModelStats:      modelStats,
-		DailyStats:      dailyStats,
-		ModelDailyStats: modelDailyStats,
-		QuotaToCNY:      quotaToCNY,
-	}, nil
+	return buildUsageAnalysisForUsers([]int{req.UserID}, req.StartTimestamp, req.EndTimestamp)
 }
 
 // DepartmentUsersRequest holds the request params for fetching department user list.

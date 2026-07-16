@@ -20,6 +20,7 @@ import {
   Copy,
   Download,
   ImageIcon,
+  ImageOff,
   PackageOpen,
   Pencil,
   RefreshCw,
@@ -284,6 +285,19 @@ export function ResultGrid({
                 <Pencil className="size-3.5" />
               </Button>
             </div>
+          </div>
+        ))}
+        {Array.from({ length: record.failedImageCount ?? 0 }, (_, index) => (
+          <div
+            key={`failed-image-${index}`}
+            className="bg-muted text-muted-foreground flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border"
+            role="img"
+            aria-label={t("Image generation failed")}
+          >
+            <ImageOff className="size-8 opacity-50" aria-hidden="true" />
+            <span className="text-sm font-medium">
+              {t("Image generation failed")}
+            </span>
           </div>
         ))}
       </div>

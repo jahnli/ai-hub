@@ -62,12 +62,10 @@ function buildPayload(
   referenceImages: ReferenceImage[]
 ): ImageGenerationPayload {
   const support = imageModelParamSupport(config.model)
-  const imageCount = Math.min(support.maxImages, Math.max(1, config.n))
   const payload: ImageGenerationPayload = {
     model: config.model,
     group: config.group,
     prompt,
-    n: imageCount,
   }
   const size = resolveSize(config)
   // omitted size/quality/etc. means "provider default", same as 'auto'
@@ -166,6 +164,8 @@ export function useImageGeneration({
   const generate = useCallback(
     async ({ config, prompt, mode, referenceImages }: GenerateArgs) => {
       const payload = buildPayload(config, prompt, mode, referenceImages)
+      const support = imageModelParamSupport(config.model)
+      const requestCount = Math.min(support.maxImages, Math.max(1, config.n))
       const controller = new AbortController()
       abortRef.current = controller
       setIsGenerating(true)
@@ -174,7 +174,13 @@ export function useImageGeneration({
       const startedAt = Date.now()
       try {
         const send = mode === 'edit' ? editImages : generateImages
-        const { response, requestId } = await send(payload, controller.signal)
+        const requestResults = await Promise.allSettled(
+          Array.from({ length: requestCount }, () =>
+            send(payload, controller.signal)
+          )
+        )
+        if (controller.signal.aborted) return null
+
         const durationMs = Date.now() - startedAt
 
         // label images with the format actually requested; when
@@ -182,21 +188,40 @@ export function useImageGeneration({
         const imageMimeType = imageMimeTypeForOutputFormat(
           payload.output_format ?? 'png'
         )
-        const responseItems = response.data ?? []
-        const imageOutputs = responseItems
-          .map((item) =>
-            ({
+        const successfulRequests = requestResults.flatMap((result) => {
+          if (result.status === 'rejected') return []
+
+          const imageOutputs = (result.value.response.data ?? [])
+            .map((item) => ({
               src: item.b64_json
                 ? `data:${imageMimeType};base64,${item.b64_json}`
                 : (item.url ?? ''),
               revisedPrompt: item.revised_prompt,
-            })
-          )
-          .filter((item) => item.src)
+            }))
+            .filter((item) => item.src)
+
+          if (imageOutputs.length === 0) return []
+          return [
+            {
+              imageOutputs,
+              requestId: result.value.requestId,
+            },
+          ]
+        })
+        const imageOutputs = successfulRequests.flatMap(
+          (result) => result.imageOutputs
+        )
 
         if (imageOutputs.length === 0) {
+          const firstFailure = requestResults.find(
+            (result) => result.status === 'rejected'
+          )
+          if (firstFailure?.status === 'rejected') {
+            throw firstFailure.reason
+          }
           throw new Error('empty image response')
         }
+        const failedImageCount = requestCount - successfulRequests.length
 
         const recordId = `${startedAt}-${Math.random().toString(36).slice(2, 8)}`
         const storedRecord = await storeImageStudioGeneration(
@@ -211,7 +236,7 @@ export function useImageGeneration({
             quality: payload.quality,
             moderation: payload.moderation,
             output_format: payload.output_format,
-            n: payload.n ?? 1,
+            n: requestCount,
             duration_ms: durationMs,
             images: imageOutputs.map((item) => ({
               src: item.src,
@@ -243,6 +268,7 @@ export function useImageGeneration({
           outputFormat: storedRecord.output_format || undefined,
           n: storedRecord.n,
           images,
+          failedImageCount,
           usage: { durationMs: storedRecord.duration_ms },
           favorite: storedRecord.favorite,
         }
@@ -250,15 +276,34 @@ export function useImageGeneration({
         setActiveRecordId(record.id)
 
         // billing info lands in logs slightly after the response
+        const requestIds = successfulRequests
+          .map((result) => result.requestId)
+          .filter((requestId) => requestId.length > 0)
         window.setTimeout(() => {
-          void fetchGenerationLog(requestId, config.model).then((log) => {
-            if (!log) return
+          const logRequests =
+            requestCount === 1
+              ? [fetchGenerationLog(requestIds[0] ?? '', config.model)]
+              : requestIds.map((requestId) => fetchGenerationLog(requestId, ''))
+          if (logRequests.length === 0) return
+
+          void Promise.all(logRequests).then((logs) => {
+            const availableLogs = logs.filter((log) => log !== null)
+            if (availableLogs.length === 0) return
+
+            const usage = availableLogs.reduce(
+              (total, log) => ({
+                quota: total.quota + log.quota,
+                promptTokens: total.promptTokens + log.promptTokens,
+                completionTokens: total.completionTokens + log.completionTokens,
+              }),
+              { quota: 0, promptTokens: 0, completionTokens: 0 }
+            )
             patchRecord(record.id, {
               usage: {
                 durationMs,
-                quota: log.quota,
-                promptTokens: log.promptTokens,
-                completionTokens: log.completionTokens,
+                quota: usage.quota,
+                promptTokens: usage.promptTokens,
+                completionTokens: usage.completionTokens,
               },
             })
           })

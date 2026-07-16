@@ -248,6 +248,7 @@ func SetApiRouter(router *gin.Engine) {
 			departmentRoute.POST("/sub-stats", controller.GetSubDepartmentStats)
 			departmentRoute.POST("/usage-analysis", controller.GetUsageAnalysis)
 			departmentRoute.POST("/logs", controller.GetDepartmentLogs)
+			departmentRoute.POST("/user-logs", controller.GetDepartmentUserLogs)
 			departmentRoute.POST("/users", controller.GetDepartmentUsers)
 			departmentRoute.POST("/user-rankings", controller.GetDepartmentUserRankings)
 			departmentRoute.POST("/user-usage-analysis", controller.GetUserUsageAnalysis)

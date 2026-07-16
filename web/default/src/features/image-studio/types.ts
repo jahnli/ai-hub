@@ -29,6 +29,7 @@ export interface ImageStudioConfig {
   quality: string
   /** '' means "do not send" */
   moderation: string
+  /** number of parallel single-image requests; never sent to the relay */
   n: number
   /** advanced params, '' / null means "do not send" */
   background: string
@@ -86,6 +87,8 @@ export interface GenerationRecord {
   outputFormat?: string
   n: number
   images: GeneratedImage[]
+  /** Failed image requests represented as placeholders in the result grid. */
+  failedImageCount?: number
   referenceImages?: ReferenceImage[]
   usage?: GenerationUsage
   favorite?: boolean
@@ -95,7 +98,6 @@ export interface ImageGenerationPayload {
   model: string
   group?: string
   prompt: string
-  n?: number
   size?: string
   quality?: string
   moderation?: string

@@ -12,12 +12,11 @@ import { RequestMessagesProvider } from '@/features/usage-logs/components/reques
 import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-provider'
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
-import { getAllLogs } from '@/features/usage-logs/api'
 import type { GetLogsResponse } from '@/features/usage-logs/types'
-import { getDepartmentLogs } from '../api'
+import { getDepartmentLogs, getDepartmentUserLogs } from '../api'
 
 interface UserLogsSectionProps {
-  username: string
+  userId: number
   startTimestamp: number
   endTimestamp: number
 }
@@ -27,20 +26,20 @@ export function UserLogsSection(props: UserLogsSectionProps) {
     <LogsSection
       queryKey={[
         'user-stats-logs',
-        props.username,
+        props.userId,
         props.startTimestamp,
         props.endTimestamp,
       ]}
       queryFn={(pagination) =>
-        getAllLogs({
-          username: props.username,
+        getDepartmentUserLogs({
+          user_id: props.userId,
           start_timestamp: props.startTimestamp,
           end_timestamp: props.endTimestamp,
           p: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
         })
       }
-      enabled={!!props.username}
+      enabled={props.userId > 0}
       skeletonKeyPrefix='user-stats-logs-skeleton'
     />
   )
