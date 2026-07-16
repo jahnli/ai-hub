@@ -34,6 +34,7 @@ BUILTIN_MODEL_MAPPING: list[ModelMapping] = [
     ("Qwen3-Reranker-8B", ["Qwen3-Reranker-8B"]),
     ("Qwen3-Embedding-8B", ["Qwen3-Embedding-8B"]),
     ("Claude Haiku 4.5", ["claude-haiku-4-5-20251001", "claude-haiku-4-5", "claude-haiku-4.5"], (1.0, 5.0, 0.1, 1.25)),
+    ("Claude Sonnet 5", ["claude-sonnet-5"], (2.0, 10.0, 0.2, 2.5)),
     ("Claude Sonnet 4.6", ["claude-sonnet-4-6", "claude-sonnet-4.6", "anthropic/claude-sonnet-4.6"]),
     ("Claude Opus 4.6", ["claude-opus-4-6", "claude-opus-4.6", "anthropic/claude-opus-4.6"]),
     ("Claude Opus 4.7", ["claude-opus-4-7", "claude-opus-4.7", "anthropic/claude-opus-4.7"], (5.0, 25.0, 0.5, 6.25)),
