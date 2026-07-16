@@ -17,8 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useCallback, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 
 import {
   editImages,
@@ -140,7 +138,6 @@ export function useImageGeneration({
   addRecord: (record: GenerationRecord) => void
   patchRecord: (id: string, patch: Partial<GenerationRecord>) => void
 }) {
-  const { t } = useTranslation()
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null)
@@ -224,7 +221,7 @@ export function useImageGeneration({
           }
           throw new Error('empty image response')
         }
-        const failedRequestCount = requestCount - successfulRequests.length
+        const failedImageCount = requestCount - successfulRequests.length
 
         const recordId = `${startedAt}-${Math.random().toString(36).slice(2, 8)}`
         const storedRecord = await storeImageStudioGeneration(
@@ -239,7 +236,7 @@ export function useImageGeneration({
             quality: payload.quality,
             moderation: payload.moderation,
             output_format: payload.output_format,
-            n: imageOutputs.length,
+            n: requestCount,
             duration_ms: durationMs,
             images: imageOutputs.map((item) => ({
               src: item.src,
@@ -271,22 +268,12 @@ export function useImageGeneration({
           outputFormat: storedRecord.output_format || undefined,
           n: storedRecord.n,
           images,
+          failedImageCount,
           usage: { durationMs: storedRecord.duration_ms },
           favorite: storedRecord.favorite,
         }
         addRecord(record)
         setActiveRecordId(record.id)
-        if (failedRequestCount > 0) {
-          toast.warning(
-            t(
-              'Generated {{successCount}} images; {{failureCount}} requests failed',
-              {
-                successCount: images.length,
-                failureCount: failedRequestCount,
-              }
-            )
-          )
-        }
 
         // billing info lands in logs slightly after the response
         const requestIds = successfulRequests
@@ -331,7 +318,7 @@ export function useImageGeneration({
         setIsGenerating(false)
       }
     },
-    [addRecord, patchRecord, t]
+    [addRecord, patchRecord]
   )
 
   return {

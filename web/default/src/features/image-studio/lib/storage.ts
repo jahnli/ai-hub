@@ -43,7 +43,9 @@ function removeLegacyLocalHistory(): void {
   window.localStorage.removeItem(STORAGE_KEY)
 }
 
-function fromServerRecord(record: ImageStudioGenerationRecord): GenerationRecord {
+function fromServerRecord(
+  record: ImageStudioGenerationRecord
+): GenerationRecord {
   return {
     id: record.id,
     createdAt: record.created_at,
@@ -66,6 +68,7 @@ function fromServerRecord(record: ImageStudioGenerationRecord): GenerationRecord
       height: image.height,
       revisedPrompt: image.revised_prompt || undefined,
     })),
+    failedImageCount: Math.max(0, record.n - record.images.length),
     usage: {
       durationMs: record.duration_ms,
       quota: record.quota,

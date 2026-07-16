@@ -87,6 +87,8 @@ export interface GenerationRecord {
   outputFormat?: string
   n: number
   images: GeneratedImage[]
+  /** Failed image requests represented as placeholders in the result grid. */
+  failedImageCount?: number
   referenceImages?: ReferenceImage[]
   usage?: GenerationUsage
   favorite?: boolean
