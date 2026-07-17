@@ -416,6 +416,7 @@ export function Dashboard() {
                     data={modelData}
                     filters={modelFilters}
                     loading={dataLoading}
+                    canViewUserConsumption={isAdmin}
                     defaultChartTab={
                       DEFAULT_DASHBOARD_CHART_PREFERENCES.modelAnalyticsChart
                     }
