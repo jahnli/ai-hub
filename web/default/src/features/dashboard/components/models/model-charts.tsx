@@ -82,7 +82,11 @@ const USER_ANALYTICS_TABS = new Set<ModelAnalyticsChartTab>([
 
 function normalizeModelAnalyticsChartTab(
   tab: ModelAnalyticsChartTab | undefined,
+  canViewUserConsumption: boolean,
 ): ModelAnalyticsChartTab {
+  if (!canViewUserConsumption && tab && USER_ANALYTICS_TABS.has(tab)) {
+    return "trend";
+  }
   return tab === "userTrend" ? "userRank" : (tab ?? "trend");
 }
 
@@ -92,6 +96,7 @@ interface ModelChartsProps {
   loading?: boolean;
   timeGranularity?: TimeGranularity;
   defaultChartTab?: ModelAnalyticsChartTab;
+  canViewUserConsumption: boolean;
 }
 
 interface UserRankProfile {
@@ -139,20 +144,21 @@ export function ModelCharts(props: ModelChartsProps) {
     "--radius-md",
     `${customization.preset}:${customization.radius}`,
   );
-  const [activeTab, setActiveTab] = useState<ModelAnalyticsChartTab>(
-    normalizeModelAnalyticsChartTab(props.defaultChartTab),
+  const [selectedTab, setSelectedTab] = useState<ModelAnalyticsChartTab>(
+    normalizeModelAnalyticsChartTab(
+      props.defaultChartTab,
+      props.canViewUserConsumption,
+    ),
   );
   const [themeReady, setThemeReady] = useState(false);
   const themeManagerRef = useRef<
     (typeof import("@visactor/vchart"))["ThemeManager"] | null
   >(null);
   const timeGranularity = props.timeGranularity ?? DEFAULT_TIME_GRANULARITY;
-
-  useEffect(() => {
-    if (props.defaultChartTab) {
-      setActiveTab(normalizeModelAnalyticsChartTab(props.defaultChartTab));
-    }
-  }, [props.defaultChartTab]);
+  const activeTab = normalizeModelAnalyticsChartTab(
+    selectedTab,
+    props.canViewUserConsumption,
+  );
 
   useEffect(() => {
     const updateTheme = async () => {
@@ -201,7 +207,8 @@ export function ModelCharts(props: ModelChartsProps) {
   const userQuotaQuery = useQuery({
     queryKey: ["dashboard", "model-analytics-user-quota", userTimeRange],
     queryFn: () => getUserQuotaDataByUsers(userTimeRange),
-    enabled: USER_ANALYTICS_TABS.has(activeTab),
+    enabled:
+      props.canViewUserConsumption && USER_ANALYTICS_TABS.has(activeTab),
     select: (response) => (response.success ? response.data : []),
     staleTime: 60_000,
   });
@@ -250,14 +257,17 @@ export function ModelCharts(props: ModelChartsProps) {
   );
 
   const modelSpecKey = MODEL_CHART_SPEC_KEYS[activeTab];
-  const userSpecKey = USER_CHART_SPEC_KEYS[activeTab];
+  const userSpecKey = props.canViewUserConsumption
+    ? USER_CHART_SPEC_KEYS[activeTab]
+    : undefined;
   let spec = null;
   if (modelSpecKey) {
     spec = chartData[modelSpecKey];
   } else if (userSpecKey) {
     spec = userChartData[userSpecKey];
   }
-  const isUserAnalyticsTab = USER_ANALYTICS_TABS.has(activeTab);
+  const isUserAnalyticsTab =
+    props.canViewUserConsumption && USER_ANALYTICS_TABS.has(activeTab);
   const isChartLoading =
     props.loading || (isUserAnalyticsTab && userQuotaQuery.isLoading);
   const summaryDisplay = isUserAnalyticsTab
@@ -290,27 +300,39 @@ export function ModelCharts(props: ModelChartsProps) {
         </div>
 
         <div className="bg-muted/60 inline-flex h-7 w-full overflow-x-auto rounded-lg border p-0.5 sm:h-8 sm:w-auto">
-          {MODEL_ANALYTICS_CHART_OPTIONS.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setActiveTab(tab.value)}
-              className={`shrink-0 rounded-md px-3 text-xs font-medium transition-colors ${
-                activeTab === tab.value
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t(tab.labelKey)}
-            </button>
-          ))}
+          {MODEL_ANALYTICS_CHART_OPTIONS.map((tab) => {
+            if (
+              !props.canViewUserConsumption &&
+              USER_ANALYTICS_TABS.has(tab.value)
+            ) {
+              return null;
+            }
+
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setSelectedTab(tab.value)}
+                className={`shrink-0 rounded-md px-3 text-xs font-medium transition-colors ${
+                  activeTab === tab.value
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t(tab.labelKey)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="h-[300px] p-1.5 sm:h-96 sm:p-2">
-        {isChartLoading ? (
+        {isChartLoading && (
           <Skeleton className="h-full w-full" />
-        ) : activeTab === "userRank" ? (
+        )}
+        {!isChartLoading &&
+          isUserAnalyticsTab &&
+          activeTab === "userRank" && (
           <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-2">
             <div className="relative min-h-0 rounded-md border/0">
               {userRankProfiles.length > 0 ? (
@@ -353,7 +375,8 @@ export function ModelCharts(props: ModelChartsProps) {
               ) : null}
             </div>
           </div>
-        ) : themeReady && spec ? (
+        )}
+        {!isChartLoading && !isUserAnalyticsTab && themeReady && spec && (
           <VChart
             key={chartKey}
             spec={{
@@ -363,7 +386,7 @@ export function ModelCharts(props: ModelChartsProps) {
             }}
             option={VCHART_OPTION}
           />
-        ) : null}
+        )}
       </div>
     </div>
   );
