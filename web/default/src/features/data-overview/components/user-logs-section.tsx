@@ -84,9 +84,11 @@ interface LogsSectionProps {
 
 function LogsSection(props: LogsSectionProps) {
   const { t } = useTranslation()
-  const columns = useCommonLogsColumns(true)
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
-  const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const columns = useCommonLogsColumns(true, {
+    canFetchUserDetails: isSuperAdmin,
+  })
   const [pagination, setPagination] = usePagination()
 
   const { data, isLoading, isFetching } = useQuery({
@@ -121,8 +123,8 @@ function LogsSection(props: LogsSectionProps) {
     <UsageLogsProvider>
       <RequestMessagesProvider
         requestIds={requestIds}
-        canViewRequestContent={canViewRequestContent}
-        isAdmin
+        canViewRequestContent={isSuperAdmin}
+        isAdmin={isSuperAdmin}
       >
         <div className='space-y-3 overflow-hidden'>
           <h3 className='flex items-center gap-2 text-sm font-medium'>

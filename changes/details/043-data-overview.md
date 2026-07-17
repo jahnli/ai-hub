@@ -20,7 +20,8 @@
 - `web/default/src/features/data-overview/components/department-stats-cards.tsx` — 从 index.tsx 提取为独立组件，展示部门统计指标卡片（Token/费用/均价/请求数/注册数/未注册数/响应时间/错误率），支持 Tooltip 展示 Token 详情
 - `web/default/src/features/data-overview/components/usage-analysis.tsx` — 使用分析组件：模型排行/费用占比（tab 切换条形图/饼图）改为纵向柱状图；新增模型使用趋势折线图（ModelUsageTrend，按 Top N 模型展示每日 Token 量）；每日用量趋势新增「费用」指标切换；新增均价趋势折线图（AvgPriceTrendChart，计算每日平均单价并补全无数据日期）；费用和均价计算改用后端返回的 quota_to_cny 换算率；请求趋势图高度调整；重构为纯展示组件（移除 startTimestamp/endTimestamp 参数），移除均价趋势和 Token 分布图表，模型调用排行改为饼图分布，费用排行标题改为「模型消耗排行」，费用趋势标题改为「额度消耗趋势」
 - `web/default/src/features/data-overview/components/user-stats-dialog.tsx` — 新增用户统计弹窗：展示单用户独立时间筛选、使用分析图表与近期调用日志；日志查询改为传递不可变 user_id；弹窗宽度调整为 1360px，并保留视口宽度自适应
-- `web/default/src/features/data-overview/components/user-logs-section.tsx` — 新增用户日志列表组件，复用 usage-logs 公共列定义；抽取通用 LogsSection 并新增 DepartmentLogsSection 复用同一使用日志表格；用户日志改调独立接口并按 user_id 精确查询，避免用户名包含匹配串入其他用户日志；补充 RequestMessagesProvider 以加载并显示近期调用日志中的请求内容；请求内容加载同步遵循超级管理员可见性限制
+- `web/default/src/features/data-overview/components/user-logs-section.tsx` — 新增用户日志列表组件，复用 usage-logs 公共列定义；抽取通用 LogsSection 并新增 DepartmentLogsSection 复用同一使用日志表格；用户日志改调独立接口并按 user_id 精确查询，避免用户名包含匹配串入其他用户日志；补充 RequestMessagesProvider 以加载并显示近期调用日志中的请求内容；请求内容加载同步遵循超级管理员可见性限制；数据总览中的日志表格按超级管理员权限决定是否启用管理员用户详情拉取，避免 AI BP/中心 BP hover 用户头像时触发管理员接口导致无权限提示
+- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — useCommonLogsColumns 增加 canFetchUserDetails 选项，拆分“显示用户列”和“拉取管理员用户详情”能力；默认保持管理员日志页原行为，数据总览可禁用详情拉取并仅展示日志自带的基础用户信息
 - `web/default/src/features/data-overview/components/department-logs-dialog.tsx` — 新增部门使用日志弹窗，复用 DepartmentLogsSection 展示当前部门或子部门员工在数据总览选中时间内的使用日志，不额外提供时间选择器
 - `web/default/src/hooks/use-sidebar-config.ts` — 侧边栏配置新增 data_overview 模块及 URL 映射
 - `web/default/src/hooks/use-sidebar-data.ts` — 「数据总览」菜单从管理员分区移至控制台分区，添加 requiredRole ADMIN

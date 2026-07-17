@@ -315,10 +315,18 @@ function buildTypeDetailSegments(
   return segments;
 }
 
-export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
+interface UseCommonLogsColumnsOptions {
+  canFetchUserDetails?: boolean;
+}
+
+export function useCommonLogsColumns(
+  isAdmin: boolean,
+  options: UseCommonLogsColumnsOptions = {},
+): ColumnDef<UsageLog>[] {
   const { t } = useTranslation();
   const currentUserRole = useAuthStore((state) => state.auth.user?.role);
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN;
+  const canFetchUserDetails = options.canFetchUserDetails ?? isAdmin;
   const columns: ColumnDef<UsageLog>[] = [
     {
       accessorKey: "created_at",
@@ -365,7 +373,13 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         const fetchedRef = useRef(false);
 
         const handleFetchUser = useCallback(() => {
-          if (fetchedRef.current || !sensitiveVisible) return;
+          if (
+            !canFetchUserDetails ||
+            fetchedRef.current ||
+            !sensitiveVisible
+          ) {
+            return;
+          }
           fetchedRef.current = true;
           void getUserInfo(log.user_id).then((res) => {
             if (res.success && res.data) {
@@ -398,7 +412,7 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
               });
             }
           });
-        }, [log.user_id, sensitiveVisible]);
+        }, [canFetchUserDetails, log.user_id, sensitiveVisible]);
 
         if (!log.username) return null;
 
@@ -475,14 +489,18 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
           </Avatar>
         );
 
+        const userAvatar = canFetchUserDetails ? (
+          <UserProfileHoverCard user={baseUser}>{avatarEl}</UserProfileHoverCard>
+        ) : (
+          avatarEl
+        );
+
         return (
           <div
             className="flex w-[120px] min-w-0 items-center gap-2"
             onMouseEnter={handleFetchUser}
           >
-            <UserProfileHoverCard user={baseUser}>
-              {avatarEl}
-            </UserProfileHoverCard>
+            {userAvatar}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <LongText className="max-w-full font-medium">
                 {primaryName}
