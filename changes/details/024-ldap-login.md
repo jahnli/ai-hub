@@ -1,6 +1,6 @@
 # 新增 LDAP 登录与用户同步
 
-**日期**: 2026-07-09
+**日期**: 2026-07-17
 
 ## 涉及文件
 
@@ -15,7 +15,7 @@
 - `model/user.go` — User 模型新增 LDAP 相关字段、公司字段与查询方法
 - `router/api-router.go` — 注册 LDAP 登录/绑定/解绑路由
 - `service/feishu_sync.go` — 新增飞书用户同步服务；支持按公司同步配置选择飞书/钉钉应用凭据
-- `service/ldap.go` — LDAP 认证与用户查找核心逻辑；支持从公司 OU 中提取用户公司并带回注册流程
+- `service/ldap.go` — LDAP 认证与用户查找核心逻辑；支持从公司 OU 中提取用户公司并带回注册流程；创建本地账号时使用目录返回的标准用户名，属性未配置或返回空值时拒绝登录，不再回退到用户输入值
 - `setting/system_setting/feishu.go` — 飞书同步相关系统设置
 - `setting/system_setting/ldap.go` — LDAP 连接相关系统设置（服务器、BaseDN、BindDN 等）；新增公司同步配置解析、归一化和按公司读取自动订阅套餐
 - `web/default/src/features/auth/api.ts` — 前端 LDAP 登录 API 调用
