@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
+import { getActiveUserRateClassName } from '../lib/active-user-rate'
 import type { DepartmentStat } from '../types'
 
 export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
@@ -49,12 +50,9 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
   }
 
   const activeUserRate = stat.active_user_rate ?? 0
-  let activeUserRateClassName = 'text-destructive'
-  if (activeUserRate >= 90) {
-    activeUserRateClassName = 'text-success'
-  } else if (activeUserRate >= 50) {
-    activeUserRateClassName = 'text-warning'
-  }
+  const tokensPerActiveUser =
+    (stat.avg_tokens_per_active_user_mt ?? 0) * 1_000_000
+  const activeUserRateClassName = getActiveUserRateClassName(activeUserRate)
 
   const items: {
     title: string
@@ -112,19 +110,18 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       valueClassName: 'text-warning',
     },
     {
-      title: t('Active Users / Share'),
+      title: t('Active Users / Active Rate'),
       value: `${(stat.active_users ?? 0).toLocaleString()} / ${activeUserRate.toFixed(1)}%`,
-      desc: t('Active Users / Share'),
+      desc: t('Active users and their share during the selected period'),
       icon: Users,
       valueClassName: activeUserRateClassName,
     },
     {
       title: t('Tokens per Active User'),
-      value: t('{{value}} million', {
-        value: (stat.avg_tokens_per_active_user_mt ?? 0).toFixed(2),
-      }),
+      value: formatTokens(tokensPerActiveUser),
       desc: t('Based on active users only'),
       icon: Layers,
+      tooltip: formatTokensDetail(tokensPerActiveUser),
     },
     {
       title: t('Error Rate'),
