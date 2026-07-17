@@ -121,8 +121,9 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 
 	info := &LDAPUserInfo{DN: entry.DN}
 
-	if settings.UsernameAttribute != "" {
-		info.Username = entry.GetAttributeValue(settings.UsernameAttribute)
+	info.Username, err = getLDAPUsername(entry, settings.UsernameAttribute)
+	if err != nil {
+		return nil, err
 	}
 	if settings.EmailAttribute != "" {
 		info.Email = entry.GetAttributeValue(settings.EmailAttribute)
@@ -131,9 +132,6 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 		info.DisplayName = entry.GetAttributeValue(settings.DisplayNameAttribute)
 	}
 
-	if info.Username == "" {
-		info.Username = username
-	}
 	company, err := ExtractLDAPCompanyFromDN(entry.DN, settings.SearchBase)
 	if err != nil {
 		return nil, err
@@ -141,6 +139,20 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 	info.Company = company
 
 	return info, nil
+}
+
+// getLDAPUsername returns the canonical local username from the configured LDAP attribute.
+func getLDAPUsername(entry *ldapv3.Entry, attribute string) (string, error) {
+	attribute = strings.TrimSpace(attribute)
+	if attribute == "" {
+		return "", fmt.Errorf("LDAP username attribute is not configured")
+	}
+
+	username := strings.TrimSpace(entry.GetEqualFoldAttributeValue(attribute))
+	if username == "" {
+		return "", fmt.Errorf("LDAP username attribute %q is empty", attribute)
+	}
+	return username, nil
 }
 
 // ExtractLDAPCompanyFromDN returns the OU directly under the configured LDAP search base.
