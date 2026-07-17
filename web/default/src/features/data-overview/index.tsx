@@ -271,6 +271,11 @@ export function DataOverview() {
             queryParams && (
               <SubDepartmentStats
                 data={subStatsQuery.data.data}
+                activityFormula={
+                  statsQuery.data?.data.active_user_formula ?? [
+                    10, 1_000_000, 0.85,
+                  ]
+                }
                 startTimestamp={queryParams.start_timestamp}
                 endTimestamp={queryParams.end_timestamp}
               />

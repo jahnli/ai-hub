@@ -73,7 +73,9 @@ export interface DepartmentStat {
   active_users: number
   active_user_rate: number
   avg_tokens_per_active_user_mt: number
+  active_user_formula: [number, number, number]
   active_user_request_threshold: number
+  active_user_token_threshold: number
 }
 
 export interface ReportNotifySetting {
