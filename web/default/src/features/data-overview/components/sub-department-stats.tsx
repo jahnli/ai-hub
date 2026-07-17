@@ -30,11 +30,13 @@ import { VCHART_OPTION } from '@/lib/vchart'
 
 import { getActiveUserRateClassName } from '../lib/active-user-rate'
 import type { SubDepartmentStat } from '../types'
+import { ActivityFormulaTooltip } from './activity-formula-tooltip'
 import { DepartmentLogsDialog } from './department-logs-dialog'
 import { SubDepartmentStatsDialog } from './sub-department-stats-dialog'
 
 interface SubDepartmentStatsProps {
   data: SubDepartmentStat[]
+  activityFormula: [number, number, number]
   startTimestamp: number
   endTimestamp: number
 }
@@ -69,6 +71,7 @@ function formatRequests(count: number): string {
 }
 
 function useSubDepartmentColumns(
+  activityFormula: [number, number, number],
   onViewStats: (department: SubDepartmentStat) => void,
   onViewLogs: (department: SubDepartmentStat) => void
 ): ColumnDef<SubDepartmentStat>[] {
@@ -194,7 +197,12 @@ function useSubDepartmentColumns(
       },
       {
         accessorKey: 'active_users',
-        header: t('Active Users / Active Rate'),
+        header: () => (
+          <span className='inline-flex items-center gap-1'>
+            {t('Users / Share')}
+            <ActivityFormulaTooltip formula={activityFormula} />
+          </span>
+        ),
         cell: ({ row }) => (
           <span
             className={`${getActiveUserRateClassName(row.original.active_user_rate)} font-mono whitespace-nowrap`}
@@ -247,7 +255,7 @@ function useSubDepartmentColumns(
         ),
       },
     ],
-    [onViewLogs, onViewStats, t]
+    [activityFormula, onViewLogs, onViewStats, t]
   )
 }
 
@@ -258,7 +266,11 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
     useState<SubDepartmentStat | null>(null)
   const [logsDepartment, setLogsDepartment] =
     useState<SubDepartmentStat | null>(null)
-  const columns = useSubDepartmentColumns(setStatsDepartment, setLogsDepartment)
+  const columns = useSubDepartmentColumns(
+    props.activityFormula,
+    setStatsDepartment,
+    setLogsDepartment
+  )
 
   const sortedData = useMemo(
     () =>

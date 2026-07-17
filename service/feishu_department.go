@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -638,18 +639,48 @@ func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error
 	}, nil
 }
 
-const defaultActiveUserRequestThreshold = 10
+type activeUserThreshold struct {
+	RequestCount int64
+	TokenCount   int64
+	Formula      activeUserThresholdFormula
+}
 
-func getActiveUserRequestThreshold() int {
-	threshold := common.GetEnvOrDefault(
-		"DATA_OVERVIEW_ACTIVE_USER_REQUEST_THRESHOLD",
-		defaultActiveUserRequestThreshold,
-	)
-	if threshold < 0 {
-		common.SysError("DATA_OVERVIEW_ACTIVE_USER_REQUEST_THRESHOLD must not be negative, using default value: 10")
-		return defaultActiveUserRequestThreshold
+type activeUserThresholdFormula [3]float64
+
+func getActiveUserThreshold(startTimestamp, endTimestamp int64) activeUserThreshold {
+	formula := activeUserThresholdFormula{10, 1_000_000, 0.85}
+	rawFormula := common.GetEnvOrDefaultString("DATA_OVERVIEW_ACTIVE_USER_THRESHOLD_FORMULA", "")
+	if strings.TrimSpace(rawFormula) != "" {
+		var configuredFormula activeUserThresholdFormula
+		if err := common.UnmarshalJsonStr(rawFormula, &configuredFormula); err != nil {
+			common.SysError(fmt.Sprintf("failed to parse DATA_OVERVIEW_ACTIVE_USER_THRESHOLD_FORMULA: %s, using default values", err.Error()))
+		} else {
+			validFormula := true
+			for _, parameter := range configuredFormula {
+				if math.IsNaN(parameter) || math.IsInf(parameter, 0) || parameter <= 0 {
+					validFormula = false
+					break
+				}
+			}
+			if validFormula {
+				formula = configuredFormula
+			} else {
+				common.SysError("DATA_OVERVIEW_ACTIVE_USER_THRESHOLD_FORMULA must contain three positive finite numbers, using default values")
+			}
+		}
 	}
-	return threshold
+
+	const secondsPerDay int64 = 24 * 60 * 60
+	queryDays := int64(1)
+	if startTimestamp > 0 && endTimestamp >= startTimestamp {
+		queryDays = (endTimestamp-startTimestamp)/secondsPerDay + 1
+	}
+	multiplier := math.Pow(float64(queryDays), formula[2])
+	return activeUserThreshold{
+		RequestCount: int64(math.Ceil(formula[0] * multiplier)),
+		TokenCount:   int64(math.Ceil(formula[1] * multiplier)),
+		Formula:      formula,
+	}
 }
 
 // DepartmentStatsRequest is the request body for department stats.
@@ -818,13 +849,15 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 		return nil, fmt.Errorf("find users by open_id: %w", err)
 	}
 
-	activeUserRequestThreshold := getActiveUserRequestThreshold()
+	activeUserThreshold := getActiveUserThreshold(req.StartTimestamp, req.EndTimestamp)
 
 	stat, err := model.GetDepartmentStats(
 		userIds,
 		req.StartTimestamp,
 		req.EndTimestamp,
-		activeUserRequestThreshold,
+		activeUserThreshold.RequestCount,
+		activeUserThreshold.TokenCount,
+		[3]float64(activeUserThreshold.Formula),
 	)
 	if err != nil {
 		return nil, err
@@ -954,7 +987,7 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 		activeUsers   int64
 	}
 	agg := make([]aggResult, len(children))
-	activeUserRequestThreshold := getActiveUserRequestThreshold()
+	activeUserThreshold := getActiveUserThreshold(req.StartTimestamp, req.EndTimestamp)
 	for _, row := range rows {
 		idx, ok := userToDeptIdx[row.UserID]
 		if !ok {
@@ -963,7 +996,7 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 		agg[idx].totalTokens += row.TotalTokens
 		agg[idx].totalQuota += row.TotalQuota
 		agg[idx].totalRequests += row.TotalReqs
-		if row.TotalReqs > int64(activeUserRequestThreshold) {
+		if row.TotalReqs >= activeUserThreshold.RequestCount || row.TotalTokens >= activeUserThreshold.TokenCount {
 			agg[idx].activeUsers++
 		}
 	}

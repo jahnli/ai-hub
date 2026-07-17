@@ -1169,28 +1169,34 @@ func GetModelDailyStatsForModels(userIds []int, startTimestamp, endTimestamp int
 
 // DepartmentStat holds aggregated statistics for a department.
 type DepartmentStat struct {
-	TotalTokens                int64   `json:"total_tokens"`
-	TotalQuota                 int64   `json:"total_quota"`
-	TotalAmountCNY             float64 `json:"total_amount_cny"`
-	TotalRequests              int64   `json:"total_requests"`
-	TotalErrors                int64   `json:"total_errors"`
-	TotalUseTime               int64   `json:"total_use_time"`
-	AvgUseTime                 float64 `json:"avg_use_time"`
-	ErrorRate                  float64 `json:"error_rate"`
-	AvgPricePerMT              float64 `json:"avg_price_per_mt"`
-	RegisteredUsers            int64   `json:"registered_users"`
-	UnregisteredUsers          int64   `json:"unregistered_users"`
-	ActiveUsers                int64   `json:"active_users"`
-	ActiveUserRate             float64 `json:"active_user_rate"`
-	AvgTokensPerActiveUserMT   float64 `json:"avg_tokens_per_active_user_mt"`
-	ActiveUserRequestThreshold int     `json:"active_user_request_threshold"`
+	TotalTokens                int64      `json:"total_tokens"`
+	TotalQuota                 int64      `json:"total_quota"`
+	TotalAmountCNY             float64    `json:"total_amount_cny"`
+	TotalRequests              int64      `json:"total_requests"`
+	TotalErrors                int64      `json:"total_errors"`
+	TotalUseTime               int64      `json:"total_use_time"`
+	AvgUseTime                 float64    `json:"avg_use_time"`
+	ErrorRate                  float64    `json:"error_rate"`
+	AvgPricePerMT              float64    `json:"avg_price_per_mt"`
+	RegisteredUsers            int64      `json:"registered_users"`
+	UnregisteredUsers          int64      `json:"unregistered_users"`
+	ActiveUsers                int64      `json:"active_users"`
+	ActiveUserRate             float64    `json:"active_user_rate"`
+	AvgTokensPerActiveUserMT   float64    `json:"avg_tokens_per_active_user_mt"`
+	ActiveUserRequestThreshold int64      `json:"active_user_request_threshold"`
+	ActiveUserTokenThreshold   int64      `json:"active_user_token_threshold"`
+	ActiveUserFormula          [3]float64 `json:"active_user_formula"`
 }
 
 // GetDepartmentStats aggregates statistics for a set of user IDs within a time range.
 // Main metrics (tokens, quota, requests) come from quota_data; error count and use_time come from logs.
-func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activeUserRequestThreshold int) (*DepartmentStat, error) {
+func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activeUserRequestThreshold, activeUserTokenThreshold int64, activeUserFormula [3]float64) (*DepartmentStat, error) {
 	if len(userIds) == 0 {
-		return &DepartmentStat{ActiveUserRequestThreshold: activeUserRequestThreshold}, nil
+		return &DepartmentStat{
+			ActiveUserRequestThreshold: activeUserRequestThreshold,
+			ActiveUserTokenThreshold:   activeUserTokenThreshold,
+			ActiveUserFormula:          activeUserFormula,
+		}, nil
 	}
 
 	type quotaResult struct {
@@ -1227,7 +1233,7 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activ
 		activeUserTx = activeUserTx.Where("created_at <= ?", endTimestamp)
 	}
 	activeUserTx = activeUserTx.Group("user_id").
-		Having("SUM(count) > ?", activeUserRequestThreshold)
+		Having("SUM(count) >= ? OR SUM(token_used) >= ?", activeUserRequestThreshold, activeUserTokenThreshold)
 	if err := DB.Table("(?) AS active_users", activeUserTx).
 		Count(&activeUsers).Error; err != nil {
 		return nil, errors.New("查询部门使用人数失败")
@@ -1263,6 +1269,8 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activ
 		TotalUseTime:               er.TotalUseTime,
 		ActiveUsers:                activeUsers,
 		ActiveUserRequestThreshold: activeUserRequestThreshold,
+		ActiveUserTokenThreshold:   activeUserTokenThreshold,
+		ActiveUserFormula:          activeUserFormula,
 	}
 
 	if qr.TotalReqs > 0 {

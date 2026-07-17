@@ -10,6 +10,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils'
 
 import { getActiveUserRateClassName } from '../lib/active-user-rate'
 import type { DepartmentStat } from '../types'
+import { ActivityFormulaTooltip } from './activity-formula-tooltip'
 
 export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
   const { t } = useTranslation()
@@ -56,6 +58,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
 
   const items: {
     title: string
+    titleSuffix?: ReactNode
     value: string
     desc?: string
     icon: LucideIcon
@@ -110,9 +113,12 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       valueClassName: 'text-warning',
     },
     {
-      title: t('Active Users / Active Rate'),
+      title: t('Users / Share'),
+      titleSuffix: (
+        <ActivityFormulaTooltip formula={stat.active_user_formula} />
+      ),
       value: `${(stat.active_users ?? 0).toLocaleString()} / ${activeUserRate.toFixed(1)}%`,
-      desc: t('Active users and their share during the selected period'),
+      desc: t('Users and their share during the selected period'),
       icon: Users,
       valueClassName: activeUserRateClassName,
     },
@@ -143,9 +149,10 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
             >
               <div className='flex min-w-0 items-center gap-2'>
                 <Icon className='text-muted-foreground/60 size-3.5 shrink-0' />
-                <div className='text-muted-foreground truncate text-xs font-medium tracking-wider uppercase'>
+                <div className='text-muted-foreground min-w-0 truncate text-xs font-medium tracking-wider uppercase'>
                   {item.title}
                 </div>
+                {item.titleSuffix}
               </div>
               {item.tooltip ? (
                 <Tooltip>
