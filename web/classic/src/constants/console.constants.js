@@ -19,6 +19,11 @@ For commercial licensing, please contact support@quantumnous.com
 
 import dayjs from 'dayjs';
 
+function getMondayWeekStart(date) {
+  const weekday = date.day() === 0 ? 7 : date.day();
+  return date.subtract(weekday - 1, 'day').startOf('day');
+}
+
 // ========== 日期预设常量 ==========
 export const DATE_RANGE_PRESETS = [
   {
@@ -33,8 +38,8 @@ export const DATE_RANGE_PRESETS = [
   },
   {
     text: '本周',
-    start: () => dayjs().startOf('week').toDate(),
-    end: () => dayjs().endOf('week').toDate(),
+    start: () => getMondayWeekStart(dayjs()).toDate(),
+    end: () => getMondayWeekStart(dayjs()).add(6, 'day').endOf('day').toDate(),
   },
   {
     text: '近 30 天',
