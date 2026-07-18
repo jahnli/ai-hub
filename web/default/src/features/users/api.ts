@@ -41,12 +41,14 @@ export async function getUsers(
   params: GetUsersParams = {}
 ): Promise<GetUsersResponse> {
   const { p = 1, page_size = 10, sort_by, sort_order } = params
-  const queryParams = new URLSearchParams()
-  queryParams.set('p', String(p))
-  queryParams.set('page_size', String(page_size))
-  if (sort_by) queryParams.set('sort_by', sort_by)
-  if (sort_order) queryParams.set('sort_order', sort_order)
-  const res = await api.get(`/api/user/?${queryParams.toString()}`)
+  const res = await api.get('/api/user/', {
+    params: {
+      p,
+      page_size,
+      sort_by,
+      sort_order,
+    },
+  })
   return res.data
 }
 
@@ -108,7 +110,15 @@ export async function updateUser(
 }
 
 /**
- * Manage user (promote, demote, enable, disable)
+ * Delete a single user (hard delete)
+ */
+export async function deleteUser(id: number): Promise<ApiResponse> {
+  const res = await api.delete(`/api/user/${id}/`)
+  return res.data
+}
+
+/**
+ * Manage user (promote, demote, enable, disable, delete)
  */
 export async function manageUser(
   id: number,

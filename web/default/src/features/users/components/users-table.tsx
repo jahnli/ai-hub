@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query'
+import { getRouteApi } from '@tanstack/react-router'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -16,9 +18,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { SortingState } from '@tanstack/react-table'
-import { useQuery } from '@tanstack/react-query'
-import { getRouteApi } from '@tanstack/react-router'
+import type { OnChangeFn, SortingState } from '@tanstack/react-table'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -39,7 +39,7 @@ import {
   getUserRoleOptions,
   isUserDeleted,
 } from '../constants'
-import type { User } from '../types'
+import type { User, UserSortBy, UserSortOrder } from '../types'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { useUsersColumns } from './users-columns'
 import { useUsers } from './users-provider'
@@ -50,7 +50,7 @@ function isDisabledUserRow(user: User) {
   return isUserDeleted(user) || user.status === USER_STATUS.DISABLED
 }
 
-const USER_COLUMN_SORT_MAP: Record<string, string> = {
+const USER_COLUMN_SORT_MAP: Partial<Record<string, UserSortBy>> = {
   quota: 'sub_quota_used',
   monthly_total_amount_cny: 'monthly_total_amount_cny',
   average_price: 'monthly_avg_price_per_mt',
@@ -75,9 +75,9 @@ export function UsersTable() {
   ])
 
   const sortParam = sorting[0]
-  const sortBy = sortParam ? (USER_COLUMN_SORT_MAP[sortParam.id] ?? '') : ''
-  let sortOrder = ''
-  if (sortParam) {
+  const sortBy = sortParam ? USER_COLUMN_SORT_MAP[sortParam.id] : undefined
+  let sortOrder: UserSortOrder | undefined
+  if (sortBy && sortParam) {
     sortOrder = sortParam.desc ? 'desc' : 'asc'
   }
 
@@ -111,6 +111,13 @@ export function UsersTable() {
   const groupFilter =
     (columnFilters.find((filter) => filter.id === 'group')?.value as string) ??
     ''
+
+  const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
+    setSorting(updater)
+    if (pagination.pageIndex > 0) {
+      onPaginationChange({ ...pagination, pageIndex: 0 })
+    }
+  }
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
@@ -172,10 +179,7 @@ export function UsersTable() {
     globalFilter,
     pagination,
     sorting,
-    onSortingChange: (updater) => {
-      setSorting(updater)
-      onPaginationChange((prev) => ({ ...prev, pageIndex: 0 }))
-    },
+    onSortingChange: handleSortingChange,
     globalFilterFn: (row, _columnId, filterValue) => {
       const searchValue = String(filterValue).toLowerCase()
       const fields = [

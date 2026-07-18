@@ -87,11 +87,29 @@ export interface ApiResponse<T = unknown> {
   data?: T
 }
 
+export type UserSortBy =
+  | 'id'
+  | 'username'
+  | 'quota'
+  | 'group'
+  | 'created_at'
+  | 'last_login_at'
+  | 'used_quota'
+  | 'role'
+  | 'status'
+  | 'sub_quota_used'
+  | 'monthly_total_amount_cny'
+  | 'monthly_avg_price_per_mt'
+  | 'monthly_total_tokens'
+  | 'monthly_total_requests'
+
+export type UserSortOrder = 'asc' | 'desc'
+
 export interface GetUsersParams {
   p?: number
   page_size?: number
-  sort_by?: string
-  sort_order?: string
+  sort_by?: UserSortBy
+  sort_order?: UserSortOrder
 }
 
 export interface GetUsersResponse {
@@ -112,8 +130,8 @@ export interface SearchUsersParams {
   status?: string
   p?: number
   page_size?: number
-  sort_by?: string
-  sort_order?: string
+  sort_by?: UserSortBy
+  sort_order?: UserSortOrder
 }
 
 export interface UserFormData {

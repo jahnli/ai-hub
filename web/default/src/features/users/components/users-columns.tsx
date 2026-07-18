@@ -21,7 +21,8 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Checkbox } from '@/components/ui/checkbox'
-import { type User } from '../types'
+
+import type { User } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
 import { useSharedUserColumns } from './shared-user-columns'
 
@@ -45,7 +46,9 @@ export function useUsersColumns(): ColumnDef<User>[] {
           <Checkbox
             checked={table.getIsAllPageRowsSelected()}
             indeterminate={table.getIsSomePageRowsSelected()}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label='Select all'
             className='translate-y-[2px]'
           />
@@ -70,6 +73,6 @@ export function useUsersColumns(): ColumnDef<User>[] {
         meta: { pinned: 'right' as const },
       } satisfies ColumnDef<User>,
     ],
-    [sharedColumns, t],
+    [sharedColumns, t]
   )
 }
