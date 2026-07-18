@@ -744,7 +744,7 @@ func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 		return nil, fmt.Errorf("get department members: %w", err)
 	}
 
-	userIds, err := findUserIdsByOpenIDs(memberOpenIDs)
+	userIds, err := findRegisteredUserIdsByOpenIDs(memberOpenIDs, req.EndTimestamp)
 	if err != nil {
 		return nil, fmt.Errorf("find users by open_id: %w", err)
 	}
@@ -844,7 +844,7 @@ func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, err
 		return nil, fmt.Errorf("get department members: %w", err)
 	}
 
-	userIds, err := findUserIdsByOpenIDs(memberOpenIDs)
+	userIds, err := findRegisteredUserIdsByOpenIDs(memberOpenIDs, req.EndTimestamp)
 	if err != nil {
 		return nil, fmt.Errorf("find users by open_id: %w", err)
 	}
@@ -945,7 +945,7 @@ func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem
 				errs[idx] = err
 				return
 			}
-			userIDs, err := findUserIdsByOpenIDs(memberOpenIDs)
+			userIDs, err := findRegisteredUserIdsByOpenIDs(memberOpenIDs, req.EndTimestamp)
 			if err != nil {
 				errs[idx] = err
 				return
@@ -1287,15 +1287,18 @@ func getAllMembersUnderDepts(token string, openDeptIDs []string) ([]string, erro
 	return result, nil
 }
 
-func findUserIdsByOpenIDs(openIDs []string) ([]int, error) {
+func findRegisteredUserIdsByOpenIDs(openIDs []string, registeredBefore int64) ([]int, error) {
 	if len(openIDs) == 0 {
 		return nil, nil
 	}
-	var userIds []int
-	if err := model.DB.Model(&model.User{}).
+	query := model.DB.Model(&model.User{}).
 		Select("id").
-		Where("open_id IN ?", openIDs).
-		Scan(&userIds).Error; err != nil {
+		Where("open_id IN ?", openIDs)
+	if registeredBefore > 0 {
+		query = query.Where("created_at <= ?", registeredBefore)
+	}
+	var userIds []int
+	if err := query.Scan(&userIds).Error; err != nil {
 		return nil, err
 	}
 	return userIds, nil
@@ -1526,7 +1529,7 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 		return nil, fmt.Errorf("get department members: %w", err)
 	}
 
-	userIds, err := findUserIdsByOpenIDs(memberOpenIDs)
+	userIds, err := findRegisteredUserIdsByOpenIDs(memberOpenIDs, req.EndTimestamp)
 	if err != nil {
 		return nil, fmt.Errorf("find users by open_id: %w", err)
 	}
@@ -1595,7 +1598,25 @@ func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *mo
 	}
 }
 
-func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string, memberDetails map[string]feishuDeptMember, includeUnregistered bool, registrationStatus string) []DepartmentUserItem {
+func isDepartmentUserRegisteredAt(user *model.User, endTimestamp int64) bool {
+	return user != nil && (endTimestamp <= 0 || user.CreatedAt <= endTimestamp)
+}
+
+func departmentUserRegistrationCounts(users []*model.User, totalUsers int, endTimestamp int64) (int64, int64) {
+	registeredUsers := int64(0)
+	for _, user := range users {
+		if isDepartmentUserRegisteredAt(user, endTimestamp) {
+			registeredUsers++
+		}
+	}
+	unregisteredUsers := int64(totalUsers) - registeredUsers
+	if unregisteredUsers < 0 {
+		unregisteredUsers = 0
+	}
+	return registeredUsers, unregisteredUsers
+}
+
+func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string, memberDetails map[string]feishuDeptMember, endTimestamp int64, includeUnregistered bool, registrationStatus string) []DepartmentUserItem {
 	userMap := make(map[string]*model.User, len(users))
 	for _, u := range users {
 		if u.OpenId != "" {
@@ -1611,10 +1632,14 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 		}
 		seen[openID] = true
 		if u, ok := userMap[openID]; ok {
-			if registrationStatus == departmentRegistrationStatusUnregistered {
+			isRegistered := isDepartmentUserRegisteredAt(u, endTimestamp)
+			if isRegistered && registrationStatus == departmentRegistrationStatusUnregistered {
 				continue
 			}
-			result = append(result, DepartmentUserItem{User: u, IsRegistered: true})
+			if !isRegistered && (!includeUnregistered || registrationStatus == departmentRegistrationStatusRegistered) {
+				continue
+			}
+			result = append(result, DepartmentUserItem{User: u, IsRegistered: isRegistered})
 			continue
 		}
 		if !includeUnregistered || registrationStatus == departmentRegistrationStatusRegistered {
@@ -1723,13 +1748,9 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 			return nil, fmt.Errorf("get users by open_ids: %w", err)
 		}
 		totalUsers := int64(len(memberOpenIDs))
-		registeredUsers := int64(len(users))
-		unregisteredUsers := totalUsers - registeredUsers
-		if unregisteredUsers < 0 {
-			unregisteredUsers = 0
-		}
+		registeredUsers, unregisteredUsers := departmentUserRegistrationCounts(users, len(memberOpenIDs), req.EndTimestamp)
 		if len(users) == 0 {
-			allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
+			allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.EndTimestamp, includeUnregistered, req.RegistrationStatus)
 			start := startIdx
 			end := start + pageSize
 			if start > len(allItems) {
@@ -1780,7 +1801,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		if usdExchangeRate <= 0 {
 			usdExchangeRate = 1
 		}
-		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
+		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.EndTimestamp, includeUnregistered, req.RegistrationStatus)
 		for i := range allItems {
 			u := allItems[i].User
 			if u.Id == 0 {
@@ -1826,7 +1847,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 	}
 
 	if len(users) == 0 {
-		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
+		allItems := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.EndTimestamp, includeUnregistered, req.RegistrationStatus)
 		start := startIdx
 		end := start + pageSize
 		if start > len(allItems) {
@@ -1883,7 +1904,7 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		usdExchangeRate = 1
 	}
 
-	result := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, includeUnregistered, req.RegistrationStatus)
+	result := mergeDepartmentUsersWithMembers(users, memberOpenIDs, memberDetails, req.EndTimestamp, includeUnregistered, req.RegistrationStatus)
 	for i := range result {
 		u := result[i].User
 		if u.Id == 0 {
@@ -1913,14 +1934,15 @@ func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, 
 		end = len(result)
 	}
 
+	registeredUsers, unregisteredUsers := departmentUserRegistrationCounts(users, len(memberOpenIDs), req.EndTimestamp)
 	return &DepartmentUsersResponse{
 		Items:             result[start:end],
 		Total:             int64(len(result)),
 		Page:              page,
 		Size:              pageSize,
 		TotalUsers:        int64(len(memberOpenIDs)),
-		RegisteredUsers:   int64(len(users)),
-		UnregisteredUsers: max(int64(len(memberOpenIDs)-len(users)), 0),
+		RegisteredUsers:   registeredUsers,
+		UnregisteredUsers: unregisteredUsers,
 	}, nil
 }
 
