@@ -1,6 +1,6 @@
 # 数据总览页：飞书部门树筛选、统计卡片、子部门统计与使用分析
 
-**日期**: 2026-06-25 ~ 07-16（最后更新 07-16）
+**日期**: 2026-06-25 ~ 07-17（最后更新 07-17）
 
 ## 涉及文件
 
@@ -36,14 +36,13 @@
 - `web/default/src/features/data-overview/types.ts` — DepartmentUsersResponse 类型补充 total_users、registered_users、unregistered_users 字段
 - `web/default/src/components/data-table/core/column-header.tsx` — DataTableColumnHeader 新增 DescriptionTooltip，通过 column.columnDef.meta.description 渲染列头说明图标
 - `web/default/src/features/users/components/shared-user-columns.tsx` — userQuotaColumn 与共享均价列改为贴近列名的内联说明图标，悬停表头可查看当前自然月额度统计说明和每百万 Token 均价说明；共享列新增均价列，显示 `/MT` 单位并保留排序入口
-- `.env.example` — 新增数据总览使用人数请求次数阈值配置说明，默认值为 10
-- `docker-compose.yml` — 将 `DATA_OVERVIEW_ACTIVE_USER_REQUEST_THRESHOLD` 注入服务环境变量并提供默认值 10
-- `model/log.go` — 部门统计新增使用人数、使用占比、人均 Token 和阈值字段；按筛选时间内用户请求次数严格大于阈值聚合使用人数
-- `model/department_stats_test.go` — 覆盖使用人数阈值边界、时间与用户范围过滤，以及空部门保留阈值的回归行为
-- `service/feishu_department.go` — 读取并校验使用人数请求次数阈值，为部门与子部门计算使用占比和人均 Token
-- `web/default/src/features/data-overview/components/department-stats-cards.tsx` — 统计卡片新增使用人数/占比与人均 Token，并通过提示说明使用人数阈值
-- `web/default/src/features/data-overview/components/sub-department-stats-dialog.tsx` — 子部门统计弹窗透传并展示使用人数阈值
-- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门表格新增使用人数/占比与人均 Token 列，支持按使用人数排序并展示阈值说明
+- `.env.example` — 新增 `DATA_OVERVIEW_ACTIVE_USER_THRESHOLD_FORMULA`，支持用 `days` 按统计区间天数配置活跃用户请求阈值公式，并保留旧固定阈值配置作为兼容兜底
+- `model/log.go` — 部门统计新增使用人数、使用占比、人均 Token 和阈值字段；按筛选时间内用户请求次数严格大于动态阈值聚合使用人数
+- `service/feishu_department.go` — 解析和校验活跃用户阈值公式，按统计区间天数计算阈值；公式缺失或无效时回退固定阈值，并向部门与子部门统计结果下发阈值和公式说明
+- `service/feishu_department_stats_test.go` — 覆盖动态公式阈值边界、固定阈值兜底、时间与用户范围过滤，以及空部门统计行为
+- `web/default/src/features/data-overview/components/activity-formula-tooltip.tsx` — 新增活跃用户公式说明 Tooltip，展示实际生效的动态阈值计算方式
+- `web/default/src/features/data-overview/components/department-stats-cards.tsx` — 统计卡片新增使用人数/占比与人均 Token，并展示活跃用户公式说明
+- `web/default/src/features/data-overview/components/sub-department-stats.tsx` — 子部门表格新增使用人数/占比与人均 Token 列，支持按使用人数排序并展示活跃用户公式说明
 - `web/default/src/features/data-overview/index.tsx` — 数据总览主统计区域补充使用人数指标卡片及对应骨架布局
 - `web/default/src/features/data-overview/types.ts` — 部门与子部门统计类型补充使用人数、占比、人均 Token 和阈值字段
 - `web/default/src/i18n/locales/*.json` — 补齐使用人数、使用占比、人均 Token、请求阈值说明等各语言文案

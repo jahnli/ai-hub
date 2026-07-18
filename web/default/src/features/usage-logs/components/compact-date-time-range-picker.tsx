@@ -47,6 +47,11 @@ function fromInputValue(value: string): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
+function getMondayWeekStart(date: dayjs.Dayjs): dayjs.Dayjs {
+  const weekday = date.day() === 0 ? 7 : date.day()
+  return date.subtract(weekday - 1, 'day').startOf('day')
+}
+
 export function CompactDateTimeRangePicker({
   start,
   end,
@@ -98,72 +103,77 @@ export function CompactDateTimeRangePicker({
 
   const buildPresetMap = (
     now: dayjs.Dayjs
-  ): Record<PresetKind, { start: Date; end: Date }> => ({
-    lastHour: {
-      start: now.subtract(1, 'hour').toDate(),
-      end: now.toDate(),
-    },
-    today: {
-      start: now.startOf('day').toDate(),
-      end: now.endOf('day').toDate(),
-    },
-    yesterday: {
-      start: now.subtract(1, 'day').startOf('day').toDate(),
-      end: now.subtract(1, 'day').endOf('day').toDate(),
-    },
-    thisWeek: {
-      start: now.startOf('week').toDate(),
-      end: now.endOf('week').toDate(),
-    },
-    lastWeek: {
-      start: now.subtract(1, 'week').startOf('week').toDate(),
-      end: now.subtract(1, 'week').endOf('week').toDate(),
-    },
-    thisMonth: {
-      start: now.startOf('month').toDate(),
-      end: now.endOf('month').toDate(),
-    },
-    lastMonth: {
-      start: now.subtract(1, 'month').startOf('month').toDate(),
-      end: now.subtract(1, 'month').endOf('month').toDate(),
-    },
-    thisQuarter: {
-      start: now.startOf('quarter').toDate(),
-      end: now.endOf('quarter').toDate(),
-    },
-    lastQuarter: {
-      start: now.subtract(1, 'quarter').startOf('quarter').toDate(),
-      end: now.subtract(1, 'quarter').endOf('quarter').toDate(),
-    },
-    thisHalfYear: {
-      start: (now.month() < 6
-        ? now.startOf('year')
-        : now.startOf('year').add(6, 'month')
-      ).toDate(),
-      end: (now.month() < 6
-        ? now.startOf('year').add(5, 'month').endOf('month')
-        : now.endOf('year')
-      ).toDate(),
-    },
-    lastHalfYear: {
-      start: (now.month() < 6
-        ? now.subtract(1, 'year').startOf('year').add(6, 'month')
-        : now.startOf('year')
-      ).toDate(),
-      end: (now.month() < 6
-        ? now.subtract(1, 'year').endOf('year')
-        : now.startOf('year').add(5, 'month').endOf('month')
-      ).toDate(),
-    },
-    thisYear: {
-      start: now.startOf('year').toDate(),
-      end: now.endOf('year').toDate(),
-    },
-    lastYear: {
-      start: now.subtract(1, 'year').startOf('year').toDate(),
-      end: now.subtract(1, 'year').endOf('year').toDate(),
-    },
-  })
+  ): Record<PresetKind, { start: Date; end: Date }> => {
+    const thisWeekStart = getMondayWeekStart(now)
+    const lastWeekStart = thisWeekStart.subtract(1, 'week')
+
+    return {
+      lastHour: {
+        start: now.subtract(1, 'hour').toDate(),
+        end: now.toDate(),
+      },
+      today: {
+        start: now.startOf('day').toDate(),
+        end: now.endOf('day').toDate(),
+      },
+      yesterday: {
+        start: now.subtract(1, 'day').startOf('day').toDate(),
+        end: now.subtract(1, 'day').endOf('day').toDate(),
+      },
+      thisWeek: {
+        start: thisWeekStart.toDate(),
+        end: thisWeekStart.add(6, 'day').endOf('day').toDate(),
+      },
+      lastWeek: {
+        start: lastWeekStart.toDate(),
+        end: lastWeekStart.add(6, 'day').endOf('day').toDate(),
+      },
+      thisMonth: {
+        start: now.startOf('month').toDate(),
+        end: now.endOf('month').toDate(),
+      },
+      lastMonth: {
+        start: now.subtract(1, 'month').startOf('month').toDate(),
+        end: now.subtract(1, 'month').endOf('month').toDate(),
+      },
+      thisQuarter: {
+        start: now.startOf('quarter').toDate(),
+        end: now.endOf('quarter').toDate(),
+      },
+      lastQuarter: {
+        start: now.subtract(1, 'quarter').startOf('quarter').toDate(),
+        end: now.subtract(1, 'quarter').endOf('quarter').toDate(),
+      },
+      thisHalfYear: {
+        start: (now.month() < 6
+          ? now.startOf('year')
+          : now.startOf('year').add(6, 'month')
+        ).toDate(),
+        end: (now.month() < 6
+          ? now.startOf('year').add(5, 'month').endOf('month')
+          : now.endOf('year')
+        ).toDate(),
+      },
+      lastHalfYear: {
+        start: (now.month() < 6
+          ? now.subtract(1, 'year').startOf('year').add(6, 'month')
+          : now.startOf('year')
+        ).toDate(),
+        end: (now.month() < 6
+          ? now.subtract(1, 'year').endOf('year')
+          : now.startOf('year').add(5, 'month').endOf('month')
+        ).toDate(),
+      },
+      thisYear: {
+        start: now.startOf('year').toDate(),
+        end: now.endOf('year').toDate(),
+      },
+      lastYear: {
+        start: now.subtract(1, 'year').startOf('year').toDate(),
+        end: now.subtract(1, 'year').endOf('year').toDate(),
+      },
+    }
+  }
 
   const applyPreset = (kind: PresetKind) => {
     const range = buildPresetMap(dayjs())[kind]
