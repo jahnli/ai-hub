@@ -22,6 +22,7 @@ import { SSRFSection } from '../request-limits/ssrf-section'
 import { TokenLimitSection } from '../request-limits/token-limit-section'
 import type { SecuritySettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
+import { AuditSection } from './audit-section'
 
 const SECURITY_SECTIONS = [
   {
@@ -86,6 +87,21 @@ const SECURITY_SECTIONS = [
         defaultValues={{
           'token_setting.max_user_tokens':
             settings['token_setting.max_user_tokens'],
+        }}
+      />
+    ),
+  },
+  {
+    id: 'audit',
+    titleKey: 'Security Audit',
+    build: (settings: SecuritySettings) => (
+      <AuditSection
+        defaultValues={{
+          'audit_setting.enabled': settings['audit_setting.enabled'],
+          'audit_setting.off_hours_start_hour':
+            settings['audit_setting.off_hours_start_hour'],
+          'audit_setting.off_hours_end_hour':
+            settings['audit_setting.off_hours_end_hour'],
         }}
       />
     ),

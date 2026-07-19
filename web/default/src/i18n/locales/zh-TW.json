@@ -5540,6 +5540,27 @@
     "Zero retention": "零數據保留",
     "Zhipu": "智譜",
     "Zhipu V4": "智譜 V4",
-    "Zoom": "縮放"
+    "Zoom": "縮放",
+    "Security Audit": "安全稽核",
+    "Off-Hours Requests": "非工作時間請求",
+    "Search username": "搜尋使用者名稱",
+    "Audit window": "稽核時段",
+    "next day": "次日",
+    "Security audit is disabled": "安全稽核功能未啟用",
+    "Enable it in System Settings → Security & Limits → Security Audit.": "請在「系統設定 → 安全與限制 → 安全稽核」中開啟。",
+    "Time Range": "時間範圍",
+    "IP Addresses": "IP 位址",
+    "View Details": "檢視明細",
+    "No off-hours requests": "暫無非工作時間請求",
+    "No requests were recorded during the audit window in this time range.": "該時間範圍內稽核時段沒有請求記錄。",
+    "Enable security audit": "啟用安全稽核",
+    "Aggregates consumption requests made during the audit window from usage logs. No extra data is stored; changing the window applies to history immediately.": "從使用日誌中聚合稽核時段內的消費請求。不額外儲存資料;修改時段後立即對歷史資料生效。",
+    "Audit window start hour": "稽核時段開始小時",
+    "Audit window end hour": "稽核時段結束小時",
+    "0-23, in the server local timezone. Default 3.": "0-23,按伺服器本地時區。預設 3。",
+    "Default 7. An end hour not later than the start hour means the window crosses midnight (e.g. 22-6) and is attributed to the starting day.": "預設 7。結束小時不大於開始小時表示時段跨午夜(如 22-6),歸屬於起始日。",
+    "Start and end hour cannot be the same": "開始與結束小時不能相同",
+    "The IP column depends on per-user IP logging; users who disabled it will show no IP.": "IP 欄位依賴使用者級 IP 記錄設定;已關閉該設定的使用者不顯示 IP。",
+    "Save audit settings": "儲存稽核設定"
   }
 }

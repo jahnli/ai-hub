@@ -5540,6 +5540,27 @@
     "Zero retention": "Без хранения данных",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Security Audit": "Аудит безопасности",
+    "Off-Hours Requests": "Запросы в нерабочее время",
+    "Search username": "Поиск по имени пользователя",
+    "Audit window": "Окно аудита",
+    "next day": "следующий день",
+    "Security audit is disabled": "Аудит безопасности отключён",
+    "Enable it in System Settings → Security & Limits → Security Audit.": "Включите его в Настройки системы → Безопасность и лимиты → Аудит безопасности.",
+    "Time Range": "Диапазон времени",
+    "IP Addresses": "IP-адреса",
+    "View Details": "Подробности",
+    "No off-hours requests": "Нет запросов в нерабочее время",
+    "No requests were recorded during the audit window in this time range.": "За выбранный период в окне аудита запросы не зафиксированы.",
+    "Enable security audit": "Включить аудит безопасности",
+    "Aggregates consumption requests made during the audit window from usage logs. No extra data is stored; changing the window applies to history immediately.": "Агрегирует запросы потребления, сделанные в окне аудита, из журналов использования. Дополнительные данные не сохраняются; изменение окна сразу применяется к истории.",
+    "Audit window start hour": "Час начала окна аудита",
+    "Audit window end hour": "Час окончания окна аудита",
+    "0-23, in the server local timezone. Default 3.": "0-23, по местному времени сервера. По умолчанию 3.",
+    "Default 7. An end hour not later than the start hour means the window crosses midnight (e.g. 22-6) and is attributed to the starting day.": "По умолчанию 7. Если час окончания не позже часа начала, окно пересекает полночь (напр. 22-6) и относится к дню начала.",
+    "Start and end hour cannot be the same": "Час начала и час окончания не могут совпадать",
+    "The IP column depends on per-user IP logging; users who disabled it will show no IP.": "Столбец IP зависит от настройки записи IP у пользователя; для отключивших её IP не отображается.",
+    "Save audit settings": "Сохранить настройки аудита"
   }
 }

@@ -44,6 +44,10 @@ export const STATIC_I18N_KEYS = [
   'Routing Reliability',
   'Maintenance',
 
+  // Security audit (page tabs & settings section)
+  'Security Audit',
+  'Off-Hours Requests',
+
   // System info
   'online',
   'stale',

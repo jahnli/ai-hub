@@ -5540,6 +5540,27 @@
     "Zero retention": "Không lưu dữ liệu",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Security Audit": "Kiểm toán bảo mật",
+    "Off-Hours Requests": "Yêu cầu ngoài giờ làm việc",
+    "Search username": "Tìm kiếm tên người dùng",
+    "Audit window": "Khung giờ kiểm toán",
+    "next day": "ngày hôm sau",
+    "Security audit is disabled": "Kiểm toán bảo mật đang tắt",
+    "Enable it in System Settings → Security & Limits → Security Audit.": "Bật trong Cài đặt hệ thống → Bảo mật & Giới hạn → Kiểm toán bảo mật.",
+    "Time Range": "Khoảng thời gian",
+    "IP Addresses": "Địa chỉ IP",
+    "View Details": "Xem chi tiết",
+    "No off-hours requests": "Không có yêu cầu ngoài giờ làm việc",
+    "No requests were recorded during the audit window in this time range.": "Không có yêu cầu nào được ghi nhận trong khung giờ kiểm toán ở khoảng thời gian này.",
+    "Enable security audit": "Bật kiểm toán bảo mật",
+    "Aggregates consumption requests made during the audit window from usage logs. No extra data is stored; changing the window applies to history immediately.": "Tổng hợp các yêu cầu tiêu thụ trong khung giờ kiểm toán từ nhật ký sử dụng. Không lưu thêm dữ liệu; thay đổi khung giờ áp dụng ngay cho lịch sử.",
+    "Audit window start hour": "Giờ bắt đầu khung kiểm toán",
+    "Audit window end hour": "Giờ kết thúc khung kiểm toán",
+    "0-23, in the server local timezone. Default 3.": "0-23, theo múi giờ máy chủ. Mặc định 3.",
+    "Default 7. An end hour not later than the start hour means the window crosses midnight (e.g. 22-6) and is attributed to the starting day.": "Mặc định 7. Giờ kết thúc không muộn hơn giờ bắt đầu nghĩa là khung giờ vượt qua nửa đêm (vd. 22-6) và được tính vào ngày bắt đầu.",
+    "Start and end hour cannot be the same": "Giờ bắt đầu và giờ kết thúc không được trùng nhau",
+    "The IP column depends on per-user IP logging; users who disabled it will show no IP.": "Cột IP phụ thuộc vào cài đặt ghi IP của từng người dùng; người dùng đã tắt sẽ không hiển thị IP.",
+    "Save audit settings": "Lưu cài đặt kiểm toán"
   }
 }

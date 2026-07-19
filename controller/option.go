@@ -185,6 +185,15 @@ func UpdateOption(c *gin.Context) {
 
 			return
 		}
+	case "audit_setting.off_hours_start_hour", "audit_setting.off_hours_end_hour":
+		v, convErr := strconv.Atoi(option.Value.(string))
+		if convErr != nil || v < 0 || v > 23 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "审计时段小时必须为 0-23 的整数",
+			})
+			return
+		}
 	case "theme.frontend":
 		if option.Value != "default" {
 			c.JSON(http.StatusOK, gin.H{

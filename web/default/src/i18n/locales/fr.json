@@ -5540,6 +5540,27 @@
     "Zero retention": "Aucune rétention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Security Audit": "Audit de sécurité",
+    "Off-Hours Requests": "Requêtes hors heures ouvrées",
+    "Search username": "Rechercher un nom d'utilisateur",
+    "Audit window": "Fenêtre d'audit",
+    "next day": "jour suivant",
+    "Security audit is disabled": "L'audit de sécurité est désactivé",
+    "Enable it in System Settings → Security & Limits → Security Audit.": "Activez-le dans Paramètres système → Sécurité et limites → Audit de sécurité.",
+    "Time Range": "Plage horaire",
+    "IP Addresses": "Adresses IP",
+    "View Details": "Voir les détails",
+    "No off-hours requests": "Aucune requête hors heures ouvrées",
+    "No requests were recorded during the audit window in this time range.": "Aucune requête enregistrée pendant la fenêtre d'audit sur cette période.",
+    "Enable security audit": "Activer l'audit de sécurité",
+    "Aggregates consumption requests made during the audit window from usage logs. No extra data is stored; changing the window applies to history immediately.": "Agrège les requêtes de consommation effectuées pendant la fenêtre d'audit à partir des journaux d'utilisation. Aucune donnée supplémentaire n'est stockée ; la modification de la fenêtre s'applique immédiatement à l'historique.",
+    "Audit window start hour": "Heure de début de la fenêtre d'audit",
+    "Audit window end hour": "Heure de fin de la fenêtre d'audit",
+    "0-23, in the server local timezone. Default 3.": "0-23, fuseau horaire local du serveur. Par défaut 3.",
+    "Default 7. An end hour not later than the start hour means the window crosses midnight (e.g. 22-6) and is attributed to the starting day.": "Par défaut 7. Une heure de fin antérieure ou égale à l'heure de début signifie que la fenêtre traverse minuit (ex. 22-6) et est attribuée au jour de début.",
+    "Start and end hour cannot be the same": "L'heure de début et l'heure de fin ne peuvent pas être identiques",
+    "The IP column depends on per-user IP logging; users who disabled it will show no IP.": "La colonne IP dépend de la journalisation IP par utilisateur ; les utilisateurs l'ayant désactivée n'affichent aucune IP.",
+    "Save audit settings": "Enregistrer les paramètres d'audit"
   }
 }

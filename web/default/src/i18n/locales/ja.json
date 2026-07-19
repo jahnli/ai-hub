@@ -5540,6 +5540,27 @@
     "Zero retention": "データ保持なし",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V 4",
-    "Zoom": "ズーム"
+    "Zoom": "ズーム",
+    "Security Audit": "セキュリティ監査",
+    "Off-Hours Requests": "業務時間外リクエスト",
+    "Search username": "ユーザー名を検索",
+    "Audit window": "監査時間帯",
+    "next day": "翌日",
+    "Security audit is disabled": "セキュリティ監査は無効です",
+    "Enable it in System Settings → Security & Limits → Security Audit.": "システム設定 → セキュリティと制限 → セキュリティ監査 で有効にしてください。",
+    "Time Range": "時間範囲",
+    "IP Addresses": "IP アドレス",
+    "View Details": "詳細を表示",
+    "No off-hours requests": "業務時間外リクエストはありません",
+    "No requests were recorded during the audit window in this time range.": "この期間の監査時間帯にリクエストは記録されていません。",
+    "Enable security audit": "セキュリティ監査を有効にする",
+    "Aggregates consumption requests made during the audit window from usage logs. No extra data is stored; changing the window applies to history immediately.": "使用ログから監査時間帯内の消費リクエストを集計します。追加データは保存されず、時間帯の変更は履歴に即時反映されます。",
+    "Audit window start hour": "監査時間帯の開始時刻",
+    "Audit window end hour": "監査時間帯の終了時刻",
+    "0-23, in the server local timezone. Default 3.": "0-23、サーバーのローカルタイムゾーンで指定。デフォルトは 3。",
+    "Default 7. An end hour not later than the start hour means the window crosses midnight (e.g. 22-6) and is attributed to the starting day.": "デフォルトは 7。終了時刻が開始時刻以下の場合、時間帯は深夜0時をまたぎ(例:22-6)、開始日に帰属します。",
+    "Start and end hour cannot be the same": "開始時刻と終了時刻は同じにできません",
+    "The IP column depends on per-user IP logging; users who disabled it will show no IP.": "IP 列はユーザーごとの IP 記録設定に依存します。無効にしたユーザーの IP は表示されません。",
+    "Save audit settings": "監査設定を保存"
   }
 }

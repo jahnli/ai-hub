@@ -31,6 +31,7 @@ import {
   Radio,
   ServerCog,
   Settings,
+  ShieldAlert,
   User,
   Users,
   Wallet,
@@ -154,6 +155,13 @@ export function useSidebarData(): SidebarData {
             title: t('Users'),
             url: '/users',
             icon: Users,
+          },
+          {
+            title: t('Security Audit'),
+            url: '/security-audit/off-hours',
+            activeUrls: ['/security-audit'],
+            icon: ShieldAlert,
+            requiredRole: ROLE.ADMIN,
           },
           {
             title: t('Subscription Management'),

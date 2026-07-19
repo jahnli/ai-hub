@@ -127,6 +127,7 @@
           "getSiteSectionContent",
           "getSiteSectionMeta",
           "getUsageLogsSectionNavItems",
+          "isSecurityAuditSectionId",
           "isUsageLogsSectionId",
           "useSuppressSettingsSectionHeader"
         ]
