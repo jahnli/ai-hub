@@ -1,5 +1,4 @@
 import type { ColumnDef } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Info } from 'lucide-react'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -21,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BadgeCell } from '@/components/data-table'
+import { BadgeCell, DataTableColumnHeader } from '@/components/data-table'
 import { GroupBadge } from '@/components/group-badge'
 import { LongText } from '@/components/long-text'
 import { StatusBadge } from '@/components/status-badge'
@@ -199,39 +198,9 @@ export function userQuotaColumn<T extends UserColumnRow>(
   return {
     id: 'quota',
     accessorKey: 'quota',
-    header: ({ column }) => {
-      const sorted = column.getIsSorted()
-      let SortIcon = ChevronsUpDown
-      if (sorted === 'desc') {
-        SortIcon = ArrowDown
-      } else if (sorted === 'asc') {
-        SortIcon = ArrowUp
-      }
-
-      return (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                type='button'
-                className='hover:bg-accent hover:text-accent-foreground -ms-3 inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium transition-colors'
-                onClick={() => column.toggleSorting(sorted === 'asc')}
-                aria-label={headerDescription}
-              />
-            }
-          >
-            <span className='inline-flex items-center gap-1'>
-              <span>{headerText}</span>
-              <Info className='text-muted-foreground size-3.5 shrink-0 translate-y-px' />
-            </span>
-            <SortIcon className='ms-1 size-4' />
-          </TooltipTrigger>
-          <TooltipContent className='max-w-64'>
-            <p className='text-xs leading-relaxed'>{headerDescription}</p>
-          </TooltipContent>
-        </Tooltip>
-      )
-    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={headerText} />
+    ),
     cell: ({ row }) => {
       const user = row.original as UserColumnRow
       const used = user.sub_quota_used ?? 0
@@ -284,7 +253,7 @@ export function userQuotaColumn<T extends UserColumnRow>(
       )
     },
     size: opts?.width ? opts.width + 20 : 170,
-    meta: {},
+    meta: { description: headerDescription },
   }
 }
 
@@ -331,40 +300,9 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
 
       return (cost / tokens) * 1_000_000
     },
-    header: ({ column }) => {
-      const description = t('Average price per million tokens')
-      const sorted = column.getIsSorted()
-      let SortIcon = ChevronsUpDown
-      if (sorted === 'desc') {
-        SortIcon = ArrowDown
-      } else if (sorted === 'asc') {
-        SortIcon = ArrowUp
-      }
-
-      return (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                type='button'
-                className='hover:bg-accent hover:text-accent-foreground -ms-3 inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm font-medium transition-colors'
-                onClick={() => column.toggleSorting(sorted === 'asc')}
-                aria-label={description}
-              />
-            }
-          >
-            <span className='inline-flex items-center gap-1'>
-              <span>{t('Avg Price')}</span>
-              <Info className='text-muted-foreground size-3.5 shrink-0 translate-y-px' />
-            </span>
-            <SortIcon className='ms-1 size-4' />
-          </TooltipTrigger>
-          <TooltipContent className='max-w-64'>
-            <p className='text-xs leading-relaxed'>{description}</p>
-          </TooltipContent>
-        </Tooltip>
-      )
-    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={t('Avg Price')} />
+    ),
     cell: ({ row }) => {
       const averagePrice = row.getValue('average_price') as number
 
@@ -389,7 +327,10 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
     },
     enableSorting: true,
     size: 110,
-    meta: { mobileHidden: true },
+    meta: {
+      mobileHidden: true,
+      description: t('Average price per million tokens'),
+    },
   }
 }
 
