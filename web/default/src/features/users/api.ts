@@ -61,6 +61,7 @@ export async function searchUsers(
   const {
     keyword = '',
     group = '',
+    company = '',
     role = '',
     status = '',
     p = 1,
@@ -71,6 +72,7 @@ export async function searchUsers(
   const queryParams = new URLSearchParams()
   queryParams.set('keyword', keyword)
   queryParams.set('group', group)
+  queryParams.set('company', company)
   if (role) queryParams.set('role', role)
   if (status) queryParams.set('status', status)
   queryParams.set('p', String(p))
@@ -78,6 +80,14 @@ export async function searchUsers(
   if (sort_by) queryParams.set('sort_by', sort_by)
   if (sort_order) queryParams.set('sort_order', sort_order)
   const res = await api.get(`/api/user/search?${queryParams.toString()}`)
+  return res.data
+}
+
+/**
+ * Get distinct companies assigned to users
+ */
+export async function getUserCompanies(): Promise<ApiResponse<string[]>> {
+  const res = await api.get('/api/user/companies')
   return res.data
 }
 

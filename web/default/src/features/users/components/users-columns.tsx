@@ -67,6 +67,12 @@ export function useUsersColumns(): ColumnDef<User>[] {
       } satisfies ColumnDef<User>,
       ...sharedColumns,
       {
+        accessorKey: 'company',
+        header: () => t('Company'),
+        enableSorting: false,
+        enableHiding: false,
+      } satisfies ColumnDef<User>,
+      {
         id: 'actions',
         header: () => t('Actions'),
         cell: ({ row }) => <DataTableRowActions row={row} />,

@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30 ~ 07-08（最后更新 07-08）
+**日期**: 2026-06-30 ~ 07-20（最后更新 07-20）
 
 ## 涉及文件
 
@@ -29,3 +29,15 @@
 - `web/default/src/i18n/locales/ru.json` — 补充用户管理新增统计列俄文文案。
 - `web/default/src/i18n/locales/vi.json` — 补充用户管理新增统计列越南文文案。
 - `web/default/src/i18n/locales/zh.json` — 补充用户管理新增统计列中文文案。
+
+## 2026-07-20 公司筛选
+
+- `model/user.go` — 新增 `GetUserCompanies` 查询去重且非空的用户公司列表（按公司升序）；`SearchUsers` 新增 `company` 参数，非空时按 `company` 精确过滤。
+- `controller/user.go` — 新增 `GetUserCompanies` 接口；`SearchUsers` 读取 `company` 查询参数并透传给 model 层。
+- `router/api-router.go` — 管理端用户路由新增 `GET /api/user/companies`。
+- `web/default/src/features/users/api.ts` — `searchUsers` 透传 `company` 查询参数；新增 `getUserCompanies` 获取去重公司列表。
+- `web/default/src/features/users/types.ts` — `SearchUsersParams` 新增 `company` 字段。
+- `web/default/src/routes/_authenticated/users/index.tsx` — URL 搜索 schema 新增 `company` 数组参数。
+- `web/default/src/features/users/components/users-columns.tsx` — 新增 `company` 列（默认隐藏、不可排序），用于承载「公司」筛选。
+- `web/default/src/features/users/components/users-table.tsx` — 在「角色」筛选旁新增「公司」单选筛选（Building2 图标），公司选项来自 `getUserCompanies`，公司列默认隐藏并参与筛选与搜索请求。
+- `web/default/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 补充「Company」（公司）翻译。

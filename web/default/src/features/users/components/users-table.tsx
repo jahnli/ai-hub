@@ -19,6 +19,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import type { OnChangeFn, SortingState } from '@tanstack/react-table'
+import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -32,7 +33,7 @@ import {
 import { useMediaQuery } from '@/hooks'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 
-import { getUsers, searchUsers } from '../api'
+import { getUserCompanies, getUsers, searchUsers } from '../api'
 import {
   USER_STATUS,
   getUserStatusOptions,
@@ -63,6 +64,8 @@ const USER_COLUMN_SORT_MAP: Partial<Record<string, UserSortBy>> = {
   role: 'role',
   status: 'status',
 }
+
+const USER_COLUMN_VISIBILITY = { company: false }
 
 export function UsersTable() {
   const { t } = useTranslation()
@@ -98,6 +101,7 @@ export function UsersTable() {
       { columnId: 'status', searchKey: 'status', type: 'array' },
       { columnId: 'role', searchKey: 'role', type: 'array' },
       { columnId: 'group', searchKey: 'group', type: 'string' },
+      { columnId: 'company', searchKey: 'company', type: 'array' },
     ],
   })
   const statusFilter =
@@ -111,6 +115,20 @@ export function UsersTable() {
   const groupFilter =
     (columnFilters.find((filter) => filter.id === 'group')?.value as string) ??
     ''
+  const companyFilter =
+    (columnFilters.find((filter) => filter.id === 'company')?.value as
+      | string[]
+      | undefined) ?? []
+
+  const { data: companiesResponse } = useQuery({
+    queryKey: ['user-companies'],
+    queryFn: getUserCompanies,
+  })
+  const companyOptions = (companiesResponse?.data ?? []).map((company) => ({
+    label: company,
+    value: company,
+    icon: Building2,
+  }))
 
   const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
     setSorting(updater)
@@ -128,6 +146,7 @@ export function UsersTable() {
       statusFilter,
       roleFilter,
       groupFilter,
+      companyFilter,
       refreshTrigger,
       sortBy,
       sortOrder,
@@ -135,7 +154,10 @@ export function UsersTable() {
     queryFn: async () => {
       const hasFilter = globalFilter?.trim()
       const hasColumnFilter =
-        statusFilter.length > 0 || roleFilter.length > 0 || Boolean(groupFilter)
+        statusFilter.length > 0 ||
+        roleFilter.length > 0 ||
+        Boolean(groupFilter) ||
+        companyFilter.length > 0
       const params = {
         p: pagination.pageIndex + 1,
         page_size: pagination.pageSize,
@@ -151,6 +173,7 @@ export function UsersTable() {
               status: statusFilter[0] ?? '',
               role: roleFilter[0] ?? '',
               group: groupFilter,
+              company: companyFilter[0] ?? '',
             })
           : await getUsers(params)
 
@@ -179,6 +202,7 @@ export function UsersTable() {
     globalFilter,
     pagination,
     sorting,
+    initialColumnVisibility: USER_COLUMN_VISIBILITY,
     onSortingChange: handleSortingChange,
     globalFilterFn: (row, _columnId, filterValue) => {
       const searchValue = String(filterValue).toLowerCase()
@@ -228,6 +252,12 @@ export function UsersTable() {
             columnId: 'role',
             title: t('Role'),
             options: getUserRoleOptions(t),
+            singleSelect: true,
+          },
+          {
+            columnId: 'company',
+            title: t('Company'),
+            options: companyOptions,
             singleSelect: true,
           },
         ],

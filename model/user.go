@@ -429,7 +429,17 @@ func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (use
 	return users, total, nil
 }
 
-func SearchUsers(keyword string, group string, role *int, status *int, startIdx int, num int, sortOptions ...UserSortOptions) ([]*User, int64, error) {
+func GetUserCompanies() ([]string, error) {
+	var companies []string
+	err := DB.Unscoped().Model(&User{}).
+		Where("company <> ?", "").
+		Distinct().
+		Order("company ASC").
+		Pluck("company", &companies).Error
+	return companies, err
+}
+
+func SearchUsers(keyword string, group string, company string, role *int, status *int, startIdx int, num int, sortOptions ...UserSortOptions) ([]*User, int64, error) {
 	var users []*User
 	var total int64
 	var err error
@@ -463,6 +473,9 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 	query = query.Where("("+likeCondition+")", likeArgs...)
 	if group != "" {
 		query = query.Where(commonGroupCol+" = ?", group)
+	}
+	if company != "" {
+		query = query.Where("company = ?", company)
 	}
 	if role != nil {
 		query = query.Where("role = ?", *role)

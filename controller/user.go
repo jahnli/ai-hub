@@ -366,9 +366,19 @@ func GetAllUsers(c *gin.Context) {
 	return
 }
 
+func GetUserCompanies(c *gin.Context) {
+	companies, err := model.GetUserCompanies()
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, companies)
+}
+
 func SearchUsers(c *gin.Context) {
 	keyword := c.Query("keyword")
 	group := c.Query("group")
+	company := c.Query("company")
 	var role *int
 	if roleStr := c.Query("role"); roleStr != "" {
 		if parsed, err := strconv.Atoi(roleStr); err == nil {
@@ -385,7 +395,7 @@ func SearchUsers(c *gin.Context) {
 	if common.IsComputedSortColumn(pageInfo.SortBy) {
 		sortBy := pageInfo.SortBy
 		sortOrder := pageInfo.SortOrder
-		users, total, err := model.SearchUsers(keyword, group, role, status, 0, 10000)
+		users, total, err := model.SearchUsers(keyword, group, company, role, status, 0, 10000)
 		if err != nil {
 			common.ApiError(c, err)
 			return
@@ -407,7 +417,7 @@ func SearchUsers(c *gin.Context) {
 	}
 
 	sortOptions := model.NewUserSortOptions(c.Query("sort_by"), c.Query("sort_order"))
-	users, total, err := model.SearchUsers(keyword, group, role, status, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), sortOptions)
+	users, total, err := model.SearchUsers(keyword, group, company, role, status, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), sortOptions)
 	if err != nil {
 		common.ApiError(c, err)
 		return

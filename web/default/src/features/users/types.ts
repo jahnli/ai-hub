@@ -127,6 +127,7 @@ export interface GetUsersResponse {
 export interface SearchUsersParams {
   keyword?: string
   group?: string
+  company?: string
   role?: string
   status?: string
   p?: number
