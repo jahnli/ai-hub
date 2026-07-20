@@ -88,6 +88,15 @@ class ModelStats:
         return self.input_tokens + self.output_tokens + self.cache_input_tokens + self.cache_output_tokens
 
 
+@dataclass(frozen=True)
+class ConsumptionDistribution:
+    zero: int = 0
+    under_100: int = 0
+    from_100_to_400: int = 0
+    from_400_to_800: int = 0
+    at_least_800: int = 0
+
+
 def normalize_model_name(value: Any) -> str:
     return str(value or "").strip().lower()
 
@@ -524,22 +533,26 @@ def collect_statistics(
     conn: Any,
     start_ts: int,
     end_ts: int,
-) -> tuple[list[ModelStats], int, int]:
+    registered_user_ids: set[int],
+) -> tuple[list[ModelStats], int, int, dict[int, int]]:
     statistics: dict[str, ModelStats] = {}
+    user_quotas = {user_id: 0 for user_id in registered_user_ids}
     total_quota = 0
     fallback_rows = 0
     with conn.cursor(name="weekly_report_log_rows") as cur:
         cur.itersize = 2_000
         cur.execute(
             """
-            SELECT id, model_name, prompt_tokens, completion_tokens, quota, other
+            SELECT id, user_id, model_name, prompt_tokens, completion_tokens, quota, other
             FROM logs
             WHERE type = %s AND created_at >= %s AND created_at <= %s
             """,
             (CONSUME_LOG_TYPE, start_ts, end_ts),
         )
-        for _log_id, model_name, prompt_tokens, completion_tokens, quota_value, raw_other in cur:
+        for _log_id, user_id, model_name, prompt_tokens, completion_tokens, quota_value, raw_other in cur:
             quota = int(quota_value or 0)
+            if user_id in user_quotas:
+                user_quotas[user_id] += quota
             other, malformed_other = parse_log_other(raw_other)
             tokens = extract_token_categories(prompt_tokens, completion_tokens, other)
 
@@ -584,7 +597,7 @@ def collect_statistics(
         statistics.values(),
         key=lambda stat: (model_order.get(stat.name, len(model_order)), stat.name.lower()),
     )
-    return result, total_quota, fallback_rows
+    return result, total_quota, fallback_rows, user_quotas
 
 
 def load_options(conn: Any) -> dict[str, Any]:
@@ -604,10 +617,37 @@ def get_positive_option(options: dict[str, Any], keys: tuple[str, ...], default:
     return default
 
 
-def fetch_total_users(conn: Any) -> int:
+def fetch_registered_user_ids(conn: Any) -> set[int]:
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM users")
-        return int(cur.fetchone()[0])
+        cur.execute("SELECT id FROM users")
+        return {int(row[0]) for row in cur.fetchall()}
+
+
+def calculate_consumption_distribution(
+    user_quotas: dict[int, int],
+    quota_per_unit: float,
+    exchange_rate: float,
+) -> ConsumptionDistribution:
+    counts = {
+        "zero": 0,
+        "under_100": 0,
+        "from_100_to_400": 0,
+        "from_400_to_800": 0,
+        "at_least_800": 0,
+    }
+    for quota in user_quotas.values():
+        cost = quota / quota_per_unit * exchange_rate
+        if cost <= 0:
+            counts["zero"] += 1
+        elif cost < 100:
+            counts["under_100"] += 1
+        elif cost < 400:
+            counts["from_100_to_400"] += 1
+        elif cost < 800:
+            counts["from_400_to_800"] += 1
+        else:
+            counts["at_least_800"] += 1
+    return ConsumptionDistribution(**counts)
 
 
 def format_token_amount(tokens: int) -> str:
@@ -641,6 +681,7 @@ def print_report(
     start: datetime,
     end: datetime,
     total_users: int,
+    consumption_distribution: ConsumptionDistribution,
     stats: list[ModelStats],
 ) -> None:
     input_tokens = sum(item.input_tokens for item in stats)
@@ -684,6 +725,7 @@ def print_report(
 AI 中转站{label}统计
 统计周期：{start.strftime('%Y-%m-%d %H:%M:%S')} － {end.strftime('%Y-%m-%d %H:%M')}
 总注册人数：{total_users:,} 人
+其中0元消费{consumption_distribution.zero:,}人，0~100元消费{consumption_distribution.under_100:,}人，100~400元消费{consumption_distribution.from_100_to_400:,}人，400~800元消费{consumption_distribution.from_400_to_800:,}人，800元以上消费{consumption_distribution.at_least_800:,}人
 
 非缓存输入，Token 量 {format_token_amount(input_tokens)}，费用 {format_cost(input_cost)} 元，单价 {unit_price(input_cost, input_tokens):.2f} 元
 非缓存输出，Token 量 {format_token_amount(output_tokens)}，费用 {format_cost(output_cost)} 元，单价 {unit_price(output_cost, output_tokens):.2f} 元
@@ -726,7 +768,8 @@ def main() -> int:
     end_ts = int(end.timestamp())
     conn = psycopg2.connect(DEFAULT_DSN)
     try:
-        total_users = fetch_total_users(conn)
+        registered_user_ids = fetch_registered_user_ids(conn)
+        total_users = len(registered_user_ids)
         options = load_options(conn)
         exchange_rate = get_positive_option(
             options,
@@ -738,7 +781,12 @@ def main() -> int:
             ("QuotaPerUnit", "quota_per_unit"),
             DEFAULT_QUOTA_PER_UNIT,
         )
-        stats, total_quota, fallback_rows = collect_statistics(conn, start_ts, end_ts)
+        stats, total_quota, fallback_rows, user_quotas = collect_statistics(
+            conn,
+            start_ts,
+            end_ts,
+            registered_user_ids,
+        )
         for stat in stats:
             stat.quota_cost_cny = stat.quota / quota_per_unit * exchange_rate
             stat.input_cost_cny = stat.input_quota / quota_per_unit * exchange_rate
@@ -747,6 +795,11 @@ def main() -> int:
             stat.cache_output_cost_cny = stat.cache_output_quota / quota_per_unit * exchange_rate
         if sum(stat.quota for stat in stats) != total_quota:
             raise RuntimeError("模型汇总 quota 与日志总 quota 不一致")
+        consumption_distribution = calculate_consumption_distribution(
+            user_quotas,
+            quota_per_unit,
+            exchange_rate,
+        )
     finally:
         conn.close()
 
@@ -756,7 +809,7 @@ def main() -> int:
             "已按该条日志的四类 Token 占比分配最终 quota。",
             file=sys.stderr,
         )
-    print_report(label, start, end, total_users, stats)
+    print_report(label, start, end, total_users, consumption_distribution, stats)
     return 0
 
 
