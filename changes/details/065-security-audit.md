@@ -12,7 +12,7 @@
 - `model/security_audit_test.go` — 覆盖时间窗口、聚合、分页、中文显示名模糊筛选和模型排行。
 - `setting/system_setting/audit_setting.go` — 使用结构化非工作时段配置。
 - `router/api-router.go` — 注册安全审计接口路由。
-- `web/default/src/features/security-audit/` — 新增安全审计页面、筛选、表格、日志明细弹框和用户资料展示。
+- `web/default/src/features/security-audit/` — 新增安全审计页面、筛选、表格、日志明细弹框和用户资料展示；日志明细弹框高度统一为视口 85%。
 - `web/default/src/features/system-settings/security/` — 新增安全审计设置界面。
 - `web/default/src/hooks/use-sidebar-data.ts` — 增加安全审计侧边栏入口。
 - `web/default/src/routes/_authenticated/security-audit/` — 增加安全审计受保护路由。

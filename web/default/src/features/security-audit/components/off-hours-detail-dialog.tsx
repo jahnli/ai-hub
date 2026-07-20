@@ -55,7 +55,7 @@ export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="flex h-[80vh] max-h-[80vh] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]">
+      <DialogContent className="flex h-[85vh] max-h-[85vh] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]">
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {t("Usage Logs")} - {props.target.displayName} · {props.target.date}{" "}
