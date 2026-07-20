@@ -15,16 +15,12 @@ import (
 // /api/option/ 为 root 专属,普通管理员打开审计页时需要单独入口获取时段与开关。
 func GetSecurityAuditSetting(c *gin.Context) {
 	auditSetting := system_setting.GetAuditSetting()
-	common.ApiSuccess(c, gin.H{
-		"enabled":              auditSetting.Enabled,
-		"off_hours_start_hour": auditSetting.OffHoursStartHour,
-		"off_hours_end_hour":   auditSetting.OffHoursEndHour,
-	})
+	common.ApiSuccess(c, auditSetting)
 }
 
 func GetOffHoursUsage(c *gin.Context) {
-	auditSetting := system_setting.GetAuditSetting()
-	if !auditSetting.Enabled {
+	offHoursSetting := system_setting.GetAuditSetting().OffHours
+	if !offHoursSetting.Enabled {
 		common.ApiErrorMsg(c, "安全审计功能未启用")
 		return
 	}
@@ -39,7 +35,7 @@ func GetOffHoursUsage(c *gin.Context) {
 	}
 	username := c.Query("username")
 	items, total, err := model.GetOffHoursUsage(startTimestamp, endTimestamp,
-		auditSetting.OffHoursStartHour, auditSetting.OffHoursEndHour,
+		offHoursSetting.StartHour, offHoursSetting.EndHour,
 		username, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
 	if err != nil {
 		common.ApiError(c, err)

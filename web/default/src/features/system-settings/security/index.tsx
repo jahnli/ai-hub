@@ -42,9 +42,11 @@ const defaultSecuritySettings: SecuritySettings = {
   'fetch_setting.allowed_ports': [],
   'fetch_setting.apply_ip_filter_for_domain': false,
   'token_setting.max_user_tokens': 1000,
-  'audit_setting.enabled': true,
-  'audit_setting.off_hours_start_hour': 3,
-  'audit_setting.off_hours_end_hour': 7,
+  'audit_setting.off_hours': {
+    enabled: true,
+    start_hour: 3,
+    end_hour: 7,
+  },
 }
 
 export function SecuritySettings() {
