@@ -175,7 +175,10 @@ function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
             size='sm'
             className='size-6 p-0'
             onClick={props.row.getToggleExpandedHandler()}
-            aria-label={t('Expand')}
+            aria-label={
+              props.row.getIsExpanded() ? t('Collapse') : t('Expand')
+            }
+            aria-expanded={props.row.getIsExpanded()}
           >
             {props.row.getIsExpanded() ? (
               <ChevronDown className='h-4 w-4' />
