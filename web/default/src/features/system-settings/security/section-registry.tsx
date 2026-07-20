@@ -95,15 +95,7 @@ const SECURITY_SECTIONS = [
     id: 'audit',
     titleKey: 'Security Audit',
     build: (settings: SecuritySettings) => (
-      <AuditSection
-        defaultValues={{
-          'audit_setting.enabled': settings['audit_setting.enabled'],
-          'audit_setting.off_hours_start_hour':
-            settings['audit_setting.off_hours_start_hour'],
-          'audit_setting.off_hours_end_hour':
-            settings['audit_setting.off_hours_end_hour'],
-        }}
-      />
+      <AuditSection defaultValues={settings['audit_setting.off_hours']} />
     ),
   },
 ] as const

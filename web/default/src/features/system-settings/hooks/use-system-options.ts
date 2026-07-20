@@ -96,11 +96,33 @@ function parseOptionValueSafe<T>(
     }
   }
 
+  if (typeof defaultValue === 'object' && defaultValue !== null) {
+    try {
+      const parsed = JSON.parse(value)
+      const isObject =
+        typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      if (!isObject) {
+        return {
+          success: false,
+          error: 'Expected object but got non-object JSON',
+          fallback: defaultValue,
+        }
+      }
+      return { success: true, value: parsed as T }
+    } catch (error) {
+      return {
+        success: false,
+        error: `JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+        fallback: defaultValue,
+      }
+    }
+  }
+
   return { success: true, value: value as T }
 }
 
 export function getOptionValue<
-  T extends Record<string, string | number | boolean | unknown[]>,
+  T extends Record<string, unknown>,
 >(options: Array<{ key: string; value: string }> | undefined, defaults: T): T {
   if (!options) return defaults
 

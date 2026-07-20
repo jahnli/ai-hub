@@ -66,9 +66,11 @@ export interface GetOffHoursUsageResponse {
 }
 
 export interface SecurityAuditSetting {
-  enabled: boolean
-  off_hours_start_hour: number
-  off_hours_end_hour: number
+  off_hours: {
+    enabled: boolean
+    start_hour: number
+    end_hour: number
+  }
 }
 
 export interface GetSecurityAuditSettingResponse {

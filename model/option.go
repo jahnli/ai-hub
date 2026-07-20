@@ -180,6 +180,9 @@ func InitOptionMap() {
 }
 
 func loadOptionsFromDatabase() {
+	if err := migrateLegacyAuditSetting(); err != nil {
+		common.SysError("failed to migrate legacy audit setting: " + err.Error())
+	}
 	options, _ := AllOption()
 	for _, option := range options {
 		err := updateOptionMap(option.Key, option.Value)
@@ -187,6 +190,66 @@ func loadOptionsFromDatabase() {
 			common.SysLog("failed to update option map: " + err.Error())
 		}
 	}
+}
+
+func migrateLegacyAuditSetting() error {
+	const newOptionKey = "audit_setting.off_hours"
+	legacyOptionKeys := []string{
+		"audit_setting.enabled",
+		"audit_setting.off_hours_start_hour",
+		"audit_setting.off_hours_end_hour",
+	}
+
+	var existingOption Option
+	if err := DB.Where("key = ?", newOptionKey).First(&existingOption).Error; err == nil {
+		return DB.Where("key IN ?", legacyOptionKeys).Delete(&Option{}).Error
+	} else if err != gorm.ErrRecordNotFound {
+		return err
+	}
+
+	var legacyOptions []Option
+	if err := DB.Where("key IN ?", legacyOptionKeys).Find(&legacyOptions).Error; err != nil {
+		return err
+	}
+	if len(legacyOptions) == 0 {
+		return nil
+	}
+
+	offHoursSetting := system_setting.GetAuditSetting().OffHours
+	for _, legacyOption := range legacyOptions {
+		switch legacyOption.Key {
+		case "audit_setting.enabled":
+			parsedEnabled, parseErr := strconv.ParseBool(legacyOption.Value)
+			if parseErr == nil {
+				offHoursSetting.Enabled = parsedEnabled
+			}
+		case "audit_setting.off_hours_start_hour":
+			parsedHour, parseErr := strconv.Atoi(legacyOption.Value)
+			if parseErr == nil && parsedHour >= 0 && parsedHour <= 23 {
+				offHoursSetting.StartHour = parsedHour
+			}
+		case "audit_setting.off_hours_end_hour":
+			parsedHour, parseErr := strconv.Atoi(legacyOption.Value)
+			if parseErr == nil && parsedHour >= 0 && parsedHour <= 23 {
+				offHoursSetting.EndHour = parsedHour
+			}
+		}
+	}
+
+	serializedSetting, err := common.Marshal(offHoursSetting)
+	if err != nil {
+		return err
+	}
+
+	return DB.Transaction(func(transaction *gorm.DB) error {
+		if err := transaction.Create(&Option{
+			Key:   newOptionKey,
+			Value: string(serializedSetting),
+		}).Error; err != nil {
+			return err
+		}
+		return transaction.Where("key IN ?", legacyOptionKeys).Delete(&Option{}).Error
+	})
 }
 
 func SyncOptions(frequency int) {

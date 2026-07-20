@@ -25,13 +25,16 @@ import * as z from 'zod'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group'
 import { Switch } from '@/components/ui/switch'
 
 import {
@@ -48,57 +51,50 @@ const createAuditSchema = (t: (key: string) => string) =>
     .object({
       audit_setting: z.object({
         enabled: z.boolean(),
-        off_hours_start_hour: z.number().int().min(0).max(23),
-        off_hours_end_hour: z.number().int().min(0).max(23),
+        start_hour: z.number().int().min(0).max(23),
+        end_hour: z.number().int().min(0).max(23),
       }),
     })
     .refine(
-      (v) =>
-        v.audit_setting.off_hours_start_hour !==
-        v.audit_setting.off_hours_end_hour,
+      (values) =>
+        values.audit_setting.end_hour >= values.audit_setting.start_hour,
       {
-        path: ['audit_setting', 'off_hours_end_hour'],
-        message: t('Start and end hour cannot be the same'),
+        path: ['audit_setting', 'end_hour'],
+        message: t('End time cannot be earlier than start time'),
       }
     )
 
-type AuditFormValues = z.output<ReturnType<typeof createAuditSchema>>
-type AuditFormInput = z.input<ReturnType<typeof createAuditSchema>>
+type OffHoursAuditSetting = {
+  enabled: boolean
+  start_hour: number
+  end_hour: number
+}
 
-type NormalizedAuditValues = {
-  'audit_setting.enabled': boolean
-  'audit_setting.off_hours_start_hour': number
-  'audit_setting.off_hours_end_hour': number
+type AuditFormValues = {
+  audit_setting: OffHoursAuditSetting
 }
 
 type AuditSectionProps = {
-  defaultValues: NormalizedAuditValues
+  defaultValues: OffHoursAuditSetting
+}
+
+const parseAuditHour = (rawValue: string): number => {
+  const parsedHour = Number.parseInt(rawValue, 10)
+  if (Number.isNaN(parsedHour)) return 0
+  return Math.min(23, Math.max(0, parsedHour))
 }
 
 const buildFormDefaults = (
   defaults: AuditSectionProps['defaultValues']
-): AuditFormInput => ({
-  audit_setting: {
-    enabled: defaults['audit_setting.enabled'],
-    off_hours_start_hour: defaults['audit_setting.off_hours_start_hour'],
-    off_hours_end_hour: defaults['audit_setting.off_hours_end_hour'],
-  },
-})
-
-const normalizeFormValues = (
-  values: AuditFormValues
-): NormalizedAuditValues => ({
-  'audit_setting.enabled': values.audit_setting.enabled,
-  'audit_setting.off_hours_start_hour':
-    values.audit_setting.off_hours_start_hour,
-  'audit_setting.off_hours_end_hour': values.audit_setting.off_hours_end_hour,
+): AuditFormValues => ({
+  audit_setting: { ...defaults },
 })
 
 export function AuditSection({ defaultValues }: AuditSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
   const auditSchema = createAuditSchema(t)
-  const form = useForm<AuditFormInput, unknown, AuditFormValues>({
+  const form = useForm<AuditFormValues>({
     resolver: zodResolver(auditSchema),
     mode: 'onChange',
     defaultValues: buildFormDefaults(defaultValues),
@@ -109,20 +105,10 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
   }, [defaultValues, form])
 
   const onSubmit = async (values: AuditFormValues) => {
-    const normalized = normalizeFormValues(values)
-    for (const key of Object.keys(normalized) as Array<
-      keyof NormalizedAuditValues
-    >) {
-      if (normalized[key] !== defaultValues[key]) {
-        await updateOption.mutateAsync({ key, value: normalized[key] })
-      }
-    }
-  }
-
-  const parseHour = (raw: string): number => {
-    const parsed = Number.parseInt(raw)
-    if (Number.isNaN(parsed)) return 0
-    return Math.min(23, Math.max(0, parsed))
+    await updateOption.mutateAsync({
+      key: 'audit_setting.off_hours',
+      value: JSON.stringify(values.audit_setting),
+    })
   }
 
   return (
@@ -134,88 +120,78 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
             isSaving={updateOption.isPending}
             saveLabel='Save audit settings'
           />
-          <FormField
-            control={form.control}
-            name='audit_setting.enabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Enable security audit')}</FormLabel>
-                  <FormDescription>
-                    {t(
-                      'Aggregates consumption requests made during the audit window from usage logs. No extra data is stored; changing the window applies to history immediately.'
-                    )}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
-
-          <div className='grid gap-4 md:grid-cols-2'>
+          <h3 className='text-sm font-semibold'>{t('Off-hours audit')}</h3>
+          <div className='grid items-end gap-4 md:grid-cols-3'>
             <FormField
               control={form.control}
-              name='audit_setting.off_hours_start_hour'
+              name='audit_setting.enabled'
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Audit window start hour')}</FormLabel>
+                <SettingsSwitchItem className='h-8 py-0'>
+                  <SettingsSwitchContent>
+                    <FormLabel>{t('Enable')}</FormLabel>
+                  </SettingsSwitchContent>
                   <FormControl>
-                    <Input
-                      type='number'
-                      min={0}
-                      max={23}
-                      step={1}
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(parseHour(e.target.value))
-                      }
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                     />
                   </FormControl>
-                  <FormDescription>
-                    {t('0-23, in the server local timezone. Default 3.')}
-                  </FormDescription>
+                </SettingsSwitchItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='audit_setting.start_hour'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Start time')}</FormLabel>
+                  <FormControl>
+                    <InputGroup>
+                      <InputGroupInput
+                        type='number'
+                        min={0}
+                        max={23}
+                        step={1}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onChange={(event) =>
+                          field.onChange(parseAuditHour(event.target.value))
+                        }
+                      />
+                      <InputGroupAddon align='inline-end'>:00</InputGroupAddon>
+                    </InputGroup>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <FormField
               control={form.control}
-              name='audit_setting.off_hours_end_hour'
+              name='audit_setting.end_hour'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('Audit window end hour')}</FormLabel>
+                  <FormLabel>{t('End time')}</FormLabel>
                   <FormControl>
-                    <Input
-                      type='number'
-                      min={0}
-                      max={23}
-                      step={1}
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(parseHour(e.target.value))
-                      }
-                    />
+                    <InputGroup>
+                      <InputGroupInput
+                        type='number'
+                        min={0}
+                        max={23}
+                        step={1}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onChange={(event) =>
+                          field.onChange(parseAuditHour(event.target.value))
+                        }
+                      />
+                      <InputGroupAddon align='inline-end'>:00</InputGroupAddon>
+                    </InputGroup>
                   </FormControl>
-                  <FormDescription>
-                    {t(
-                      'Default 7. An end hour not later than the start hour means the window crosses midnight (e.g. 22-6) and is attributed to the starting day.'
-                    )}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          <FormDescription>
-            {t(
-              'The IP column depends on per-user IP logging; users who disabled it will show no IP.'
-            )}
-          </FormDescription>
         </SettingsForm>
       </Form>
     </SettingsSection>

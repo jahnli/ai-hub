@@ -185,13 +185,19 @@ func UpdateOption(c *gin.Context) {
 
 			return
 		}
-	case "audit_setting.off_hours_start_hour", "audit_setting.off_hours_end_hour":
-		v, convErr := strconv.Atoi(option.Value.(string))
-		if convErr != nil || v < 0 || v > 23 {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "审计时段小时必须为 0-23 的整数",
-			})
+	case "audit_setting.off_hours":
+		var offHoursSetting system_setting.OffHoursAuditSetting
+		if unmarshalErr := common.UnmarshalJsonStr(option.Value.(string), &offHoursSetting); unmarshalErr != nil {
+			common.ApiErrorMsg(c, "非工作时间审计配置格式无效")
+			return
+		}
+		if offHoursSetting.StartHour < 0 || offHoursSetting.StartHour > 23 ||
+			offHoursSetting.EndHour < 0 || offHoursSetting.EndHour > 23 {
+			common.ApiErrorMsg(c, "审计时段小时必须为 0-23 的整数")
+			return
+		}
+		if offHoursSetting.EndHour < offHoursSetting.StartHour {
+			common.ApiErrorMsg(c, "结束时间不得早于开始时间")
 			return
 		}
 	case "theme.frontend":

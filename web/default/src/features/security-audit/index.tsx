@@ -68,7 +68,7 @@ export function SecurityAudit() {
   })
   const auditSetting = settingQuery.data?.data
   // 配置加载中按启用处理,避免打开页面时提示横幅闪烁
-  const auditDisabled = auditSetting?.enabled === false
+  const auditDisabled = auditSetting?.off_hours.enabled === false
 
   const startTimestamp =
     search.startTime ?? dayjs().subtract(6, 'day').startOf('day').unix()
@@ -152,10 +152,8 @@ export function SecurityAudit() {
             {auditSetting && (
               <span className='text-muted-foreground text-sm'>
                 {t('Audit window')}:{' '}
-                {formatHour(auditSetting.off_hours_start_hour)} -{' '}
-                {formatHour(auditSetting.off_hours_end_hour)}
-                {auditSetting.off_hours_end_hour <=
-                  auditSetting.off_hours_start_hour && ` (${t('next day')})`}
+                {formatHour(auditSetting.off_hours.start_hour)} -{' '}
+                {formatHour(auditSetting.off_hours.end_hour)}
               </span>
             )}
           </div>
