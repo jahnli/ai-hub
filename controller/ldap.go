@@ -73,7 +73,7 @@ func LDAPLogin(c *gin.Context) {
 }
 
 // findOrCreateLDAPUser 以 username 唯一关联用户：若用户名已存在则返回已有用户，
-// 否则在注册开启时创建新用户，并在创建成功后异步触发飞书字段同步。
+// 否则在注册开启时创建新用户，并在创建成功后同步平台用户信息（飞书或钉钉）。
 func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*model.User, error) {
 	user := &model.User{}
 
@@ -119,13 +119,27 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		user.DisplayName = user.Username
 	}
 	user.Company = model.NormalizeCompany(ldapUser.Company)
-	if ldapUser.Email != "" {
-		user.Email = ldapUser.Email
-	} else if cfg, ok := system_setting.GetLDAPCompanySyncConfig(user.Company); ok && cfg.FeishuEmailSuffix != "" {
-		user.Email = user.Username + cfg.FeishuEmailSuffix
-	} else {
-		user.Email = user.Username + system_setting.FeishuEmailSuffix()
+
+	companySyncCfg, hasSyncCfg := system_setting.GetLDAPCompanySyncConfig(user.Company)
+	syncPlatform := system_setting.LDAPSyncPlatformNone
+	if hasSyncCfg {
+		syncPlatform = companySyncCfg.SyncPlatform
 	}
+
+	if syncPlatform == system_setting.LDAPSyncPlatformDingTalk {
+		// 钉钉平台：email 由同步接口从钉钉获取，注册时留空。
+		user.Email = ""
+	} else {
+		// 飞书平台或无同步：按公司配置或全局设置拼接邮箱后缀。
+		if ldapUser.Email != "" {
+			user.Email = ldapUser.Email
+		} else if hasSyncCfg && companySyncCfg.FeishuEmailSuffix != "" {
+			user.Email = user.Username + companySyncCfg.FeishuEmailSuffix
+		} else {
+			user.Email = user.Username + system_setting.FeishuEmailSuffix()
+		}
+	}
+
 	user.Role = common.RoleCommonUser
 	user.Status = common.UserStatusEnabled
 
@@ -135,10 +149,23 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 
 	autoSubscribeUserAfterCreate(user.Id, user.Company, "ldap_register_auto")
 
-	// 注册成功后同步飞书字段（avatar_url/open_id/display_name/departments/job_number 等）
-	// 使用同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
-	if err := service.SyncFeishuUser(user); err != nil {
-		common.SysError(fmt.Sprintf("飞书字段同步失败 user=%s: %s", user.Username, err.Error()))
+	switch syncPlatform {
+	case system_setting.LDAPSyncPlatformDingTalk:
+		// 钉钉同步：从 LDAP extensionAttribute12 读取 userid，同步调用以确保
+		// 登录响应中包含头像、显示名、部门、邮箱等完整信息。
+		if ldapUser.DingTalkUserID != "" {
+			if err := service.SyncDingTalkUser(user, ldapUser.DingTalkUserID); err != nil {
+				common.SysError(fmt.Sprintf("钉钉字段同步失败 user=%s: %s", user.Username, err.Error()))
+			}
+		} else {
+			common.SysError(fmt.Sprintf("钉钉 userid 为空（extensionAttribute12 未设置）user=%s", user.Username))
+		}
+	default:
+		// 飞书同步（avatar_url/open_id/display_name/departments/job_number 等）。
+		// 同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
+		if err := service.SyncFeishuUser(user); err != nil {
+			common.SysError(fmt.Sprintf("飞书字段同步失败 user=%s: %s", user.Username, err.Error()))
+		}
 	}
 
 	return user, nil
@@ -204,8 +231,14 @@ func LDAPBind(c *gin.Context) {
 		return
 	}
 
-	// 绑定时也尝试同步一次飞书字段
-	service.SyncFeishuUserAsync(&user)
+	// 绑定时也尝试异步同步一次平台字段（钉钉或飞书）。
+	company := model.NormalizeCompany(user.Company)
+	if cfg, ok := system_setting.GetLDAPCompanySyncConfig(company); ok &&
+		cfg.SyncPlatform == system_setting.LDAPSyncPlatformDingTalk {
+		service.SyncDingTalkUserAsync(&user, ldapUser.DingTalkUserID)
+	} else {
+		service.SyncFeishuUserAsync(&user)
+	}
 
 	common.ApiSuccess(c, nil)
 }

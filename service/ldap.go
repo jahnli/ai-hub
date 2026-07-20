@@ -10,13 +10,17 @@ import (
 	ldapv3 "github.com/go-ldap/ldap/v3"
 )
 
+// dingTalkUserIDAttribute 是 LDAP 中存放钉钉 userid 的属性名。
+const dingTalkUserIDAttribute = "extensionAttribute12"
+
 // LDAPUserInfo 保存 LDAP 认证成功后从目录中解析出的用户信息。
 type LDAPUserInfo struct {
-	Username    string
-	Email       string
-	DisplayName string
-	DN          string
-	Company     string
+	Username       string
+	Email          string
+	DisplayName    string
+	DN             string
+	Company        string
+	DingTalkUserID string // 来自 extensionAttribute12，用于钉钉同步的 open_id
 }
 
 func dialLDAP(settings *system_setting.LDAPSettings) (*ldapv3.Conn, error) {
@@ -77,7 +81,8 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 	}
 
 	filter := buildSearchFilter(settings.SearchFilter, username)
-	attrs := []string{"dn"}
+	// 始终请求钉钉 userid 属性，钉钉同步流程从这里读取 open_id。
+	attrs := []string{"dn", dingTalkUserIDAttribute}
 	if settings.UsernameAttribute != "" {
 		attrs = append(attrs, settings.UsernameAttribute)
 	}
@@ -131,6 +136,7 @@ func AuthenticateLDAP(username, password string) (*LDAPUserInfo, error) {
 	if settings.DisplayNameAttribute != "" {
 		info.DisplayName = entry.GetAttributeValue(settings.DisplayNameAttribute)
 	}
+	info.DingTalkUserID = strings.TrimSpace(entry.GetAttributeValue(dingTalkUserIDAttribute))
 
 	company, err := ExtractLDAPCompanyFromDN(entry.DN, settings.SearchBase)
 	if err != nil {

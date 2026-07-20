@@ -101,6 +101,8 @@ const oauthSchema = z.object({
         feishu_app_id: z.string(),
         feishu_app_secret: z.string(),
         feishu_email_suffix: z.string(),
+        dingtalk_client_id: z.string(),
+        dingtalk_client_secret: z.string(),
       })
     ),
   }),
@@ -152,6 +154,8 @@ const emptyLDAPCompanySyncConfig = (): LDAPCompanySyncConfig => ({
   feishu_app_id: '',
   feishu_app_secret: '',
   feishu_email_suffix: '',
+  dingtalk_client_id: '',
+  dingtalk_client_secret: '',
 })
 
 const parseLDAPCompanySyncConfigs = (
@@ -1158,76 +1162,145 @@ export function OAuthSection(props: OAuthSectionProps) {
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name={`ldap.company_sync_configs.${index}.feishu_app_id`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t('Application ID')}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  autoComplete='off'
-                                  value={field.value ?? ''}
-                                  onChange={(event) =>
-                                    field.onChange(event.target.value)
-                                  }
-                                  name={field.name}
-                                  onBlur={field.onBlur}
-                                  ref={field.ref}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        {form.watch(
+                          `ldap.company_sync_configs.${index}.sync_platform`
+                        ) === 'feishu' ? (
+                          <>
+                            <FormField
+                              control={form.control}
+                              name={`ldap.company_sync_configs.${index}.feishu_app_id`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t('Application ID')}</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      autoComplete='off'
+                                      value={field.value ?? ''}
+                                      onChange={(event) =>
+                                        field.onChange(event.target.value)
+                                      }
+                                      name={field.name}
+                                      onBlur={field.onBlur}
+                                      ref={field.ref}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
-                        <FormField
-                          control={form.control}
-                          name={`ldap.company_sync_configs.${index}.feishu_app_secret`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t('Application Secret')}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type='password'
-                                  autoComplete='new-password'
-                                  value={field.value ?? ''}
-                                  onChange={(event) =>
-                                    field.onChange(event.target.value)
-                                  }
-                                  name={field.name}
-                                  onBlur={field.onBlur}
-                                  ref={field.ref}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                            <FormField
+                              control={form.control}
+                              name={`ldap.company_sync_configs.${index}.feishu_app_secret`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    {t('Application Secret')}
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type='password'
+                                      autoComplete='new-password'
+                                      value={field.value ?? ''}
+                                      onChange={(event) =>
+                                        field.onChange(event.target.value)
+                                      }
+                                      name={field.name}
+                                      onBlur={field.onBlur}
+                                      ref={field.ref}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
 
-                        <FormField
-                          control={form.control}
-                          name={`ldap.company_sync_configs.${index}.feishu_email_suffix`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t('Feishu Email Suffix')}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder='@example.com'
-                                  autoComplete='off'
-                                  value={field.value ?? ''}
-                                  onChange={(event) =>
-                                    field.onChange(event.target.value)
-                                  }
-                                  name={field.name}
-                                  onBlur={field.onBlur}
-                                  ref={field.ref}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                            <FormField
+                              control={form.control}
+                              name={`ldap.company_sync_configs.${index}.feishu_email_suffix`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    {t('Feishu Email Suffix')}
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder='@example.com'
+                                      autoComplete='off'
+                                      value={field.value ?? ''}
+                                      onChange={(event) =>
+                                        field.onChange(event.target.value)
+                                      }
+                                      name={field.name}
+                                      onBlur={field.onBlur}
+                                      ref={field.ref}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </>
+                        ) : null}
+
+                        {form.watch(
+                          `ldap.company_sync_configs.${index}.sync_platform`
+                        ) === 'dingtalk' ? (
+                          <>
+                            <FormField
+                              control={form.control}
+                              name={`ldap.company_sync_configs.${index}.dingtalk_client_id`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    {t('DingTalk Client ID')}
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      autoComplete='off'
+                                      placeholder={t('Original AppKey')}
+                                      value={field.value ?? ''}
+                                      onChange={(event) =>
+                                        field.onChange(event.target.value)
+                                      }
+                                      name={field.name}
+                                      onBlur={field.onBlur}
+                                      ref={field.ref}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`ldap.company_sync_configs.${index}.dingtalk_client_secret`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    {t('DingTalk Client Secret')}
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type='password'
+                                      autoComplete='new-password'
+                                      placeholder={t('Original AppSecret')}
+                                      value={field.value ?? ''}
+                                      onChange={(event) =>
+                                        field.onChange(event.target.value)
+                                      }
+                                      name={field.name}
+                                      onBlur={field.onBlur}
+                                      ref={field.ref}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </>
+                        ) : null}
 
                         <FormField
                           control={form.control}

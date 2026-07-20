@@ -22,12 +22,14 @@ type LDAPSettings struct {
 
 // LDAPCompanySyncConfig defines company-specific behavior after LDAP login.
 type LDAPCompanySyncConfig struct {
-	Company             string `json:"company"`
-	SyncPlatform        string `json:"sync_platform"`
-	AutoSubscribePlanId int    `json:"auto_subscribe_plan_id"`
-	FeishuAppID         string `json:"feishu_app_id"`
-	FeishuAppSecret     string `json:"feishu_app_secret"`
-	FeishuEmailSuffix   string `json:"feishu_email_suffix"`
+	Company              string `json:"company"`
+	SyncPlatform         string `json:"sync_platform"`
+	AutoSubscribePlanId  int    `json:"auto_subscribe_plan_id"`
+	FeishuAppID          string `json:"feishu_app_id"`
+	FeishuAppSecret      string `json:"feishu_app_secret"`
+	FeishuEmailSuffix    string `json:"feishu_email_suffix"`
+	DingTalkClientID     string `json:"dingtalk_client_id"`
+	DingTalkClientSecret string `json:"dingtalk_client_secret"`
 }
 
 const (

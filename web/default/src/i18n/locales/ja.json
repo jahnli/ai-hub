@@ -1480,6 +1480,8 @@
     "Dify channels only support chatflow and agent, and agent does not support images": "Dify チャネルは chatflow と agent のみサポートしており、agent は画像をサポートしていません",
     "Digest:": "ダイジェスト：",
     "DingTalk": "DingTalk",
+    "DingTalk Client ID": "DingTalk Client ID",
+    "DingTalk Client Secret": "DingTalk Client Secret",
     "Direction": "方向",
     "Directory File Count": "ディレクトリファイル数",
     "Directory Total Size": "ディレクトリ合計サイズ",
