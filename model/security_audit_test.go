@@ -98,6 +98,21 @@ func TestOffHoursDayBucketExpr(t *testing.T) {
 	}
 }
 
+func TestTopModelsByRequestCount(t *testing.T) {
+	modelRequestCounts := map[string]int64{
+		"gpt-5.6-sol":  120,
+		"gpt-5.5-sol":  80,
+		"gpt-5.4-mini": 80,
+		"claude-opus":  10,
+	}
+
+	assert.Equal(
+		t,
+		[]string{"gpt-5.6-sol", "gpt-5.4-mini", "gpt-5.5-sol"},
+		topModelsByRequestCount(modelRequestCounts, 3),
+	)
+}
+
 func TestGetOffHoursUsage(t *testing.T) {
 	// GetOffHoursUsage 内部以 time.Local 划分天窗口,种子时间戳同样用 time.Local
 	// 生成,保证断言与测试机时区无关。
@@ -109,7 +124,7 @@ func TestGetOffHoursUsage(t *testing.T) {
 	rangeEnd := ts(2, 23, 59, 59)
 
 	users := []*User{
-		{Id: 98001, Username: "audit_alice", Password: "test12345678", DisplayName: "Alice Audit"},
+		{Id: 98001, Username: "audit_alice", Password: "test12345678", DisplayName: "李晓明"},
 		{Id: 98003, Username: "audit_carol", Password: "test12345678", DisplayName: "Carol Audit"},
 	}
 	for _, u := range users {
@@ -144,10 +159,10 @@ func TestGetOffHoursUsage(t *testing.T) {
 		require.EqualValues(t, 2, total)
 		require.Len(t, rows, 2)
 
-		// 排序:quota 降序 → carol(500) 在 alice(380) 前
-		carol, alice := rows[0], rows[1]
-		require.Equal(t, 98003, carol.UserId)
+		// 排序:天数降序 → alice(2 天) 在 carol(1 天) 前
+		alice, carol := rows[0], rows[1]
 		require.Equal(t, 98001, alice.UserId)
+		require.Equal(t, 98003, carol.UserId)
 
 		assert.Equal(t, "Carol Audit", carol.DisplayName)
 		assert.Equal(t, 1, carol.Days)
@@ -156,11 +171,11 @@ func TestGetOffHoursUsage(t *testing.T) {
 		assert.Equal(t, []string{"gpt-4o"}, carol.Models)
 		assert.Equal(t, []string{"3.3.3.3"}, carol.Ips)
 
-		assert.Equal(t, "Alice Audit", alice.DisplayName)
+		assert.Equal(t, "李晓明", alice.DisplayName)
 		assert.Equal(t, 2, alice.Days)
 		assert.EqualValues(t, 4, alice.Count)
 		assert.EqualValues(t, 380, alice.Quota)
-		assert.Equal(t, []string{"claude-3", "gpt-4o"}, alice.Models)
+		assert.Equal(t, []string{"gpt-4o", "claude-3"}, alice.Models)
 		assert.Equal(t, []string{"1.1.1.1", "2.2.2.2"}, alice.Ips)
 
 		// 子行按天倒序
@@ -179,16 +194,30 @@ func TestGetOffHoursUsage(t *testing.T) {
 		assert.EqualValues(t, 350, day1.Quota)
 		assert.Equal(t, ts(1, 3, 30, 0), day1.StartTime)
 		assert.Equal(t, ts(1, 5, 0, 0), day1.EndTime)
-		assert.Equal(t, []string{"claude-3", "gpt-4o"}, day1.Models)
+		assert.Equal(t, []string{"gpt-4o", "claude-3"}, day1.Models)
 		assert.Equal(t, []string{"1.1.1.1", "2.2.2.2"}, day1.Ips)
 	})
 
-	t.Run("username filter", func(t *testing.T) {
-		rows, total, err := GetOffHoursUsage(rangeStart, rangeEnd, 3, 7, "audit_alice", 0, 100)
-		require.NoError(t, err)
-		assert.EqualValues(t, 1, total)
-		require.Len(t, rows, 1)
-		assert.Equal(t, 98001, rows[0].UserId)
+	t.Run("username and display name fuzzy filter", func(t *testing.T) {
+		testCases := []struct {
+			name    string
+			keyword string
+			userId  int
+		}{
+			{name: "partial username", keyword: "alice", userId: 98001},
+			{name: "Chinese partial display name", keyword: "李", userId: 98001},
+			{name: "partial display name", keyword: "Carol Aud", userId: 98003},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				rows, total, err := GetOffHoursUsage(rangeStart, rangeEnd, 3, 7, testCase.keyword, 0, 100)
+				require.NoError(t, err)
+				assert.EqualValues(t, 1, total)
+				require.Len(t, rows, 1)
+				assert.Equal(t, testCase.userId, rows[0].UserId)
+			})
+		}
 	})
 
 	t.Run("pagination slices users", func(t *testing.T) {
@@ -196,13 +225,13 @@ func TestGetOffHoursUsage(t *testing.T) {
 		require.NoError(t, err)
 		assert.EqualValues(t, 2, total)
 		require.Len(t, rows, 1)
-		assert.Equal(t, 98003, rows[0].UserId)
+		assert.Equal(t, 98001, rows[0].UserId)
 
 		rows, total, err = GetOffHoursUsage(rangeStart, rangeEnd, 3, 7, "", 1, 1)
 		require.NoError(t, err)
 		assert.EqualValues(t, 2, total)
 		require.Len(t, rows, 1)
-		assert.Equal(t, 98001, rows[0].UserId)
+		assert.Equal(t, 98003, rows[0].UserId)
 	})
 
 	t.Run("empty result outside audited hours", func(t *testing.T) {

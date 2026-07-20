@@ -249,7 +249,7 @@ function useSubDepartmentColumns(
               onClick={() => onViewLogs(row.original)}
             >
               <ScrollText className='size-3.5' />
-              {t('Usage Logs')}
+              {t('Logs')}
             </Button>
           </div>
         ),

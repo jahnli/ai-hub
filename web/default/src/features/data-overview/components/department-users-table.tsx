@@ -345,7 +345,7 @@ export function DepartmentUsersTable({
             onClick={() => setLogsOpen(true)}
           >
             <ScrollText className='size-3.5' />
-            {t('Usage Logs')}
+            {t('Logs')}
           </Button>
         </div>
       </CardHeader>

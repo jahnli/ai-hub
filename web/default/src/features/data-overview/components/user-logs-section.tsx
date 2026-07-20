@@ -126,8 +126,8 @@ function LogsSection(props: LogsSectionProps) {
         canViewRequestContent={isSuperAdmin}
         isAdmin={isSuperAdmin}
       >
-        <div className='space-y-3 overflow-hidden'>
-          <h3 className='flex items-center gap-2 text-sm font-medium'>
+        <div className='flex min-h-0 flex-1 flex-col gap-3 overflow-hidden'>
+          <h3 className='flex shrink-0 items-center gap-2 text-sm font-medium'>
             <ScrollText className='text-primary size-4' />
             {t('Recent Usage Logs')}
           </h3>
@@ -141,7 +141,7 @@ function LogsSection(props: LogsSectionProps) {
             skeletonKeyPrefix={props.skeletonKeyPrefix}
             applyHeaderSize
             toolbarProps={null}
-            className='h-[min(42vh,420px)] min-h-[260px]'
+            className='min-h-0 flex-1'
             paginationInFooter={false}
             tableClassName='rounded-none border-0 [scrollbar-gutter:stable] [&_[data-slot=table]]:min-w-[1120px] [&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
           />

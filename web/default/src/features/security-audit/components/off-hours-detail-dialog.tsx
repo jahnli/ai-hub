@@ -16,59 +16,59 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
-import type { ColumnDef, PaginationState } from '@tanstack/react-table'
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useQuery } from "@tanstack/react-query";
+import type { ColumnDef, PaginationState } from "@tanstack/react-table";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { DataTablePage, useDataTable } from '@/components/data-table'
+import { DataTablePage, useDataTable } from "@/components/data-table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { getAllLogs } from '@/features/usage-logs/api'
-import { useCommonLogsColumns } from '@/features/usage-logs/components/columns/common-logs-columns'
-import { RequestMessagesProvider } from '@/features/usage-logs/components/request-messages-provider'
-import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-provider'
-import dayjs from '@/lib/dayjs'
-import { ROLE } from '@/lib/roles'
-import { useAuthStore } from '@/stores/auth-store'
+} from "@/components/ui/dialog";
+import { getAllLogs } from "@/features/usage-logs/api";
+import { useCommonLogsColumns } from "@/features/usage-logs/components/columns/common-logs-columns";
+import { RequestMessagesProvider } from "@/features/usage-logs/components/request-messages-provider";
+import { UsageLogsProvider } from "@/features/usage-logs/components/usage-logs-provider";
+import dayjs from "@/lib/dayjs";
+import { ROLE } from "@/lib/roles";
+import { useAuthStore } from "@/stores/auth-store";
 
-import type { OffHoursDetailTarget } from '../types'
+import type { OffHoursDetailTarget } from "../types";
 
 interface OffHoursDetailDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  target: OffHoursDetailTarget | null
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  target: OffHoursDetailTarget | null;
 }
 
 export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
-  if (!props.target) return null
+  if (!props.target) return null;
 
-  const windowLabel = `${dayjs.unix(props.target.windowStart).format('HH:mm')} - ${dayjs
+  const windowLabel = `${dayjs.unix(props.target.windowStart).format("HH:mm")} - ${dayjs
     .unix(props.target.windowEnd)
-    .format('HH:mm')}`
+    .format("HH:mm")}`;
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className='flex max-h-[calc(100vh-2rem)] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]'>
-        <DialogHeader className='shrink-0'>
+      <DialogContent className="flex h-[85vh] max-h-[85vh] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
-            {t('Usage Logs')} - {props.target.displayName} · {props.target.date}{' '}
+            {t("Usage Logs")} - {props.target.displayName} · {props.target.date}{" "}
             · {windowLabel}
           </DialogTitle>
         </DialogHeader>
 
-        <div className='min-h-0 overflow-y-auto pt-2 pr-1'>
+        <div className="min-h-0 flex-1 overflow-y-auto pt-2 pr-1">
           <OffHoursLogsSection target={props.target} />
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 /**
@@ -76,21 +76,21 @@ export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
  * table matches the Usage Logs page, scoped to the user's audit window.
  */
 function OffHoursLogsSection(props: { target: OffHoursDetailTarget }) {
-  const { t } = useTranslation()
-  const currentUserRole = useAuthStore((state) => state.auth.user?.role)
-  const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const { t } = useTranslation();
+  const currentUserRole = useAuthStore((state) => state.auth.user?.role);
+  const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN;
   const columns = useCommonLogsColumns(true, {
     canFetchUserDetails: isSuperAdmin,
-  })
+  });
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
-  })
+  });
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
-      'security-audit',
-      'off-hours-logs',
+      "security-audit",
+      "off-hours-logs",
       props.target.username,
       props.target.windowStart,
       props.target.windowEnd,
@@ -108,13 +108,13 @@ function OffHoursLogsSection(props: { target: OffHoursDetailTarget }) {
         page_size: pagination.pageSize,
       }),
     staleTime: 60 * 1000,
-  })
+  });
 
-  const logs = data?.data?.items ?? []
-  const total = data?.data?.total ?? 0
+  const logs = data?.data?.items ?? [];
+  const total = data?.data?.total ?? 0;
   const requestIds = (logs as Array<{ request_id?: string }>)
-    .map((log) => log.request_id ?? '')
-    .filter(Boolean)
+    .map((log) => log.request_id ?? "")
+    .filter(Boolean);
 
   const { table } = useDataTable({
     data: logs as Record<string, unknown>[],
@@ -125,7 +125,7 @@ function OffHoursLogsSection(props: { target: OffHoursDetailTarget }) {
     manualPagination: true,
     manualFiltering: true,
     totalCount: total,
-  })
+  });
 
   return (
     <UsageLogsProvider>
@@ -139,16 +139,16 @@ function OffHoursLogsSection(props: { target: OffHoursDetailTarget }) {
           columns={columns as ColumnDef<Record<string, unknown>>[]}
           isLoading={isLoading}
           isFetching={isFetching}
-          emptyTitle={t('No Logs Found')}
-          emptyDescription={t('No usage logs in this time range.')}
-          skeletonKeyPrefix='security-audit-detail-logs'
+          emptyTitle={t("No Logs Found")}
+          emptyDescription={t("No usage logs in this time range.")}
+          skeletonKeyPrefix="security-audit-detail-logs"
           applyHeaderSize
           toolbarProps={null}
-          className='h-[min(52vh,560px)] min-h-[280px]'
+          className="h-full min-h-[360px]"
           paginationInFooter={false}
-          tableClassName='rounded-none border-0 [scrollbar-gutter:stable] [&_[data-slot=table]]:min-w-[1120px] [&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
+          tableClassName="rounded-none border-0 [scrollbar-gutter:stable] [&_[data-slot=table]]:min-w-[1120px] [&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]"
         />
       </RequestMessagesProvider>
     </UsageLogsProvider>
-  )
+  );
 }
