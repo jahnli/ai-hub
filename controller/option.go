@@ -280,6 +280,13 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
+	case "ldap.company_sync_configs":
+		normalized, normalizeErr := system_setting.NormalizeLDAPCompanySyncConfigsJSON(option.Value.(string))
+		if normalizeErr != nil {
+			common.ApiErrorMsg(c, normalizeErr.Error())
+			return
+		}
+		option.Value = normalized
 	case "console_setting.api_info":
 		err = console_setting.ValidateConsoleSettings(option.Value.(string), "ApiInfo")
 		if err != nil {

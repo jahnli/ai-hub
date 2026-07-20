@@ -96,6 +96,7 @@ const oauthSchema = z.object({
     company_sync_configs: z.array(
       z.object({
         company: z.string(),
+        display_name: z.string(),
         sync_platform: z.enum(['none', 'feishu', 'dingtalk']),
         auto_subscribe_plan_id: z.number().int().nonnegative(),
         feishu_app_id: z.string(),
@@ -149,6 +150,7 @@ const oauthTabContentClassName =
 
 const emptyLDAPCompanySyncConfig = (): LDAPCompanySyncConfig => ({
   company: '',
+  display_name: '',
   sync_platform: 'none',
   auto_subscribe_plan_id: 0,
   feishu_app_id: '',
@@ -158,23 +160,38 @@ const emptyLDAPCompanySyncConfig = (): LDAPCompanySyncConfig => ({
   dingtalk_client_secret: '',
 })
 
+const normalizeLDAPCompanySyncConfig = (
+  config: Partial<LDAPCompanySyncConfig>
+): LDAPCompanySyncConfig => {
+  const company = config.company?.trim() ?? ''
+  const syncPlatform =
+    config.sync_platform === 'feishu' || config.sync_platform === 'dingtalk'
+      ? config.sync_platform
+      : 'none'
+
+  return {
+    ...emptyLDAPCompanySyncConfig(),
+    ...config,
+    company,
+    display_name: config.display_name?.trim() || company,
+    sync_platform: syncPlatform,
+    auto_subscribe_plan_id: Number(config.auto_subscribe_plan_id ?? 0),
+  }
+}
+
 const parseLDAPCompanySyncConfigs = (
   value: string | LDAPCompanySyncConfig[]
 ): LDAPCompanySyncConfig[] => {
-  if (Array.isArray(value)) return value
+  if (Array.isArray(value)) {
+    return value.map(normalizeLDAPCompanySyncConfig)
+  }
   if (!value) return []
   try {
     const parsed = JSON.parse(value)
     if (!Array.isArray(parsed)) return []
-    return parsed.map((item) => ({
-      ...emptyLDAPCompanySyncConfig(),
-      ...(item as Partial<LDAPCompanySyncConfig>),
-      sync_platform:
-        item?.sync_platform === 'feishu' || item?.sync_platform === 'dingtalk'
-          ? item.sync_platform
-          : 'none',
-      auto_subscribe_plan_id: Number(item?.auto_subscribe_plan_id ?? 0),
-    }))
+    return parsed.map((item) =>
+      normalizeLDAPCompanySyncConfig(item as Partial<LDAPCompanySyncConfig>)
+    )
   } catch {
     return []
   }
@@ -282,7 +299,9 @@ const normalizeFormValues = (values: OAuthFormValues): FlatOAuthDefaults => ({
   'ldap.start_tls': values.ldap.start_tls,
   'ldap.skip_tls_verify': values.ldap.skip_tls_verify,
   'ldap.login_label': values.ldap.login_label,
-  'ldap.company_sync_configs': JSON.stringify(values.ldap.company_sync_configs),
+  'ldap.company_sync_configs': JSON.stringify(
+    values.ldap.company_sync_configs.map(normalizeLDAPCompanySyncConfig)
+  ),
   WeChatAuthEnabled: values.WeChatAuthEnabled,
   WeChatServerAddress: values.WeChatServerAddress,
   WeChatServerToken: values.WeChatServerToken,
@@ -1118,6 +1137,30 @@ export function OAuthSection(props: OAuthSectionProps) {
                               <FormControl>
                                 <Input
                                   placeholder={t('Company OU name')}
+                                  autoComplete='off'
+                                  value={field.value ?? ''}
+                                  onChange={(event) =>
+                                    field.onChange(event.target.value)
+                                  }
+                                  name={field.name}
+                                  onBlur={field.onBlur}
+                                  ref={field.ref}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`ldap.company_sync_configs.${index}.display_name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Display Name')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t('Display Name')}
                                   autoComplete='off'
                                   value={field.value ?? ''}
                                   onChange={(event) =>

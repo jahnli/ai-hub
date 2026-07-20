@@ -82,6 +82,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	if username == "" {
 		return nil, fmt.Errorf("ldap username is empty")
 	}
+	company, companySyncCfg, hasSyncCfg := system_setting.ResolveLDAPCompany(ldapUser.Company)
 
 	existing := &model.User{}
 	err := model.DB.Unscoped().Where("username = ?", username).First(existing).Error
@@ -90,7 +91,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		if existing.DeletedAt.Valid {
 			return nil, &LDAPUserDeletedError{}
 		}
-		company := model.NormalizeCompany(ldapUser.Company)
+		company = model.NormalizeCompany(company)
 		if company != "" && existing.Company != company {
 			if err := model.DB.Model(&model.User{}).Where("id = ?", existing.Id).Update("company", company).Error; err != nil {
 				return nil, err
@@ -118,9 +119,8 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	} else {
 		user.DisplayName = user.Username
 	}
-	user.Company = model.NormalizeCompany(ldapUser.Company)
+	user.Company = model.NormalizeCompany(company)
 
-	companySyncCfg, hasSyncCfg := system_setting.GetLDAPCompanySyncConfig(user.Company)
 	syncPlatform := system_setting.LDAPSyncPlatformNone
 	if hasSyncCfg {
 		syncPlatform = companySyncCfg.SyncPlatform
@@ -206,6 +206,7 @@ func LDAPBind(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgLDAPAuthFailed)
 		return
 	}
+	company, companySyncCfg, hasSyncCfg := system_setting.ResolveLDAPCompany(ldapUser.Company)
 
 	// 以 username 唯一关联：若 LDAP 用户名已被其他账号占用则拒绝
 	if ldapUser.Username != "" && ldapUser.Username != user.Username {
@@ -222,8 +223,8 @@ func LDAPBind(c *gin.Context) {
 	if ldapUser.DisplayName != "" {
 		user.DisplayName = ldapUser.DisplayName
 	}
-	if ldapUser.Company != "" {
-		user.Company = model.NormalizeCompany(ldapUser.Company)
+	if company != "" {
+		user.Company = model.NormalizeCompany(company)
 	}
 
 	if err := user.Edit(false); err != nil {
@@ -232,9 +233,7 @@ func LDAPBind(c *gin.Context) {
 	}
 
 	// 绑定时也尝试异步同步一次平台字段（钉钉或飞书）。
-	company := model.NormalizeCompany(user.Company)
-	if cfg, ok := system_setting.GetLDAPCompanySyncConfig(company); ok &&
-		cfg.SyncPlatform == system_setting.LDAPSyncPlatformDingTalk {
+	if hasSyncCfg && companySyncCfg.SyncPlatform == system_setting.LDAPSyncPlatformDingTalk {
 		service.SyncDingTalkUserAsync(&user, ldapUser.DingTalkUserID)
 	} else {
 		service.SyncFeishuUserAsync(&user)
