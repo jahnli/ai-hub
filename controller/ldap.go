@@ -147,7 +147,19 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		return nil, err
 	}
 
-	autoSubscribeUserAfterCreate(user.Id, user.Company, "ldap_register_auto")
+	if hasSyncCfg {
+		if companySyncCfg.AutoSubscribePlanId > 0 {
+			if msg, err := model.AdminBindSubscription(user.Id, companySyncCfg.AutoSubscribePlanId, "ldap_register_auto"); err != nil {
+				common.SysError(fmt.Sprintf("[ldap_register_auto] auto-subscribe failed for user %d plan %d: %v",
+					user.Id, companySyncCfg.AutoSubscribePlanId, err))
+			} else {
+				common.SysLog(fmt.Sprintf("[ldap_register_auto] auto-subscribe succeeded for user %d plan %d: %s",
+					user.Id, companySyncCfg.AutoSubscribePlanId, msg))
+			}
+		}
+	} else {
+		autoSubscribeUserAfterCreate(user.Id, user.Company, "ldap_register_auto")
+	}
 
 	switch syncPlatform {
 	case system_setting.LDAPSyncPlatformDingTalk:

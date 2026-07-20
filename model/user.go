@@ -176,6 +176,19 @@ func (user *User) SetAccessToken(token string) {
 	user.AccessToken = &token
 }
 
+// RenameUserCompany batch-updates the company field for all users whose
+// current company equals oldCompany. Used when an LDAP company display_name
+// is renamed so that existing users are migrated immediately rather than
+// waiting for each user to log in again.
+func RenameUserCompany(oldCompany, newCompany string) error {
+	oldCompany = NormalizeCompany(oldCompany)
+	newCompany = NormalizeCompany(newCompany)
+	if oldCompany == "" || newCompany == "" || oldCompany == newCompany {
+		return nil
+	}
+	return DB.Model(&User{}).Where("company = ?", oldCompany).Update("company", newCompany).Error
+}
+
 func (user *User) GetSetting() dto.UserSetting {
 	setting := dto.UserSetting{RecordIpLog: true}
 	if user.Setting != "" {

@@ -141,34 +141,41 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
               </AvatarFallback>
             </Avatar>
           </div>
-          <div className="mt-2">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate text-base font-semibold">
-                {primaryName}
-              </span>
-              {hasGender && (
-                <ProfileIconWithTooltip
-                  icon={GenderIcon}
-                  label={genderLabel}
-                  className={genderIconClassName}
-                />
+          <div className="mt-2 flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-base font-semibold">
+                  {primaryName}
+                </span>
+                {hasGender && (
+                  <ProfileIconWithTooltip
+                    icon={GenderIcon}
+                    label={genderLabel}
+                    className={genderIconClassName}
+                  />
+                )}
+                {RoleIcon && roleLabel && (
+                  <ProfileIconWithTooltip
+                    icon={RoleIcon}
+                    label={roleLabel}
+                    className="text-primary shrink-0"
+                  />
+                )}
+              </div>
+              {user.display_name && user.display_name !== user.username && (
+                <div className="text-muted-foreground mt-0.5 truncate text-xs">
+                  @{user.username}
+                </div>
               )}
-              {RoleIcon && roleLabel && (
-                <ProfileIconWithTooltip
-                  icon={RoleIcon}
-                  label={roleLabel}
-                  className="text-primary shrink-0"
-                />
+              {user.description && (
+                <div className="text-muted-foreground mt-1 truncate text-xs">
+                  {user.description}
+                </div>
               )}
             </div>
-            {user.display_name && user.display_name !== user.username && (
-              <div className="text-muted-foreground mt-0.5 truncate text-xs">
-                @{user.username}
-              </div>
-            )}
-            {user.description && (
-              <div className="text-muted-foreground mt-1 truncate text-xs">
-                {user.description}
+            {user.company && (
+              <div className="text-muted-foreground mt-0.5 shrink-0 text-right text-xs">
+                {user.company}
               </div>
             )}
           </div>
