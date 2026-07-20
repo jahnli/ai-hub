@@ -94,6 +94,7 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
   const avatarFallback = getUserAvatarFallback(primaryName);
   const avatarFallbackStyle = getUserAvatarStyle(primaryName);
   const roleConfig = USER_ROLES[user.role as keyof typeof USER_ROLES];
+  const hasGender = user.gender === 1 || user.gender === 2;
   const GenderIcon = user.gender === 2 ? Venus : Mars;
   const genderIconClassName = user.gender === 2
     ? "shrink-0 text-pink-500"
@@ -145,11 +146,13 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
               <span className="truncate text-base font-semibold">
                 {primaryName}
               </span>
-              <ProfileIconWithTooltip
-                icon={GenderIcon}
-                label={genderLabel}
-                className={genderIconClassName}
-              />
+              {hasGender && (
+                <ProfileIconWithTooltip
+                  icon={GenderIcon}
+                  label={genderLabel}
+                  className={genderIconClassName}
+                />
+              )}
               {RoleIcon && roleLabel && (
                 <ProfileIconWithTooltip
                   icon={RoleIcon}

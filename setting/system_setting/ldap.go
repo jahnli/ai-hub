@@ -1,6 +1,12 @@
 package system_setting
 
-import "github.com/QuantumNous/new-api/setting/config"
+import (
+	"errors"
+	"strings"
+
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting/config"
+)
 
 // LDAPSettings 维护 LDAP 登录所需的全部配置。
 // 字段通过 config.GlobalConfig 以 "ldap.<field>" 的键形式持久化到数据库。
@@ -22,12 +28,15 @@ type LDAPSettings struct {
 
 // LDAPCompanySyncConfig defines company-specific behavior after LDAP login.
 type LDAPCompanySyncConfig struct {
-	Company             string `json:"company"`
-	SyncPlatform        string `json:"sync_platform"`
-	AutoSubscribePlanId int    `json:"auto_subscribe_plan_id"`
-	FeishuAppID         string `json:"feishu_app_id"`
-	FeishuAppSecret     string `json:"feishu_app_secret"`
-	FeishuEmailSuffix   string `json:"feishu_email_suffix"`
+	Company              string `json:"company"`
+	DisplayName          string `json:"display_name"`
+	SyncPlatform         string `json:"sync_platform"`
+	AutoSubscribePlanId  int    `json:"auto_subscribe_plan_id"`
+	FeishuAppID          string `json:"feishu_app_id"`
+	FeishuAppSecret      string `json:"feishu_app_secret"`
+	FeishuEmailSuffix    string `json:"feishu_email_suffix"`
+	DingTalkClientID     string `json:"dingtalk_client_id"`
+	DingTalkClientSecret string `json:"dingtalk_client_secret"`
 }
 
 const (
@@ -52,15 +61,53 @@ func GetLDAPSettings() *LDAPSettings {
 }
 
 func GetLDAPCompanySyncConfig(company string) (LDAPCompanySyncConfig, bool) {
+	company = strings.TrimSpace(company)
 	if company == "" {
 		return LDAPCompanySyncConfig{}, false
 	}
 	for _, cfg := range defaultLDAPSettings.CompanySyncConfigs {
+		cfg = normalizeLDAPCompanySyncConfig(cfg)
 		if cfg.Company == company {
-			return normalizeLDAPCompanySyncConfig(cfg), true
+			return cfg, true
+		}
+	}
+	for _, cfg := range defaultLDAPSettings.CompanySyncConfigs {
+		cfg = normalizeLDAPCompanySyncConfig(cfg)
+		if cfg.DisplayName != "" && cfg.DisplayName == company {
+			return cfg, true
 		}
 	}
 	return LDAPCompanySyncConfig{}, false
+}
+
+// ResolveLDAPCompany maps an LDAP OU company name to the name stored on users.
+// The matching sync configuration is returned so callers can continue using
+// the OU-specific provider settings after the display name has been applied.
+func ResolveLDAPCompany(company string) (string, LDAPCompanySyncConfig, bool) {
+	company = strings.TrimSpace(company)
+	cfg, ok := GetLDAPCompanySyncConfig(company)
+	if !ok {
+		return company, LDAPCompanySyncConfig{}, false
+	}
+	return cfg.DisplayName, cfg, true
+}
+
+func NormalizeLDAPCompanySyncConfigsJSON(value string) (string, error) {
+	var configs []LDAPCompanySyncConfig
+	if err := common.UnmarshalJsonStr(value, &configs); err != nil {
+		return "", err
+	}
+	for i := range configs {
+		configs[i] = normalizeLDAPCompanySyncConfig(configs[i])
+		if configs[i].Company == "" {
+			return "", errors.New("LDAP company name is required")
+		}
+	}
+	normalized, err := common.Marshal(configs)
+	if err != nil {
+		return "", err
+	}
+	return string(normalized), nil
 }
 
 func GetLDAPAutoSubscribePlanId(company string) int {
@@ -72,6 +119,11 @@ func GetLDAPAutoSubscribePlanId(company string) int {
 }
 
 func normalizeLDAPCompanySyncConfig(cfg LDAPCompanySyncConfig) LDAPCompanySyncConfig {
+	cfg.Company = strings.TrimSpace(cfg.Company)
+	cfg.DisplayName = strings.TrimSpace(cfg.DisplayName)
+	if cfg.DisplayName == "" {
+		cfg.DisplayName = cfg.Company
+	}
 	if cfg.SyncPlatform == "" {
 		cfg.SyncPlatform = LDAPSyncPlatformNone
 	}

@@ -12,6 +12,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_FLOOR
+from pathlib import Path
 from typing import Any
 
 import psycopg2
@@ -91,8 +92,11 @@ class ModelStats:
 @dataclass(frozen=True)
 class ConsumptionDistribution:
     zero: int = 0
-    under_100: int = 0
-    from_100_to_400: int = 0
+    under_10: int = 0
+    from_10_to_50: int = 0
+    from_50_to_100: int = 0
+    from_100_to_200: int = 0
+    from_200_to_400: int = 0
     from_400_to_800: int = 0
     at_least_800: int = 0
 
@@ -630,8 +634,11 @@ def calculate_consumption_distribution(
 ) -> ConsumptionDistribution:
     counts = {
         "zero": 0,
-        "under_100": 0,
-        "from_100_to_400": 0,
+        "under_10": 0,
+        "from_10_to_50": 0,
+        "from_50_to_100": 0,
+        "from_100_to_200": 0,
+        "from_200_to_400": 0,
         "from_400_to_800": 0,
         "at_least_800": 0,
     }
@@ -639,15 +646,96 @@ def calculate_consumption_distribution(
         cost = quota / quota_per_unit * exchange_rate
         if cost <= 0:
             counts["zero"] += 1
+        elif cost < 10:
+            counts["under_10"] += 1
+        elif cost < 50:
+            counts["from_10_to_50"] += 1
         elif cost < 100:
-            counts["under_100"] += 1
+            counts["from_50_to_100"] += 1
+        elif cost < 200:
+            counts["from_100_to_200"] += 1
         elif cost < 400:
-            counts["from_100_to_400"] += 1
+            counts["from_200_to_400"] += 1
         elif cost < 800:
             counts["from_400_to_800"] += 1
         else:
             counts["at_least_800"] += 1
     return ConsumptionDistribution(**counts)
+
+
+def save_consumption_histogram(
+    label: str,
+    start: datetime,
+    end: datetime,
+    total_users: int,
+    distribution: ConsumptionDistribution,
+) -> Path:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib import font_manager
+    except ImportError as exc:
+        raise RuntimeError(
+            "生成消费柱状图需要 matplotlib，请执行：python -m pip install matplotlib"
+        ) from exc
+
+    preferred_fonts = ("Microsoft YaHei", "SimHei", "Noto Sans CJK SC")
+    available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+    chart_font = next(
+        (font for font in preferred_fonts if font in available_fonts),
+        "DejaVu Sans",
+    )
+    plt.rcParams["font.sans-serif"] = [chart_font]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    labels = (
+        "0元",
+        "0~10元",
+        "10~50元",
+        "50~100元",
+        "100~200元",
+        "200~400元",
+        "400~800元",
+        "800元以上",
+    )
+    values = (
+        distribution.zero,
+        distribution.under_10,
+        distribution.from_10_to_50,
+        distribution.from_50_to_100,
+        distribution.from_100_to_200,
+        distribution.from_200_to_400,
+        distribution.from_400_to_800,
+        distribution.at_least_800,
+    )
+
+    figure, axis = plt.subplots(figsize=(12, 6.5), dpi=160)
+    bars = axis.bar(labels, values, color="#4C78A8", width=0.72)
+    axis.set_title(f"整体用户{label}消费分布", fontsize=18, pad=16)
+    axis.set_xlabel("消费金额区间（元）", fontsize=12, labelpad=10)
+    axis.set_ylabel("注册用户人数（人）", fontsize=12, labelpad=10)
+    axis.grid(axis="y", linestyle="--", alpha=0.25)
+    axis.set_axisbelow(True)
+    axis.spines["top"].set_visible(False)
+    axis.spines["right"].set_visible(False)
+    axis.bar_label(bars, labels=[f"{value:,}人" for value in values], padding=4)
+    axis.text(
+        0,
+        -0.17,
+        f"统计周期：{start.strftime('%Y-%m-%d %H:%M')} 至 "
+        f"{end.strftime('%Y-%m-%d %H:%M')}  |  注册用户：{total_users:,}人",
+        transform=axis.transAxes,
+        fontsize=10,
+        color="#555555",
+    )
+    figure.tight_layout()
+
+    output_path = Path(__file__).with_name("weekly_consumption_histogram.png")
+    figure.savefig(output_path, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
 
 
 def format_token_amount(tokens: int) -> str:
@@ -725,7 +813,7 @@ def print_report(
 AI 中转站{label}统计
 统计周期：{start.strftime('%Y-%m-%d %H:%M:%S')} － {end.strftime('%Y-%m-%d %H:%M')}
 总注册人数：{total_users:,} 人
-其中0元消费{consumption_distribution.zero:,}人，0~100元消费{consumption_distribution.under_100:,}人，100~400元消费{consumption_distribution.from_100_to_400:,}人，400~800元消费{consumption_distribution.from_400_to_800:,}人，800元以上消费{consumption_distribution.at_least_800:,}人
+其中0元消费{consumption_distribution.zero:,}人，0~10元消费{consumption_distribution.under_10:,}人，10~50元消费{consumption_distribution.from_10_to_50:,}人，50~100元消费{consumption_distribution.from_50_to_100:,}人，100~200元消费{consumption_distribution.from_100_to_200:,}人，200~400元消费{consumption_distribution.from_200_to_400:,}人，400~800元消费{consumption_distribution.from_400_to_800:,}人，800元以上消费{consumption_distribution.at_least_800:,}人
 
 非缓存输入，Token 量 {format_token_amount(input_tokens)}，费用 {format_cost(input_cost)} 元，单价 {unit_price(input_cost, input_tokens):.2f} 元
 非缓存输出，Token 量 {format_token_amount(output_tokens)}，费用 {format_cost(output_cost)} 元，单价 {unit_price(output_cost, output_tokens):.2f} 元
@@ -810,6 +898,14 @@ def main() -> int:
             file=sys.stderr,
         )
     print_report(label, start, end, total_users, consumption_distribution, stats)
+    chart_path = save_consumption_histogram(
+        label,
+        start,
+        end,
+        total_users,
+        consumption_distribution,
+    )
+    print(f"\n消费柱状图已保存至：{chart_path}")
     return 0
 
 
