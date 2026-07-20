@@ -412,7 +412,7 @@ export function useCommonLogsColumns(
               });
             }
           });
-        }, [canFetchUserDetails, log.user_id, sensitiveVisible]);
+        }, [log.user_id, sensitiveVisible]);
 
         if (!log.username) return null;
 
@@ -532,6 +532,7 @@ export function useCommonLogsColumns(
             <ModelBadge
               modelName={modelInfo.name}
               actualModel={modelInfo.actualModel}
+              className="font-normal"
             />
           </div>
         );
@@ -626,7 +627,7 @@ export function useCommonLogsColumns(
                     <Tooltip>
                       <TooltipTrigger
                         render={<CircleAlert className="size-3 text-red-500" />}
-                      ></TooltipTrigger>
+                      />
                       <TooltipContent>
                         <div className="space-y-0.5 text-xs">
                           <p>
@@ -712,7 +713,7 @@ export function useCommonLogsColumns(
         const quotaStr = formatLogQuota(quota);
         const quotaDisplay = splitQuotaDisplay(quotaStr);
         const quotaNode = (
-          <span className="border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 [font-family:var(--font-body)] text-sm leading-none font-semibold tabular-nums">
+          <span className="border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 [font-family:var(--font-body)] text-sm leading-none font-normal tabular-nums">
             {quotaDisplay.prefix && (
               <span className="mr-1">{quotaDisplay.prefix}</span>
             )}

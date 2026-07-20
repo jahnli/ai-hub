@@ -127,7 +127,7 @@ func offHoursDayBucketExpr() string {
 }
 
 type offHoursDayAgg struct {
-	models  map[string]struct{}
+	models  map[string]int64
 	ips     map[string]struct{}
 	firstTs int64
 	lastTs  int64
@@ -169,9 +169,23 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 		args = append(args, w.Start, w.End)
 	}
 	sb.WriteString(")")
-	if username != "" {
-		sb.WriteString(" AND username = ?")
-		args = append(args, username)
+	trimmedKeyword := strings.TrimSpace(username)
+	if trimmedKeyword != "" {
+		likeKeyword := "%" + trimmedKeyword + "%"
+		var matchedUserIds []int
+		if err = DB.Table("users").
+			Where("username LIKE ? OR display_name LIKE ?", likeKeyword, likeKeyword).
+			Pluck("id", &matchedUserIds).Error; err != nil {
+			return nil, 0, err
+		}
+
+		if len(matchedUserIds) > 0 {
+			sb.WriteString(" AND (user_id IN ? OR username LIKE ?)")
+			args = append(args, matchedUserIds, likeKeyword)
+		} else {
+			sb.WriteString(" AND username LIKE ?")
+			args = append(args, likeKeyword)
+		}
 	}
 	sb.WriteString(" GROUP BY user_id, username, day_bucket, model_name, ip")
 	sb.WriteString(fmt.Sprintf(" LIMIT %d", maxOffHoursGroupRows+1))
@@ -216,7 +230,7 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 		day, ok := user.days[bucket]
 		if !ok {
 			day = &offHoursDayAgg{
-				models:  make(map[string]struct{}),
+				models:  make(map[string]int64),
 				ips:     make(map[string]struct{}),
 				firstTs: row.FirstTs,
 				lastTs:  row.LastTs,
@@ -224,7 +238,7 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 			user.days[bucket] = day
 		}
 		if row.ModelName != "" {
-			day.models[row.ModelName] = struct{}{}
+			day.models[row.ModelName] += row.ReqCount
 		}
 		if row.Ip != "" {
 			day.ips[row.Ip] = struct{}{}
@@ -242,7 +256,7 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 	users := make([]*OffHoursUserRow, 0, len(userAggs))
 	for userId, agg := range userAggs {
 		row := &OffHoursUserRow{UserId: userId, Username: agg.username}
-		userModels := make(map[string]struct{})
+		userModels := make(map[string]int64)
 		userIps := make(map[string]struct{})
 		buckets := make([]int, 0, len(agg.days))
 		for bucket := range agg.days {
@@ -259,13 +273,13 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 				WindowEnd:   w.End,
 				StartTime:   day.firstTs,
 				EndTime:     day.lastTs,
-				Models:      sortedSetItems(day.models),
+				Models:      topModelsByRequestCount(day.models, 3),
 				Ips:         sortedSetItems(day.ips),
 				Count:       day.count,
 				Quota:       day.quota,
 			})
-			for m := range day.models {
-				userModels[m] = struct{}{}
+			for modelName, requestCount := range day.models {
+				userModels[modelName] += requestCount
 			}
 			for ip := range day.ips {
 				userIps[ip] = struct{}{}
@@ -274,12 +288,15 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 			row.Quota += day.quota
 		}
 		row.Days = len(row.DayRows)
-		row.Models = sortedSetItems(userModels)
+		row.Models = topModelsByRequestCount(userModels, 3)
 		row.Ips = sortedSetItems(userIps)
 		users = append(users, row)
 	}
 
 	sort.Slice(users, func(i, j int) bool {
+		if users[i].Days != users[j].Days {
+			return users[i].Days > users[j].Days
+		}
 		if users[i].Quota != users[j].Quota {
 			return users[i].Quota > users[j].Quota
 		}
@@ -306,6 +323,33 @@ func GetOffHoursUsage(startTs, endTs int64, startHour, endHour int, username str
 		return nil, 0, err
 	}
 	return page, total, nil
+}
+
+func topModelsByRequestCount(modelRequestCounts map[string]int64, limit int) []string {
+	type modelRequestCount struct {
+		name  string
+		count int64
+	}
+
+	models := make([]modelRequestCount, 0, len(modelRequestCounts))
+	for modelName, requestCount := range modelRequestCounts {
+		models = append(models, modelRequestCount{name: modelName, count: requestCount})
+	}
+	sort.Slice(models, func(leftIndex, rightIndex int) bool {
+		if models[leftIndex].count != models[rightIndex].count {
+			return models[leftIndex].count > models[rightIndex].count
+		}
+		return models[leftIndex].name < models[rightIndex].name
+	})
+
+	if limit > 0 && len(models) > limit {
+		models = models[:limit]
+	}
+	modelNames := make([]string, len(models))
+	for index, model := range models {
+		modelNames[index] = model.name
+	}
+	return modelNames
 }
 
 func sortedSetItems(set map[string]struct{}) []string {

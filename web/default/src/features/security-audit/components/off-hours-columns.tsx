@@ -16,36 +16,194 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { ColumnDef } from '@tanstack/react-table'
-import { CalendarDays, ChevronDown, ChevronRight, Eye } from 'lucide-react'
-import { useMemo } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import type { ColumnDef, Row } from '@tanstack/react-table'
+import { CalendarDays, ChevronDown, ChevronRight, Eye, Globe } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BadgeListCell } from '@/components/data-table/core/badge-list-cell'
+import { LongText } from '@/components/long-text'
 import { StatusBadge } from '@/components/status-badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
+import { getUserInfo } from '@/features/usage-logs/api'
+import { ModelBadge } from '@/features/usage-logs/components/model-badge'
+import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
-import { formatLogQuota } from '@/lib/format'
 
 import type { AuditRow, OffHoursDetailTarget } from '../types'
 
-function formatClock(ts: number): string {
-  return dayjs.unix(ts).format('HH:mm:ss')
+function formatClock(timestamp: number): string {
+  return dayjs.unix(timestamp).format('HH:mm:ss')
 }
 
-function badgeList(items: string[], variant: 'blue' | 'grey') {
+function renderModelBadges(models: string[]) {
   return (
     <BadgeListCell
-      items={items.map((item) => (
-        <StatusBadge
-          key={item}
-          label={item}
-          variant={variant}
-          size='sm'
-          copyable={false}
+      max={3}
+      items={models.map((model) => (
+        <ModelBadge
+          key={model}
+          modelName={model}
+          className='font-normal'
         />
       ))}
     />
+  )
+}
+
+function renderIpBadges(ipAddresses: string[]) {
+  return (
+    <BadgeListCell
+      items={ipAddresses.map((ipAddress) => (
+        <StatusBadge
+          key={ipAddress}
+          label={ipAddress}
+          icon={Globe}
+          copyText={ipAddress}
+          size='sm'
+          showDot={false}
+          className='border-border/60 bg-muted/30 text-foreground h-6 max-w-full gap-1.5 overflow-hidden rounded-md border px-2 py-0.5 font-mono'
+        />
+      ))}
+    />
+  )
+}
+
+function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
+  const { t } = useTranslation()
+  const audit = props.row.original
+  const [userData, setUserData] = useState<UserColumnRow | null>(null)
+  const fetchedUserId = useRef<number | null>(null)
+
+  const handleFetchUser = useCallback(() => {
+    if (audit.kind !== 'user' || fetchedUserId.current === audit.user.user_id) {
+      return
+    }
+
+    fetchedUserId.current = audit.user.user_id
+    void getUserInfo(audit.user.user_id).then((response) => {
+      if (!response.success || !response.data) return
+
+      const userInfo = response.data
+      setUserData({
+        id: userInfo.id,
+        username: userInfo.username,
+        display_name: userInfo.display_name || userInfo.username,
+        email: userInfo.email,
+        avatar_url: userInfo.avatar_url,
+        remark: userInfo.remark,
+        quota: userInfo.quota,
+        used_quota: userInfo.used_quota,
+        sub_quota_used: 0,
+        sub_quota_total: 0,
+        request_count: userInfo.request_count,
+        group: userInfo.group || '',
+        status: userInfo.status ?? 1,
+        role: userInfo.role ?? 1,
+        department_name: userInfo.department_name,
+        custom_field_values: userInfo.custom_field_values,
+        join_date: userInfo.join_date,
+        job_number: userInfo.job_number,
+        job_title: userInfo.job_title,
+        description: userInfo.description,
+        background_image: userInfo.background_image,
+        mobile: userInfo.mobile,
+        open_id: userInfo.open_id,
+        gender: userInfo.gender,
+      })
+    })
+  }, [audit])
+
+  if (audit.kind !== 'user') {
+    return (
+      <div className='flex items-center gap-2 pl-8'>
+        <CalendarDays className='text-muted-foreground size-3.5 shrink-0' />
+        <span className='tabular-nums'>{audit.day?.date}</span>
+      </div>
+    )
+  }
+
+  const hasMultipleDays = (audit.user.day_rows?.length ?? 0) > 1
+  const primaryName = audit.user.display_name || audit.user.username
+  const avatarFallback = getUserAvatarFallback(primaryName)
+  const avatarFallbackStyle = getUserAvatarStyle(primaryName)
+  const hasDistinctUsername =
+    audit.user.display_name && audit.user.display_name !== audit.user.username
+  const fallbackUser: UserColumnRow = {
+    id: audit.user.user_id,
+    username: audit.user.username,
+    display_name: primaryName,
+    avatar_url: audit.user.avatar_url || undefined,
+    quota: 0,
+    used_quota: 0,
+    sub_quota_used: 0,
+    sub_quota_total: 0,
+    request_count: audit.user.count,
+    group: '',
+    status: 1,
+    role: 1,
+  }
+
+  const avatar = (
+    <Avatar size='sm' className='shrink-0'>
+      {audit.user.avatar_url ? (
+        <AvatarImage src={audit.user.avatar_url} alt={primaryName} />
+      ) : null}
+      <AvatarFallback
+        className='text-xs font-medium text-white'
+        style={avatarFallbackStyle}
+      >
+        {avatarFallback}
+      </AvatarFallback>
+    </Avatar>
+  )
+
+  return (
+    <div
+      className='flex min-w-0 items-center gap-2'
+      onMouseEnter={handleFetchUser}
+    >
+      <div className='flex size-6 shrink-0 items-center justify-center'>
+        {hasMultipleDays ? (
+          <Button
+            variant='ghost'
+            size='sm'
+            className='size-6 p-0'
+            onClick={props.row.getToggleExpandedHandler()}
+            aria-label={t('Expand')}
+          >
+            {props.row.getIsExpanded() ? (
+              <ChevronDown className='h-4 w-4' />
+            ) : (
+              <ChevronRight className='h-4 w-4' />
+            )}
+          </Button>
+        ) : null}
+      </div>
+      <UserProfileHoverCard user={userData ?? fallbackUser}>
+        {avatar}
+      </UserProfileHoverCard>
+      <div className='flex w-[150px] min-w-0 flex-col gap-1'>
+        <LongText className='max-w-full font-medium'>{primaryName}</LongText>
+        {hasDistinctUsername ? (
+          <LongText className='text-muted-foreground max-w-full text-xs'>
+            {audit.user.username}
+          </LongText>
+        ) : null}
+      </div>
+      <StatusBadge
+        label={`${audit.user.days} ${t('days')}`}
+        variant='red'
+        size='sm'
+        copyable={false}
+        className='border-destructive/30 bg-destructive/10 h-5 shrink-0 rounded-md border px-1.5 !text-[11px] [&_span]:!text-[11px]'
+      />
+    </div>
   )
 }
 
@@ -60,92 +218,42 @@ export function useOffHoursColumns(
         id: 'identity',
         header: t('User'),
         meta: { mobileTitle: true },
-        size: 240,
+        size: 220,
+        cell: ({ row }) => <OffHoursIdentityCell row={row} />,
+      },
+      {
+        id: 'time_range',
+        header: t('Time Range'),
+        size: 150,
         cell: ({ row }) => {
           const audit = row.original
-          if (audit.kind === 'user') {
-            return (
-              <div className='flex items-center gap-2'>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-6 w-6 shrink-0 p-0'
-                  onClick={row.getToggleExpandedHandler()}
-                >
-                  {row.getIsExpanded() ? (
-                    <ChevronDown className='h-4 w-4' />
-                  ) : (
-                    <ChevronRight className='h-4 w-4' />
-                  )}
-                </Button>
-                <div className='flex min-w-0 flex-col'>
-                  <span className='truncate font-medium'>
-                    {audit.user.display_name || audit.user.username}
-                  </span>
-                  <span className='text-muted-foreground truncate text-xs'>
-                    {audit.user.username}
-                  </span>
-                </div>
-                <StatusBadge
-                  label={`${audit.user.days} ${t('days')}`}
-                  variant='blue'
-                  size='sm'
-                  copyable={false}
-                />
-              </div>
-            )
+          const singleDay =
+            audit.kind === 'user' && audit.user.day_rows?.length === 1
+              ? audit.user.day_rows[0]
+              : undefined
+          const displayedDay = audit.kind === 'day' ? audit.day : singleDay
+          if (!displayedDay) {
+            return <span className='text-muted-foreground text-xs'>-</span>
           }
           return (
-            <div className='flex items-center gap-2 pl-8'>
-              <CalendarDays className='text-muted-foreground size-3.5 shrink-0' />
-              <span className='tabular-nums'>{audit.day?.date}</span>
+            <div className='flex flex-col gap-0.5 text-sm tabular-nums'>
+              {singleDay ? (
+                <span className='text-muted-foreground text-xs'>
+                  {displayedDay.date}
+                </span>
+              ) : null}
+              <span>
+                {formatClock(displayedDay.start_time)} ~{' '}
+                {formatClock(displayedDay.end_time)}
+              </span>
             </div>
           )
         },
       },
       {
-        id: 'time_range',
-        header: t('Time Range'),
-        size: 170,
-        cell: ({ row }) => {
-          const audit = row.original
-          if (audit.kind !== 'day' || !audit.day) {
-            return <span className='text-muted-foreground text-xs'>-</span>
-          }
-          return (
-            <span className='text-sm tabular-nums'>
-              {formatClock(audit.day.start_time)} ~{' '}
-              {formatClock(audit.day.end_time)}
-            </span>
-          )
-        },
-      },
-      {
-        id: 'models',
-        header: t('Models'),
-        size: 220,
-        cell: ({ row }) => {
-          const audit = row.original
-          const models =
-            audit.kind === 'day' ? (audit.day?.models ?? []) : audit.user.models
-          return badgeList(models, 'blue')
-        },
-      },
-      {
-        id: 'ips',
-        header: t('IP Addresses'),
-        size: 200,
-        cell: ({ row }) => {
-          const audit = row.original
-          const ips =
-            audit.kind === 'day' ? (audit.day?.ips ?? []) : audit.user.ips
-          return badgeList(ips, 'grey')
-        },
-      },
-      {
         id: 'count',
         header: t('Requests'),
-        size: 100,
+        size: 80,
         cell: ({ row }) => {
           const audit = row.original
           const count =
@@ -166,10 +274,36 @@ export function useOffHoursColumns(
           const quota =
             audit.kind === 'day' ? (audit.day?.quota ?? 0) : audit.user.quota
           return (
-            <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 text-sm leading-none font-semibold tabular-nums'>
-              {formatLogQuota(quota)}
+            <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 text-sm leading-none font-normal tabular-nums'>
+              {formatQuotaWithCurrency(quota, {
+                digitsLarge: 2,
+                digitsSmall: 2,
+                abbreviate: false,
+              })}
             </span>
           )
+        },
+      },
+      {
+        id: 'models',
+        header: t('Models'),
+        size: 300,
+        cell: ({ row }) => {
+          const audit = row.original
+          const models =
+            audit.kind === 'day' ? (audit.day?.models ?? []) : audit.user.models
+          return renderModelBadges(models)
+        },
+      },
+      {
+        id: 'ips',
+        header: t('IP Addresses'),
+        size: 200,
+        cell: ({ row }) => {
+          const audit = row.original
+          const ips =
+            audit.kind === 'day' ? (audit.day?.ips ?? []) : audit.user.ips
+          return renderIpBadges(ips)
         },
       },
       {
@@ -178,8 +312,12 @@ export function useOffHoursColumns(
         size: 120,
         cell: ({ row }) => {
           const audit = row.original
-          if (audit.kind !== 'day' || !audit.day) return null
-          const day = audit.day
+          const singleDay =
+            audit.kind === 'user' && audit.user.day_rows?.length === 1
+              ? audit.user.day_rows[0]
+              : undefined
+          const displayedDay = audit.kind === 'day' ? audit.day : singleDay
+          if (!displayedDay) return null
           return (
             <Button
               variant='ghost'
@@ -189,14 +327,14 @@ export function useOffHoursColumns(
                 onViewDetail({
                   username: audit.user.username,
                   displayName: audit.user.display_name || audit.user.username,
-                  date: day.date,
-                  windowStart: day.window_start,
-                  windowEnd: day.window_end,
+                  date: displayedDay.date,
+                  windowStart: displayedDay.window_start,
+                  windowEnd: displayedDay.window_end,
                 })
               }
             >
               <Eye className='size-3.5' />
-              {t('View Details')}
+              {t('Logs')}
             </Button>
           )
         },

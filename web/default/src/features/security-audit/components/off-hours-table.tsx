@@ -36,12 +36,15 @@ function buildAuditRows(items: OffHoursUserRow[]): AuditRow[] {
     id: `u-${user.user_id}`,
     kind: 'user' as const,
     user,
-    children: (user.day_rows ?? []).map((day) => ({
-      id: `u-${user.user_id}-${day.date}`,
-      kind: 'day' as const,
-      user,
-      day,
-    })),
+    children:
+      user.day_rows?.length > 1
+        ? user.day_rows.map((day) => ({
+            id: `u-${user.user_id}-${day.date}`,
+            kind: 'day' as const,
+            user,
+            day,
+          }))
+        : undefined,
   }))
 }
 
