@@ -18,6 +18,9 @@
 - `service/dingtalk_sync.go` — 新增钉钉用户同步服务：缓存 access token，通过用户与部门接口回填头像、邮箱、显示名、手机号、工号、职务、负责人、入职日期和部门层级，并复用部门节点缓存减少请求
 - `service/ldap.go` — LDAP 认证与用户查找核心逻辑；支持从公司 OU 中提取用户公司并带回注册流程；创建本地账号时使用目录返回的标准用户名，属性未配置或返回空值时拒绝登录，不再回退到用户输入值；读取 extensionAttribute12 作为钉钉 userid
 - `setting/system_setting/feishu.go` — 飞书同步相关系统设置
+- `controller/ldap.go` — 修复多公司配置时自动订阅套餐因 DisplayName 与其他条目 Company 名称交叉导致匹配错误的 bug：LDAP 首次创建用户时改为直接使用已解析的 `companySyncCfg.AutoSubscribePlanId`，避免通过 `autoSubscribeUserAfterCreate` 以 DisplayName 反查配置时触发第一个循环的 Company 匹配导致误匹配
+- `controller/option.go` — 新增 `migrateChangedLDAPCompanyDisplayNames` 函数：保存 LDAP 公司同步配置时，比对新旧配置中每个条目的 DisplayName 变更（按 Company OU 名匹配），自动批量更新所有持有旧 DisplayName 的用户 company 字段为新 DisplayName；失败仅记日志不阻止配置保存
+- `model/user.go` — 新增 `RenameUserCompany` 批量更新函数：按旧公司名精确匹配所有用户并更新 company 字段为新公司名，用于 LDAP DisplayName 重命名时自动迁移已有用户
 - `setting/system_setting/ldap.go` — LDAP 连接相关系统设置（服务器、BaseDN、BindDN 等）；公司同步配置新增显示名称映射与保存归一化，显示名称留空时默认使用 LDAP 公司名，并支持通过 LDAP 原公司名或显示名称读取同步平台及自动订阅套餐；支持保存钉钉 Client ID 与 Client Secret
 - `web/default/src/features/auth/api.ts` — 前端 LDAP 登录 API 调用
 - `web/default/src/features/auth/components/ldap-login-dialog.tsx` — LDAP 登录弹窗组件

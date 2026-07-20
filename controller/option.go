@@ -286,6 +286,7 @@ func UpdateOption(c *gin.Context) {
 			common.ApiErrorMsg(c, normalizeErr.Error())
 			return
 		}
+		migrateChangedLDAPCompanyDisplayNames(normalized)
 		option.Value = normalized
 	case "console_setting.api_info":
 		err = console_setting.ValidateConsoleSettings(option.Value.(string), "ApiInfo")
@@ -337,4 +338,47 @@ func UpdateOption(c *gin.Context) {
 		"success": true,
 		"message": "",
 	})
+}
+
+// migrateChangedLDAPCompanyDisplayNames compares the incoming company_sync_configs
+// JSON against the currently active configuration. For each entry where the
+// display_name has changed (matched by the immutable LDAP OU company key), it
+// batch-updates every user whose company field still holds the old display_name.
+//
+// Failures are logged but do not abort the config save so that a rename is
+// never silently blocked by a transient DB error.
+func migrateChangedLDAPCompanyDisplayNames(newConfigsJSON string) {
+	var newConfigs []system_setting.LDAPCompanySyncConfig
+	if err := common.UnmarshalJsonStr(newConfigsJSON, &newConfigs); err != nil {
+		common.SysError("LDAP company migration: failed to parse new configs: " + err.Error())
+		return
+	}
+
+	newDisplayNameByOU := make(map[string]string, len(newConfigs))
+	for _, cfg := range newConfigs {
+		if cfg.Company != "" {
+			newDisplayNameByOU[cfg.Company] = cfg.DisplayName
+		}
+	}
+
+	for _, currentCfg := range system_setting.GetLDAPSettings().CompanySyncConfigs {
+		if currentCfg.Company == "" || currentCfg.DisplayName == "" {
+			continue
+		}
+		newDisplayName, exists := newDisplayNameByOU[currentCfg.Company]
+		if !exists || newDisplayName == currentCfg.DisplayName {
+			continue
+		}
+		if err := model.RenameUserCompany(currentCfg.DisplayName, newDisplayName); err != nil {
+			common.SysError(fmt.Sprintf(
+				"LDAP company migration: rename %q -> %q failed: %s",
+				currentCfg.DisplayName, newDisplayName, err.Error(),
+			))
+		} else {
+			common.SysLog(fmt.Sprintf(
+				"LDAP company migration: renamed users company %q -> %q",
+				currentCfg.DisplayName, newDisplayName,
+			))
+		}
+	}
 }

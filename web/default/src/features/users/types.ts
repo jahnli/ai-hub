@@ -68,6 +68,7 @@ export const userSchema = z.object({
   background_image: z.string().optional(),
   custom_field_values: z.string().optional(),
   join_date: z.string().optional(),
+  company: z.string().optional(),
   admin_permissions: z
     .record(z.string(), z.record(z.string(), z.boolean()))
     .optional(),
@@ -199,6 +200,7 @@ export interface UserColumnRow {
   mobile?: string
   open_id?: string
   gender?: number
+  company?: string
 }
 
 // ============================================================================
