@@ -6,11 +6,11 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
+	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -140,7 +140,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	user.Role = common.RoleCommonUser
 	user.Status = common.UserStatusEnabled
 
-	if err := user.Insert(0); err != nil {
+	if err := user.Insert(); err != nil {
 		return nil, err
 	}
 
@@ -195,13 +195,12 @@ func LDAPBind(c *gin.Context) {
 		return
 	}
 
-	session := sessions.Default(c)
-	id := session.Get("id")
-	if id == nil {
+	identity, ok := middleware.GetSessionAuthIdentity(c)
+	if !ok {
 		common.ApiErrorI18n(c, i18n.MsgLDAPNotEnabled)
 		return
 	}
-	user := model.User{Id: id.(int)}
+	user := model.User{Id: identity.UserID}
 	if err := user.FillUserById(); err != nil || user.Id == 0 {
 		common.ApiErrorMsg(c, "user not found")
 		return

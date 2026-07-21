@@ -54,7 +54,7 @@ func GetStatus(c *gin.Context) {
 		"version":                     common.Version,
 		"start_time":                  common.StartTime,
 		"email_verification":          common.EmailVerificationEnabled,
-		"theme":                       system_setting.GetThemeSettings().Frontend,
+		"theme":                       "default",
 		"system_name":                 common.SystemName,
 		"logo":                        common.Logo,
 		"footer_html":                 common.Footer,

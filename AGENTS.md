@@ -35,10 +35,8 @@ types/         — 类型定义（relay 格式、文件来源、错误）
 i18n/          — 后端国际化（go-i18n，en/zh）
 oauth/         — OAuth 提供商实现
 pkg/           — 内部包（cachex、ionet）
-web/             — 前端主题容器
- web/default/   — 默认前端（React 19、Rsbuild、Base UI、Tailwind）
-  web/classic/   — 经典前端（React 18、Vite、Semi Design）
-  web/default/src/i18n/ — 前端国际化（i18next，zh/en/fr/ru/ja/vi）
+web/           — 前端（React 19、Rsbuild、Base UI、Tailwind）
+  src/i18n/    — 前端国际化（i18next，en/zh/zh-TW/fr/ru/ja/vi）
 ```
 
 ## 国际化 (i18n)
@@ -47,12 +45,12 @@ web/             — 前端主题容器
 - 库: `nicksnyder/go-i18n/v2`
 - 语言: en、zh
 
-### 前端 (`web/default/src/i18n/`)
+### 前端 (`web/src/i18n/`)
 - 库: `i18next` + `react-i18next` + `i18next-browser-languagedetector`
-- 语言: en（基础）、zh（兜底）、fr、ru、ja、vi
-- 翻译文件: `web/default/src/i18n/locales/{lang}.json` — 扁平 JSON，键为英文原文
+- 语言: en（基础）、zh（兜底）、zh-TW、fr、ru、ja、vi
+- 翻译文件: `web/src/i18n/locales/{lang}.json` — 扁平 JSON，键为英文原文
 - 用法: `useTranslation()` hook，在组件中调用 `t('English key')`
-- CLI 工具: `bun run i18n:sync`（在 `web/default/` 目录下执行）
+- CLI 工具: `bun run i18n:sync`（在 `web/` 目录下执行）
 
 ## 规则
 
@@ -126,14 +124,14 @@ web/             — 前端主题容器
 
 ### 前端规则
 
-- 使用 `bun` 作为前端（`web/default/`）的首选包管理器和脚本运行器：
+- 使用 `bun` 作为前端（`web/`）的首选包管理器和脚本运行器：
   - `bun install` 安装依赖
   - `bun run dev` 启动开发服务器
   - `bun run build` 生产构建
   - `bun run i18n:*` 国际化工具
-- 前端 UI 文本必须使用 `i18next`/`react-i18next` 支持国际化。使用 `web/default/src/i18n/locales/{lang}.json` 中的扁平 JSON 区域文件，以英文原文为键。
+- 前端 UI 文本必须使用 `i18next`/`react-i18next` 支持国际化。使用 `web/src/i18n/locales/{lang}.json` 中的扁平 JSON 区域文件，以英文原文为键。
 - 在 React 组件中使用 `useTranslation()` 并调用 `t('English key')` 处理用户可见文本。
-- 详细前端约定（包括 TypeScript、组件结构、样式、可访问性、测试和构建检查）参见 `web/default/AGENTS.md`。
+- 详细前端约定（包括 TypeScript、组件结构、样式、可访问性、测试和构建检查）参见 `web/AGENTS.md`。
 
 ### 项目治理
 
