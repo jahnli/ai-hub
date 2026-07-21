@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { formatQuotaWithCurrency } from '@/lib/currency'
 import { formatQuota, formatTimestamp } from '@/lib/format'
 import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
@@ -199,7 +200,12 @@ export function userQuotaColumn<T extends UserColumnRow>(
     id: 'quota',
     accessorKey: 'quota',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={headerText} />
+      <DataTableColumnHeader
+        column={column}
+        title={headerText}
+        descriptionPosition='after-title'
+        className='space-x-0 [&_[data-slot=button]]:px-1.5'
+      />
     ),
     cell: ({ row }) => {
       const user = row.original as UserColumnRow
@@ -212,17 +218,23 @@ export function userQuotaColumn<T extends UserColumnRow>(
       }
 
       const usedPercentage = Math.min((used / total) * 100, 100)
+      const formattedUsedQuota = formatQuotaWithCurrency(used, {
+        digitsLarge: 2,
+        digitsSmall: 2,
+        minimumFractionDigits: 2,
+        abbreviate: true,
+      })
 
       return (
         <Tooltip>
           <TooltipTrigger
             render={
-              <div className='w-full min-w-0 cursor-help space-y-1.5 overflow-hidden' />
+              <div className='w-[128px] max-w-full min-w-0 cursor-help space-y-1.5 overflow-hidden' />
             }
           >
             <div className='grid min-w-0 grid-cols-2 gap-x-4 text-xs'>
               <span className='min-w-0 truncate font-medium tabular-nums'>
-                {formatQuota(used)}
+                {formattedUsedQuota}
               </span>
               <span className='text-muted-foreground min-w-0 truncate text-right tabular-nums'>
                 {formatQuota(total)}
@@ -236,7 +248,7 @@ export function userQuotaColumn<T extends UserColumnRow>(
           <TooltipContent>
             <div className='space-y-1 text-xs'>
               <div>
-                {t('Used:')} {formatQuota(used)}
+                {t('Used:')} {formattedUsedQuota}
               </div>
               <div>
                 {t('Remaining:')} {formatQuota(remaining)}

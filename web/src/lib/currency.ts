@@ -90,6 +90,8 @@ export interface CurrencyFormatOptions {
   digitsLarge?: number
   /** Fraction digits to use when |value| < 1 */
   digitsSmall?: number
+  /** Minimum fraction digits to preserve in the formatted value */
+  minimumFractionDigits?: number
   /** Whether to abbreviate thousands with k suffix */
   abbreviate?: boolean
   /** Minimal absolute value to display when rounding would produce zero */
@@ -133,6 +135,7 @@ type DisplayMeta =
 const DEFAULT_FORMAT_OPTIONS: ResolvedCurrencyFormatOptions = {
   digitsLarge: 2,
   digitsSmall: 4,
+  minimumFractionDigits: 0,
   abbreviate: true,
   minimumNonZero: 0,
   compact: false,
@@ -235,6 +238,9 @@ function mergeOptions(
   return {
     digitsLarge: options.digitsLarge ?? DEFAULT_FORMAT_OPTIONS.digitsLarge,
     digitsSmall: options.digitsSmall ?? DEFAULT_FORMAT_OPTIONS.digitsSmall,
+    minimumFractionDigits:
+      options.minimumFractionDigits ??
+      DEFAULT_FORMAT_OPTIONS.minimumFractionDigits,
     abbreviate: options.abbreviate ?? DEFAULT_FORMAT_OPTIONS.abbreviate,
     minimumNonZero:
       options.minimumNonZero ?? DEFAULT_FORMAT_OPTIONS.minimumNonZero,
@@ -253,6 +259,7 @@ function formatNumberWithSuffix(
   value: number,
   digitsLarge: number,
   digitsSmall: number,
+  minimumFractionDigits: number,
   abbreviate: boolean
 ): string {
   const abs = Math.abs(value)
@@ -262,7 +269,14 @@ function formatNumberWithSuffix(
   }
 
   const digits = abs >= 1 ? digitsLarge : digitsSmall
-  return removeTrailingZeros(value.toFixed(digits))
+  const formattedValue = value.toFixed(digits)
+  if (minimumFractionDigits >= digits) return formattedValue
+
+  const trimmedValue = removeTrailingZeros(formattedValue)
+  if (minimumFractionDigits <= 0) return trimmedValue
+
+  const [integerPart, fractionPart = ''] = trimmedValue.split('.')
+  return `${integerPart}.${fractionPart.padEnd(minimumFractionDigits, '0')}`
 }
 
 function adjustForMinimum(
@@ -296,6 +310,7 @@ function formatCurrencyValue(
       value,
       options.digitsLarge,
       options.digitsSmall,
+      options.minimumFractionDigits,
       options.abbreviate
     )
   }
@@ -308,7 +323,10 @@ function formatCurrencyValue(
     if (!options.showSymbol) {
       return new Intl.NumberFormat(options.locale, {
         notation: options.compact ? 'compact' : 'standard',
-        minimumFractionDigits: 0,
+        minimumFractionDigits: Math.min(
+          options.minimumFractionDigits,
+          options.compact ? 1 : digits
+        ),
         maximumFractionDigits: options.compact ? 1 : digits,
       }).format(adjustedValue)
     }
@@ -318,7 +336,10 @@ function formatCurrencyValue(
       currency: meta.currencyCode,
       currencyDisplay: 'narrowSymbol',
       notation: options.compact ? 'compact' : 'standard',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: Math.min(
+        options.minimumFractionDigits,
+        options.compact ? 1 : digits
+      ),
       maximumFractionDigits: options.compact ? 1 : digits,
     }).format(adjustedValue)
     return formatted
@@ -326,7 +347,10 @@ function formatCurrencyValue(
 
   const decimal = new Intl.NumberFormat(options.locale, {
     notation: options.compact ? 'compact' : 'standard',
-    minimumFractionDigits: 0,
+    minimumFractionDigits: Math.min(
+      options.minimumFractionDigits,
+      options.compact ? 1 : digits
+    ),
     maximumFractionDigits: options.compact ? 1 : digits,
   }).format(adjustedValue)
 
@@ -406,6 +430,7 @@ export function formatCurrencyFromUSD(
       tokens,
       0,
       merged.digitsSmall,
+      merged.minimumFractionDigits,
       merged.abbreviate
     )
   }

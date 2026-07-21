@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30 ~ 07-20（最后更新 07-20）
+**日期**: 2026-06-30 ~ 07-22（最后更新 07-22）
 
 ## 涉及文件
 
@@ -41,3 +41,9 @@
 - `web/default/src/features/users/components/users-columns.tsx` — 新增 `company` 列（默认隐藏、不可排序），用于承载「公司」筛选。
 - `web/default/src/features/users/components/users-table.tsx` — 在「角色」筛选旁新增「公司」单选筛选（Building2 图标），公司选项来自 `getUserCompanies`，公司列默认隐藏并参与筛选与搜索请求。
 - `web/default/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 补充「Company」（公司）翻译。
+
+## 2026-07-22 额度列展示优化
+
+- `web/src/features/users/components/shared-user-columns.tsx` — 缩短额度数字与进度条展示区域，已用额度固定保留两位小数，并将额度说明图标放到列名之后。
+- `web/src/components/data-table/core/column-header.tsx` — 通用列头支持将说明图标放在列名后、排序图标前，同时保留原有默认布局。
+- `web/src/lib/currency.ts` — 货币与额度格式化支持配置最少保留的小数位数。

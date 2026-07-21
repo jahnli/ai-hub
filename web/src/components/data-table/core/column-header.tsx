@@ -41,15 +41,19 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-type DataTableColumnHeaderProps<TData, TValue> =
-  React.HTMLAttributes<HTMLDivElement> & {
-    column: Column<TData, TValue>
-    title: React.ReactNode
-  }
+type DataTableColumnHeaderProps<TData, TValue> = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'title'
+> & {
+  column: Column<TData, TValue>
+  title: React.ReactNode
+  descriptionPosition?: 'after-header' | 'after-title'
+}
 
 export function DataTableColumnHeader<TData, TValue>({
   column,
   title,
+  descriptionPosition = 'after-header',
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
   const { t } = useTranslation()
@@ -77,6 +81,9 @@ export function DataTableColumnHeader<TData, TValue>({
           }
         >
           <span>{title}</span>
+          {description && descriptionPosition === 'after-title' ? (
+            <DescriptionTooltip description={description} />
+          ) : null}
           {column.getIsSorted() === 'desc' ? (
             <ArrowDownIcon className='ms-2 h-4 w-4' />
           ) : column.getIsSorted() === 'asc' ? (
@@ -105,7 +112,9 @@ export function DataTableColumnHeader<TData, TValue>({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      {description && <DescriptionTooltip description={description} />}
+      {description && descriptionPosition === 'after-header' ? (
+        <DescriptionTooltip description={description} />
+      ) : null}
     </div>
   )
 }
