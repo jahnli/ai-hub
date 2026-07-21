@@ -129,14 +129,12 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		// 钉钉平台：email 由同步接口从钉钉获取，注册时留空。
 		user.Email = ""
 	} else {
-		// 飞书平台或无同步：按公司配置或全局设置拼接邮箱后缀。
-		if ldapUser.Email != "" {
-			user.Email = ldapUser.Email
-		} else if hasSyncCfg && companySyncCfg.FeishuEmailSuffix != "" {
-			user.Email = user.Username + companySyncCfg.FeishuEmailSuffix
-		} else {
-			user.Email = user.Username + system_setting.FeishuEmailSuffix()
+		// 飞书平台或无同步：已配置的邮箱后缀优先于 LDAP 邮箱属性。
+		emailSuffix := system_setting.FeishuEmailSuffix()
+		if hasSyncCfg && companySyncCfg.FeishuEmailSuffix != "" {
+			emailSuffix = companySyncCfg.FeishuEmailSuffix
 		}
+		user.Email = resolveLDAPRegistrationEmail(user.Username, ldapUser.Email, emailSuffix)
 	}
 
 	user.Role = common.RoleCommonUser
@@ -180,6 +178,14 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	}
 
 	return user, nil
+}
+
+// resolveLDAPRegistrationEmail applies the registration email precedence used by LDAP users.
+func resolveLDAPRegistrationEmail(username, ldapEmail, feishuEmailSuffix string) string {
+	if feishuEmailSuffix != "" {
+		return username + feishuEmailSuffix
+	}
+	return ldapEmail
 }
 
 // LDAPBind 供已登录用户绑定 LDAP 账号。

@@ -28,7 +28,7 @@
 | 022 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
 | 023 | 2026-07-20 | 新增 LDAP 登录与用户同步（飞书/钉钉）：后端 LDAP 认证/绑定/解绑及平台用户同步服务、前端登录与系统设置、7 语言翻译；支持按公司 OU 读取 LDAP 用户公司并选择飞书或钉钉同步，钉钉从 LDAP extensionAttribute12 获取 userid 并回填用户资料与部门层级；支持配置平台凭据、邮箱后缀和自动订阅套餐；公司同步配置新增显示名称映射，登录、注册和绑定时写入显示名称，并支持按原公司名或显示名称查找同步及套餐配置；显示名称留空时保存为 LDAP 公司名；LDAP 登录创建账号时改用目录返回的标准用户名并取消登录输入值兜底；修复 LDAP 公司同步添加配置按钮滚动到底部时被页面底部区域遮挡导致无法点击；修复多公司配置时自动订阅套餐因 DisplayName 与其他条目 Company 名称交叉导致匹配错误的 bug（改为直接使用已解析的配置，避免二次反查）；保存 LDAP 公司同步配置时自动批量迁移已有用户的公司字段以匹配新的显示名称 | [详情](details/024-ldap-login.md) |
 | 024 | 2026-07-15 | 登录页默认使用 LDAP 登录：LDAP 表单内联展示替代弹窗，视图切换（LDAP/密码/OAuth）布局；用户名输入框下添加示例提示；删除未使用的 LDAPLoginDialog 组件；移除注册入口提示并简化标题布局 | [详情](details/025-ldap-default-login.md) |
-| 025 | 2026-06-22 | 移除 User 表 name 字段，飞书同步的姓名改写入 display_name；LDAP 注册 email 改为 username + FEISHU_EMAIL_SUFFIX 拼接 | `model/user.go`、`service/feishu_sync.go`、`controller/ldap.go` |
+| 025 | 2026-07-21 | 移除 User 表 name 字段，飞书同步的姓名改写入 display_name；LDAP 注册邮箱在配置飞书邮箱后缀时优先使用 username + 后缀拼接，未配置后缀时回退 LDAP 邮箱属性 | `model/user.go`、`service/feishu_sync.go`、`controller/ldap.go` |
 | 026 | 2026-06-23 | Feishu 凭据改为惰性读取（sync.OnceValue），避免包导入时 .env 未加载导致同步失败 | `setting/system_setting/feishu.go`、`service/feishu_sync.go`、`controller/ldap.go` |
 | 027 | 2026-06-23 | 用户头像改用 avatar_url 字段：后端 API 下发 avatar_url，前端头像组件优先展示图片、无图时回退首字母 | [详情](details/028-avatar-url.md) |
 | 028 | 2026-06-23 | LDAP 注册时飞书同步改为同步调用，确保首次登录响应即包含头像；SyncFeishuUser 回写 user 指针字段 | `controller/ldap.go`、`service/feishu_sync.go` |
