@@ -84,8 +84,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 	}
 	company, companySyncCfg, hasSyncCfg := system_setting.ResolveLDAPCompany(ldapUser.Company)
 
-	existing := &model.User{}
-	err := model.DB.Unscoped().Where("username = ?", username).First(existing).Error
+	existing, err := model.GetUnscopedUserByUsernameCaseInsensitive(username)
 	if err == nil {
 		// 找到用户
 		if existing.DeletedAt.Valid {
@@ -222,8 +221,7 @@ func LDAPBind(c *gin.Context) {
 
 	// 以 username 唯一关联：若 LDAP 用户名已被其他账号占用则拒绝
 	if ldapUser.Username != "" && ldapUser.Username != user.Username {
-		var other model.User
-		err := model.DB.Unscoped().Where("username = ?", ldapUser.Username).First(&other).Error
+		other, err := model.GetUnscopedUserByUsernameCaseInsensitive(ldapUser.Username)
 		if err == nil && other.Id != user.Id {
 			common.ApiErrorI18n(c, i18n.MsgLDAPBindConflict)
 			return

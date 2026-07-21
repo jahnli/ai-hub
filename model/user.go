@@ -313,6 +313,13 @@ func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+// GetUnscopedUserByUsernameCaseInsensitive returns a user regardless of username casing or soft-deletion state.
+func GetUnscopedUserByUsernameCaseInsensitive(username string) (*User, error) {
+	user := &User{}
+	err := DB.Unscoped().Where("LOWER(username) = ?", strings.ToLower(strings.TrimSpace(username))).First(user).Error
+	return user, err
+}
+
 func emailQuery(tx *gorm.DB, email string) *gorm.DB {
 	if tx == nil {
 		tx = DB

@@ -5,14 +5,15 @@
 ## 涉及文件
 
 - `.env.example` — 新增 LDAP 相关环境变量示例
-- `controller/ldap.go` — 新增 LDAP 登录控制器（认证、绑定、解绑）；LDAP 注册、已有用户登录和绑定时将 LDAP 公司名映射为配置的显示名称后写入用户公司字段，并按同一公司配置选择飞书或钉钉同步、邮箱后缀与自动订阅套餐；钉钉注册同步完成前不预填邮箱，绑定时异步刷新平台资料
+- `controller/ldap.go` — 新增 LDAP 登录控制器（认证、绑定、解绑）；LDAP 注册、已有用户登录和绑定时将 LDAP 公司名映射为配置的显示名称后写入用户公司字段，并按同一公司配置选择飞书或钉钉同步、邮箱后缀与自动订阅套餐；LDAP 返回的小写标准用户名与 `users.username` 的小写值匹配，兼容历史混合大小写账号；钉钉注册同步完成前不预填邮箱，绑定时异步刷新平台资料
+- `controller/ldap_test.go` — 验证 LDAP 小写标准用户名会复用 `users` 表中对应的历史混合大小写账号，不会创建重复用户
 - `controller/misc.go` — 状态接口暴露 LDAP 启用标志
 - `controller/option.go` — 系统设置保存时规范化 LDAP 公司同步配置；显示名称留空时自动写入 LDAP 公司名，并拒绝缺少 LDAP 公司名的无效配置
 - `controller/user.go` — 用户模型适配 LDAP 字段；注册和管理员创建用户后的自动订阅改为按用户公司选择套餐
 - `go.mod`、`go.sum` — 引入 LDAP 依赖包
 - `i18n/keys.go` — 新增 LDAP 相关后端 i18n key
 - `i18n/locales/en.yaml`、`i18n/locales/zh-CN.yaml`、`i18n/locales/zh-TW.yaml` — LDAP 后端翻译（英/简中/繁中）
-- `model/user.go` — User 模型新增 LDAP 相关字段、公司字段与查询方法
+- `model/user.go` — User 模型新增 LDAP 相关字段、公司字段与查询方法；新增包含软删除记录的 username 大小写不敏感查询供 LDAP 账号关联复用
 - `router/api-router.go` — 注册 LDAP 登录/绑定/解绑路由
 - `service/feishu_sync.go` — 新增飞书用户同步服务；支持按公司同步配置选择飞书/钉钉应用凭据
 - `service/dingtalk_sync.go` — 新增钉钉用户同步服务：缓存 access token，通过用户与部门接口回填头像、邮箱、显示名、手机号、工号、职务、负责人、入职日期和部门层级，并复用部门节点缓存减少请求
