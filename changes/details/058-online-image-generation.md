@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-07-21
+**日期**: 2026-07-22
 
 ## 涉及文件
 
@@ -36,7 +36,7 @@
 - `web/default/src/features/image-studio/components/result-grid.tsx` — 结果网格适配服务端图片 URL 展示；部分请求失败时追加等量灰色“生图失败”占位卡；大图预览将图片与提示词框统一为最大 960px/92vw 宽度，图片、提示词和操作栏作为整体按视口居中，优化三部分间距并保持缩放与旋转操作。
 - `web/default/src/features/image-studio/components/history-panel.tsx` — 历史面板适配服务端数据结构。
 - `web/default/src/features/image-studio/constants.ts` — 新增 IMAGE_STUDIO_GENERATIONS API 端点常量；在线生图最大生成数量改为 4。
-- `controller/security_audit.go`、`router/api-router.go` — 新增管理员图片审计分页接口与路由，支持按时间范围、用户名和显示名筛选。
+- `controller/security_audit.go`、`router/api-router.go`、`setting/system_setting/audit_setting.go` — 新增图片审计分页接口与独立开关，默认启用；安全审计路由收紧为仅超级管理员访问，关闭图片审计开关时接口拒绝查询。
 - `model/image_studio.go` — 图片生成记录新增安全审计查询，关联用户展示信息并批量加载图片资源，兼容 SQLite、MySQL 和 PostgreSQL。
-- `web/default/src/features/security-audit/` — 安全审计新增图片审计页，提供日期与用户筛选、图片缩略图及大图预览、请求内容 Tooltip、生成详情、图片下载和分页；生成详情与请求内容弹框统一为最大 78rem、视口 85% 高度，头像和用户资料展示保持一致并放大详情文字，图片数量改为主题色标签；审计大图预览同步统一图片和提示词宽度、视口居中及三部分间距。
+- `web/default/src/features/security-audit/` — 安全审计新增图片审计页，提供日期与用户筛选、图片缩略图及大图预览、请求内容 Tooltip、生成详情、图片下载和分页；安全审计入口与页面仅超级管理员可见，关闭图片审计开关时隐藏对应区块；图片审计表格默认分页调整为每页 10 条；预览界面移除冗余提示词标签，统一详情标签尺寸；生成详情与请求内容弹框统一为最大 78rem、视口 85% 高度，头像和用户资料展示保持一致并放大详情文字，图片数量改为主题色标签；审计大图预览同步统一图片和提示词宽度、视口居中及三部分间距。
 - `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补充图片审计界面多语言文案并更新同步报告。
