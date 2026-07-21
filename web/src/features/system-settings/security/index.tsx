@@ -47,6 +47,7 @@ const defaultSecuritySettings: SecuritySettings = {
     start_hour: 3,
     end_hour: 7,
   },
+  'audit_setting.image_studio': true,
 }
 
 export function SecuritySettings() {

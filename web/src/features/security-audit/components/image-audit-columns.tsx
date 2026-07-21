@@ -31,10 +31,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
-import type { UserColumnRow } from '@/features/users/types'
 import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
@@ -244,9 +244,7 @@ export function useImageAuditColumns(
                 />
               )}
               <Tooltip>
-                <TooltipTrigger
-                  className='text-muted-foreground line-clamp-2 max-w-[240px] cursor-default text-left text-xs leading-snug break-all whitespace-normal'
-                >
+                <TooltipTrigger className='text-muted-foreground line-clamp-2 max-w-[240px] cursor-default text-left text-xs leading-snug break-all whitespace-normal'>
                   {requestContent}
                 </TooltipTrigger>
                 <TooltipContent className='max-w-md break-all whitespace-pre-wrap'>

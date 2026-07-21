@@ -170,13 +170,11 @@ export function ApiKeysMutateDrawer({
           toast.error(t(ERROR_MESSAGES.LOAD_FAILED))
         })
     } else if (open && !isUpdate) {
-      form.reset(
-        {
-          ...getApiKeyFormDefaultValues(false),
-          group: createApiKeyDefaultGroup,
-          cross_group_retry: false,
-        }
-      )
+      form.reset({
+        ...getApiKeyFormDefaultValues(false),
+        group: createApiKeyDefaultGroup,
+        cross_group_retry: false,
+      })
     }
   }, [open, isUpdate, currentRow, form, createApiKeyDefaultGroup, t])
 

@@ -151,7 +151,9 @@ function SidebarMenuCollapsible({
   // 检查当前路径是否匹配子菜单项
   const isSubItemActive = checkIsActive(href, item)
   // 使用受控状态，初始值基于当前路径是否匹配
-  const [isOpen, setIsOpen] = useState(() => item.defaultOpen ?? isSubItemActive)
+  const [isOpen, setIsOpen] = useState(
+    () => item.defaultOpen ?? isSubItemActive
+  )
 
   // 当路径变化时，如果匹配子菜单项，自动展开父级菜单
   useEffect(() => {

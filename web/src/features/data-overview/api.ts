@@ -1,5 +1,9 @@
+import type {
+  GetLogsParams,
+  GetLogsResponse,
+} from '@/features/usage-logs/types'
 import { api } from '@/lib/api'
-import type { GetLogsParams, GetLogsResponse } from '@/features/usage-logs/types'
+
 import type {
   DepartmentTreeResponse,
   DepartmentStat,

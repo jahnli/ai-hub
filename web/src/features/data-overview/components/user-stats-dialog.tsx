@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from 'react'
-import dayjs from 'dayjs'
 import { useQuery } from '@tanstack/react-query'
+import dayjs from 'dayjs'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import {
   Dialog,
   DialogContent,
@@ -9,10 +10,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/compact-date-time-range-picker'
+
 import { getUserUsageAnalysis } from '../api'
 import type { DepartmentUser } from '../types'
-import { UserLogsSection } from './user-logs-section'
 import { UsageAnalysisSection } from './usage-analysis'
+import { UserLogsSection } from './user-logs-section'
 
 interface UserStatsDialogProps {
   open: boolean
@@ -41,12 +43,11 @@ function getDateRangeFromTimestamps(
 export function UserStatsDialog(props: UserStatsDialogProps) {
   const { t } = useTranslation()
 
-  const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>(
-    () =>
-      getDateRangeFromTimestamps(
-        props.initialStartTimestamp,
-        props.initialEndTimestamp
-      )
+  const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>(() =>
+    getDateRangeFromTimestamps(
+      props.initialStartTimestamp,
+      props.initialEndTimestamp
+    )
   )
 
   useEffect(() => {
@@ -76,12 +77,7 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
   const userId = props.user?.id
 
   const { data: analysisData } = useQuery({
-    queryKey: [
-      'user-usage-analysis',
-      userId,
-      startTimestamp,
-      endTimestamp,
-    ],
+    queryKey: ['user-usage-analysis', userId, startTimestamp, endTimestamp],
     queryFn: () => {
       if (!userId) throw new Error('Missing user id')
       return getUserUsageAnalysis({
@@ -121,7 +117,9 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
             endTimestamp={endTimestamp}
           />
 
-          {analysisData?.data && <UsageAnalysisSection data={analysisData.data} />}
+          {analysisData?.data && (
+            <UsageAnalysisSection data={analysisData.data} />
+          )}
         </div>
       </DialogContent>
     </Dialog>

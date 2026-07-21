@@ -327,7 +327,7 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
 
 		securityAuditRoute := apiRouter.Group("/security_audit")
-		securityAuditRoute.Use(middleware.AdminAuth())
+		securityAuditRoute.Use(middleware.RootAuth())
 		{
 			securityAuditRoute.GET("/setting", controller.GetSecurityAuditSetting)
 			securityAuditRoute.GET("/off_hours", controller.GetOffHoursUsage)

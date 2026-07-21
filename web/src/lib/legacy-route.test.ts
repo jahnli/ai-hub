@@ -86,10 +86,7 @@ describe('legacy frontend route migration', () => {
   })
 
   test('does not revive removed redemption routes', () => {
-    assert.equal(
-      resolveLegacyRoute('/console/redemption'),
-      '/dashboard'
-    )
+    assert.equal(resolveLegacyRoute('/console/redemption'), '/dashboard')
     assert.equal(resolveLegacyRoute('/redemption-codes'), null)
   })
 

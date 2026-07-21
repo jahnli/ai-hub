@@ -16,27 +16,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-export function sendToFluent(apiKey: string, serverAddress?: string): boolean {
-  if (typeof window === 'undefined') {
-    return false
-  }
+import type { SecurityAuditSectionId } from './section-registry'
 
-  const container = document.getElementById('fluent-ai-gateway-container')
-  if (!container) {
-    return false
-  }
-
-  const payload = {
-    id: 'ai-gateway',
-    baseUrl: serverAddress || window.location.origin,
-    apiKey: `sk-${apiKey}`,
-  }
-
-  container.dispatchEvent(
-    new CustomEvent('fluent:prefill', {
-      detail: payload,
-    })
-  )
-
-  return true
+export function getVisibleSecurityAuditSectionIds(
+  sectionIds: readonly SecurityAuditSectionId[],
+  offHoursEnabled: boolean,
+  imageStudioEnabled: boolean
+): readonly SecurityAuditSectionId[] {
+  return sectionIds.filter((sectionId) => {
+    if (sectionId === 'off-hours') return offHoursEnabled
+    if (sectionId === 'image-studio') return imageStudioEnabled
+    return true
+  })
 }

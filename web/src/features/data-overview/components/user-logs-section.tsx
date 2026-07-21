@@ -1,18 +1,21 @@
-import { useState, useCallback } from 'react'
-import type { PaginationState, OnChangeFn, ColumnDef } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
+import type {
+  PaginationState,
+  OnChangeFn,
+  ColumnDef,
+} from '@tanstack/react-table'
 import { ScrollText } from 'lucide-react'
+import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  DataTablePage,
-  useDataTable,
-} from '@/components/data-table'
+
+import { DataTablePage, useDataTable } from '@/components/data-table'
 import { useCommonLogsColumns } from '@/features/usage-logs/components/columns/common-logs-columns'
 import { RequestMessagesProvider } from '@/features/usage-logs/components/request-messages-provider'
 import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-provider'
+import type { GetLogsResponse } from '@/features/usage-logs/types'
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
-import type { GetLogsResponse } from '@/features/usage-logs/types'
+
 import { getDepartmentLogs, getDepartmentUserLogs } from '../api'
 
 interface UserLogsSectionProps {
@@ -92,11 +95,7 @@ function LogsSection(props: LogsSectionProps) {
   const [pagination, setPagination] = usePagination()
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: [
-      ...props.queryKey,
-      pagination.pageIndex,
-      pagination.pageSize,
-    ],
+    queryKey: [...props.queryKey, pagination.pageIndex, pagination.pageSize],
     queryFn: () => props.queryFn(pagination),
     enabled: props.enabled,
     staleTime: 60 * 1000,

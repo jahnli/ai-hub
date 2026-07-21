@@ -11,7 +11,8 @@ type OffHoursAuditSetting struct {
 
 // AuditSetting 安全审计配置
 type AuditSetting struct {
-	OffHours OffHoursAuditSetting `json:"off_hours"`
+	OffHours    OffHoursAuditSetting `json:"off_hours"`
+	ImageStudio bool                 `json:"image_studio"`
 }
 
 var auditSetting = AuditSetting{
@@ -20,6 +21,7 @@ var auditSetting = AuditSetting{
 		StartHour: 3,
 		EndHour:   7,
 	},
+	ImageStudio: true,
 }
 
 func init() {

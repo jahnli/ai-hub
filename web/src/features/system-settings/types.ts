@@ -387,6 +387,7 @@ export type SecuritySettings = {
   'fetch_setting.apply_ip_filter_for_domain': boolean
   'token_setting.max_user_tokens': number
   'audit_setting.off_hours': OffHoursAuditSetting
+  'audit_setting.image_studio': boolean
 }
 
 export type UpstreamChannel = {

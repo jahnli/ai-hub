@@ -49,17 +49,17 @@ import { useUpdateOption } from '../hooks/use-update-option'
 const createAuditSchema = (t: (key: string) => string) =>
   z
     .object({
-      audit_setting: z.object({
+      offHours: z.object({
         enabled: z.boolean(),
         start_hour: z.number().int().min(0).max(23),
         end_hour: z.number().int().min(0).max(23),
       }),
+      imageStudioEnabled: z.boolean(),
     })
     .refine(
-      (values) =>
-        values.audit_setting.end_hour >= values.audit_setting.start_hour,
+      (values) => values.offHours.end_hour >= values.offHours.start_hour,
       {
-        path: ['audit_setting', 'end_hour'],
+        path: ['offHours', 'end_hour'],
         message: t('End time cannot be earlier than start time'),
       }
     )
@@ -71,11 +71,15 @@ type OffHoursAuditSetting = {
 }
 
 type AuditFormValues = {
-  audit_setting: OffHoursAuditSetting
+  offHours: OffHoursAuditSetting
+  imageStudioEnabled: boolean
 }
 
 type AuditSectionProps = {
-  defaultValues: OffHoursAuditSetting
+  defaultValues: {
+    offHours: OffHoursAuditSetting
+    imageStudioEnabled: boolean
+  }
 }
 
 const parseAuditHour = (rawValue: string): number => {
@@ -87,7 +91,8 @@ const parseAuditHour = (rawValue: string): number => {
 const buildFormDefaults = (
   defaults: AuditSectionProps['defaultValues']
 ): AuditFormValues => ({
-  audit_setting: { ...defaults },
+  offHours: { ...defaults.offHours },
+  imageStudioEnabled: defaults.imageStudioEnabled,
 })
 
 export function AuditSection({ defaultValues }: AuditSectionProps) {
@@ -105,10 +110,16 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
   }, [defaultValues, form])
 
   const onSubmit = async (values: AuditFormValues) => {
-    await updateOption.mutateAsync({
-      key: 'audit_setting.off_hours',
-      value: JSON.stringify(values.audit_setting),
-    })
+    await Promise.all([
+      updateOption.mutateAsync({
+        key: 'audit_setting.off_hours',
+        value: JSON.stringify(values.offHours),
+      }),
+      updateOption.mutateAsync({
+        key: 'audit_setting.image_studio',
+        value: values.imageStudioEnabled,
+      }),
+    ])
   }
 
   return (
@@ -121,10 +132,10 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
             saveLabel='Save audit settings'
           />
           <h3 className='text-sm font-semibold'>{t('Off-hours audit')}</h3>
-          <div className='grid items-end gap-4 md:grid-cols-3'>
+          <div className='grid items-center gap-4 pl-4 md:grid-cols-3'>
             <FormField
               control={form.control}
-              name='audit_setting.enabled'
+              name='offHours.enabled'
               render={({ field }) => (
                 <SettingsSwitchItem className='h-8 py-0'>
                   <SettingsSwitchContent>
@@ -141,12 +152,12 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
             />
             <FormField
               control={form.control}
-              name='audit_setting.start_hour'
+              name='offHours.start_hour'
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Start time')}</FormLabel>
+                <FormItem className='flex min-w-0 items-center gap-3 space-y-0'>
+                  <FormLabel className='shrink-0'>{t('Start time')}</FormLabel>
                   <FormControl>
-                    <InputGroup>
+                    <InputGroup className='flex-1'>
                       <InputGroupInput
                         type='number'
                         min={0}
@@ -167,12 +178,12 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
             />
             <FormField
               control={form.control}
-              name='audit_setting.end_hour'
+              name='offHours.end_hour'
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('End time')}</FormLabel>
+                <FormItem className='flex min-w-0 items-center gap-3 space-y-0'>
+                  <FormLabel className='shrink-0'>{t('End time')}</FormLabel>
                   <FormControl>
-                    <InputGroup>
+                    <InputGroup className='flex-1'>
                       <InputGroupInput
                         type='number'
                         min={0}
@@ -189,6 +200,26 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
                   </FormControl>
                   <FormMessage />
                 </FormItem>
+              )}
+            />
+          </div>
+          <h3 className='text-sm font-semibold'>{t('Image audit')}</h3>
+          <div className='grid items-center gap-4 pl-4 md:grid-cols-3'>
+            <FormField
+              control={form.control}
+              name='imageStudioEnabled'
+              render={({ field }) => (
+                <SettingsSwitchItem className='h-8 py-0'>
+                  <SettingsSwitchContent>
+                    <FormLabel>{t('Enable')}</FormLabel>
+                  </SettingsSwitchContent>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </SettingsSwitchItem>
               )}
             />
           </div>

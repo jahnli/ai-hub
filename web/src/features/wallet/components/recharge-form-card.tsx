@@ -165,7 +165,6 @@ export function RechargeFormCard({
               </div>
             </div>
           </div>
-
         </CardContent>
       </Card>
     )
@@ -454,9 +453,7 @@ export function RechargeFormCard({
       ) : (
         <Alert>
           <AlertDescription>
-            {t(
-              'Online topup is not enabled. Please contact administrator.'
-            )}
+            {t('Online topup is not enabled. Please contact administrator.')}
           </AlertDescription>
         </Alert>
       )}
@@ -476,7 +473,6 @@ export function RechargeFormCard({
             />
           </div>
         )}
-
     </TitledCard>
   )
 }

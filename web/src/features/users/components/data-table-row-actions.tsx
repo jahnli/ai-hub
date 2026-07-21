@@ -264,7 +264,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <ShieldAlert size={16} />
           </DropdownMenuShortcut>
         </DropdownMenuItem>
-
       </DataTableRowActionMenu>
 
       <ConfirmDialog

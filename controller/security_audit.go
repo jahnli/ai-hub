@@ -48,6 +48,10 @@ func GetOffHoursUsage(c *gin.Context) {
 
 // GetImageStudioAudit 管理员分页查看在线生图记录,支持时间范围与用户名/显示名模糊筛选。
 func GetImageStudioAudit(c *gin.Context) {
+	if !system_setting.GetAuditSetting().ImageStudio {
+		common.ApiErrorMsg(c, "图片审计功能未启用")
+		return
+	}
 	pageInfo := common.GetPageQuery(c)
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)

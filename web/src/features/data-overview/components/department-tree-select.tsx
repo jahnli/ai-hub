@@ -1,13 +1,15 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ChevronRight, Building2, Check, Search, X } from 'lucide-react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
+
 import { Button } from '@/components/ui/button'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
+
 import type { DeptTreeNode } from '../types'
 
 interface DepartmentTreeSelectProps {
@@ -47,16 +49,13 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
     return path.map((n) => n.label).join(' / ')
   }, [props.value, props.treeData])
 
-  const handleHover = useCallback(
-    (node: DeptTreeNode, depth: number) => {
-      setActivePath((prev) => {
-        const next = prev.slice(0, depth)
-        next.push(node)
-        return next
-      })
-    },
-    []
-  )
+  const handleHover = useCallback((node: DeptTreeNode, depth: number) => {
+    setActivePath((prev) => {
+      const next = prev.slice(0, depth)
+      next.push(node)
+      return next
+    })
+  }, [])
 
   const handleSelect = useCallback(
     (node: DeptTreeNode) => {
@@ -210,9 +209,7 @@ function CascaderColumn(props: CascaderColumnProps) {
             onClick={() => props.onSelect(node)}
           >
             <span className='min-w-0 flex-1 truncate'>{node.label}</span>
-            {isSelected && (
-              <Check className='text-primary size-3.5 shrink-0' />
-            )}
+            {isSelected && <Check className='text-primary size-3.5 shrink-0' />}
             {hasChildren && !isSelected && (
               <ChevronRight className='text-muted-foreground size-3.5 shrink-0' />
             )}

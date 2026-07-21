@@ -18,7 +18,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 /* eslint-disable react-refresh/only-export-components */
 import type { ColumnDef, Row } from '@tanstack/react-table'
-import { CalendarDays, ChevronDown, ChevronRight, Eye, Globe } from 'lucide-react'
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  Globe,
+} from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -27,10 +33,10 @@ import { LongText } from '@/components/long-text'
 import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
-import type { UserColumnRow } from '@/features/users/types'
 import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
@@ -46,11 +52,7 @@ function renderModelBadges(models: string[]) {
     <BadgeListCell
       max={3}
       items={models.map((model) => (
-        <ModelBadge
-          key={model}
-          modelName={model}
-          className='font-normal'
-        />
+        <ModelBadge key={model} modelName={model} className='font-normal' />
       ))}
     />
   )
@@ -175,9 +177,7 @@ function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
             size='sm'
             className='size-6 p-0'
             onClick={props.row.getToggleExpandedHandler()}
-            aria-label={
-              props.row.getIsExpanded() ? t('Collapse') : t('Expand')
-            }
+            aria-label={props.row.getIsExpanded() ? t('Collapse') : t('Expand')}
             aria-expanded={props.row.getIsExpanded()}
           >
             {props.row.getIsExpanded() ? (

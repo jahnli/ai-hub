@@ -161,7 +161,7 @@ export function useSidebarData(): SidebarData {
             url: '/security-audit/off-hours',
             activeUrls: ['/security-audit'],
             icon: ShieldAlert,
-            requiredRole: ROLE.ADMIN,
+            requiredRole: ROLE.SUPER_ADMIN,
           },
           {
             title: t('Subscription Management'),

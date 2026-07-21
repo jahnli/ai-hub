@@ -272,12 +272,7 @@ export function GeneratePanel({
           </Button>
         )}
         {canReset && !isGenerating && (
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            onClick={onReset}
-          >
+          <Button type='button' variant='ghost' size='sm' onClick={onReset}>
             {t('Reset')}
           </Button>
         )}

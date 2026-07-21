@@ -1385,7 +1385,11 @@ type EstimatorProps = {
   exchangeRate: number
 }
 
-function CostEstimator({ effectiveExpr, currencySymbol, exchangeRate }: EstimatorProps) {
+function CostEstimator({
+  effectiveExpr,
+  currencySymbol,
+  exchangeRate,
+}: EstimatorProps) {
   const { t } = useTranslation()
   const [promptTokens, setPromptTokens] = useState(0)
   const [completionTokens, setCompletionTokens] = useState(0)
@@ -1482,7 +1486,8 @@ function CostEstimator({ effectiveExpr, currencySymbol, exchangeRate }: Estimato
         ) : (
           <div className='flex items-center gap-2'>
             <span className='font-medium'>
-              {t('Estimated quota cost')}: {currencySymbol}{(result.cost * exchangeRate).toLocaleString()}
+              {t('Estimated quota cost')}: {currencySymbol}
+              {(result.cost * exchangeRate).toLocaleString()}
             </span>
             {result.matchedTier && (
               <Badge variant='outline' className='text-xs'>
@@ -1905,7 +1910,11 @@ export const TieredPricingEditor = memo(function TieredPricingEditor({
         )}
       </div>
 
-      <CostEstimator effectiveExpr={effectiveExpr} currencySymbol={currencySymbol} exchangeRate={exchangeRate} />
+      <CostEstimator
+        effectiveExpr={effectiveExpr}
+        currencySymbol={currencySymbol}
+        exchangeRate={exchangeRate}
+      />
     </div>
   )
 })

@@ -74,11 +74,7 @@ export function ProfileDropdown() {
   return (
     <>
       <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-        <DropdownMenu
-          modal={false}
-          open={menuOpen}
-          onOpenChange={setMenuOpen}
-        >
+        <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger
             render={
               <Button

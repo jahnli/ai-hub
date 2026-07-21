@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type {
   PaginationState,
   OnChangeFn,
@@ -6,7 +6,6 @@ import type {
   ColumnDef,
   ColumnFiltersState,
 } from '@tanstack/react-table'
-import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   CheckCircle2,
@@ -15,7 +14,14 @@ import {
   UserRoundX,
   Users,
 } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import {
+  DataTablePage,
+  useDataTable,
+  type DataTablePinnedColumn,
+} from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,17 +32,13 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  DataTablePage,
-  useDataTable,
-  type DataTablePinnedColumn,
-} from '@/components/data-table'
 import { useSharedUserColumns } from '@/features/users/components/shared-user-columns'
+
 import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
+import type { DepartmentUser } from '../types'
 import { DepartmentLogsDialog } from './department-logs-dialog'
 import { UserConsumptionCharts } from './user-consumption-charts'
 import { UserStatsDialog } from './user-stats-dialog'
-import type { DepartmentUser } from '../types'
 
 interface DepartmentUsersTableProps {
   departmentId: string
@@ -305,7 +307,13 @@ export function DepartmentUsersTable({
   })
 
   const rankingsQuery = useQuery({
-    queryKey: ['department', 'user-rankings', departmentId, startTimestamp, endTimestamp],
+    queryKey: [
+      'department',
+      'user-rankings',
+      departmentId,
+      startTimestamp,
+      endTimestamp,
+    ],
     queryFn: () =>
       getDepartmentUserRankings({
         department_id: departmentId,
@@ -349,7 +357,7 @@ export function DepartmentUsersTable({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className='px-4 pb-4 pt-0'>
+      <CardContent className='px-4 pt-0 pb-4'>
         <DataTablePage
           table={table}
           columns={columns}

@@ -52,7 +52,9 @@ export function HowItWorks() {
             'Connect through OpenAI, Claude, Gemini, and other compatible API routes'
           )}
           <span className='mt-1.5 flex items-center justify-center gap-1.5'>
-            <span className='text-muted-foreground/50 text-xs'>{t('API Base URL')}:</span>
+            <span className='text-muted-foreground/50 text-xs'>
+              {t('API Base URL')}:
+            </span>
             <code className='text-primary/80 bg-primary/5 rounded px-1.5 py-0.5 text-xs font-medium'>
               https://ai.semi-tech.com
             </code>

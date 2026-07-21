@@ -70,7 +70,6 @@ function getServerAddress(): string {
   return window.location.origin
 }
 
-
 type DataTableRowActionsProps<TData> = {
   row: Row<TData>
 }

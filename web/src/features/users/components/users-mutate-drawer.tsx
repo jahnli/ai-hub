@@ -294,9 +294,7 @@ export function UsersMutateDrawer({
                               {t('Common User')}
                             </SelectItem>
                             <SelectItem value='2'>{t('AI BP')}</SelectItem>
-                            <SelectItem value='3'>
-                              {t('Center BP')}
-                            </SelectItem>
+                            <SelectItem value='3'>{t('Center BP')}</SelectItem>
                             <SelectItem value='10'>{t('Admin')}</SelectItem>
                           </SelectGroup>
                         </SelectContent>

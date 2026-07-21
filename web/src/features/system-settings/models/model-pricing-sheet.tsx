@@ -64,6 +64,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
+
 import {
   EMPTY_LANE_ENABLED,
   EMPTY_LANE_PRICES,
@@ -125,7 +126,15 @@ export const ModelPricingSheet = forwardRef<
   ModelPricingEditorPanelHandle,
   ModelPricingSheetProps
 >(function ModelPricingSheet(
-  { open, onOpenChange, editData, onSave, isSaving, inputInLocalCurrency, onInputInLocalCurrencyChange },
+  {
+    open,
+    onOpenChange,
+    editData,
+    onSave,
+    isSaving,
+    inputInLocalCurrency,
+    onInputInLocalCurrencyChange,
+  },
   ref
 ) {
   const { t } = useTranslation()
@@ -160,7 +169,14 @@ export const ModelPricingEditorPanel = forwardRef<
   ModelPricingEditorPanelHandle,
   ModelPricingEditorPanelProps
 >(function ModelPricingEditorPanel(
-  { editData, className, onSave, isSaving, inputInLocalCurrency, onInputInLocalCurrencyChange },
+  {
+    editData,
+    className,
+    onSave,
+    isSaving,
+    inputInLocalCurrency,
+    onInputInLocalCurrencyChange,
+  },
   ref
 ) {
   const { t } = useTranslation()
@@ -690,7 +706,9 @@ export const ModelPricingEditorPanel = forwardRef<
                               <FieldLabel>{t('Fixed price')}</FieldLabel>
                               <FormControl>
                                 <InputGroup>
-                                  <InputGroupAddon>{currencySymbol}</InputGroupAddon>
+                                  <InputGroupAddon>
+                                    {currencySymbol}
+                                  </InputGroupAddon>
                                   <InputGroupInput
                                     inputMode='decimal'
                                     placeholder='0.01'

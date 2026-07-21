@@ -17,13 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import {
   createRootRouteWithContext,
   Outlet,
   redirect,
   useNavigate,
 } from '@tanstack/react-router'
+import { useEffect } from 'react'
+
 import { NavigationProgress } from '@/components/navigation-progress'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeCustomizationProvider } from '@/context/theme-customization-provider'

@@ -244,13 +244,15 @@ export function ComboboxInput({
           ) : (
             <div className='px-2 py-6 text-center text-sm'>
               {t(emptyText)}
-              {showCustomValueHint && allowCustomValue && searchValue.trim() && (
-                <div className='text-muted-foreground mt-1 text-xs'>
-                  {t('Press Enter to use "{{value}}"', {
-                    value: searchValue.trim(),
-                  })}
-                </div>
-              )}
+              {showCustomValueHint &&
+                allowCustomValue &&
+                searchValue.trim() && (
+                  <div className='text-muted-foreground mt-1 text-xs'>
+                    {t('Press Enter to use "{{value}}"', {
+                      value: searchValue.trim(),
+                    })}
+                  </div>
+                )}
             </div>
           )}
         </div>

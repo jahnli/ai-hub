@@ -121,9 +121,10 @@ function parseOptionValueSafe<T>(
   return { success: true, value: value as T }
 }
 
-export function getOptionValue<
-  T extends Record<string, unknown>,
->(options: Array<{ key: string; value: string }> | undefined, defaults: T): T {
+export function getOptionValue<T extends Record<string, unknown>>(
+  options: Array<{ key: string; value: string }> | undefined,
+  defaults: T
+): T {
   if (!options) return defaults
 
   const result = { ...defaults }

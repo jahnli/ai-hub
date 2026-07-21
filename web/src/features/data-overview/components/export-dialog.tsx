@@ -1,7 +1,8 @@
-import { useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -13,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+
 import {
   getDepartmentStats,
   getDepartmentUsers,
@@ -20,6 +22,11 @@ import {
   getSubDepartmentStats,
   getUsageAnalysis,
 } from '../api'
+import {
+  exportDataOverview,
+  findNodeByValue,
+  type SubDepartmentDetail,
+} from '../lib/export-excel'
 import type {
   DepartmentStat,
   DepartmentUser,
@@ -27,11 +34,6 @@ import type {
   SubDepartmentStat,
   UserRankingItem,
 } from '../types'
-import {
-  exportDataOverview,
-  findNodeByValue,
-  type SubDepartmentDetail,
-} from '../lib/export-excel'
 
 interface ExportDialogProps {
   queryParams: {
@@ -121,7 +123,12 @@ export function ExportDialog(props: ExportDialogProps) {
             departmentName: sub.department_name,
             stats: statsRes.data,
             subStats: subStatsRes.data ?? [],
-            usage: usageRes.data ?? { model_stats: [], daily_stats: [], model_daily_stats: [], quota_to_cny: 0 },
+            usage: usageRes.data ?? {
+              model_stats: [],
+              daily_stats: [],
+              model_daily_stats: [],
+              quota_to_cny: 0,
+            },
           })
         }
       }
@@ -136,7 +143,11 @@ export function ExportDialog(props: ExportDialogProps) {
       userRankings = rankingsRes.data
 
       if (includeUserList) {
-        users = await fetchAllUsers(department_id, start_timestamp, end_timestamp)
+        users = await fetchAllUsers(
+          department_id,
+          start_timestamp,
+          end_timestamp
+        )
       }
 
       const usageRes = await getUsageAnalysis({
@@ -189,7 +200,7 @@ export function ExportDialog(props: ExportDialogProps) {
 
         <div className='space-y-3 py-2'>
           {hasSubDepts && (
-            <label className='flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50'>
+            <label className='hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors'>
               <Checkbox
                 checked={includeSubDepts}
                 onCheckedChange={(checked) =>
@@ -210,7 +221,7 @@ export function ExportDialog(props: ExportDialogProps) {
             </label>
           )}
 
-          <label className='flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50'>
+          <label className='hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors'>
             <Checkbox
               checked={includeUserList}
               onCheckedChange={(checked) =>

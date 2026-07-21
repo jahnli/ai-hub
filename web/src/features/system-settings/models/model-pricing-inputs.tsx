@@ -48,9 +48,7 @@ export function PriceInput(props: {
         disabled={props.disabled}
         onChange={(event) => props.onChange(event.target.value)}
       />
-      <InputGroupAddon align='inline-end'>
-        {symbol}/1M
-      </InputGroupAddon>
+      <InputGroupAddon align='inline-end'>{symbol}/1M</InputGroupAddon>
     </InputGroup>
   )
 }

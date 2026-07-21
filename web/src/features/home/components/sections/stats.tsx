@@ -16,9 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Layers, DollarSign, Code, Gauge } from 'lucide-react'
 import { useRef, useEffect, useCallback, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layers, DollarSign, Code, Gauge } from 'lucide-react'
+
 import { HeroTerminalDemo } from '../hero-terminal-demo'
 
 interface CounterProps {
@@ -113,7 +114,9 @@ export function Stats(_props: StatsProps) {
       end: 100,
       suffix: '+',
       label: t('model billing support'),
-      icon: <DollarSign className='size-4 text-emerald-400' strokeWidth={1.5} />,
+      icon: (
+        <DollarSign className='size-4 text-emerald-400' strokeWidth={1.5} />
+      ),
       iconBg: 'bg-emerald-500/10',
     },
     {
@@ -150,9 +153,7 @@ export function Stats(_props: StatsProps) {
               <span className='stat-shimmer text-3xl font-bold tracking-tight md:text-4xl'>
                 <Counter end={s.end} suffix={s.suffix} decimals={s.decimals} />
               </span>
-              <span className='text-muted-foreground text-xs'>
-                {s.label}
-              </span>
+              <span className='text-muted-foreground text-xs'>{s.label}</span>
             </div>
           ))}
         </div>

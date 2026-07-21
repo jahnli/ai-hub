@@ -16,24 +16,23 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Crown, Clock, CalendarDays, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatQuota } from '@/lib/format'
-import { cn } from '@/lib/utils'
-import { Progress } from '@/components/ui/progress'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+
 import {
   StatusBadge,
   dotColorMap,
   textColorMap,
 } from '@/components/status-badge'
+import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TitledCard } from '@/components/ui/titled-card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   getPublicPlans,
   getSelfSubscriptionFull,
@@ -42,6 +41,8 @@ import type {
   PlanRecord,
   UserSubscriptionRecord,
 } from '@/features/subscriptions/types'
+import { formatQuota } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 export function SubscriptionCard() {
   const { t } = useTranslation()
@@ -199,11 +200,23 @@ function SubscriptionItem({
             {planTitle || `${t('Subscription')} #${subscription?.id}`}
           </span>
           {isActive ? (
-            <StatusBadge label={t('Active')} variant='success' copyable={false} />
+            <StatusBadge
+              label={t('Active')}
+              variant='success'
+              copyable={false}
+            />
           ) : isCancelled ? (
-            <StatusBadge label={t('Cancelled')} variant='neutral' copyable={false} />
+            <StatusBadge
+              label={t('Cancelled')}
+              variant='neutral'
+              copyable={false}
+            />
           ) : (
-            <StatusBadge label={t('Expired')} variant='neutral' copyable={false} />
+            <StatusBadge
+              label={t('Expired')}
+              variant='neutral'
+              copyable={false}
+            />
           )}
         </div>
 
@@ -232,7 +245,9 @@ function SubscriptionItem({
               <RefreshCw className='size-3 shrink-0' />
               <span>
                 {t('Next reset')}:{' '}
-                {new Date(subscription!.next_reset_time! * 1000).toLocaleDateString()}
+                {new Date(
+                  subscription!.next_reset_time! * 1000
+                ).toLocaleDateString()}
               </span>
             </div>
           )}
@@ -243,7 +258,9 @@ function SubscriptionItem({
         <div className='mt-3 border-t pt-3'>
           <div className='flex items-center justify-between text-xs'>
             <Tooltip>
-              <TooltipTrigger render={<span className='text-muted-foreground cursor-help' />}>
+              <TooltipTrigger
+                render={<span className='text-muted-foreground cursor-help' />}
+              >
                 {formatQuota(usedAmount)} / {formatQuota(totalAmount)}
               </TooltipTrigger>
               <TooltipContent>

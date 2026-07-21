@@ -6,7 +6,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -14,9 +13,7 @@ interface ActivityFormulaTooltipProps {
   formula?: [number, number, number]
 }
 
-const DEFAULT_ACTIVITY_FORMULA: [number, number, number] = [
-  10, 1_000_000, 0.85,
-]
+const DEFAULT_ACTIVITY_FORMULA: [number, number, number] = [10, 1_000_000, 0.85]
 
 export function ActivityFormulaTooltip(props: ActivityFormulaTooltipProps) {
   const { t } = useTranslation()

@@ -79,11 +79,9 @@ export async function storeImageStudioGeneration(
   payload: StoreImageStudioGenerationPayload,
   signal?: AbortSignal
 ): Promise<ImageStudioGenerationRecord> {
-  const res = await api.post(
-    API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS,
-    payload,
-    { signal }
-  )
+  const res = await api.post(API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS, payload, {
+    signal,
+  })
   return unwrapApiData(
     res.data as ApiEnvelope<ImageStudioGenerationRecord>,
     'failed to store generated images'

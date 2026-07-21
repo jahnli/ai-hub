@@ -112,8 +112,7 @@ export function UserAuthForm({
   const hasLDAPLogin = Boolean(status?.ldap_enabled)
   const ldapLoginLabel = status?.ldap_login_label || ''
   const hasOAuthLogin = Boolean(
-    status?.oidc_enabled ||
-      (status?.custom_oauth_providers?.length ?? 0) > 0
+    status?.oidc_enabled || (status?.custom_oauth_providers?.length ?? 0) > 0
   )
   const hasAlternativeLogin =
     passkeyLoginEnabled || hasWeChatLogin || hasOAuthLogin

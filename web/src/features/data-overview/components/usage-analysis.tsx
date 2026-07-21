@@ -1,4 +1,3 @@
-import { useMemo, type ElementType, type ReactNode } from 'react'
 import { VChart } from '@visactor/react-vchart'
 import {
   ChartLine,
@@ -8,11 +7,19 @@ import {
   PieChart,
   TrendingUp,
 } from 'lucide-react'
+import { useMemo, type ElementType, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
-import type { DailyStat, ModelDailyStat, ModelStat, UsageAnalysis } from '../types'
+
+import type {
+  DailyStat,
+  ModelDailyStat,
+  ModelStat,
+  UsageAnalysis,
+} from '../types'
 
 interface UsageAnalysisProps {
   data: UsageAnalysis
@@ -30,7 +37,7 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
     return null
   }
 
-  const quotaToCnyRate = props.data.quota_to_cny || (1 / 500000)
+  const quotaToCnyRate = props.data.quota_to_cny || 1 / 500000
   const chartProps = { themeReady, resolvedTheme, quotaToCnyRate }
 
   return (
@@ -505,7 +512,10 @@ function ModelCallDistributionChart(
       label: {
         visible: true,
         position: 'outside',
-        formatMethod: (_: unknown, datum: { name?: string; value?: number }) => {
+        formatMethod: (
+          _: unknown,
+          datum: { name?: string; value?: number }
+        ) => {
           const name = datum.name ?? ''
           const pct =
             totalRequests > 0
@@ -529,8 +539,7 @@ function ModelCallDistributionChart(
             },
             {
               key: () => t('Total Cost'),
-              value: (datum: { cost?: number }) =>
-                formatCost(datum.cost ?? 0),
+              value: (datum: { cost?: number }) => formatCost(datum.cost ?? 0),
             },
           ],
         },
@@ -628,7 +637,8 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
+              value: (d: { tokens?: number }) =>
+                formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
@@ -650,7 +660,8 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
             },
             {
               key: () => 'Token',
-              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
+              value: (d: { tokens?: number }) =>
+                formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
@@ -791,4 +802,3 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     />
   )
 }
-

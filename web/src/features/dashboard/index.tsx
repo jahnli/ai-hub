@@ -32,7 +32,6 @@ import { SectionPageLayout } from '@/components/layout'
 import { FadeIn } from '@/components/page-transition'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -41,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
@@ -64,10 +64,7 @@ import {
   DASHBOARD_DEFAULT_SECTION,
   DASHBOARD_SECTION_IDS,
 } from './section-registry'
-import type {
-  DashboardFilters,
-  QuotaDataItem,
-} from './types'
+import type { DashboardFilters, QuotaDataItem } from './types'
 
 const route = getRouteApi('/_authenticated/dashboard/$section')
 
@@ -104,11 +101,7 @@ const LOG_STAT_CARD_FALLBACK_ITEMS = [
   'average-tpm',
 ]
 
-const PERFORMANCE_FALLBACK_METRICS = [
-  'status',
-  'latency',
-  'success-rate',
-]
+const PERFORMANCE_FALLBACK_METRICS = ['status', 'latency', 'success-rate']
 
 const PERFORMANCE_FALLBACK_BADGES = ['bucket-count', 'sample-count']
 

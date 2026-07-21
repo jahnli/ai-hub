@@ -71,6 +71,7 @@ export interface SecurityAuditSetting {
     start_hour: number
     end_hour: number
   }
+  image_studio: boolean
 }
 
 export interface GetSecurityAuditSettingResponse {

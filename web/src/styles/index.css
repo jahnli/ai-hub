@@ -705,8 +705,9 @@ For commercial licensing, please contact support@quantumnous.com
   background-clip: text;
   color: transparent;
   -webkit-background-clip: text;
-  filter:
-    drop-shadow(0 0 10px color-mix(in oklch, var(--primary) 22%, transparent))
+  filter: drop-shadow(
+      0 0 10px color-mix(in oklch, var(--primary) 22%, transparent)
+    )
     drop-shadow(0 0 24px color-mix(in oklch, var(--primary) 14%, transparent));
 }
 
@@ -740,8 +741,9 @@ For commercial licensing, please contact support@quantumnous.com
   background-clip: text;
   color: transparent;
   -webkit-background-clip: text;
-  filter:
-    drop-shadow(0 0 12px color-mix(in oklch, var(--primary) 36%, transparent))
+  filter: drop-shadow(
+      0 0 12px color-mix(in oklch, var(--primary) 36%, transparent)
+    )
     drop-shadow(0 0 30px color-mix(in oklch, var(--primary) 22%, transparent));
 }
 
@@ -762,7 +764,6 @@ For commercial licensing, please contact support@quantumnous.com
     display: none;
   }
 }
-
 
 /* Stat number shimmer — white light sweeps left to right */
 @keyframes stat-shimmer {

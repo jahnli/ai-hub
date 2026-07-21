@@ -29,72 +29,72 @@ import type { RankingPeriod, VendorRanking, VendorShareSeries } from '../types'
 import { VendorLink } from './entity-links'
 
 const PERIOD_DESCRIPTIONS: Record<RankingPeriod, string> = {
-  today: "Token share by model author across the last 24 hours",
-  week: "Token share by model author across the past few weeks",
-  month: "Token share by model author across the past month",
-  year: "Token share by model author across the past year",
-};
+  today: 'Token share by model author across the last 24 hours',
+  week: 'Token share by model author across the past few weeks',
+  month: 'Token share by model author across the past month',
+  year: 'Token share by model author across the past year',
+}
 
 /** Stable colour palette for vendors, used in both the share chart and the
  * legend dots. Falls back to a neutral palette for unknown vendors so that
  * future additions still render. */
 const VENDOR_COLOURS: Record<string, string> = {
-  OpenAI: "#10a37f",
-  Anthropic: "#d97757",
-  Google: "#4285f4",
-  DeepSeek: "#7c5cff",
-  Alibaba: "#ff9900",
-  xAI: "#1f2937",
-  Meta: "#1877f2",
-  Moonshot: "#ec4899",
-  Zhipu: "#06b6d4",
-  Mistral: "#ff7000",
-  ByteDance: "#3b82f6",
-  Tencent: "#22c55e",
-  MiniMax: "#a855f7",
-  Cohere: "#fb923c",
-  Baidu: "#ef4444",
-  Others: "#94a3b8",
-};
-
-const FALLBACK_PALETTE = [
-  "#0ea5e9",
-  "#22c55e",
-  "#a855f7",
-  "#f97316",
-  "#14b8a6",
-  "#eab308",
-  "#ec4899",
-  "#84cc16",
-  "#6366f1",
-  "#10b981",
-  "#f43f5e",
-  "#0891b2",
-  "#94a3b8",
-];
-
-function buildVendorColourMap(names: string[]): Record<string, string> {
-  const result: Record<string, string> = {};
-  let fallbackIdx = 0;
-  for (const name of names) {
-    if (VENDOR_COLOURS[name]) {
-      result[name] = VENDOR_COLOURS[name];
-    } else {
-      result[name] = FALLBACK_PALETTE[fallbackIdx % FALLBACK_PALETTE.length];
-      fallbackIdx += 1;
-    }
-  }
-  return result;
+  OpenAI: '#10a37f',
+  Anthropic: '#d97757',
+  Google: '#4285f4',
+  DeepSeek: '#7c5cff',
+  Alibaba: '#ff9900',
+  xAI: '#1f2937',
+  Meta: '#1877f2',
+  Moonshot: '#ec4899',
+  Zhipu: '#06b6d4',
+  Mistral: '#ff7000',
+  ByteDance: '#3b82f6',
+  Tencent: '#22c55e',
+  MiniMax: '#a855f7',
+  Cohere: '#fb923c',
+  Baidu: '#ef4444',
+  Others: '#94a3b8',
 }
 
-const MAX_VENDORS_IN_LIST = 12;
+const FALLBACK_PALETTE = [
+  '#0ea5e9',
+  '#22c55e',
+  '#a855f7',
+  '#f97316',
+  '#14b8a6',
+  '#eab308',
+  '#ec4899',
+  '#84cc16',
+  '#6366f1',
+  '#10b981',
+  '#f43f5e',
+  '#0891b2',
+  '#94a3b8',
+]
+
+function buildVendorColourMap(names: string[]): Record<string, string> {
+  const result: Record<string, string> = {}
+  let fallbackIdx = 0
+  for (const name of names) {
+    if (VENDOR_COLOURS[name]) {
+      result[name] = VENDOR_COLOURS[name]
+    } else {
+      result[name] = FALLBACK_PALETTE[fallbackIdx % FALLBACK_PALETTE.length]
+      fallbackIdx += 1
+    }
+  }
+  return result
+}
+
+const MAX_VENDORS_IN_LIST = 12
 
 type MarketShareSectionProps = {
-  history: VendorShareSeries;
-  rows: VendorRanking[];
-  period: RankingPeriod;
-  canViewTokenNumbers: boolean;
-};
+  history: VendorShareSeries
+  rows: VendorRanking[]
+  period: RankingPeriod
+  canViewTokenNumbers: boolean
+}
 
 /**
  * Combined "Market Share" card: a 100%-stacked bar chart showing each
@@ -102,48 +102,48 @@ type MarketShareSectionProps = {
  * vendor list.
  */
 export function MarketShareSection(props: MarketShareSectionProps) {
-  const { t } = useTranslation();
-  const { resolvedTheme, themeReady } = useChartTheme();
+  const { t } = useTranslation()
+  const { resolvedTheme, themeReady } = useChartTheme()
   const chartTextColor =
-    resolvedTheme === "dark"
-      ? "rgba(255, 255, 255, 0.68)"
-      : "rgba(15, 23, 42, 0.58)";
+    resolvedTheme === 'dark'
+      ? 'rgba(255, 255, 255, 0.68)'
+      : 'rgba(15, 23, 42, 0.58)'
   const chartGridColor =
-    resolvedTheme === "dark"
-      ? "rgba(255, 255, 255, 0.12)"
-      : "rgba(15, 23, 42, 0.12)";
+    resolvedTheme === 'dark'
+      ? 'rgba(255, 255, 255, 0.12)'
+      : 'rgba(15, 23, 42, 0.12)'
 
   const colourMap = useMemo(
     () => buildVendorColourMap(props.history.vendors.map((v) => v.name)),
-    [props.history],
-  );
+    [props.history]
+  )
 
   const orderedPoints = useMemo(() => {
     const order = new Map(
-      props.history.vendors.map((v, idx) => [v.name, idx] as const),
-    );
+      props.history.vendors.map((v, idx) => [v.name, idx] as const)
+    )
     return [...props.history.points].sort((a, b) => {
-      const tsCmp = a.ts.localeCompare(b.ts);
-      if (tsCmp !== 0) return tsCmp;
-      return (order.get(a.vendor) ?? 999) - (order.get(b.vendor) ?? 999);
-    });
-  }, [props.history]);
+      const tsCmp = a.ts.localeCompare(b.ts)
+      if (tsCmp !== 0) return tsCmp
+      return (order.get(a.vendor) ?? 999) - (order.get(b.vendor) ?? 999)
+    })
+  }, [props.history])
 
   const spec = useMemo(() => {
-    if (orderedPoints.length === 0) return null;
+    if (orderedPoints.length === 0) return null
     return {
-      type: "bar" as const,
-      data: [{ id: "vendor-share", values: orderedPoints }],
-      xField: "label",
-      yField: "share",
-      seriesField: "vendor",
+      type: 'bar' as const,
+      data: [{ id: 'vendor-share', values: orderedPoints }],
+      xField: 'label',
+      yField: 'share',
+      seriesField: 'vendor',
       stack: true,
       paddingInner: 0.12,
       legends: { visible: false },
       color: { specified: colourMap },
       axes: [
         {
-          orient: "bottom",
+          orient: 'bottom',
           label: {
             style: { fill: chartTextColor, fontSize: 10 },
             autoHide: true,
@@ -152,7 +152,7 @@ export function MarketShareSection(props: MarketShareSectionProps) {
           tick: { visible: false },
         },
         {
-          orient: "left",
+          orient: 'left',
           min: 0,
           max: 1,
           label: {
@@ -171,7 +171,7 @@ export function MarketShareSection(props: MarketShareSectionProps) {
           content: [
             {
               key: (datum: Record<string, unknown>) =>
-                String(datum?.vendor ?? ""),
+                String(datum?.vendor ?? ''),
               value: (datum: Record<string, unknown>) =>
                 props.canViewTokenNumbers
                   ? `${(Number(datum?.share) * 100).toFixed(1)}% · ${formatTokens(Number(datum?.tokens) || 0)}`
@@ -182,18 +182,18 @@ export function MarketShareSection(props: MarketShareSectionProps) {
         dimension: {
           title: {
             value: (datum: Record<string, unknown>) =>
-              String(datum?.label ?? ""),
+              String(datum?.label ?? ''),
           },
           content: [
             {
               key: (datum: Record<string, unknown>) =>
-                String(datum?.vendor ?? ""),
+                String(datum?.vendor ?? ''),
               value: (datum: Record<string, unknown>) =>
                 Number(datum?.share) || 0,
             },
           ],
           updateContent: (
-            array: Array<{ key: string; value: string | number }>,
+            array: Array<{ key: string; value: string | number }>
           ) => {
             return array
               .filter((item) => Number(item.value) > 0.001)
@@ -201,74 +201,74 @@ export function MarketShareSection(props: MarketShareSectionProps) {
               .map((item) => ({
                 key: item.key,
                 value: `${(Number(item.value) * 100).toFixed(1)}%`,
-              }));
+              }))
           },
         },
       },
       animationAppear: { duration: 800 },
-    };
+    }
   }, [
     chartGridColor,
     chartTextColor,
     colourMap,
     orderedPoints,
     props.canViewTokenNumbers,
-  ]);
+  ])
 
-  const visible = props.rows.slice(0, MAX_VENDORS_IN_LIST);
-  const half = Math.ceil(visible.length / 2);
-  const left = visible.slice(0, half);
-  const right = visible.slice(half);
+  const visible = props.rows.slice(0, MAX_VENDORS_IN_LIST)
+  const half = Math.ceil(visible.length / 2)
+  const left = visible.slice(0, half)
+  const right = visible.slice(half)
 
   return (
-    <section className="bg-card overflow-hidden rounded-lg border">
+    <section className='bg-card overflow-hidden rounded-lg border'>
       {/* Chart block ----------------------------------------------------- */}
-      <header className="px-5 py-4">
-        <h2 className="text-foreground inline-flex items-center gap-2 text-base font-semibold">
-          <PieChart className="text-primary size-4" />
-          {t("Market Share")}
+      <header className='px-5 py-4'>
+        <h2 className='text-foreground inline-flex items-center gap-2 text-base font-semibold'>
+          <PieChart className='text-primary size-4' />
+          {t('Market Share')}
         </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className='text-muted-foreground mt-1 text-sm'>
           {t(PERIOD_DESCRIPTIONS[props.period])}
         </p>
       </header>
 
-      <div className="px-5 pb-5">
-        <div className="h-60 sm:h-72">
+      <div className='px-5 pb-5'>
+        <div className='h-60 sm:h-72'>
           {themeReady && spec ? (
             <VChart
               key={`vendor-share-${resolvedTheme}-${props.period}`}
               spec={{
                 ...spec,
-                theme: resolvedTheme === "dark" ? "dark" : "light",
-                background: "transparent",
+                theme: resolvedTheme === 'dark' ? 'dark' : 'light',
+                background: 'transparent',
               }}
               option={VCHART_OPTION}
             />
           ) : (
-            <div className="text-muted-foreground/80 flex h-full items-center justify-center text-xs">
-              {t("No history data available")}
+            <div className='text-muted-foreground/80 flex h-full items-center justify-center text-xs'>
+              {t('No history data available')}
             </div>
           )}
         </div>
       </div>
 
       {/* Vendor list block ----------------------------------------------- */}
-      <div className="border-t">
-        <header className="px-5 pt-4 pb-2">
-          <h3 className="text-foreground text-sm font-semibold">
-            {t("By model author")}
+      <div className='border-t'>
+        <header className='px-5 pt-4 pb-2'>
+          <h3 className='text-foreground text-sm font-semibold'>
+            {t('By model author')}
           </h3>
-          <p className="text-muted-foreground/80 mt-0.5 text-xs">
-            {t("Vendors ranked by aggregated token volume")}
+          <p className='text-muted-foreground/80 mt-0.5 text-xs'>
+            {t('Vendors ranked by aggregated token volume')}
           </p>
         </header>
         {visible.length === 0 ? (
-          <div className="text-muted-foreground/80 px-5 py-8 text-center text-sm">
-            {t("No vendor data available")}
+          <div className='text-muted-foreground/80 px-5 py-8 text-center text-sm'>
+            {t('No vendor data available')}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-8 px-5 pt-1 pb-4 md:grid-cols-2">
+          <div className='grid grid-cols-1 gap-x-8 px-5 pt-1 pb-4 md:grid-cols-2'>
             <VendorList
               rows={left}
               colourMap={colourMap}
@@ -285,40 +285,40 @@ export function MarketShareSection(props: MarketShareSectionProps) {
         )}
       </div>
     </section>
-  );
+  )
 }
 
 function VendorList(props: {
-  rows: VendorRanking[];
-  colourMap: Record<string, string>;
-  canViewTokenNumbers: boolean;
+  rows: VendorRanking[]
+  colourMap: Record<string, string>
+  canViewTokenNumbers: boolean
 }) {
   return (
     <ul>
       {props.rows.map((vendor) => (
-        <li key={vendor.vendor} className="flex items-center gap-3 py-2.5">
-          <span className="text-muted-foreground/80 w-6 shrink-0 text-right font-mono text-xs tabular-nums">
+        <li key={vendor.vendor} className='flex items-center gap-3 py-2.5'>
+          <span className='text-muted-foreground/80 w-6 shrink-0 text-right font-mono text-xs tabular-nums'>
             {vendor.rank}.
           </span>
           <span
             aria-hidden
-            className="size-2.5 shrink-0 rounded-full"
+            className='size-2.5 shrink-0 rounded-full'
             style={{
-              backgroundColor: props.colourMap[vendor.vendor] ?? "#94a3b8",
+              backgroundColor: props.colourMap[vendor.vendor] ?? '#94a3b8',
             }}
           />
           <VendorLink
             vendor={vendor.vendor}
-            className="text-foreground min-w-0 flex-1 truncate text-sm font-medium"
+            className='text-foreground min-w-0 flex-1 truncate text-sm font-medium'
           >
             {vendor.vendor}
           </VendorLink>
           {props.canViewTokenNumbers && (
-            <div className="shrink-0 text-right">
-              <div className="text-foreground font-mono text-sm font-semibold tabular-nums">
+            <div className='shrink-0 text-right'>
+              <div className='text-foreground font-mono text-sm font-semibold tabular-nums'>
                 {formatTokens(vendor.total_tokens)}
               </div>
-              <div className="text-muted-foreground/80 font-mono text-[11px] tabular-nums">
+              <div className='text-muted-foreground/80 font-mono text-[11px] tabular-nums'>
                 {formatShare(vendor.share)}
               </div>
             </div>
@@ -326,5 +326,5 @@ function VendorList(props: {
         </li>
       ))}
     </ul>
-  );
+  )
 }

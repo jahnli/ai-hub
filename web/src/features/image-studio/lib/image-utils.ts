@@ -53,7 +53,9 @@ function extensionForMime(mime: string): string {
   return 'png'
 }
 
-function extensionForOutputFormat(outputFormat: string | undefined): string | null {
+function extensionForOutputFormat(
+  outputFormat: string | undefined
+): string | null {
   if (outputFormat === 'webp') return 'webp'
   if (outputFormat === 'jpeg' || outputFormat === 'jpg') return 'jpg'
   if (outputFormat === 'png') return 'png'
@@ -67,7 +69,9 @@ export function imageFileName(
 ): string {
   const ext =
     extensionForOutputFormat(outputFormat) ??
-    (src.startsWith('data:') ? extensionForMime(guessMimeFromDataUrl(src)) : 'png')
+    (src.startsWith('data:')
+      ? extensionForMime(guessMimeFromDataUrl(src))
+      : 'png')
   return `image-${index + 1}.${ext}`
 }
 
@@ -132,9 +136,7 @@ export async function copyImageToClipboard(src: string): Promise<void> {
   const blob = await srcToBlob(src)
   // PNG is the only broadly supported clipboard image type
   const pngBlob = blob.type === 'image/png' ? blob : await convertToPng(blob)
-  await navigator.clipboard.write([
-    new ClipboardItem({ 'image/png': pngBlob }),
-  ])
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })])
 }
 
 async function convertToPng(blob: Blob): Promise<Blob> {

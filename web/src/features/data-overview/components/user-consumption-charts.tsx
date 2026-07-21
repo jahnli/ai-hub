@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
 import { VChart } from '@visactor/react-vchart'
 import { BarChart3, PieChart } from 'lucide-react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
+
 import type { UserRankingItem } from '../types'
 
 interface UserConsumptionChartsProps {
@@ -97,7 +99,8 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             },
             {
               key: () => t('Tokens Used'),
-              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
+              value: (d: { tokens?: number }) =>
+                formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Unit Price'),
@@ -170,7 +173,8 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             },
             {
               key: () => t('Tokens Used'),
-              value: (d: { tokens?: number }) => formatTokensDetail(d.tokens ?? 0),
+              value: (d: { tokens?: number }) =>
+                formatTokensDetail(d.tokens ?? 0),
             },
             {
               key: () => t('Percentage'),
@@ -237,7 +241,10 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             {t('Total')}: {formatCost(totalCost)}
           </span>
         </div>
-        <div className='p-2' style={{ height: Math.max(300, sortedData.length * 34) }}>
+        <div
+          className='p-2'
+          style={{ height: Math.max(300, sortedData.length * 34) }}
+        >
           {themeReady && (
             <VChart
               key={`user-pie-${resolvedTheme}`}

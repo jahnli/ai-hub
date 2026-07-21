@@ -37,6 +37,7 @@ import { useDialogs } from '@/hooks/use-dialog'
 import { useStatus } from '@/hooks/use-status'
 import { api } from '@/lib/api'
 import { buildOIDCOAuthUrl } from '@/lib/oauth'
+
 import {
   getSelfOAuthBindings,
   unbindCustomOAuth,
@@ -476,7 +477,6 @@ export function AccountBindingsTab({
         }
         onSuccess={onUpdate}
       />
-
     </>
   )
 }

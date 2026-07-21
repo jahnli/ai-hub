@@ -93,9 +93,7 @@ export function HistoryPanel({
             disabled={disabled}
             aria-label={t('Show favorites only')}
           >
-            <Star
-              className={cn('size-3.5', favoritesOnly && 'fill-current')}
-            />
+            <Star className={cn('size-3.5', favoritesOnly && 'fill-current')} />
           </Button>
           {history.length > 0 && (
             <AlertDialog>

@@ -16,6 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-export { useImageStudioState, isLikelyImageModel } from './use-image-studio-state'
+export {
+  useImageStudioState,
+  isLikelyImageModel,
+} from './use-image-studio-state'
 export { useGenerationHistory } from './use-generation-history'
 export { useImageGeneration } from './use-image-studio'

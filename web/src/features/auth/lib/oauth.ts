@@ -52,8 +52,5 @@ export function getAvailableOAuthProviders(
  */
 export function hasOAuthProviders(status: SystemStatus | null): boolean {
   if (!status) return false
-  return !!(
-    status.oidc_enabled ||
-    status.wechat_login
-  )
+  return !!(status.oidc_enabled || status.wechat_login)
 }

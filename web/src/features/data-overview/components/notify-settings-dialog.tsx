@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
 import { Bell, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useAuthStore } from '@/stores/auth-store'
+
 import { getReportNotifySetting, updateReportNotifySetting } from '../api'
 
 const FREQUENCY_OPTIONS = [
@@ -37,9 +39,7 @@ const getFrequencyLabel = (value: string): string =>
 export function NotifySettingsDialog() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const isDeptLeader = useAuthStore(
-    (s) => s.auth.user?.is_dept_leader === true
-  )
+  const isDeptLeader = useAuthStore((s) => s.auth.user?.is_dept_leader === true)
 
   const [open, setOpen] = useState(false)
   const [reportEnabled, setReportEnabled] = useState(false)
@@ -82,9 +82,7 @@ export function NotifySettingsDialog() {
   const handleSave = () => {
     const freqVal = reportEnabled ? Number(frequency) : 0
     const quotaVal = quotaEnabled ? Number(quotaValue) || 0 : 0
-    const quotaLeaveVal = quotaLeaveEnabled
-      ? Number(quotaLeaveValue) || 0
-      : 0
+    const quotaLeaveVal = quotaLeaveEnabled ? Number(quotaLeaveValue) || 0 : 0
 
     if (quotaEnabled && quotaVal <= 0) {
       toast.error(t('Quota threshold must be greater than 0'))
@@ -128,13 +126,9 @@ export function NotifySettingsDialog() {
           <div className='space-y-5'>
             <div className='flex items-center justify-between gap-4'>
               <div className='min-w-0 space-y-0.5'>
-                <div className='text-sm font-medium'>
-                  {t('Data Report')}
-                </div>
+                <div className='text-sm font-medium'>{t('Data Report')}</div>
                 <div className='text-muted-foreground text-xs'>
-                  {t(
-                    'Push data overview report at the selected frequency'
-                  )}
+                  {t('Push data overview report at the selected frequency')}
                 </div>
               </div>
               <div className='flex shrink-0 items-center gap-3'>

@@ -27,7 +27,9 @@ export function sleep(ms: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export function buildFeishuUserChatUrl(openId: string | undefined): string | undefined {
+export function buildFeishuUserChatUrl(
+  openId: string | undefined
+): string | undefined {
   const normalizedOpenId = openId?.trim()
   if (!normalizedOpenId) return undefined
 

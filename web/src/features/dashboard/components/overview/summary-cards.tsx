@@ -32,6 +32,7 @@ import {
 import type { SubscriptionPlan } from '@/features/subscriptions/types'
 import { useStatus } from '@/hooks/use-status'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
+import dayjs from '@/lib/dayjs'
 import {
   formatDashboardQuota,
   formatQuota,
@@ -39,8 +40,8 @@ import {
 } from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
-import dayjs from '@/lib/dayjs'
 import { useAuthStore } from '@/stores/auth-store'
+
 import { StatCard } from '../ui/stat-card'
 
 const SUMMARY_SPARKLINE_BUCKETS = 12
@@ -350,7 +351,8 @@ export function SummaryCards() {
                     {formatQuota(subAmountUsed)}
                   </span>
                   <span className='text-muted-foreground text-2xl font-semibold tracking-tight'>
-                    / {isUnlimited ? t('Unlimited') : formatQuota(subAmountTotal)}
+                    /{' '}
+                    {isUnlimited ? t('Unlimited') : formatQuota(subAmountTotal)}
                   </span>
                 </div>
                 {!isUnlimited && (
@@ -368,7 +370,10 @@ export function SummaryCards() {
 
               {nextResetTime > 0 && (
                 <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
-                  <CalendarClock className='size-3.5 shrink-0' aria-hidden='true' />
+                  <CalendarClock
+                    className='size-3.5 shrink-0'
+                    aria-hidden='true'
+                  />
                   <span>
                     {t('Next reset')}:{' '}
                     {dayjs(nextResetTime * 1000).format('YYYY/M/D HH:mm:ss')}

@@ -136,7 +136,9 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
                 'text-[11px] font-semibold',
                 !sensitiveVisible && 'bg-muted text-muted-foreground'
               )}
-              style={sensitiveVisible ? getUserAvatarStyle(displayName) : undefined}
+              style={
+                sensitiveVisible ? getUserAvatarStyle(displayName) : undefined
+              }
             >
               {sensitiveVisible ? getUserAvatarFallback(displayName) : '•'}
             </AvatarFallback>

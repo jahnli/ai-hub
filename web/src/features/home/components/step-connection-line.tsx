@@ -83,9 +83,21 @@ export function StepConnectionLine(props: StepConnectionLineProps) {
     >
       <defs>
         <linearGradient id={lineGradId} x1='0%' y1='0%' x2='100%' y2='0%'>
-          <stop offset='0%' stopColor='var(--step-line-light)' stopOpacity='0.6' />
-          <stop offset='50%' stopColor='var(--step-line-mid)' stopOpacity='0.9' />
-          <stop offset='100%' stopColor='var(--step-line-deep)' stopOpacity='0.6' />
+          <stop
+            offset='0%'
+            stopColor='var(--step-line-light)'
+            stopOpacity='0.6'
+          />
+          <stop
+            offset='50%'
+            stopColor='var(--step-line-mid)'
+            stopOpacity='0.9'
+          />
+          <stop
+            offset='100%'
+            stopColor='var(--step-line-deep)'
+            stopOpacity='0.6'
+          />
         </linearGradient>
 
         <filter id={glowId} x='-50%' y='-50%' width='200%' height='200%'>
@@ -98,8 +110,16 @@ export function StepConnectionLine(props: StepConnectionLineProps) {
 
         <radialGradient id={particleGradId}>
           <stop offset='0%' stopColor='var(--step-line-mid)' stopOpacity='1' />
-          <stop offset='50%' stopColor='var(--step-line-light)' stopOpacity='0.6' />
-          <stop offset='100%' stopColor='var(--step-line-deep)' stopOpacity='0' />
+          <stop
+            offset='50%'
+            stopColor='var(--step-line-light)'
+            stopOpacity='0.6'
+          />
+          <stop
+            offset='100%'
+            stopColor='var(--step-line-deep)'
+            stopOpacity='0'
+          />
         </radialGradient>
       </defs>
 
@@ -131,7 +151,11 @@ export function StepConnectionLine(props: StepConnectionLineProps) {
       </path>
 
       {/* 主粒子 */}
-      <circle r='3.5' fill={`url(#${particleGradId})`} filter={`url(#${glowId})`}>
+      <circle
+        r='3.5'
+        fill={`url(#${particleGradId})`}
+        filter={`url(#${glowId})`}
+      >
         <animateMotion
           dur='2.2s'
           repeatCount='indefinite'

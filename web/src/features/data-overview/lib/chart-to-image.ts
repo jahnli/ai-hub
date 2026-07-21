@@ -1,5 +1,12 @@
 import VChart, { type ISpec } from '@visactor/vchart'
-import type { DailyStat, ModelDailyStat, ModelStat, SubDepartmentStat, UserRankingItem } from '../types'
+
+import type {
+  DailyStat,
+  ModelDailyStat,
+  ModelStat,
+  SubDepartmentStat,
+  UserRankingItem,
+} from '../types'
 
 const CHART_WIDTH = 680
 const CHART_HEIGHT = 400
@@ -66,15 +73,38 @@ export function buildSubDeptBarSpec(subStats: SubDepartmentStat[]): ISpec {
   return {
     type: 'bar',
     title: { visible: true, text: '子部门 Token 用量排行' },
-    data: [{ values: sorted.map((s) => ({ name: s.department_name, value: s.total_tokens })) }],
+    data: [
+      {
+        values: sorted.map((s) => ({
+          name: s.department_name,
+          value: s.total_tokens,
+        })),
+      },
+    ],
     direction: 'horizontal',
     xField: 'value',
     yField: 'name',
-    label: { visible: true, position: 'outside', formatMethod: (v: number) => fmtTokens(v) },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (v: number) => fmtTokens(v),
+    },
     bar: { style: { cornerRadius: [4, 4, 4, 4] } },
     axes: [
-      { orient: 'left', type: 'band', label: { style: { fontSize: 11 }, formatMethod: (v: string) => v.length > 12 ? v.slice(0, 12) + '…' : v } },
-      { orient: 'bottom', type: 'linear', label: { formatMethod: (v: number) => fmtTokens(v) } },
+      {
+        orient: 'left',
+        type: 'band',
+        label: {
+          style: { fontSize: 11 },
+          formatMethod: (v: string) =>
+            v.length > 12 ? v.slice(0, 12) + '…' : v,
+        },
+      },
+      {
+        orient: 'bottom',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtTokens(v) },
+      },
     ],
     theme: 'light',
     background: 'white',
@@ -82,17 +112,33 @@ export function buildSubDeptBarSpec(subStats: SubDepartmentStat[]): ISpec {
 }
 
 export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
-  const sorted = [...subStats].sort((a, b) => b.total_amount_cny - a.total_amount_cny)
+  const sorted = [...subStats].sort(
+    (a, b) => b.total_amount_cny - a.total_amount_cny
+  )
   const total = sorted.reduce((s, i) => s + i.total_amount_cny, 0)
   return {
     type: 'pie',
     title: { visible: true, text: '子部门消耗占比' },
-    data: [{ values: sorted.filter((i) => i.total_amount_cny > 0).map((i) => ({ name: i.department_name, value: i.total_amount_cny })) }],
+    data: [
+      {
+        values: sorted
+          .filter((i) => i.total_amount_cny > 0)
+          .map((i) => ({ name: i.department_name, value: i.total_amount_cny })),
+      },
+    ],
     valueField: 'value',
     categoryField: 'name',
     outerRadius: 0.75,
     innerRadius: 0.45,
-    label: { visible: true, position: 'outside', formatMethod: (_: unknown, d: { name?: string; value?: number }) => { const pct = total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''; return pct ? `${d.name} ${pct}` : d.name ?? '' } },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
+        const pct =
+          total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''
+        return pct ? `${d.name} ${pct}` : (d.name ?? '')
+      },
+    },
     legends: { visible: true, orient: 'bottom', type: 'discrete' },
     theme: 'light',
     background: 'white',
@@ -112,8 +158,14 @@ function getISOWeekLabel(dateStr: string): string {
   return `${utcDate.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
 }
 
-export function buildCostTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: number): ISpec {
-  const values = dailyStats.map((d) => ({ date: d.date, value: d.total_quota * quotaToCnyRate }))
+export function buildCostTrendSpec(
+  dailyStats: DailyStat[],
+  quotaToCnyRate: number
+): ISpec {
+  const values = dailyStats.map((d) => ({
+    date: d.date,
+    value: d.total_quota * quotaToCnyRate,
+  }))
   return {
     type: 'area',
     title: { visible: true, text: '消耗趋势' },
@@ -124,18 +176,36 @@ export function buildCostTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: numb
     line: { style: { curveType: 'monotone' } },
     area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
     axes: [
-      { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
-      { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtCny(v) } },
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: { style: { fontSize: 10 }, autoHide: true },
+      },
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtCny(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
-export function buildAvgPriceTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: number): ISpec | null {
-  const weeklyStats = new Map<string, { totalQuota: number; totalTokens: number }>()
+export function buildAvgPriceTrendSpec(
+  dailyStats: DailyStat[],
+  quotaToCnyRate: number
+): ISpec | null {
+  const weeklyStats = new Map<
+    string,
+    { totalQuota: number; totalTokens: number }
+  >()
   for (const dailyStat of dailyStats) {
     const weekLabel = getISOWeekLabel(dailyStat.date)
-    const weeklyStat = weeklyStats.get(weekLabel) ?? { totalQuota: 0, totalTokens: 0 }
+    const weeklyStat = weeklyStats.get(weekLabel) ?? {
+      totalQuota: 0,
+      totalTokens: 0,
+    }
     weeklyStat.totalQuota += dailyStat.total_quota
     weeklyStat.totalTokens += dailyStat.total_tokens
     weeklyStats.set(weekLabel, weeklyStat)
@@ -160,15 +230,27 @@ export function buildAvgPriceTrendSpec(dailyStats: DailyStat[], quotaToCnyRate: 
     point: { visible: false },
     line: { style: { curveType: 'monotone' } },
     axes: [
-      { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
-      { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtCny(v) } },
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: { style: { fontSize: 10 }, autoHide: true },
+      },
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtCny(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
 export function buildRequestTrendSpec(dailyStats: DailyStat[]): ISpec {
-  const values = dailyStats.map((d) => ({ date: d.date, value: d.total_requests }))
+  const values = dailyStats.map((d) => ({
+    date: d.date,
+    value: d.total_requests,
+  }))
   return {
     type: 'area',
     title: { visible: true, text: '请求次数趋势' },
@@ -179,15 +261,27 @@ export function buildRequestTrendSpec(dailyStats: DailyStat[]): ISpec {
     line: { style: { curveType: 'monotone' } },
     area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
     axes: [
-      { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
-      { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtLargeNum(v) } },
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: { style: { fontSize: 10 }, autoHide: true },
+      },
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtLargeNum(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
 export function buildTokenTrendSpec(dailyStats: DailyStat[]): ISpec {
-  const values = dailyStats.map((d) => ({ date: d.date, value: d.total_tokens }))
+  const values = dailyStats.map((d) => ({
+    date: d.date,
+    value: d.total_tokens,
+  }))
   return {
     type: 'area',
     title: { visible: true, text: 'Token 用量趋势' },
@@ -198,68 +292,151 @@ export function buildTokenTrendSpec(dailyStats: DailyStat[]): ISpec {
     line: { style: { curveType: 'monotone' } },
     area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
     axes: [
-      { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
-      { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtTokens(v) } },
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: { style: { fontSize: 10 }, autoHide: true },
+      },
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtTokens(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
-export function buildModelUsageTrendSpec(modelDailyStats: ModelDailyStat[]): ISpec | null {
+export function buildModelUsageTrendSpec(
+  modelDailyStats: ModelDailyStat[]
+): ISpec | null {
   if (modelDailyStats.length === 0) return null
   return {
     type: 'line',
     title: { visible: true, text: '模型使用趋势' },
-    data: [{ values: modelDailyStats.map((item) => ({ date: item.date, model: item.model_name, tokens: item.total_tokens })) }],
+    data: [
+      {
+        values: modelDailyStats.map((item) => ({
+          date: item.date,
+          model: item.model_name,
+          tokens: item.total_tokens,
+        })),
+      },
+    ],
     xField: 'date',
     yField: 'tokens',
     seriesField: 'model',
     point: { visible: false },
     line: { style: { curveType: 'monotone' } },
     axes: [
-      { orient: 'bottom', type: 'band', label: { style: { fontSize: 10 }, autoHide: true } },
-      { orient: 'left', type: 'linear', label: { formatMethod: (v: number) => fmtTokens(v) } },
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: { style: { fontSize: 10 }, autoHide: true },
+      },
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtTokens(v) },
+      },
     ],
     legends: { visible: true, orient: 'bottom', type: 'discrete' },
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
 export function buildModelCallRankSpec(modelStats: ModelStat[]): ISpec {
-  const sorted = [...modelStats].sort((a, b) => a.total_requests - b.total_requests).slice(-15)
+  const sorted = [...modelStats]
+    .sort((a, b) => a.total_requests - b.total_requests)
+    .slice(-15)
   return {
     type: 'bar',
     title: { visible: true, text: '模型调用排行' },
-    data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_requests })) }],
+    data: [
+      {
+        values: sorted.map((m) => ({
+          name: m.model_name,
+          value: m.total_requests,
+        })),
+      },
+    ],
     direction: 'horizontal',
     xField: 'value',
     yField: 'name',
-    label: { visible: true, position: 'outside', formatMethod: (v: number) => fmtLargeNum(v) },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (v: number) => fmtLargeNum(v),
+    },
     bar: { style: { cornerRadius: [0, 4, 4, 0] } },
     axes: [
-      { orient: 'left', type: 'band', label: { style: { fontSize: 10 }, formatMethod: (v: string) => v.length > 18 ? v.slice(0, 18) + '…' : v } },
-      { orient: 'bottom', type: 'linear', label: { formatMethod: (v: number) => fmtLargeNum(v) } },
+      {
+        orient: 'left',
+        type: 'band',
+        label: {
+          style: { fontSize: 10 },
+          formatMethod: (v: string) =>
+            v.length > 18 ? v.slice(0, 18) + '…' : v,
+        },
+      },
+      {
+        orient: 'bottom',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtLargeNum(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
-export function buildModelCostRankSpec(modelStats: ModelStat[], quotaToCnyRate: number): ISpec {
-  const sorted = [...modelStats].sort((a, b) => a.total_quota - b.total_quota).slice(-15)
+export function buildModelCostRankSpec(
+  modelStats: ModelStat[],
+  quotaToCnyRate: number
+): ISpec {
+  const sorted = [...modelStats]
+    .sort((a, b) => a.total_quota - b.total_quota)
+    .slice(-15)
   return {
     type: 'bar',
     title: { visible: true, text: '模型费用排行' },
-    data: [{ values: sorted.map((m) => ({ name: m.model_name, value: m.total_quota * quotaToCnyRate })) }],
+    data: [
+      {
+        values: sorted.map((m) => ({
+          name: m.model_name,
+          value: m.total_quota * quotaToCnyRate,
+        })),
+      },
+    ],
     direction: 'horizontal',
     xField: 'value',
     yField: 'name',
-    label: { visible: true, position: 'outside', formatMethod: (v: number) => fmtCny(v) },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (v: number) => fmtCny(v),
+    },
     bar: { style: { cornerRadius: [0, 4, 4, 0] } },
     axes: [
-      { orient: 'left', type: 'band', label: { style: { fontSize: 10 }, formatMethod: (v: string) => v.length > 18 ? v.slice(0, 18) + '…' : v } },
-      { orient: 'bottom', type: 'linear', label: { formatMethod: (v: number) => fmtCny(v) } },
+      {
+        orient: 'left',
+        type: 'band',
+        label: {
+          style: { fontSize: 10 },
+          formatMethod: (v: string) =>
+            v.length > 18 ? v.slice(0, 18) + '…' : v,
+        },
+      },
+      {
+        orient: 'bottom',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtCny(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
@@ -270,49 +447,111 @@ export function buildModelTokenDistSpec(modelStats: ModelStat[]): ISpec | null {
   return {
     type: 'pie',
     title: { visible: true, text: '模型 Token 分布' },
-    data: [{ values: filtered.map((i) => ({ name: i.model_name, value: i.total_tokens })) }],
+    data: [
+      {
+        values: filtered.map((i) => ({
+          name: i.model_name,
+          value: i.total_tokens,
+        })),
+      },
+    ],
     valueField: 'value',
     categoryField: 'name',
     outerRadius: 0.75,
     innerRadius: 0.45,
-    label: { visible: true, position: 'outside', formatMethod: (_: unknown, d: { name?: string; value?: number }) => { const pct = total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''; return pct ? `${d.name} ${pct}` : d.name ?? '' } },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
+        const pct =
+          total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''
+        return pct ? `${d.name} ${pct}` : (d.name ?? '')
+      },
+    },
     legends: { visible: true, orient: 'bottom', type: 'discrete' },
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
 export function buildUserRankBarSpec(rankings: UserRankingItem[]): ISpec {
-  const sorted = [...rankings].sort((a, b) => b.total_cost - a.total_cost).slice(0, 10)
+  const sorted = [...rankings]
+    .sort((a, b) => b.total_cost - a.total_cost)
+    .slice(0, 10)
   return {
     type: 'bar',
     title: { visible: true, text: '用户消耗排行 Top 10' },
-    data: [{ values: sorted.map((u) => ({ name: u.display_name || u.username, value: u.total_cost })) }],
+    data: [
+      {
+        values: sorted.map((u) => ({
+          name: u.display_name || u.username,
+          value: u.total_cost,
+        })),
+      },
+    ],
     direction: 'horizontal',
     xField: 'value',
     yField: 'name',
-    label: { visible: true, position: 'outside', formatMethod: (v: number) => fmtCny(v) },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (v: number) => fmtCny(v),
+    },
     bar: { style: { cornerRadius: [4, 4, 4, 4] } },
     axes: [
-      { orient: 'left', type: 'band', label: { style: { fontSize: 11 }, formatMethod: (v: string) => v.length > 12 ? v.slice(0, 12) + '…' : v } },
-      { orient: 'bottom', type: 'linear', label: { formatMethod: (v: number) => fmtCny(v) } },
+      {
+        orient: 'left',
+        type: 'band',
+        label: {
+          style: { fontSize: 11 },
+          formatMethod: (v: string) =>
+            v.length > 12 ? v.slice(0, 12) + '…' : v,
+        },
+      },
+      {
+        orient: 'bottom',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtCny(v) },
+      },
     ],
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }
 
 export function buildUserRankPieSpec(rankings: UserRankingItem[]): ISpec {
-  const sorted = [...rankings].sort((a, b) => b.total_cost - a.total_cost).slice(0, 10)
+  const sorted = [...rankings]
+    .sort((a, b) => b.total_cost - a.total_cost)
+    .slice(0, 10)
   const total = sorted.reduce((s, u) => s + u.total_cost, 0)
   return {
     type: 'pie',
     title: { visible: true, text: '用户消耗占比 Top 10' },
-    data: [{ values: sorted.filter((u) => u.total_cost > 0).map((u) => ({ name: u.display_name || u.username, value: u.total_cost })) }],
+    data: [
+      {
+        values: sorted
+          .filter((u) => u.total_cost > 0)
+          .map((u) => ({
+            name: u.display_name || u.username,
+            value: u.total_cost,
+          })),
+      },
+    ],
     valueField: 'value',
     categoryField: 'name',
     outerRadius: 0.75,
     innerRadius: 0.45,
-    label: { visible: true, position: 'outside', formatMethod: (_: unknown, d: { name?: string; value?: number }) => { const pct = total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''; return pct ? `${d.name} ${pct}` : d.name ?? '' } },
+    label: {
+      visible: true,
+      position: 'outside',
+      formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
+        const pct =
+          total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''
+        return pct ? `${d.name} ${pct}` : (d.name ?? '')
+      },
+    },
     legends: { visible: true, orient: 'bottom', type: 'discrete' },
-    theme: 'light', background: 'white',
+    theme: 'light',
+    background: 'white',
   } as unknown as ISpec
 }

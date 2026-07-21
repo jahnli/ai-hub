@@ -1,6 +1,16 @@
 import ExcelJS from 'exceljs'
 import { t } from 'i18next'
+
 import dayjs from '@/lib/dayjs'
+
+import type {
+  DepartmentStat,
+  DepartmentUser,
+  DeptTreeNode,
+  SubDepartmentStat,
+  UsageAnalysis,
+  UserRankingItem,
+} from '../types'
 import {
   renderChartToBase64,
   buildSubDeptBarSpec,
@@ -16,14 +26,6 @@ import {
   buildUserRankBarSpec,
   buildUserRankPieSpec,
 } from './chart-to-image'
-import type {
-  DepartmentStat,
-  DepartmentUser,
-  DeptTreeNode,
-  SubDepartmentStat,
-  UsageAnalysis,
-  UserRankingItem,
-} from '../types'
 
 function fmtCny(value: number): string {
   if (value === 0) return '¥0.00'
@@ -190,9 +192,7 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
     [t('Total Cost'), fmtCny(stat.total_amount_cny)],
     [
       t('Avg Price') + '/MT',
-      stat.avg_price_per_mt === 0
-        ? '¥0.00'
-        : fmtCny(stat.avg_price_per_mt),
+      stat.avg_price_per_mt === 0 ? '¥0.00' : fmtCny(stat.avg_price_per_mt),
     ],
     [t('Total Requests'), fmtRequests(stat.total_requests)],
     [t('Registered Count'), stat.registered_users.toLocaleString()],
@@ -213,7 +213,11 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   const ws = wb.addWorksheet(t('Data Overview'))
 
   const timeRange = formatTimeRangeForFilename(p.startTimestamp, p.endTimestamp)
-  styleTitleRow(ws, `${t('Data Overview')} — ${p.departmentName}（${timeRange}）`, 6)
+  styleTitleRow(
+    ws,
+    `${t('Data Overview')} — ${p.departmentName}（${timeRange}）`,
+    6
+  )
   ws.addRow([])
 
   ws.getColumn(1).width = 28
@@ -262,7 +266,11 @@ function buildSubDeptSheet(
 ): void {
   const ws = wb.addWorksheet(sheetName)
 
-  styleTitleRow(ws, `${t('Data Overview')} — ${detail.departmentName}（${timeRange}）`, 6)
+  styleTitleRow(
+    ws,
+    `${t('Data Overview')} — ${detail.departmentName}（${timeRange}）`,
+    6
+  )
   ws.addRow([])
 
   ws.getColumn(1).width = 28
@@ -336,7 +344,9 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   ])
   styleHeaderRow(hdr)
 
-  const UNREGISTERED_FONT: Partial<ExcelJS.Font> = { color: { argb: 'FF8C8C8C' } }
+  const UNREGISTERED_FONT: Partial<ExcelJS.Font> = {
+    color: { argb: 'FF8C8C8C' },
+  }
   const UNREGISTERED_FILL: ExcelJS.Fill = {
     type: 'pattern',
     pattern: 'solid',
@@ -356,7 +366,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
       isRegistered ? fmtCny(u.total_amount_cny ?? 0) : '-',
       isRegistered ? fmtTokens(u.total_tokens ?? 0) : '-',
       isRegistered ? fmtRequests(u.total_requests ?? 0) : '-',
-      isRegistered ? (u.common_model || '-') : '-',
+      isRegistered ? u.common_model || '-' : '-',
       isRegistered && u.last_login_at
         ? dayjs.unix(u.last_login_at).format('YYYY-MM-DD HH:mm')
         : '-',
@@ -419,7 +429,12 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
   }
 
   if (params.userRankings.length > 0) {
-    await embedUserRankingCharts(wb, mainWs, params.userRankings, nextLeftChartRow)
+    await embedUserRankingCharts(
+      wb,
+      mainWs,
+      params.userRankings,
+      nextLeftChartRow
+    )
   }
 
   await embedRightSideCharts(wb, mainWs, params.usage)
@@ -501,11 +516,16 @@ async function embedRightSideCharts(
   sectionCell.font = SECTION_FONT
   sectionCell.fill = SECTION_FILL
   sectionCell.alignment = { vertical: 'middle' }
-  ws.mergeCells(headerRowNumber, rightCol + 1, headerRowNumber, rightCol + rightChartColumnCount)
+  ws.mergeCells(
+    headerRowNumber,
+    rightCol + 1,
+    headerRowNumber,
+    rightCol + rightChartColumnCount
+  )
   sectionHeaderRow.height = 22
   let row = chartStartRow
 
-  const rate = usage.quota_to_cny || (1 / 500000)
+  const rate = usage.quota_to_cny || 1 / 500000
   const dailyStats = usage.daily_stats ?? []
   const modelStats = usage.model_stats ?? []
   const modelDailyStats = usage.model_daily_stats ?? []
@@ -513,21 +533,37 @@ async function embedRightSideCharts(
   const modelTrendSpec = buildModelUsageTrendSpec(modelDailyStats)
 
   if (dailyStats.length > 0) {
-    const img1 = await renderChartToBase64(buildTokenTrendSpec(dailyStats), imgWidth, imgHeight)
+    const img1 = await renderChartToBase64(
+      buildTokenTrendSpec(dailyStats),
+      imgWidth,
+      imgHeight
+    )
     addImageToSheet(wb, ws, img1, row, rightCol, imgWidth, imgHeight)
     row += rowSpacing
 
-    const img2 = await renderChartToBase64(buildCostTrendSpec(dailyStats, rate), imgWidth, imgHeight)
+    const img2 = await renderChartToBase64(
+      buildCostTrendSpec(dailyStats, rate),
+      imgWidth,
+      imgHeight
+    )
     addImageToSheet(wb, ws, img2, row, rightCol, imgWidth, imgHeight)
     row += rowSpacing
 
-    const img3 = await renderChartToBase64(buildRequestTrendSpec(dailyStats), imgWidth, imgHeight)
+    const img3 = await renderChartToBase64(
+      buildRequestTrendSpec(dailyStats),
+      imgWidth,
+      imgHeight
+    )
     addImageToSheet(wb, ws, img3, row, rightCol, imgWidth, imgHeight)
     row += rowSpacing
 
     const avgPriceTrendSpec = buildAvgPriceTrendSpec(dailyStats, rate)
     if (avgPriceTrendSpec) {
-      const img4 = await renderChartToBase64(avgPriceTrendSpec, imgWidth, imgHeight)
+      const img4 = await renderChartToBase64(
+        avgPriceTrendSpec,
+        imgWidth,
+        imgHeight
+      )
       addImageToSheet(wb, ws, img4, row, rightCol, imgWidth, imgHeight)
       row += rowSpacing
     }
@@ -537,16 +573,28 @@ async function embedRightSideCharts(
     const barHeight = Math.max(280, Math.min(modelStats.length, 15) * 30)
     const barRowSpacing = Math.ceil(barHeight / 18) + 2
 
-    const img5 = await renderChartToBase64(buildModelCallRankSpec(modelStats), imgWidth, barHeight)
+    const img5 = await renderChartToBase64(
+      buildModelCallRankSpec(modelStats),
+      imgWidth,
+      barHeight
+    )
     addImageToSheet(wb, ws, img5, row, rightCol, imgWidth, barHeight)
     row += barRowSpacing
 
-    const img6 = await renderChartToBase64(buildModelCostRankSpec(modelStats, rate), imgWidth, barHeight)
+    const img6 = await renderChartToBase64(
+      buildModelCostRankSpec(modelStats, rate),
+      imgWidth,
+      barHeight
+    )
     addImageToSheet(wb, ws, img6, row, rightCol, imgWidth, barHeight)
     row += barRowSpacing
 
     if (modelTrendSpec) {
-      const img7 = await renderChartToBase64(modelTrendSpec, imgWidth, imgHeight)
+      const img7 = await renderChartToBase64(
+        modelTrendSpec,
+        imgWidth,
+        imgHeight
+      )
       addImageToSheet(wb, ws, img7, row, rightCol, imgWidth, imgHeight)
       row += rowSpacing
     }
