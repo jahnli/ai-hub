@@ -158,7 +158,7 @@ func getLDAPUsername(entry *ldapv3.Entry, attribute string) (string, error) {
 	if username == "" {
 		return "", fmt.Errorf("LDAP username attribute %q is empty", attribute)
 	}
-	return username, nil
+	return strings.ToLower(username), nil
 }
 
 // ExtractLDAPCompanyFromDN returns the OU directly under the configured LDAP search base.

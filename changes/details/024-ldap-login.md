@@ -16,7 +16,8 @@
 - `router/api-router.go` — 注册 LDAP 登录/绑定/解绑路由
 - `service/feishu_sync.go` — 新增飞书用户同步服务；支持按公司同步配置选择飞书/钉钉应用凭据
 - `service/dingtalk_sync.go` — 新增钉钉用户同步服务：缓存 access token，通过用户与部门接口回填头像、邮箱、显示名、手机号、工号、职务、负责人、入职日期和部门层级，并复用部门节点缓存减少请求
-- `service/ldap.go` — LDAP 认证与用户查找核心逻辑；支持从公司 OU 中提取用户公司并带回注册流程；创建本地账号时使用目录返回的标准用户名，属性未配置或返回空值时拒绝登录，不再回退到用户输入值；读取 extensionAttribute12 作为钉钉 userid
+- `service/ldap.go` — LDAP 认证与用户查找核心逻辑；支持从公司 OU 中提取用户公司并带回注册流程；注册及登录统一将目录 `UsernameAttribute` 返回的标准用户名转为小写，属性未配置或返回空值时拒绝登录，不再回退到用户输入值；读取 extensionAttribute12 作为钉钉 userid
+- `service/ldap_test.go` — 验证 LDAP 标准用户名会去除首尾空格、忽略属性名大小写并统一转为小写
 - `setting/system_setting/feishu.go` — 飞书同步相关系统设置
 - `controller/ldap.go` — 修复多公司配置时自动订阅套餐因 DisplayName 与其他条目 Company 名称交叉导致匹配错误的 bug：LDAP 首次创建用户时改为直接使用已解析的 `companySyncCfg.AutoSubscribePlanId`，避免通过 `autoSubscribeUserAfterCreate` 以 DisplayName 反查配置时触发第一个循环的 Company 匹配导致误匹配
 - `controller/option.go` — 新增 `migrateChangedLDAPCompanyDisplayNames` 函数：保存 LDAP 公司同步配置时，比对新旧配置中每个条目的 DisplayName 变更（按 Company OU 名匹配），自动批量更新所有持有旧 DisplayName 的用户 company 字段为新 DisplayName；失败仅记日志不阻止配置保存
