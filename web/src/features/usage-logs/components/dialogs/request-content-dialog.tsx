@@ -117,9 +117,9 @@ export function RequestContentDialog({
         open={open}
         onOpenChange={handleOpenChange}
         title={t('Request Content')}
-        contentClassName='sm:max-w-[78rem]'
-        contentHeight='calc(100vh - 8rem)'
-        bodyContainerClassName='max-h-[calc(100vh-8rem)] overflow-hidden'
+        contentClassName='h-[85vh] sm:max-w-[78rem]'
+        contentHeight='100%'
+        bodyContainerClassName='flex-1 max-h-none overflow-hidden'
         bodyClassName='h-full min-h-0'
       >
         <div className='flex h-full min-h-0 flex-col space-y-3'>
