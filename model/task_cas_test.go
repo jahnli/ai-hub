@@ -37,6 +37,8 @@ func TestMain(m *testing.M) {
 	if err := db.AutoMigrate(
 		&Task{},
 		&User{},
+		&UserSession{},
+		&AuthFlow{},
 		&Token{},
 		&PasskeyCredential{},
 		&TwoFA{},
@@ -66,6 +68,8 @@ func truncateTables(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {
 		DB.Exec("DELETE FROM tasks")
+		DB.Exec("DELETE FROM auth_flows")
+		DB.Exec("DELETE FROM user_sessions")
 		DB.Exec("DELETE FROM passkey_credentials")
 		DB.Exec("DELETE FROM two_fa_backup_codes")
 		DB.Exec("DELETE FROM two_fas")
@@ -315,13 +319,13 @@ func TestMarkTasksFailedWithStatus_DoesNotOverwriteSuccess(t *testing.T) {
 
 	var reloadedPending Task
 	require.NoError(t, DB.First(&reloadedPending, pendingTask.ID).Error)
-	assert.Equal(t, TaskStatusFailure, reloadedPending.Status)
+	assert.Equal(t, string(TaskStatusFailure), string(reloadedPending.Status))
 	assert.Equal(t, "100%", reloadedPending.Progress)
 	assert.Equal(t, "channel unavailable", reloadedPending.FailReason)
 
 	var reloadedSuccessful Task
 	require.NoError(t, DB.First(&reloadedSuccessful, successfulTask.ID).Error)
-	assert.Equal(t, TaskStatusSuccess, reloadedSuccessful.Status)
+	assert.Equal(t, string(TaskStatusSuccess), string(reloadedSuccessful.Status))
 	assert.Equal(t, "100%", reloadedSuccessful.Progress)
 }
 
