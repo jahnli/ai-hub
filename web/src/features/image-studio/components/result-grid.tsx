@@ -338,7 +338,6 @@ export function ResultGrid({
               >
                 {previewImage.revisedPrompt && (
                   <p className='bg-background/90 text-foreground mx-auto max-h-20 w-[min(92vw,960px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
-                    <span className='font-medium'>{t('Prompt')}: </span>
                     {previewImage.revisedPrompt}
                   </p>
                 )}
