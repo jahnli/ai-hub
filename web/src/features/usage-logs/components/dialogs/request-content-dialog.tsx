@@ -18,27 +18,32 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useMutation } from '@tanstack/react-query'
 import { Check, ChevronDown, Copy, ShieldAlert } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Dialog } from '@/components/dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
+import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatTimestampToDate } from '@/lib/format'
 
-import { notifyRequestMessageViolation } from '../../api'
+import { getUserInfo, notifyRequestMessageViolation } from '../../api'
 import type { RequestMessage } from '../../types'
 import { parseUserMessages } from '../request-messages-provider'
 
 interface RequestContentDialogProps {
   requestMessage: RequestMessage
+  user: UserColumnRow
   userAgent?: string
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -52,24 +57,62 @@ function formatParameters(parameters: string): string {
   }
 }
 
-export function RequestContentDialog({
-  requestMessage,
-  userAgent,
-  open,
-  onOpenChange,
-}: RequestContentDialogProps) {
+export function RequestContentDialog(props: RequestContentDialogProps) {
   const { t } = useTranslation()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [userData, setUserData] = useState<UserColumnRow>(props.user)
+  const fetchedUserRef = useRef(false)
   const { copiedText, copyToClipboard } = useCopyToClipboard({ notify: false })
-  const messages = parseUserMessages(requestMessage.user_content)
-  const canNotifyViolation = requestMessage.user_id > 0
+  const messages = parseUserMessages(props.requestMessage.user_content)
+  const canNotifyViolation = props.requestMessage.user_id > 0
+  const primaryName = userData.display_name || userData.username
+  const shouldShowUsername =
+    Boolean(userData.username) && userData.username !== primaryName
+  const avatarFallback = getUserAvatarFallback(primaryName)
+  const avatarFallbackStyle = getUserAvatarStyle(primaryName)
+  const handleFetchUser = useCallback(() => {
+    if (fetchedUserRef.current || props.user.id <= 0) return
+
+    fetchedUserRef.current = true
+    void getUserInfo(props.user.id).then((response) => {
+      if (!response.success || !response.data) return
+
+      const userInfo = response.data
+      setUserData({
+        id: userInfo.id,
+        username: userInfo.username,
+        display_name: userInfo.display_name || userInfo.username,
+        email: userInfo.email,
+        avatar_url: userInfo.avatar_url,
+        remark: userInfo.remark,
+        quota: userInfo.quota,
+        used_quota: userInfo.used_quota,
+        sub_quota_used: 0,
+        sub_quota_total: 0,
+        request_count: userInfo.request_count,
+        group: userInfo.group || '',
+        status: userInfo.status ?? 1,
+        role: userInfo.role ?? 1,
+        department_name: userInfo.department_name,
+        custom_field_values: userInfo.custom_field_values,
+        join_date: userInfo.join_date,
+        job_number: userInfo.job_number,
+        job_title: userInfo.job_title,
+        description: userInfo.description,
+        background_image: userInfo.background_image,
+        mobile: userInfo.mobile,
+        open_id: userInfo.open_id,
+        gender: userInfo.gender,
+      })
+    })
+  }, [props.user.id])
   const notifyViolationMutation = useMutation({
     mutationFn: async () => {
       const res = await notifyRequestMessageViolation({
-        request_id: requestMessage.request_id,
-        user_id: requestMessage.user_id,
-        model_name: requestMessage.model_name || '',
-        created_at: requestMessage.created_at || 0,
+        request_id: props.requestMessage.request_id,
+        user_id: props.requestMessage.user_id,
+        model_name: props.requestMessage.model_name || '',
+        created_at: props.requestMessage.created_at || 0,
       })
       if (!res.success) {
         throw new Error(res.message || t('Failed to send violation notice'))
@@ -93,7 +136,7 @@ export function RequestContentDialog({
     if (!nextOpen) {
       setConfirmOpen(false)
     }
-    onOpenChange(nextOpen)
+    props.onOpenChange(nextOpen)
   }
 
   // 消息内容可能重复，用 内容前缀+出现次序 组成稳定 key；最新的消息排在最上面
@@ -114,7 +157,7 @@ export function RequestContentDialog({
   return (
     <>
       <Dialog
-        open={open}
+        open={props.open}
         onOpenChange={handleOpenChange}
         title={t('Request Content')}
         contentClassName='h-[85vh] sm:max-w-[78rem]'
@@ -123,31 +166,77 @@ export function RequestContentDialog({
         bodyClassName='h-full min-h-0'
       >
         <div className='flex h-full min-h-0 flex-col space-y-3'>
-          <div className='shrink-0'>
-            <div className='flex flex-wrap items-center justify-between gap-2'>
-              <div className='text-muted-foreground flex min-w-0 flex-wrap items-center gap-1 text-sm'>
-                <span>
-                  {requestMessage.model_name} · {requestMessage.relay_format} ·{' '}
-                  {formatTimestampToDate(requestMessage.created_at)}
-                </span>
-                <span className='text-muted-foreground/60'>·</span>
-                <span className='shrink-0'>{t('Request ID')}:</span>
-                <span className='max-w-[28rem] truncate font-mono'>
-                  {requestMessage.request_id}
-                </span>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-6 w-6 shrink-0 p-0'
-                  onClick={() => copyToClipboard(requestMessage.request_id)}
-                  title={t('Copy to clipboard')}
-                >
-                  {copiedText === requestMessage.request_id ? (
-                    <Check className='size-3 text-green-600' />
-                  ) : (
-                    <Copy className='size-3' />
-                  )}
-                </Button>
+          <div className='shrink-0 border-b pb-3'>
+            <div className='flex flex-wrap items-start justify-between gap-3'>
+              <div className='flex min-w-0 flex-1 items-start gap-3'>
+                <UserProfileHoverCard user={userData}>
+                  <Avatar
+                    className='size-9 shrink-0'
+                    onMouseEnter={handleFetchUser}
+                  >
+                    {userData.avatar_url && (
+                      <AvatarImage
+                        src={userData.avatar_url}
+                        alt={primaryName}
+                      />
+                    )}
+                    <AvatarFallback
+                      className='text-sm font-semibold text-white'
+                      style={avatarFallbackStyle}
+                    >
+                      {avatarFallback}
+                    </AvatarFallback>
+                  </Avatar>
+                </UserProfileHoverCard>
+                <div className='flex min-w-0 flex-1 flex-wrap items-start gap-x-4 gap-y-1'>
+                  <div className='flex min-w-24 shrink-0 flex-col'>
+                    <span className='truncate text-sm font-medium'>
+                      {primaryName || `#${props.requestMessage.user_id}`}
+                    </span>
+                    {shouldShowUsername && (
+                      <span className='text-muted-foreground truncate text-xs'>
+                        {userData.username}
+                      </span>
+                    )}
+                  </div>
+                  <div className='min-w-0 flex-1 space-y-1'>
+                    <div className='text-muted-foreground flex min-w-0 flex-wrap items-center gap-1 text-sm'>
+                      <span>
+                        {props.requestMessage.model_name} ·{' '}
+                        {props.requestMessage.relay_format} ·{' '}
+                        {formatTimestampToDate(props.requestMessage.created_at)}
+                      </span>
+                      <span className='text-muted-foreground/60'>·</span>
+                      <span className='shrink-0'>{t('Request ID')}:</span>
+                      <span className='max-w-[28rem] truncate font-mono'>
+                        {props.requestMessage.request_id}
+                      </span>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        className='h-6 w-6 shrink-0 p-0'
+                        onClick={() =>
+                          copyToClipboard(props.requestMessage.request_id)
+                        }
+                        title={t('Copy to clipboard')}
+                      >
+                        {copiedText === props.requestMessage.request_id ? (
+                          <Check className='size-3 text-green-600' />
+                        ) : (
+                          <Copy className='size-3' />
+                        )}
+                      </Button>
+                    </div>
+                    {props.userAgent && (
+                      <div className='text-muted-foreground flex min-w-0 items-start gap-1 text-sm'>
+                        <span className='shrink-0'>{t('User-Agent')}:</span>
+                        <span className='min-w-0 break-all'>
+                          {props.userAgent}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               {canNotifyViolation && (
                 <Button
@@ -162,16 +251,10 @@ export function RequestContentDialog({
                 </Button>
               )}
             </div>
-            {userAgent && (
-              <div className='text-muted-foreground mt-1 flex min-w-0 items-start gap-1 text-sm'>
-                <span className='shrink-0'>{t('User-Agent')}:</span>
-                <span className='min-w-0 break-all'>{userAgent}</span>
-              </div>
-            )}
           </div>
 
           <div className='grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-4 overflow-hidden md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)] md:grid-rows-[minmax(0,1fr)]'>
-            <div className='h-full min-h-0 overflow-y-scroll overscroll-contain pr-3 [scrollbar-gutter:stable]'>
+            <div className='h-full min-h-0 [scrollbar-gutter:stable] overflow-y-scroll overscroll-contain pr-3'>
               <div className='space-y-3'>
                 {entries.map((entry) => (
                   <Collapsible
@@ -215,8 +298,8 @@ export function RequestContentDialog({
               </div>
             </div>
 
-            <div className='h-full min-h-0 min-w-0 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]'>
-              {requestMessage.parameters && (
+            <div className='h-full min-h-0 min-w-0 [scrollbar-gutter:stable] overflow-y-scroll overscroll-contain'>
+              {props.requestMessage.parameters && (
                 <Collapsible
                   defaultOpen
                   className='group/parameters rounded-lg border px-3 py-2'
@@ -227,7 +310,7 @@ export function RequestContentDialog({
                   </CollapsibleTrigger>
                   <CollapsibleContent className='CollapsibleContent mt-2'>
                     <pre className='bg-muted overflow-x-auto rounded-md p-3 text-xs whitespace-pre'>
-                      {formatParameters(requestMessage.parameters)}
+                      {formatParameters(props.requestMessage.parameters)}
                     </pre>
                   </CollapsibleContent>
                 </Collapsible>

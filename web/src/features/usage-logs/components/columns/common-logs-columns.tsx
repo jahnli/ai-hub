@@ -936,6 +936,22 @@ export function useCommonLogsColumns(
             </button>
             <RequestContentDialog
               requestMessage={requestMessage}
+              user={{
+                id: log.user_id,
+                username: log.username,
+                display_name: log.display_name || log.username,
+                avatar_url: log.avatar_url || undefined,
+                quota: 0,
+                used_quota: 0,
+                sub_quota_used: 0,
+                sub_quota_total: 0,
+                request_count: 0,
+                group: "",
+                status: 1,
+                role: 1,
+                open_id: log.open_id || undefined,
+                gender: log.gender,
+              }}
               userAgent={userAgent ? String(userAgent) : undefined}
               open={dialogOpen}
               onOpenChange={setDialogOpen}

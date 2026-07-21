@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-14
+**日期**: 2026-07-21
 
 ## 涉及文件
 
@@ -36,7 +36,7 @@
 - `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
 - `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
 - `model/main.go` — AutoMigrate 注册 RequestMessage 模型
-- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距；新增违规通知按钮和确认弹框，发送后 toast 提示结果；请求内容与请求参数改为左右并排展示，请求参数默认展开并缩窄宽度，弹框高度放大以展示更多内容；修复弹框高度计算，并让请求内容与请求参数区域均支持独立滚轮滚动，同时保留 JSON 横向阅读格式
+- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 请求内容详情弹窗，展示完整用户消息列表和请求参数；模型/格式/时间信息移至请求 ID 上方，请求 ID 字号放大并去除两行之间多余间距；新增违规通知按钮和确认弹框，发送后 toast 提示结果；请求内容与请求参数改为左右并排展示，请求参数默认展开并缩窄宽度，弹框统一为视口 85% 高度并修复高度计算；顶部新增头像、显示名和用户名，头像悬停加载完整用户资料，模型、格式、时间、请求 ID 与 User-Agent 排列在用户信息右侧；请求内容与请求参数区域均支持独立滚轮滚动，同时保留 JSON 横向阅读格式
 - `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容；新增 canViewRequestContent 控制，非超级管理员不发起请求内容批量查询
 - `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用；请求内容批量查询改为 POST /batch 并通过 body 传递 request_ids，避免分页 100 时 query 过长；新增 notifyRequestMessageViolation API 调用
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent；新增 NotifyViolationRequest 类型

@@ -21,24 +21,19 @@ import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { Dialog } from '@/components/dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { ModelBadge } from '@/features/usage-logs/components/model-badge'
-import { getUserInfo } from '@/features/usage-logs/api'
-import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
-import type { UserColumnRow } from '@/features/users/types'
 import {
   downloadImage,
   downloadImagesAsZip,
   imageFileName,
 } from '@/features/image-studio/lib/image-utils'
+import { getUserInfo } from '@/features/usage-logs/api'
+import { ModelBadge } from '@/features/usage-logs/components/model-badge'
+import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
+import type { UserColumnRow } from '@/features/users/types'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
@@ -56,8 +51,8 @@ interface ImageAuditDetailDialogProps {
 function DetailField(props: { label: string; children: ReactNode }) {
   return (
     <div className='flex min-w-0 flex-col gap-0.5'>
-      <span className='text-muted-foreground text-xs'>{props.label}</span>
-      <span className='min-w-0 text-sm break-all'>{props.children}</span>
+      <span className='text-muted-foreground text-sm'>{props.label}</span>
+      <span className='min-w-0 text-base break-all'>{props.children}</span>
     </div>
   )
 }
@@ -109,14 +104,10 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
   if (!props.item) return null
   const item = props.item
 
-  const primaryName = item.display_name || item.username || `#${item.user_id}`
-  const avatarFallback = getUserAvatarFallback(primaryName)
-  const avatarFallbackStyle = getUserAvatarStyle(primaryName)
-  const images = item.images ?? []
   const fallbackUser: UserColumnRow = {
     id: item.user_id,
     username: item.username,
-    display_name: primaryName,
+    display_name: item.display_name || item.username || `#${item.user_id}`,
     avatar_url: item.avatar_url || undefined,
     quota: 0,
     used_quota: 0,
@@ -127,6 +118,14 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
     status: 1,
     role: 1,
   }
+  const resolvedUser = userData ?? fallbackUser
+  const primaryName =
+    resolvedUser.display_name || resolvedUser.username || `#${item.user_id}`
+  const shouldShowUsername =
+    Boolean(resolvedUser.username) && resolvedUser.username !== primaryName
+  const avatarFallback = getUserAvatarFallback(primaryName)
+  const avatarFallbackStyle = getUserAvatarStyle(primaryName)
+  const images = item.images ?? []
 
   const handleCopyPrompt = async () => {
     try {
@@ -144,60 +143,63 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
       item.output_format
     )
     if (skipped > 0) {
-      toast.warning(t('{{count}} images could not be packed', { count: skipped }))
+      toast.warning(
+        t('{{count}} images could not be packed', { count: skipped })
+      )
     }
   }
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className='flex max-h-[85vh] w-[60vw] max-w-[60vw] flex-col overflow-hidden sm:max-w-[60vw]'>
-        <DialogHeader className='shrink-0'>
-          <DialogTitle className='flex items-center gap-2'>
-            {t('Generation Details')}
-            {item.favorite && (
-              <Star
-                className='size-4 fill-amber-400 text-amber-400'
-                aria-label={t('Favorite')}
-              />
+    <Dialog
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      title={
+        <span className='flex items-center gap-2'>
+          {t('Generation Details')}
+          {item.favorite && (
+            <Star
+              className='size-4 fill-amber-400 text-amber-400'
+              aria-label={t('Favorite')}
+            />
+          )}
+        </span>
+      }
+      contentClassName='h-[75vh] sm:max-w-[78rem]'
+      contentHeight='100%'
+      bodyContainerClassName='flex-1 max-h-none overflow-hidden'
+      bodyClassName='h-full min-h-0'
+    >
+      <div className='flex h-full min-h-0 flex-col space-y-4'>
+        <div className='flex shrink-0 items-center gap-3 border-b pb-3'>
+          <UserProfileHoverCard user={resolvedUser}>
+            <Avatar className='size-9 shrink-0' onMouseEnter={handleFetchUser}>
+              {resolvedUser.avatar_url && (
+                <AvatarImage src={resolvedUser.avatar_url} alt={primaryName} />
+              )}
+              <AvatarFallback
+                className='text-sm font-semibold text-white'
+                style={avatarFallbackStyle}
+              >
+                {avatarFallback}
+              </AvatarFallback>
+            </Avatar>
+          </UserProfileHoverCard>
+          <div className='flex min-w-0 flex-col'>
+            <span className='truncate text-base font-medium'>
+              {primaryName}
+            </span>
+            {shouldShowUsername && (
+              <span className='text-muted-foreground truncate text-sm'>
+                {resolvedUser.username}
+              </span>
             )}
-          </DialogTitle>
-        </DialogHeader>
+          </div>
+          <span className='text-muted-foreground ml-auto shrink-0 text-sm tabular-nums'>
+            {dayjs(item.created_at).format('YYYY-MM-DD HH:mm:ss')}
+          </span>
+        </div>
 
         <div className='min-h-0 flex-1 space-y-4 overflow-y-auto pr-1'>
-          <div
-            className='flex items-center gap-2.5 pl-1.5'
-            onMouseEnter={handleFetchUser}
-          >
-            <UserProfileHoverCard user={userData ?? fallbackUser}>
-              <Avatar size='sm' className='shrink-0'>
-                {item.avatar_url ? (
-                  <AvatarImage src={item.avatar_url} alt={primaryName} />
-                ) : null}
-                <AvatarFallback
-                  className='text-xs font-medium text-white'
-                  style={avatarFallbackStyle}
-                >
-                  {avatarFallback}
-                </AvatarFallback>
-              </Avatar>
-            </UserProfileHoverCard>
-            <UserProfileHoverCard user={userData ?? fallbackUser}>
-              <div className='flex min-w-0 cursor-pointer flex-col'>
-                <span className='truncate text-sm font-medium'>
-                  {primaryName}
-                </span>
-                {item.username && item.username !== primaryName && (
-                  <span className='text-muted-foreground truncate text-xs'>
-                    {item.username}
-                  </span>
-                )}
-              </div>
-            </UserProfileHoverCard>
-            <span className='text-muted-foreground ml-auto text-xs tabular-nums'>
-              {dayjs(item.created_at).format('YYYY-MM-DD HH:mm:ss')}
-            </span>
-          </div>
-
           <div className='grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border p-3 sm:grid-cols-3'>
             <DetailField label={t('Model')}>
               <ModelBadge modelName={item.model} className='font-normal' />
@@ -253,23 +255,23 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
             </DetailField>
           </div>
 
-          <div className='space-y-1.5'>
+          <div className='my-2 space-y-3'>
             <div className='flex items-center justify-between'>
-              <span className='text-muted-foreground text-sm font-medium'>
+              <span className='text-muted-foreground text-base font-medium'>
                 {t('Prompt')}
               </span>
               <Button
                 type='button'
                 variant='ghost'
                 size='sm'
-                className='h-6 gap-1 px-1.5 text-xs'
+                className='h-7 gap-1.5 px-2 text-sm'
                 onClick={() => void handleCopyPrompt()}
               >
                 <Copy className='size-3' />
                 {t('Copy prompt')}
               </Button>
             </div>
-            <p className='bg-muted/40 max-h-40 overflow-y-auto rounded-lg border p-2.5 text-xs leading-relaxed break-all whitespace-pre-wrap'>
+            <p className='bg-muted/40 max-h-40 overflow-y-auto rounded-lg border p-2.5 text-sm leading-relaxed break-all whitespace-pre-wrap'>
               {item.prompt || '-'}
             </p>
           </div>
@@ -277,8 +279,11 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
           {images.length > 0 && (
             <div className='space-y-1.5'>
               <div className='flex items-center justify-between'>
-                <span className='text-muted-foreground text-sm font-medium'>
-                  {t('Images')} ({images.length})
+                <span className='text-muted-foreground flex items-center gap-1.5 text-base font-medium'>
+                  {t('Images')}
+                  <Badge className='h-6 min-w-6 justify-center rounded-full px-2 text-sm tabular-nums'>
+                    {images.length}
+                  </Badge>
                 </span>
                 {images.length > 1 && (
                   <Button
@@ -293,7 +298,7 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
                   </Button>
                 )}
               </div>
-              <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'>
+              <div className='mt-3 grid grid-cols-[repeat(auto-fill,minmax(8rem,10rem))] gap-2'>
                 {images.map((image, index) => (
                   <div
                     key={image.id}
@@ -340,7 +345,7 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
             </div>
           )}
         </div>
-      </DialogContent>
+      </div>
     </Dialog>
   )
 }

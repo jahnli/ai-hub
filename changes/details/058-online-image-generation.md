@@ -33,10 +33,10 @@
 - `web/default/src/features/image-studio/lib/storage.ts` — 历史记录存储层重构为调用服务端 API，移除 localStorage 实现；根据请求总数与成功图片数恢复失败占位数量。
 - `web/default/src/features/image-studio/hooks/use-image-studio.ts` — 生成完成后调用服务端存储 API 持久化图片，返回服务端 URL 替代 data URL；多张生成按所选数量并行发送不带 n 的单图请求，聚合成功结果、失败数量和各请求消费日志，并移除部分失败 warning toast。
 - `web/default/src/features/image-studio/hooks/use-generation-history.ts` — 历史加载改为从服务端 API 获取。
-- `web/default/src/features/image-studio/components/result-grid.tsx` — 结果网格适配服务端图片 URL 展示；部分请求失败时追加等量灰色“生图失败”占位卡。
+- `web/default/src/features/image-studio/components/result-grid.tsx` — 结果网格适配服务端图片 URL 展示；部分请求失败时追加等量灰色“生图失败”占位卡；大图预览将图片与提示词框统一为最大 960px/92vw 宽度，图片、提示词和操作栏作为整体按视口居中，优化三部分间距并保持缩放与旋转操作。
 - `web/default/src/features/image-studio/components/history-panel.tsx` — 历史面板适配服务端数据结构。
 - `web/default/src/features/image-studio/constants.ts` — 新增 IMAGE_STUDIO_GENERATIONS API 端点常量；在线生图最大生成数量改为 4。
 - `controller/security_audit.go`、`router/api-router.go` — 新增管理员图片审计分页接口与路由，支持按时间范围、用户名和显示名筛选。
 - `model/image_studio.go` — 图片生成记录新增安全审计查询，关联用户展示信息并批量加载图片资源，兼容 SQLite、MySQL 和 PostgreSQL。
-- `web/default/src/features/security-audit/` — 安全审计新增图片审计页，提供日期与用户筛选、图片缩略图及大图预览、请求内容 Tooltip、生成详情、图片下载和分页；详情弹框支持用户资料悬停卡片并优化尺寸、字号和列宽。
+- `web/default/src/features/security-audit/` — 安全审计新增图片审计页，提供日期与用户筛选、图片缩略图及大图预览、请求内容 Tooltip、生成详情、图片下载和分页；生成详情与请求内容弹框统一为最大 78rem、视口 85% 高度，头像和用户资料展示保持一致并放大详情文字，图片数量改为主题色标签；审计大图预览同步统一图片和提示词宽度、视口居中及三部分间距。
 - `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补充图片审计界面多语言文案并更新同步报告。

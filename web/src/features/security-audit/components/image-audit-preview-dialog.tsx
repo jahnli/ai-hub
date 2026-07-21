@@ -26,12 +26,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import {
-  useEffect,
-  useState,
-  type KeyboardEvent,
-  type WheelEvent,
-} from 'react'
+import { useEffect, useState, type KeyboardEvent, type WheelEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -117,17 +112,17 @@ export function ImageAuditPreviewDialog(props: ImageAuditPreviewDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
-        className='bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&_[data-slot=dialog-close]]:bg-foreground/45 [&_[data-slot=dialog-close]]:text-background [&_[data-slot=dialog-close]]:backdrop-blur-md [&_[data-slot=dialog-close]]:hover:bg-foreground/60'
+        className='[&_[data-slot=dialog-close]]:bg-foreground/45 [&_[data-slot=dialog-close]]:text-background [&_[data-slot=dialog-close]]:hover:bg-foreground/60 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&_[data-slot=dialog-close]]:backdrop-blur-md'
         overlayClassName='bg-black/30 supports-backdrop-filter:backdrop-blur-[1.5px]'
         onKeyDown={handleKeyDown}
       >
         <DialogTitle className='sr-only'>{t('Image preview')}</DialogTitle>
         <div
-          className='flex h-[96vh] w-screen min-w-0 flex-col items-center justify-start px-6 pt-4 pb-3'
+          className='flex h-screen w-screen min-w-0 flex-col items-center justify-center px-[4vw] py-[4vh]'
           onClick={() => props.onOpenChange(false)}
         >
           <div
-            className='relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden'
+            className='relative flex w-full items-center justify-center overflow-hidden'
             onWheel={handleWheel}
           >
             {images.length > 1 && (
@@ -145,14 +140,13 @@ export function ImageAuditPreviewDialog(props: ImageAuditPreviewDialogProps) {
                 <ChevronLeft className='size-5' />
               </Button>
             )}
-            <div className='flex h-full min-h-0 max-w-[86vw] items-center justify-center overflow-hidden'>
+            <div className='flex max-h-[calc(96vh-9rem)] w-[min(92vw,960px)] items-center justify-center overflow-hidden'>
               <img
                 src={image.url}
                 alt={promptText.slice(0, 80)}
-                className='max-h-none max-w-none rounded-lg object-contain transition-transform duration-150'
+                className='max-h-[calc(96vh-9rem)] max-w-full rounded-lg object-contain transition-transform duration-150'
                 style={{
-                  height: `${zoom * 100}%`,
-                  transform: `rotate(${rotation}deg)`,
+                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
                 }}
                 onClick={(event) => event.stopPropagation()}
               />
@@ -174,11 +168,11 @@ export function ImageAuditPreviewDialog(props: ImageAuditPreviewDialogProps) {
             )}
           </div>
           <div
-            className='mt-2 flex flex-col gap-2'
+            className='mt-4 flex flex-col gap-5'
             onClick={(event) => event.stopPropagation()}
           >
             {promptText && (
-              <p className='bg-background/90 text-foreground mx-auto max-h-20 max-w-[min(86vw,720px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
+              <p className='bg-background/90 text-foreground mx-auto max-h-20 w-[min(92vw,960px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
                 <span className='font-medium'>{t('Prompt')}: </span>
                 {promptText}
               </p>
