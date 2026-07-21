@@ -281,7 +281,7 @@ export function ImageAuditDetailDialog(props: ImageAuditDetailDialogProps) {
               <div className='flex items-center justify-between'>
                 <span className='text-muted-foreground flex items-center gap-1.5 text-base font-medium'>
                   {t('Images')}
-                  <Badge className='h-6 min-w-6 justify-center rounded-full px-2 text-sm tabular-nums'>
+                  <Badge className='h-4 min-w-4 justify-center rounded-full px-0.5 text-sm leading-none tabular-nums'>
                     {images.length}
                   </Badge>
                 </span>
