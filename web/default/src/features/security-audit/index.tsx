@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { RotateCcw, Search, ShieldAlert } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SectionPageLayout } from "@/components/layout";
@@ -31,6 +31,7 @@ import { CompactDateTimeRangePicker } from "@/features/usage-logs/components/com
 import dayjs from "@/lib/dayjs";
 
 import { getSecurityAuditSetting } from "./api";
+import { ImageAuditTable } from "./components/image-audit-table";
 import { OffHoursTable } from "./components/off-hours-table";
 import {
   isSecurityAuditSectionId,
@@ -44,6 +45,9 @@ const route = getRouteApi("/_authenticated/security-audit/$section");
 const SECTION_META: Record<SecurityAuditSectionId, { titleKey: string }> = {
   "off-hours": {
     titleKey: "Off-Hours Requests",
+  },
+  "image-studio": {
+    titleKey: "Image Audit",
   },
 };
 
@@ -61,11 +65,13 @@ export function SecurityAudit() {
   )
     ? params.section
     : SECURITY_AUDIT_DEFAULT_SECTION;
+  const isOffHoursSection = activeSection === "off-hours";
 
   const settingQuery = useQuery({
     queryKey: ["security-audit", "setting"],
     queryFn: getSecurityAuditSetting,
     staleTime: 60 * 1000,
+    enabled: isOffHoursSection,
   });
   const auditSetting = settingQuery.data?.data;
   // 配置加载中按启用处理,避免打开页面时提示横幅闪烁
@@ -135,10 +141,51 @@ export function SecurityAudit() {
       void navigate({
         to: "/security-audit/$section",
         params: { section: section as SecurityAuditSectionId },
+        // 跨 tab 保留时间与用户名筛选,仅重置页码
+        search: (previousSearch: Record<string, unknown>) => ({
+          ...previousSearch,
+          page: 1,
+        }),
       });
     },
     [navigate],
   );
+
+  let sectionContent: ReactNode;
+  if (!isOffHoursSection) {
+    sectionContent = (
+      <div className="min-h-0 flex-1">
+        <ImageAuditTable
+          startTimestamp={startTimestamp}
+          endTimestamp={endTimestamp}
+          username={search.username ?? ""}
+        />
+      </div>
+    );
+  } else if (auditDisabled) {
+    sectionContent = (
+      <Alert>
+        <ShieldAlert className="size-4" />
+        <AlertTitle>{t("Security audit is disabled")}</AlertTitle>
+        <AlertDescription>
+          {t(
+            "Enable it in System Settings → Security & Limits → Security Audit.",
+          )}
+        </AlertDescription>
+      </Alert>
+    );
+  } else {
+    sectionContent = (
+      <div className="min-h-0 flex-1">
+        <OffHoursTable
+          startTimestamp={startTimestamp}
+          endTimestamp={endTimestamp}
+          username={search.username ?? ""}
+          enabled={!settingQuery.isLoading && !auditDisabled}
+        />
+      </div>
+    );
+  }
 
   return (
     <SectionPageLayout fixedContent>
@@ -179,7 +226,7 @@ export function SecurityAudit() {
               <Search className="size-4" />
               {t("Search")}
             </Button>
-            {auditSetting && (
+            {isOffHoursSection && auditSetting && (
               <span className="text-muted-foreground ml-2 text-sm">
                 {t("Audit window")}:{" "}
                 {formatHour(auditSetting.off_hours.start_hour)} -{" "}
@@ -187,26 +234,7 @@ export function SecurityAudit() {
               </span>
             )}
           </div>
-          {auditDisabled ? (
-            <Alert>
-              <ShieldAlert className="size-4" />
-              <AlertTitle>{t("Security audit is disabled")}</AlertTitle>
-              <AlertDescription>
-                {t(
-                  "Enable it in System Settings → Security & Limits → Security Audit.",
-                )}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="min-h-0 flex-1">
-              <OffHoursTable
-                startTimestamp={startTimestamp}
-                endTimestamp={endTimestamp}
-                username={search.username ?? ""}
-                enabled={!settingQuery.isLoading && !auditDisabled}
-              />
-            </div>
-          )}
+          {sectionContent}
         </div>
       </SectionPageLayout.Content>
     </SectionPageLayout>

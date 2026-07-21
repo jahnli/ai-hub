@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -199,4 +200,91 @@ func loadImageStudioGenerationImages(record *ImageStudioGeneration) error {
 	}
 	record.Images = images
 	return nil
+}
+
+// ImageStudioAuditItem 安全审计视图:生成记录附带用户展示信息。
+type ImageStudioAuditItem struct {
+	ImageStudioGeneration
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	AvatarUrl   string `json:"avatar_url"`
+}
+
+// GetImageStudioAuditGenerations 分页查询 [startTs, endTs](Unix 秒,含端)内全部用户的
+// 图片生成记录,keyword 对 username/display_name 模糊匹配。created_at 以毫秒存储,
+// 调用方需保证 endTs 已钳制在当前时间附近,避免毫秒换算溢出。
+func GetImageStudioAuditGenerations(startTs, endTs int64, keyword string, startIdx int, num int) ([]ImageStudioAuditItem, int64, error) {
+	query := DB.Model(&ImageStudioGeneration{}).
+		Where("created_at >= ? AND created_at < ?", startTs*1000, (endTs+1)*1000)
+	trimmedKeyword := strings.TrimSpace(keyword)
+	if trimmedKeyword != "" {
+		likeKeyword := "%" + trimmedKeyword + "%"
+		var matchedUserIds []int
+		if err := DB.Table("users").
+			Where("username LIKE ? OR display_name LIKE ?", likeKeyword, likeKeyword).
+			Pluck("id", &matchedUserIds).Error; err != nil {
+			return nil, 0, err
+		}
+		if len(matchedUserIds) == 0 {
+			return []ImageStudioAuditItem{}, 0, nil
+		}
+		query = query.Where("user_id IN ?", matchedUserIds)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var records []ImageStudioGeneration
+	if err := query.Order("created_at DESC").Offset(startIdx).Limit(num).Find(&records).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := loadImageStudioGenerationListImages(records); err != nil {
+		return nil, 0, err
+	}
+
+	items := make([]ImageStudioAuditItem, len(records))
+	userIdSet := make(map[int]struct{}, len(records))
+	for i := range records {
+		items[i] = ImageStudioAuditItem{ImageStudioGeneration: records[i]}
+		userIdSet[records[i].UserId] = struct{}{}
+	}
+	if len(userIdSet) == 0 {
+		return items, total, nil
+	}
+
+	userIds := make([]int, 0, len(userIdSet))
+	for id := range userIdSet {
+		userIds = append(userIds, id)
+	}
+	// 生成记录在主库,但仍按 ID 回填而非 JOIN,与 off_hours 审计保持同一套用户信息口径
+	var infos []struct {
+		Id          int    `gorm:"column:id"`
+		Username    string `gorm:"column:username"`
+		DisplayName string `gorm:"column:display_name"`
+		AvatarUrl   string `gorm:"column:avatar_url"`
+	}
+	if err := DB.Table("users").Select("id, username, display_name, avatar_url").Where("id IN ?", userIds).Find(&infos).Error; err != nil {
+		return nil, 0, err
+	}
+	infoMap := make(map[int]struct {
+		Username    string
+		DisplayName string
+		AvatarUrl   string
+	}, len(infos))
+	for _, info := range infos {
+		infoMap[info.Id] = struct {
+			Username    string
+			DisplayName string
+			AvatarUrl   string
+		}{info.Username, info.DisplayName, info.AvatarUrl}
+	}
+	for i := range items {
+		if info, ok := infoMap[items[i].UserId]; ok {
+			items[i].Username = info.Username
+			items[i].DisplayName = info.DisplayName
+			items[i].AvatarUrl = info.AvatarUrl
+		}
+	}
+	return items, total, nil
 }

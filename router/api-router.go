@@ -331,6 +331,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			securityAuditRoute.GET("/setting", controller.GetSecurityAuditSetting)
 			securityAuditRoute.GET("/off_hours", controller.GetOffHoursUsage)
+			securityAuditRoute.GET("/image_studio", controller.GetImageStudioAudit)
 		}
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())

@@ -96,3 +96,66 @@ export interface OffHoursDetailTarget {
   windowStart: number
   windowEnd: number
 }
+
+/** Mirrors backend model.ImageStudioAsset */
+export interface ImageAuditAsset {
+  id: string
+  url: string
+  mime_type: string
+  size_bytes: number
+  width?: number
+  height?: number
+  revised_prompt?: string
+}
+
+/** Mirrors backend model.ImageStudioAuditItem */
+export interface ImageAuditItem {
+  id: string
+  user_id: number
+  username: string
+  display_name: string
+  avatar_url: string
+  /** Unix milliseconds */
+  created_at: number
+  updated_at: number
+  mode: 'generate' | 'edit' | string
+  prompt: string
+  model: string
+  group: string
+  size: string
+  quality?: string
+  moderation?: string
+  output_format?: string
+  n: number
+  duration_ms: number
+  quota?: number
+  prompt_tokens?: number
+  completion_tokens?: number
+  favorite: boolean
+  images: ImageAuditAsset[]
+}
+
+export interface GetImageAuditParams {
+  p?: number
+  page_size?: number
+  start_timestamp?: number
+  end_timestamp?: number
+  username?: string
+}
+
+export interface GetImageAuditResponse {
+  success: boolean
+  message?: string
+  data?: {
+    items: ImageAuditItem[] | null
+    total: number
+    page: number
+    page_size: number
+  }
+}
+
+/** Image opened in the audit lightbox: a generation record plus the image index. */
+export interface ImageAuditPreviewTarget {
+  item: ImageAuditItem
+  index: number
+}

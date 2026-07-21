@@ -19,6 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 import type {
+  GetImageAuditParams,
+  GetImageAuditResponse,
   GetOffHoursUsageParams,
   GetOffHoursUsageResponse,
   GetSecurityAuditSettingResponse,
@@ -39,5 +41,18 @@ export async function getOffHoursUsage(
     }
   })
   const res = await api.get(`/api/security_audit/off_hours?${queryParams}`)
+  return res.data
+}
+
+export async function getImageAudit(
+  params: GetImageAuditParams
+): Promise<GetImageAuditResponse> {
+  const queryParams = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, String(value))
+    }
+  })
+  const res = await api.get(`/api/security_audit/image_studio?${queryParams}`)
   return res.data
 }

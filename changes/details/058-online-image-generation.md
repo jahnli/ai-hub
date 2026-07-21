@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-07-16
+**日期**: 2026-07-21
 
 ## 涉及文件
 
@@ -36,3 +36,7 @@
 - `web/default/src/features/image-studio/components/result-grid.tsx` — 结果网格适配服务端图片 URL 展示；部分请求失败时追加等量灰色“生图失败”占位卡。
 - `web/default/src/features/image-studio/components/history-panel.tsx` — 历史面板适配服务端数据结构。
 - `web/default/src/features/image-studio/constants.ts` — 新增 IMAGE_STUDIO_GENERATIONS API 端点常量；在线生图最大生成数量改为 4。
+- `controller/security_audit.go`、`router/api-router.go` — 新增管理员图片审计分页接口与路由，支持按时间范围、用户名和显示名筛选。
+- `model/image_studio.go` — 图片生成记录新增安全审计查询，关联用户展示信息并批量加载图片资源，兼容 SQLite、MySQL 和 PostgreSQL。
+- `web/default/src/features/security-audit/` — 安全审计新增图片审计页，提供日期与用户筛选、图片缩略图及大图预览、请求内容 Tooltip、生成详情、图片下载和分页；详情弹框支持用户资料悬停卡片并优化尺寸、字号和列宽。
+- `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补充图片审计界面多语言文案并更新同步报告。

@@ -28,6 +28,11 @@ const SECURITY_AUDIT_SECTIONS = [
     titleKey: 'Off-Hours Requests',
     build: () => null, // Content is rendered directly in the page component
   },
+  {
+    id: 'image-studio',
+    titleKey: 'Image Audit',
+    build: () => null, // Content is rendered directly in the page component
+  },
 ] as const
 
 export type SecurityAuditSectionId =
