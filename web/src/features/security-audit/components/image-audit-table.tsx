@@ -46,7 +46,7 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
 
   const pagination: PaginationState = {
     pageIndex: (search.page ?? 1) - 1,
-    pageSize: search.pageSize ?? 20,
+    pageSize: search.pageSize ?? 10,
   }
 
   const onPaginationChange: OnChangeFn<PaginationState> = useCallback(
