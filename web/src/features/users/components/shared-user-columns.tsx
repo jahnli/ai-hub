@@ -200,12 +200,7 @@ export function userQuotaColumn<T extends UserColumnRow>(
     id: "quota",
     accessorKey: "quota",
     header: ({ column }) => (
-      <DataTableColumnHeader
-        column={column}
-        title={headerText}
-        descriptionPosition="after-title"
-        className="space-x-0 [&_[data-slot=button]]:px-1.5"
-      />
+      <DataTableColumnHeader column={column} title={headerText} />
     ),
     cell: ({ row }) => {
       const user = row.original as UserColumnRow;
