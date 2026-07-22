@@ -29,6 +29,7 @@ import type { ImageAuditItem, ImageAuditPreviewTarget } from '../types'
 import { useImageAuditColumns } from './image-audit-columns'
 import { ImageAuditDetailDialog } from './image-audit-detail-dialog'
 import { ImageAuditPreviewDialog } from './image-audit-preview-dialog'
+import { ImageAuditRequestContentDialog } from './image-audit-request-content-dialog'
 
 const route = getRouteApi('/_authenticated/security-audit/$section')
 
@@ -95,6 +96,9 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [detailItem, setDetailItem] = useState<ImageAuditItem | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [requestContentItem, setRequestContentItem] =
+    useState<ImageAuditItem | null>(null)
+  const [requestContentOpen, setRequestContentOpen] = useState(false)
 
   const handlePreview = useCallback((item: ImageAuditItem, index: number) => {
     setPreviewTarget({ item, index })
@@ -104,8 +108,16 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
     setDetailItem(item)
     setDetailOpen(true)
   }, [])
+  const handleViewRequestContent = useCallback((item: ImageAuditItem) => {
+    setRequestContentItem(item)
+    setRequestContentOpen(true)
+  }, [])
 
-  const columns = useImageAuditColumns(handlePreview, handleViewDetail)
+  const columns = useImageAuditColumns(
+    handlePreview,
+    handleViewDetail,
+    handleViewRequestContent
+  )
 
   const { table } = useDataTable({
     data: items,
@@ -137,6 +149,11 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         target={previewTarget}
+      />
+      <ImageAuditRequestContentDialog
+        open={requestContentOpen}
+        onOpenChange={setRequestContentOpen}
+        item={requestContentItem}
       />
       <ImageAuditDetailDialog
         open={detailOpen}
