@@ -62,6 +62,23 @@ function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`
 }
 
+function getDefaultTimeRange(section: SecurityAuditSectionId): {
+  startTime: dayjs.Dayjs
+  endTime: dayjs.Dayjs
+} {
+  if (section === 'off-hours') {
+    return {
+      startTime: dayjs().startOf('day'),
+      endTime: dayjs().endOf('day'),
+    }
+  }
+
+  return {
+    startTime: dayjs().startOf('month'),
+    endTime: dayjs().endOf('month'),
+  }
+}
+
 export function SecurityAudit() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -108,8 +125,12 @@ export function SecurityAudit() {
     })
   }, [activeSection, navigate, settingQuery.isLoading, visibleSectionIds])
 
-  const startTimestamp = search.startTime ?? dayjs().startOf('month').unix()
-  const endTimestamp = search.endTime ?? dayjs().endOf('month').unix()
+  const defaultTimeRange = useMemo(
+    () => getDefaultTimeRange(activeSection),
+    [activeSection]
+  )
+  const startTimestamp = search.startTime ?? defaultTimeRange.startTime.unix()
+  const endTimestamp = search.endTime ?? defaultTimeRange.endTime.unix()
 
   const [startTimeInput, setStartTimeInput] = useState(
     () => new Date(startTimestamp * 1000)
@@ -118,6 +139,11 @@ export function SecurityAudit() {
     () => new Date(endTimestamp * 1000)
   )
   const [usernameInput, setUsernameInput] = useState(search.username ?? '')
+
+  useEffect(() => {
+    setStartTimeInput(new Date(startTimestamp * 1000))
+    setEndTimeInput(new Date(endTimestamp * 1000))
+  }, [startTimestamp, endTimestamp])
 
   const handleRangeChange = useCallback(
     (range: { start?: Date; end?: Date }) => {
@@ -142,10 +168,9 @@ export function SecurityAudit() {
   }, [navigate, activeSection, startTimeInput, endTimeInput, usernameInput])
 
   const resetFilters = useCallback(() => {
-    const defaultStartTime = dayjs().startOf('month')
-    const defaultEndTime = dayjs().endOf('month')
-    setStartTimeInput(defaultStartTime.toDate())
-    setEndTimeInput(defaultEndTime.toDate())
+    const defaultTimeRange = getDefaultTimeRange(activeSection)
+    setStartTimeInput(defaultTimeRange.startTime.toDate())
+    setEndTimeInput(defaultTimeRange.endTime.toDate())
     setUsernameInput('')
     void navigate({
       to: '/security-audit/$section',
