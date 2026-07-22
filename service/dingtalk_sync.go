@@ -18,14 +18,17 @@ import (
 )
 
 const (
-	dingTalkBaseURL                   = "https://oapi.dingtalk.com"
-	dingTalkHTTPTimeout               = 10 * time.Second
-	dingTalkTokenRefreshMarginSeconds = 300
-	dingTalkDeptRootID                = int64(1)
-	dingTalkDeptPathMaxDepth          = 20
-	dingTalkMemberListRequestsPerSec  = 30
-	dingTalkRateLimitRetryAttempts    = 3
-	dingTalkRateLimitRetryBaseDelay   = time.Second
+	dingTalkBaseURL                      = "https://oapi.dingtalk.com"
+	dingTalkHTTPTimeout                  = 10 * time.Second
+	dingTalkTokenRefreshMarginSeconds    = 300
+	dingTalkDeptRootID                   = int64(1)
+	dingTalkDeptPathMaxDepth             = 20
+	dingTalkDepartmentListRequestsPerSec = 30
+	dingTalkMemberListRequestsPerSec     = 30
+	dingTalkRateLimitRetryAttempts       = 3
+	dingTalkRateLimitRetryBaseDelay      = time.Second
+	dingTalkDepartmentListAPIPath        = "dingtalk.oapi.v2.department.listsub"
+	dingTalkMemberListAPIPath            = "dingtalk.oapi.v2.user.list"
 )
 
 // dingtalkTokenEntry caches an access token together with its expiry time.
@@ -35,11 +38,11 @@ type dingtalkTokenEntry struct {
 }
 
 var (
-	dingtalkTokenCacheMap            = make(map[string]*dingtalkTokenEntry)
-	dingtalkTokenCacheMutex          sync.Mutex
-	dingTalkMemberListLimiterMutex   sync.Mutex
-	dingTalkMemberListLimiterByAppID = make(map[string]<-chan time.Time)
-	errDingTalkRateLimitExceeded     = errors.New("dingtalk rate limit exceeded after retries")
+	dingtalkTokenCacheMap        = make(map[string]*dingtalkTokenEntry)
+	dingtalkTokenCacheMutex      sync.Mutex
+	dingTalkLimiterMutex         sync.Mutex
+	dingTalkLimiterByAppAndAPI   = make(map[string]<-chan time.Time)
+	errDingTalkRateLimitExceeded = errors.New("dingtalk rate limit exceeded after retries")
 )
 
 type dingtalkSyncConfig struct {
@@ -416,14 +419,15 @@ func isDingTalkRateLimitResponse(body []byte) bool {
 		strings.Contains(response.Errmsg, "subcode=90018")
 }
 
-func waitForDingTalkMemberListRequest(clientID string) {
-	dingTalkMemberListLimiterMutex.Lock()
-	ticks, ok := dingTalkMemberListLimiterByAppID[clientID]
+func waitForDingTalkRequest(clientID string, apiPath string, requestsPerSecond int) {
+	limiterKey := clientID + "\x00" + apiPath
+	dingTalkLimiterMutex.Lock()
+	ticks, ok := dingTalkLimiterByAppAndAPI[limiterKey]
 	if !ok {
-		ticks = time.NewTicker(time.Second / dingTalkMemberListRequestsPerSec).C
-		dingTalkMemberListLimiterByAppID[clientID] = ticks
+		ticks = time.NewTicker(time.Second / time.Duration(requestsPerSecond)).C
+		dingTalkLimiterByAppAndAPI[limiterKey] = ticks
 	}
-	dingTalkMemberListLimiterMutex.Unlock()
+	dingTalkLimiterMutex.Unlock()
 	<-ticks
 }
 

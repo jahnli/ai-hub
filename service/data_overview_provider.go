@@ -221,14 +221,32 @@ func fetchDingTalkCompanyDirectory(company *model.Company, config model.CompanyD
 	if err != nil {
 		return nil, err
 	}
-	departments, err := dingtalkFetchAllDepartments(token)
+	departments, err := dingtalkFetchAllDepartments(config.ClientID, token)
 	if err != nil {
 		return nil, err
 	}
 	return &overviewDirectory{OrganizationName: root.Name, Departments: departments}, nil
 }
 
-func dingtalkFetchAllDepartments(token string) ([]overviewDepartment, error) {
+type dingTalkRequestExecutor func(request func() ([]byte, int, error)) ([]byte, int, error)
+
+func dingtalkFetchAllDepartments(clientID string, token string) ([]overviewDepartment, error) {
+	return fetchDingTalkDepartments(token, func(request func() ([]byte, int, error)) ([]byte, int, error) {
+		return executeDingTalkRateLimitedRequest(
+			func() {
+				waitForDingTalkRequest(
+					clientID,
+					dingTalkDepartmentListAPIPath,
+					dingTalkDepartmentListRequestsPerSec,
+				)
+			},
+			time.Sleep,
+			request,
+		)
+	})
+}
+
+func fetchDingTalkDepartments(token string, execute dingTalkRequestExecutor) ([]overviewDepartment, error) {
 	result := make([]overviewDepartment, 0)
 	queue := []int64{dingTalkDeptRootID}
 	seen := map[int64]bool{dingTalkDeptRootID: true}
@@ -237,7 +255,9 @@ func dingtalkFetchAllDepartments(token string) ([]overviewDepartment, error) {
 		queue = queue[1:]
 		urlValue := fmt.Sprintf("%s/topapi/v2/department/listsub?access_token=%s", dingTalkBaseURL, url.QueryEscape(token))
 		body := map[string]any{"dept_id": parentID, "language": "zh_CN"}
-		respBody, status, err := dingtalkDoRequest(http.MethodPost, urlValue, body)
+		respBody, status, err := execute(func() ([]byte, int, error) {
+			return dingtalkDoRequest(http.MethodPost, urlValue, body)
+		})
 		if err != nil {
 			return nil, errors.New("dingtalk department request failed")
 		}
@@ -286,7 +306,13 @@ func dingtalkFetchDepartmentMembers(clientID string, token string, departmentID 
 		urlValue := fmt.Sprintf("%s/topapi/v2/user/list?access_token=%s", dingTalkBaseURL, url.QueryEscape(token))
 		body := map[string]any{"dept_id": deptID, "cursor": cursor, "size": 100, "order_field": "entry_asc"}
 		respBody, status, err := executeDingTalkRateLimitedRequest(
-			func() { waitForDingTalkMemberListRequest(clientID) },
+			func() {
+				waitForDingTalkRequest(
+					clientID,
+					dingTalkMemberListAPIPath,
+					dingTalkMemberListRequestsPerSec,
+				)
+			},
 			time.Sleep,
 			func() ([]byte, int, error) {
 				return dingtalkDoRequest(http.MethodPost, urlValue, body)
