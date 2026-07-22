@@ -20,6 +20,7 @@ import {
   Activity,
   BarChart3,
   Box,
+  Building2,
   CreditCard,
   FileText,
   FlaskConical,
@@ -155,6 +156,12 @@ export function useSidebarData(): SidebarData {
             title: t('Users'),
             url: '/users',
             icon: Users,
+          },
+          {
+            title: t('Company Management'),
+            url: '/companies',
+            icon: Building2,
+            requiredRole: ROLE.SUPER_ADMIN,
           },
           {
             title: t('Security Audit'),

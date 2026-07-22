@@ -19,6 +19,8 @@ import { useAuthStore } from '@/stores/auth-store'
 import { getDepartmentLogs, getDepartmentUserLogs } from '../api'
 
 interface UserLogsSectionProps {
+  companyId: number
+  departmentId: string
   userId: number
   startTimestamp: number
   endTimestamp: number
@@ -29,12 +31,16 @@ export function UserLogsSection(props: UserLogsSectionProps) {
     <LogsSection
       queryKey={[
         'user-stats-logs',
+        props.companyId,
+        props.departmentId,
         props.userId,
         props.startTimestamp,
         props.endTimestamp,
       ]}
       queryFn={(pagination) =>
         getDepartmentUserLogs({
+          company_id: props.companyId,
+          department_id: props.departmentId,
           user_id: props.userId,
           start_timestamp: props.startTimestamp,
           end_timestamp: props.endTimestamp,
@@ -49,6 +55,7 @@ export function UserLogsSection(props: UserLogsSectionProps) {
 }
 
 interface DepartmentLogsSectionProps {
+  companyId: number
   departmentId: string
   startTimestamp: number
   endTimestamp: number
@@ -59,12 +66,14 @@ export function DepartmentLogsSection(props: DepartmentLogsSectionProps) {
     <LogsSection
       queryKey={[
         'department-logs',
+        props.companyId,
         props.departmentId,
         props.startTimestamp,
         props.endTimestamp,
       ]}
       queryFn={(pagination) =>
         getDepartmentLogs({
+          company_id: props.companyId,
           department_id: props.departmentId,
           start_timestamp: props.startTimestamp,
           end_timestamp: props.endTimestamp,

@@ -36,6 +36,7 @@ import { SubDepartmentStatsDialog } from './sub-department-stats-dialog'
 
 interface SubDepartmentStatsProps {
   data: SubDepartmentStat[]
+  companyId: number
   activityFormula: [number, number, number]
   startTimestamp: number
   endTimestamp: number
@@ -512,7 +513,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
       <SubDepartmentStatsDialog
         key={
           statsDepartment
-            ? `${statsDepartment.department_id}-${props.startTimestamp}-${props.endTimestamp}`
+            ? `${props.companyId}-${statsDepartment.department_id}-${props.startTimestamp}-${props.endTimestamp}`
             : 'closed'
         }
         open={!!statsDepartment}
@@ -520,19 +521,21 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           if (!open) setStatsDepartment(null)
         }}
         department={statsDepartment}
+        companyId={props.companyId}
         startTimestamp={props.startTimestamp}
         endTimestamp={props.endTimestamp}
       />
       <DepartmentLogsDialog
         key={
           logsDepartment
-            ? `logs-${logsDepartment.department_id}-${props.startTimestamp}-${props.endTimestamp}`
+            ? `logs-${props.companyId}-${logsDepartment.department_id}-${props.startTimestamp}-${props.endTimestamp}`
             : 'logs-closed'
         }
         open={!!logsDepartment}
         onOpenChange={(open) => {
           if (!open) setLogsDepartment(null)
         }}
+        companyId={props.companyId}
         departmentId={logsDepartment?.department_id ?? null}
         departmentName={logsDepartment?.department_name ?? ''}
         initialStartTimestamp={props.startTimestamp}

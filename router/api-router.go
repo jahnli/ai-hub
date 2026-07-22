@@ -226,6 +226,16 @@ func SetApiRouter(router *gin.Engine) {
 			customOAuthRoute.PUT("/:id", controller.UpdateCustomOAuthProvider)
 			customOAuthRoute.DELETE("/:id", controller.DeleteCustomOAuthProvider)
 		}
+		companyRoute := apiRouter.Group("/company")
+		companyRoute.Use(middleware.RootAuth())
+		{
+			companyRoute.GET("/", controller.ListCompanies)
+			companyRoute.POST("/", controller.CreateCompany)
+			companyRoute.GET("/:id", controller.GetCompany)
+			companyRoute.PUT("/:id", controller.UpdateCompany)
+			companyRoute.PATCH("/:id/status", controller.SetCompanyStatus)
+			companyRoute.POST("/:id/test", controller.TestCompanyConnection)
+		}
 		performanceRoute := apiRouter.Group("/performance")
 		performanceRoute.Use(middleware.RootAuth())
 		{

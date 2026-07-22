@@ -19,6 +19,8 @@ import { UserLogsSection } from './user-logs-section'
 interface UserStatsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  companyId?: number
+  departmentId?: string
   user: DepartmentUser | null
   initialStartTimestamp: number
   initialEndTimestamp: number
@@ -75,12 +77,23 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
   )
 
   const userId = props.user?.id
+  const companyId = props.companyId ?? 0
+  const departmentId = props.departmentId ?? ''
 
   const { data: analysisData } = useQuery({
-    queryKey: ['user-usage-analysis', userId, startTimestamp, endTimestamp],
+    queryKey: [
+      'user-usage-analysis',
+      companyId,
+      departmentId,
+      userId,
+      startTimestamp,
+      endTimestamp,
+    ],
     queryFn: () => {
       if (!userId) throw new Error('Missing user id')
       return getUserUsageAnalysis({
+        company_id: companyId,
+        department_id: departmentId,
         user_id: userId,
         start_timestamp: startTimestamp,
         end_timestamp: endTimestamp,
@@ -112,6 +125,8 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
           />
 
           <UserLogsSection
+            companyId={companyId}
+            departmentId={departmentId}
             userId={props.user.id}
             startTimestamp={startTimestamp}
             endTimestamp={endTimestamp}

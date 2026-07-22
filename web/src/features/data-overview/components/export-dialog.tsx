@@ -30,23 +30,21 @@ import {
 import type {
   DepartmentStat,
   DepartmentUser,
+  DepartmentQueryParams,
   DeptTreeNode,
   SubDepartmentStat,
   UserRankingItem,
 } from '../types'
 
 interface ExportDialogProps {
-  queryParams: {
-    department_id: string
-    start_timestamp: number
-    end_timestamp: number
-  } | null
+  queryParams: DepartmentQueryParams | null
   treeData: DeptTreeNode[]
   stats: DepartmentStat | undefined
   subStats: SubDepartmentStat[]
 }
 
 async function fetchAllUsers(
+  companyId: number,
   departmentId: string,
   startTimestamp: number,
   endTimestamp: number
@@ -57,6 +55,7 @@ async function fetchAllUsers(
 
   for (;;) {
     const res = await getDepartmentUsers({
+      company_id: companyId,
       department_id: departmentId,
       start_timestamp: startTimestamp,
       end_timestamp: endTimestamp,
@@ -89,7 +88,7 @@ export function ExportDialog(props: ExportDialogProps) {
 
     setExporting(true)
     try {
-      const { department_id, start_timestamp, end_timestamp } =
+      const { company_id, department_id, start_timestamp, end_timestamp } =
         props.queryParams
 
       const node = findNodeByValue(props.treeData, department_id)
@@ -100,16 +99,19 @@ export function ExportDialog(props: ExportDialogProps) {
         for (const sub of props.subStats) {
           const [statsRes, subStatsRes, usageRes] = await Promise.all([
             getDepartmentStats({
+              company_id,
               department_id: sub.department_id,
               start_timestamp,
               end_timestamp,
             }),
             getSubDepartmentStats({
+              company_id,
               department_id: sub.department_id,
               start_timestamp,
               end_timestamp,
             }),
             getUsageAnalysis({
+              company_id,
               department_id: sub.department_id,
               start_timestamp,
               end_timestamp,
@@ -136,6 +138,7 @@ export function ExportDialog(props: ExportDialogProps) {
       let users: DepartmentUser[] = []
       let userRankings: UserRankingItem[] = []
       const rankingsRes = await getDepartmentUserRankings({
+        company_id,
         department_id,
         start_timestamp,
         end_timestamp,
@@ -144,6 +147,7 @@ export function ExportDialog(props: ExportDialogProps) {
 
       if (includeUserList) {
         users = await fetchAllUsers(
+          company_id,
           department_id,
           start_timestamp,
           end_timestamp
@@ -151,6 +155,7 @@ export function ExportDialog(props: ExportDialogProps) {
       }
 
       const usageRes = await getUsageAnalysis({
+        company_id,
         department_id,
         start_timestamp,
         end_timestamp,

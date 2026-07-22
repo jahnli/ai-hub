@@ -41,6 +41,7 @@ import { UserConsumptionCharts } from './user-consumption-charts'
 import { UserStatsDialog } from './user-stats-dialog'
 
 interface DepartmentUsersTableProps {
+  companyId: number
   departmentId: string
   startTimestamp: number
   endTimestamp: number
@@ -84,12 +85,12 @@ function getRegistrationStatusFilter(
   return String(filterValue[0])
 }
 
-export function DepartmentUsersTable({
-  departmentId,
-  startTimestamp,
-  endTimestamp,
-}: DepartmentUsersTableProps) {
+export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
   const { t } = useTranslation()
+  const companyId = props.companyId
+  const departmentId = props.departmentId
+  const startTimestamp = props.startTimestamp
+  const endTimestamp = props.endTimestamp
   const baseColumns = useSharedUserColumns<DepartmentUser>({
     costAccessor: 'total_amount_cny',
     tokensAccessor: 'total_tokens',
@@ -249,6 +250,7 @@ export function DepartmentUsersTable({
     queryKey: [
       'department',
       'users',
+      companyId,
       departmentId,
       startTimestamp,
       endTimestamp,
@@ -260,6 +262,7 @@ export function DepartmentUsersTable({
     ],
     queryFn: () =>
       getDepartmentUsers({
+        company_id: companyId,
         department_id: departmentId,
         start_timestamp: startTimestamp,
         end_timestamp: endTimestamp,
@@ -310,12 +313,14 @@ export function DepartmentUsersTable({
     queryKey: [
       'department',
       'user-rankings',
+      companyId,
       departmentId,
       startTimestamp,
       endTimestamp,
     ],
     queryFn: () =>
       getDepartmentUserRankings({
+        company_id: companyId,
         department_id: departmentId,
         start_timestamp: startTimestamp,
         end_timestamp: endTimestamp,
@@ -390,13 +395,16 @@ export function DepartmentUsersTable({
           if (!open) setStatsUser(null)
         }}
         user={statsUser}
+        companyId={companyId}
+        departmentId={departmentId}
         initialStartTimestamp={startTimestamp}
         initialEndTimestamp={endTimestamp}
       />
       <DepartmentLogsDialog
-        key={`department-logs-${departmentId}-${startTimestamp}-${endTimestamp}`}
+        key={`department-logs-${companyId}-${departmentId}-${startTimestamp}-${endTimestamp}`}
         open={logsOpen}
         onOpenChange={setLogsOpen}
+        companyId={companyId}
         departmentId={departmentId}
         departmentName={t('Department User List')}
         initialStartTimestamp={startTimestamp}

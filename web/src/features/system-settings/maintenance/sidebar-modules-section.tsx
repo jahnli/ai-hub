@@ -142,6 +142,10 @@ export function SidebarModulesSection({
         title: t('Users'),
         description: t('Administer user accounts and roles.'),
       },
+      company: {
+        title: t('Company Management'),
+        description: t('Configure company data sources and display names.'),
+      },
       setting: {
         title: t('System settings'),
         description: t('Advanced platform configuration.'),

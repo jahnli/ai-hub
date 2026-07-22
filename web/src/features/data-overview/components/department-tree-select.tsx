@@ -1,4 +1,11 @@
-import { ChevronRight, Building2, Check, Search, X } from 'lucide-react'
+import {
+  AlertCircle,
+  ChevronRight,
+  Building2,
+  Check,
+  Search,
+  X,
+} from 'lucide-react'
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -10,6 +17,10 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
+import {
+  getDepartmentNodeErrorText,
+  isDepartmentNodeDisabled,
+} from '../lib/department-selection'
 import type { DeptTreeNode } from '../types'
 
 interface DepartmentTreeSelectProps {
@@ -57,14 +68,11 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
     })
   }, [])
 
-  const handleSelect = useCallback(
-    (node: DeptTreeNode) => {
-      if (node.disabled) return
-      props.onValueChange(node.value, node)
-      setOpen(false)
-    },
-    [props.onValueChange]
-  )
+  const handleSelect = (node: DeptTreeNode) => {
+    if (isDepartmentNodeDisabled(node)) return
+    props.onValueChange(node.value, node)
+    setOpen(false)
+  }
 
   // Build cascader columns: column 0 = root list, column N = children of activePath[N-1]
   const columns = useMemo(() => {
@@ -148,7 +156,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
           <div className='flex'>
             {columns.map((nodes, colIdx) => (
               <CascaderColumn
-                key={colIdx}
+                key={activePath[colIdx - 1]?.value ?? 'root'}
                 nodes={nodes}
                 depth={colIdx}
                 activeNode={activePath[colIdx]}
@@ -176,6 +184,8 @@ interface CascaderColumnProps {
 }
 
 function CascaderColumn(props: CascaderColumnProps) {
+  const { t } = useTranslation()
+
   return (
     <div
       className={cn(
@@ -188,27 +198,40 @@ function CascaderColumn(props: CascaderColumnProps) {
         const isActive = props.activeNode?.value === node.value
         const isSelected = props.selectedValue === node.value
         const hasChildren = node.children.length > 0
+        const isDisabled = isDepartmentNodeDisabled(node)
+        const errorText = getDepartmentNodeErrorText(node, (key, options) =>
+          t(key, options)
+        )
 
         return (
           <div
             key={node.value}
             role='option'
             aria-selected={isSelected}
-            aria-disabled={node.disabled}
+            aria-disabled={isDisabled}
+            title={errorText}
             className={cn(
-              'mx-1 flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors',
-              node.disabled
+              'mx-1 flex cursor-pointer items-start gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors',
+              isDisabled
                 ? 'text-muted-foreground cursor-not-allowed opacity-50'
                 : 'hover:bg-accent',
-              isActive && !node.disabled && 'bg-accent',
-              isSelected && !node.disabled && 'text-primary font-medium'
+              isActive && !isDisabled && 'bg-accent',
+              isSelected && !isDisabled && 'text-primary font-medium'
             )}
             onMouseEnter={() => {
-              if (!node.disabled) props.onHover(node, props.depth)
+              if (!isDisabled) props.onHover(node, props.depth)
             }}
             onClick={() => props.onSelect(node)}
           >
-            <span className='min-w-0 flex-1 truncate'>{node.label}</span>
+            <span className='min-w-0 flex-1'>
+              <span className='block truncate'>{node.label}</span>
+              {errorText && (
+                <span className='mt-0.5 flex items-start gap-1 text-[11px] leading-tight'>
+                  <AlertCircle className='mt-px size-3 shrink-0' />
+                  <span className='line-clamp-2'>{errorText}</span>
+                </span>
+              )}
+            </span>
             {isSelected && <Check className='text-primary size-3.5 shrink-0' />}
             {hasChildren && !isSelected && (
               <ChevronRight className='text-muted-foreground size-3.5 shrink-0' />
@@ -230,6 +253,8 @@ interface SearchResultListProps {
 }
 
 function SearchResultList(props: SearchResultListProps) {
+  const { t } = useTranslation()
+
   return (
     <div
       className='overflow-y-auto py-1'
@@ -242,15 +267,21 @@ function SearchResultList(props: SearchResultListProps) {
       ) : (
         props.results.map((item) => {
           const isSelected = props.selectedValue === item.node.value
+          const isDisabled = isDepartmentNodeDisabled(item.node)
+          const errorText = getDepartmentNodeErrorText(
+            item.node,
+            (key, options) => t(key, options)
+          )
           return (
             <div
               key={item.node.value}
               role='option'
               aria-selected={isSelected}
-              aria-disabled={item.node.disabled}
+              aria-disabled={isDisabled}
+              title={errorText}
               className={cn(
                 'mx-1 flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 transition-colors',
-                item.node.disabled
+                isDisabled
                   ? 'text-muted-foreground cursor-not-allowed opacity-50'
                   : 'hover:bg-accent',
                 isSelected && 'bg-accent'
@@ -273,6 +304,12 @@ function SearchResultList(props: SearchResultListProps) {
               {item.breadcrumb && (
                 <span className='text-muted-foreground truncate text-[11px]'>
                   {item.breadcrumb}
+                </span>
+              )}
+              {errorText && (
+                <span className='flex items-start gap-1 text-[11px] leading-tight'>
+                  <AlertCircle className='mt-px size-3 shrink-0' />
+                  <span>{errorText}</span>
                 </span>
               )}
             </div>

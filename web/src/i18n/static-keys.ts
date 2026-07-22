@@ -120,6 +120,14 @@ export const STATIC_I18N_KEYS = [
   'Failed to delete user',
   'No user selected',
 
+  // Company management
+  'No platform',
+  'Feishu',
+  'DingTalk',
+  'Password Login',
+  'LDAP Login',
+  'Platform Login',
+
   'Copied to clipboard',
   'An unexpected error occurred',
   'Name must be between {{min}} and {{max}} characters',
