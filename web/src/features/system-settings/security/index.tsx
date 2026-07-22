@@ -48,6 +48,7 @@ const defaultSecuritySettings: SecuritySettings = {
     end_hour: 7,
   },
   'audit_setting.image_studio': true,
+  RecordRequestMessageEnabled: false,
 }
 
 export function SecuritySettings() {

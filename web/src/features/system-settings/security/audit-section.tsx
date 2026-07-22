@@ -25,6 +25,7 @@ import * as z from 'zod'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -55,6 +56,7 @@ const createAuditSchema = (t: (key: string) => string) =>
         end_hour: z.number().int().min(0).max(23),
       }),
       imageStudioEnabled: z.boolean(),
+      requestContentEnabled: z.boolean(),
     })
     .refine(
       (values) => values.offHours.end_hour >= values.offHours.start_hour,
@@ -73,12 +75,14 @@ type OffHoursAuditSetting = {
 type AuditFormValues = {
   offHours: OffHoursAuditSetting
   imageStudioEnabled: boolean
+  requestContentEnabled: boolean
 }
 
 type AuditSectionProps = {
   defaultValues: {
     offHours: OffHoursAuditSetting
     imageStudioEnabled: boolean
+    requestContentEnabled: boolean
   }
 }
 
@@ -93,6 +97,7 @@ const buildFormDefaults = (
 ): AuditFormValues => ({
   offHours: { ...defaults.offHours },
   imageStudioEnabled: defaults.imageStudioEnabled,
+  requestContentEnabled: defaults.requestContentEnabled,
 })
 
 export function AuditSection({ defaultValues }: AuditSectionProps) {
@@ -118,6 +123,10 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
       updateOption.mutateAsync({
         key: 'audit_setting.image_studio',
         value: values.imageStudioEnabled,
+      }),
+      updateOption.mutateAsync({
+        key: 'RecordRequestMessageEnabled',
+        value: values.requestContentEnabled,
       }),
     ])
   }
@@ -200,6 +209,33 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
                   </FormControl>
                   <FormMessage />
                 </FormItem>
+              )}
+            />
+          </div>
+          <h3 className='text-sm font-semibold'>
+            {t('Record request content')}
+          </h3>
+          <div className='pl-4'>
+            <FormField
+              control={form.control}
+              name='requestContentEnabled'
+              render={({ field }) => (
+                <SettingsSwitchItem>
+                  <SettingsSwitchContent>
+                    <FormLabel>{t('Enable')}</FormLabel>
+                    <FormDescription>
+                      {t(
+                        'Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </SettingsSwitchItem>
               )}
             />
           </div>

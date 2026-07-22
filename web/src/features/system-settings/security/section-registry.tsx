@@ -99,6 +99,7 @@ const SECURITY_SECTIONS = [
         defaultValues={{
           offHours: settings['audit_setting.off_hours'],
           imageStudioEnabled: settings['audit_setting.image_studio'],
+          requestContentEnabled: settings.RecordRequestMessageEnabled,
         }}
       />
     ),

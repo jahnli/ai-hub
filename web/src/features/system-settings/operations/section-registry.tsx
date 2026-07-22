@@ -99,9 +99,6 @@ const OPERATIONS_SECTIONS = [
       <LogSettingsSection
         defaultValues={{
           LogConsumeEnabled: Boolean(settings.LogConsumeEnabled),
-          RecordRequestMessageEnabled: Boolean(
-            settings.RecordRequestMessageEnabled
-          ),
         }}
       />
     ),

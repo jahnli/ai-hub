@@ -347,7 +347,6 @@ export type OperationsSettings = {
   WorkerValidKey: string
   WorkerAllowHttpImageRequestEnabled: boolean
   LogConsumeEnabled: boolean
-  RecordRequestMessageEnabled: boolean
   'performance_setting.disk_cache_enabled': boolean
   'performance_setting.disk_cache_threshold_mb': number
   'performance_setting.disk_cache_max_size_mb': number
@@ -388,6 +387,7 @@ export type SecuritySettings = {
   'token_setting.max_user_tokens': number
   'audit_setting.off_hours': OffHoursAuditSetting
   'audit_setting.image_studio': boolean
+  RecordRequestMessageEnabled: boolean
 }
 
 export type UpstreamChannel = {

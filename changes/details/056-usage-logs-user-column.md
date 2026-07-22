@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-21
+**日期**: 2026-07-22
 
 ## 涉及文件
 
@@ -41,10 +41,14 @@
 - `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用；请求内容批量查询改为 POST /batch 并通过 body 传递 request_ids，避免分页 100 时 query 过长；新增 notifyRequestMessageViolation API 调用
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent；新增 NotifyViolationRequest 类型
 - `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 包裹 RequestMessagesProvider，按当前页日志批量加载请求内容；基于当前用户角色传入请求内容可见性，仅超级管理员允许加载
-- `web/default/src/features/system-settings/maintenance/log-settings-section.tsx` — 日志设置新增「记录请求内容」开关
-- `web/default/src/features/system-settings/operations/section-registry.tsx` — 运维设置传入 RecordRequestMessageEnabled 默认值
-- `web/default/src/features/system-settings/operations/index.tsx` — 运维设置默认值补充 RecordRequestMessageEnabled
-- `web/default/src/features/system-settings/types.ts` — OperationsSettings 类型补充 RecordRequestMessageEnabled
+- `web/default/src/features/system-settings/maintenance/log-settings-section.tsx` — 从运维日志维护中移除「记录请求内容」开关
+- `web/default/src/features/system-settings/operations/section-registry.tsx` — 运维设置不再传入 RecordRequestMessageEnabled 默认值
+- `web/default/src/features/system-settings/operations/index.tsx` — 运维设置默认值移除 RecordRequestMessageEnabled
+- `web/default/src/features/system-settings/security/audit-section.tsx` — 安全审计页面新增「记录请求内容」开关，并在保存审计设置时更新 RecordRequestMessageEnabled
+- `web/default/src/features/system-settings/security/section-registry.tsx` — 将 RecordRequestMessageEnabled 服务端配置传入安全审计表单
+- `web/default/src/features/system-settings/security/index.tsx` — 安全审计设置补充与后端一致的关闭默认值
+- `web/default/src/features/system-settings/security/__tests__/audit-settings.test.tsx` — 回归测试覆盖请求内容记录开关在安全审计页面的展示和启用状态
+- `web/default/src/features/system-settings/types.ts` — 将 RecordRequestMessageEnabled 从 OperationsSettings 迁移到 SecuritySettings
 - `relay/common/relay_info.go` — RelayInfo 新增 ClientApp 字段，在基础中继信息生成时保存原始 User-Agent
 - `relay/common/client_app.go` — 新增 DetectClientApp，返回请求携带的原始 User-Agent，不做客户端名称映射
 - `relay/common/client_app_test.go` — 覆盖 DetectClientApp 原始 User-Agent 返回、缺失头与 nil 安全场景

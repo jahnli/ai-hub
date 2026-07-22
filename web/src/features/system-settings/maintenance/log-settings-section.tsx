@@ -80,7 +80,6 @@ import type { LogCleanupTask } from '../types'
 
 const logSettingsSchema = z.object({
   LogConsumeEnabled: z.boolean(),
-  RecordRequestMessageEnabled: z.boolean(),
 })
 
 type LogSettingsFormValues = z.infer<typeof logSettingsSchema>
@@ -352,29 +351,6 @@ export function LogSettingsSection({ defaultValues }: LogSettingsSectionProps) {
                   <FormDescription>
                     {t(
                       'Track per-request consumption to power usage analytics. Keeping this on increases database writes.'
-                    )}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </SettingsSwitchItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='RecordRequestMessageEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Record request content')}</FormLabel>
-                  <FormDescription>
-                    {t(
-                      'Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.'
                     )}
                   </FormDescription>
                 </SettingsSwitchContent>
