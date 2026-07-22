@@ -18,7 +18,7 @@
 - `web/default/src/features/usage-logs/components/columns/task-logs-columns.tsx` — 任务日志用户列头像点击改为通过 open_id 跳转飞书，不再打开用户信息弹框
 - `web/default/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框桌面端宽度调整为屏幕宽度 50%
 - `web/default/src/features/usage-logs/components/usage-logs-mobile-card.tsx` — 移动端使用日志卡片在令牌前展示 IP 地址字段
-- `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 自定义行渲染合并固定列样式，确保详情列的表头和内容单元格都固定在右侧；默认分页大小统一改为每页 10 条
+- `web/src/features/usage-logs/components/usage-logs-table.tsx` — 自定义行渲染合并固定列样式，确保详情列的表头和内容单元格都固定在右侧；默认分页大小统一改为每页 10 条
 - `web/default/src/features/usage-logs/components/logs-filter-toolbar.tsx` — 高级筛选默认展开，避免筛选条件入口默认折叠
 - `web/default/src/features/usage-logs/index.tsx` — 普通日志页不再渲染冗余页标题，任务日志仍保留任务日志标题与子分类切换
 - `web/default/src/features/usage-logs/section-registry.tsx` — 普通日志导航标题统一为 Usage Logs
