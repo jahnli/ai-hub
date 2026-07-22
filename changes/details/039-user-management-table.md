@@ -44,6 +44,7 @@
 
 ## 2026-07-22 额度列展示优化
 
-- `web/src/features/users/components/shared-user-columns.tsx` — 缩短额度数字与进度条展示区域，已用额度固定保留两位小数，并将额度说明图标放到列名之后。
+- `web/src/features/users/components/shared-user-columns.tsx` — 缩短额度数字与进度条展示区域，已用额度固定保留两位小数，将额度说明图标移至标题外并与均价列保持一致，修复说明悬停不显示，并将列名由「已用额度/总额度」精简为「已用/总额」及进一步收窄默认列宽与内容宽度。
 - `web/src/components/data-table/core/column-header.tsx` — 通用列头支持将说明图标放在列名后、排序图标前，同时保留原有默认布局。
 - `web/src/lib/currency.ts` — 货币与额度格式化支持配置最少保留的小数位数。
+- `web/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 同步更新精简后的额度列名翻译。

@@ -26,11 +26,6 @@ import { LongText } from '@/components/long-text'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
@@ -189,7 +184,8 @@ function ImageAuditThumbnails(props: {
 
 export function useImageAuditColumns(
   onPreview: (item: ImageAuditItem, index: number) => void,
-  onViewDetail: (item: ImageAuditItem) => void
+  onViewDetail: (item: ImageAuditItem) => void,
+  onViewRequestContent: (item: ImageAuditItem) => void
 ): ColumnDef<ImageAuditItem>[] {
   const { t } = useTranslation()
 
@@ -243,14 +239,15 @@ export function useImageAuditColumns(
                   aria-label={t('Favorite')}
                 />
               )}
-              <Tooltip>
-                <TooltipTrigger className='text-muted-foreground line-clamp-2 max-w-[240px] cursor-default text-left text-xs leading-snug break-all whitespace-normal'>
-                  {requestContent}
-                </TooltipTrigger>
-                <TooltipContent className='max-w-md break-all whitespace-pre-wrap'>
-                  {requestContent}
-                </TooltipContent>
-              </Tooltip>
+              <button
+                type='button'
+                className='text-muted-foreground line-clamp-2 max-w-[240px] cursor-pointer text-left text-xs leading-snug break-all whitespace-normal hover:underline disabled:cursor-default disabled:no-underline'
+                onClick={() => onViewRequestContent(row.original)}
+                disabled={!row.original.prompt}
+                title={row.original.prompt ? t('Request Content') : undefined}
+              >
+                {requestContent}
+              </button>
             </div>
           )
         },
@@ -324,6 +321,6 @@ export function useImageAuditColumns(
         ),
       },
     ],
-    [t, onPreview, onViewDetail]
+    [t, onPreview, onViewDetail, onViewRequestContent]
   )
 }
