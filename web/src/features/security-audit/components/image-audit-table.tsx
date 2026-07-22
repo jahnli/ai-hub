@@ -27,7 +27,6 @@ import { DataTablePage, useDataTable } from '@/components/data-table'
 import { getImageAudit } from '../api'
 import type { ImageAuditItem, ImageAuditPreviewTarget } from '../types'
 import { useImageAuditColumns } from './image-audit-columns'
-import { ImageAuditDetailDialog } from './image-audit-detail-dialog'
 import { ImageAuditPreviewDialog } from './image-audit-preview-dialog'
 import { ImageAuditRequestContentDialog } from './image-audit-request-content-dialog'
 
@@ -94,8 +93,6 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
   const [previewTarget, setPreviewTarget] =
     useState<ImageAuditPreviewTarget | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [detailItem, setDetailItem] = useState<ImageAuditItem | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
   const [requestContentItem, setRequestContentItem] =
     useState<ImageAuditItem | null>(null)
   const [requestContentOpen, setRequestContentOpen] = useState(false)
@@ -104,18 +101,20 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
     setPreviewTarget({ item, index })
     setPreviewOpen(true)
   }, [])
-  const handleViewDetail = useCallback((item: ImageAuditItem) => {
-    setDetailItem(item)
-    setDetailOpen(true)
-  }, [])
   const handleViewRequestContent = useCallback((item: ImageAuditItem) => {
     setRequestContentItem(item)
     setRequestContentOpen(true)
   }, [])
+  const handleRequestContentOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && previewOpen) return
+      setRequestContentOpen(open)
+    },
+    [previewOpen]
+  )
 
   const columns = useImageAuditColumns(
     handlePreview,
-    handleViewDetail,
     handleViewRequestContent
   )
 
@@ -152,13 +151,8 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
       />
       <ImageAuditRequestContentDialog
         open={requestContentOpen}
-        onOpenChange={setRequestContentOpen}
+        onOpenChange={handleRequestContentOpenChange}
         item={requestContentItem}
-      />
-      <ImageAuditDetailDialog
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        item={detailItem}
         onPreview={handlePreview}
       />
     </>

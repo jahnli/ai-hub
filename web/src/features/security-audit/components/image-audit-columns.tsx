@@ -18,14 +18,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 /* eslint-disable react-refresh/only-export-components */
 import type { ColumnDef } from '@tanstack/react-table'
-import { Eye, ImageOff, Star } from 'lucide-react'
+import { ImageOff, Star } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { LongText } from '@/components/long-text'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
@@ -184,7 +183,6 @@ function ImageAuditThumbnails(props: {
 
 export function useImageAuditColumns(
   onPreview: (item: ImageAuditItem, index: number) => void,
-  onViewDetail: (item: ImageAuditItem) => void,
   onViewRequestContent: (item: ImageAuditItem) => void
 ): ColumnDef<ImageAuditItem>[] {
   const { t } = useTranslation()
@@ -304,23 +302,7 @@ export function useImageAuditColumns(
           </span>
         ),
       },
-      {
-        id: 'actions',
-        header: '',
-        size: 100,
-        cell: ({ row }) => (
-          <Button
-            variant='ghost'
-            size='sm'
-            className='h-7 gap-1.5 px-2 text-xs'
-            onClick={() => onViewDetail(row.original)}
-          >
-            <Eye className='size-3.5' />
-            {t('Details')}
-          </Button>
-        ),
-      },
     ],
-    [t, onPreview, onViewDetail, onViewRequestContent]
+    [t, onPreview, onViewRequestContent]
   )
 }
