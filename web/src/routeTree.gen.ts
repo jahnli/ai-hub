@@ -35,6 +35,7 @@ import { Route as SetupIndexRouteImport } from './routes/setup/index'
 import { Route as authUserResetRouteImport } from './routes/(auth)/user/reset'
 import { Route as AuthenticatedChannelsIndexRouteImport } from './routes/_authenticated/channels/index'
 import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authenticated/chat/$chatId'
+import { Route as AuthenticatedCompaniesIndexRouteImport } from './routes/_authenticated/companies/index'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
 import { Route as AuthenticatedDashboardSectionRouteImport } from './routes/_authenticated/dashboard/$section'
 import { Route as AuthenticatedDataOverviewIndexRouteImport } from './routes/_authenticated/data-overview/index'
@@ -200,6 +201,12 @@ const AuthenticatedChatChatIdRoute = AuthenticatedChatChatIdRouteImport.update({
   path: '/chat/$chatId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCompaniesIndexRoute =
+  AuthenticatedCompaniesIndexRouteImport.update({
+    id: '/companies/',
+    path: '/companies/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardIndexRoute =
   AuthenticatedDashboardIndexRouteImport.update({
     id: '/dashboard/',
@@ -432,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/security-audit/$section': typeof AuthenticatedSecurityAuditSectionRoute
   '/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/channels/': typeof AuthenticatedChannelsIndexRoute
+  '/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/data-overview/': typeof AuthenticatedDataOverviewIndexRoute
   '/image-studio/': typeof AuthenticatedImageStudioIndexRoute
@@ -491,6 +499,7 @@ export interface FileRoutesByTo {
   '/security-audit/$section': typeof AuthenticatedSecurityAuditSectionRoute
   '/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/channels': typeof AuthenticatedChannelsIndexRoute
+  '/companies': typeof AuthenticatedCompaniesIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/data-overview': typeof AuthenticatedDataOverviewIndexRoute
   '/image-studio': typeof AuthenticatedImageStudioIndexRoute
@@ -554,6 +563,7 @@ export interface FileRoutesById {
   '/_authenticated/security-audit/$section': typeof AuthenticatedSecurityAuditSectionRoute
   '/_authenticated/usage-logs/$section': typeof AuthenticatedUsageLogsSectionRoute
   '/_authenticated/channels/': typeof AuthenticatedChannelsIndexRoute
+  '/_authenticated/companies/': typeof AuthenticatedCompaniesIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/data-overview/': typeof AuthenticatedDataOverviewIndexRoute
   '/_authenticated/image-studio/': typeof AuthenticatedImageStudioIndexRoute
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/security-audit/$section'
     | '/usage-logs/$section'
     | '/channels/'
+    | '/companies/'
     | '/dashboard/'
     | '/data-overview/'
     | '/image-studio/'
@@ -675,6 +686,7 @@ export interface FileRouteTypes {
     | '/security-audit/$section'
     | '/usage-logs/$section'
     | '/channels'
+    | '/companies'
     | '/dashboard'
     | '/data-overview'
     | '/image-studio'
@@ -737,6 +749,7 @@ export interface FileRouteTypes {
     | '/_authenticated/security-audit/$section'
     | '/_authenticated/usage-logs/$section'
     | '/_authenticated/channels/'
+    | '/_authenticated/companies/'
     | '/_authenticated/dashboard/'
     | '/_authenticated/data-overview/'
     | '/_authenticated/image-studio/'
@@ -968,6 +981,13 @@ declare module '@tanstack/react-router' {
       path: '/chat/$chatId'
       fullPath: '/chat/$chatId'
       preLoaderRoute: typeof AuthenticatedChatChatIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/companies/': {
+      id: '/_authenticated/companies/'
+      path: '/companies'
+      fullPath: '/companies/'
+      preLoaderRoute: typeof AuthenticatedCompaniesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard/': {
@@ -1304,6 +1324,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSecurityAuditSectionRoute: typeof AuthenticatedSecurityAuditSectionRoute
   AuthenticatedUsageLogsSectionRoute: typeof AuthenticatedUsageLogsSectionRoute
   AuthenticatedChannelsIndexRoute: typeof AuthenticatedChannelsIndexRoute
+  AuthenticatedCompaniesIndexRoute: typeof AuthenticatedCompaniesIndexRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDataOverviewIndexRoute: typeof AuthenticatedDataOverviewIndexRoute
   AuthenticatedImageStudioIndexRoute: typeof AuthenticatedImageStudioIndexRoute
@@ -1331,6 +1352,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedSecurityAuditSectionRoute,
   AuthenticatedUsageLogsSectionRoute: AuthenticatedUsageLogsSectionRoute,
   AuthenticatedChannelsIndexRoute: AuthenticatedChannelsIndexRoute,
+  AuthenticatedCompaniesIndexRoute: AuthenticatedCompaniesIndexRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedDataOverviewIndexRoute: AuthenticatedDataOverviewIndexRoute,
   AuthenticatedImageStudioIndexRoute: AuthenticatedImageStudioIndexRoute,

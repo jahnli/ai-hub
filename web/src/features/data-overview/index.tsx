@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, Building2, Loader2, Search } from 'lucide-react'
-import { useState, useEffect, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
@@ -25,7 +25,13 @@ import { ExportDialog } from './components/export-dialog'
 import { NotifySettingsDialog } from './components/notify-settings-dialog'
 import { SubDepartmentStats } from './components/sub-department-stats'
 import { UsageAnalysisSection } from './components/usage-analysis'
-import type { DeptTreeNode } from './types'
+import {
+  createDepartmentQueryParams,
+  findDepartmentNodeByValue,
+  findFirstSelectableNode,
+  isDepartmentNodeDisabled,
+} from './lib/department-selection'
+import type { DepartmentQueryParams, DeptTreeNode } from './types'
 
 const STATS_SKELETON_KEYS = Array.from(
   { length: 10 },
@@ -35,21 +41,20 @@ const USAGE_ANALYSIS_SKELETON_KEYS = Array.from(
   { length: 6 },
   (_, index) => `usage-analysis-skeleton-${index}`
 )
+const EMPTY_DEPARTMENT_TREE: DeptTreeNode[] = []
 
 export function DataOverview() {
   const { t } = useTranslation()
-  const [selectedDeptId, setSelectedDeptId] = useState<string>()
+  const [selectedNode, setSelectedNode] = useState<DeptTreeNode | null>(null)
   const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>(
     () => ({
       start: dayjs().startOf('month').toDate(),
       end: dayjs().endOf('month').toDate(),
     })
   )
-  const [queryParams, setQueryParams] = useState<{
-    department_id: string
-    start_timestamp: number
-    end_timestamp: number
-  } | null>(null)
+  const [queryParams, setQueryParams] = useState<DepartmentQueryParams | null>(
+    null
+  )
 
   const treeQuery = useQuery({
     queryKey: ['department', 'tree'],
@@ -89,59 +94,51 @@ export function DataOverview() {
   })
 
   const treeData = treeQuery.data?.data
-  const displayTreeData = useMemo(() => {
-    if (!treeData) return []
-    return treeData.tree_data
-  }, [treeData])
+  const displayTreeData = treeData?.tree_data ?? EMPTY_DEPARTMENT_TREE
 
   useEffect(() => {
-    if (treeData && !selectedDeptId) {
-      let deptId: string | undefined
-      const leaderIds = treeData.leader_dept_ids
-      if (leaderIds && leaderIds.length > 0) {
-        deptId = leaderIds[0]
-      } else if (displayTreeData.length > 0) {
-        const firstSelectable = findFirstSelectable(displayTreeData)
-        if (firstSelectable) {
-          deptId = firstSelectable.value
-        }
-      }
-      if (deptId) {
-        setSelectedDeptId(deptId)
-        setQueryParams({
-          department_id: deptId,
-          start_timestamp: dateRange.start
-            ? Math.floor(dateRange.start.getTime() / 1000)
-            : 0,
-          end_timestamp: dateRange.end
-            ? Math.floor(dateRange.end.getTime() / 1000)
-            : 0,
-        })
+    if (!treeData || selectedNode) return
+
+    let initialNode: DeptTreeNode | null = null
+    const firstLeaderId = treeData.leader_dept_ids[0]
+    if (firstLeaderId) {
+      const leaderNode = findDepartmentNodeByValue(
+        displayTreeData,
+        firstLeaderId
+      )
+      if (leaderNode && !isDepartmentNodeDisabled(leaderNode)) {
+        initialNode = leaderNode
       }
     }
-  }, [
-    displayTreeData,
-    treeData,
-    selectedDeptId,
-    dateRange.start,
-    dateRange.end,
-  ])
+    if (!initialNode) {
+      initialNode = findFirstSelectableNode(displayTreeData)
+    }
+    if (!initialNode) return
 
-  const handleDeptChange = (deptId: string, _node: DeptTreeNode) => {
-    setSelectedDeptId(deptId)
+    setSelectedNode(initialNode)
+    setQueryParams(
+      createDepartmentQueryParams(
+        initialNode,
+        dateRange.start ? Math.floor(dateRange.start.getTime() / 1000) : 0,
+        dateRange.end ? Math.floor(dateRange.end.getTime() / 1000) : 0
+      )
+    )
+  }, [displayTreeData, treeData, selectedNode, dateRange.start, dateRange.end])
+
+  const handleDeptChange = (_deptId: string, node: DeptTreeNode) => {
+    setSelectedNode(node)
+    setQueryParams(null)
   }
 
   const handleSearch = () => {
-    if (!selectedDeptId) return
-    setQueryParams({
-      department_id: selectedDeptId,
-      start_timestamp: dateRange.start
-        ? Math.floor(dateRange.start.getTime() / 1000)
-        : 0,
-      end_timestamp: dateRange.end
-        ? Math.floor(dateRange.end.getTime() / 1000)
-        : 0,
-    })
+    if (!selectedNode) return
+    setQueryParams(
+      createDepartmentQueryParams(
+        selectedNode,
+        dateRange.start ? Math.floor(dateRange.start.getTime() / 1000) : 0,
+        dateRange.end ? Math.floor(dateRange.end.getTime() / 1000) : 0
+      )
+    )
   }
 
   let departmentSelector: ReactNode = null
@@ -151,7 +148,7 @@ export function DataOverview() {
     departmentSelector = (
       <DepartmentTreeSelect
         treeData={displayTreeData}
-        value={selectedDeptId}
+        value={selectedNode?.value}
         onValueChange={handleDeptChange}
         disabled={treeQuery.isFetching}
       />
@@ -170,7 +167,7 @@ export function DataOverview() {
             onChange={setDateRange}
             className='max-w-[302px]'
           />
-          {selectedDeptId && (
+          {selectedNode && (
             <div className='ml-auto flex items-center gap-2'>
               <Button
                 className='gap-1.5'
@@ -271,6 +268,7 @@ export function DataOverview() {
             queryParams && (
               <SubDepartmentStats
                 data={subStatsQuery.data.data}
+                companyId={queryParams.company_id}
                 activityFormula={
                   statsQuery.data?.data.active_user_formula ?? [
                     10, 1_000_000, 0.85,
@@ -283,6 +281,7 @@ export function DataOverview() {
 
           {queryParams && (
             <DepartmentUsersTable
+              companyId={queryParams.company_id}
               departmentId={queryParams.department_id}
               startTimestamp={queryParams.start_timestamp}
               endTimestamp={queryParams.end_timestamp}
@@ -327,13 +326,4 @@ export function DataOverview() {
       </SectionPageLayout.Content>
     </SectionPageLayout>
   )
-}
-
-function findFirstSelectable(nodes: DeptTreeNode[]): DeptTreeNode | null {
-  for (const node of nodes) {
-    if (!node.disabled) return node
-    const child = findFirstSelectable(node.children)
-    if (child) return child
-  }
-  return null
 }

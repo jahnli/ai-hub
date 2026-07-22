@@ -364,6 +364,11 @@ type DeptTreeNode struct {
 	Value        string          `json:"value"`
 	Label        string          `json:"label"`
 	Disabled     bool            `json:"disabled"`
+	CompanyID    int             `json:"company_id,omitempty"`
+	Platform     string          `json:"platform,omitempty"`
+	NodeType     string          `json:"node_type,omitempty"`
+	DepartmentID string          `json:"department_id,omitempty"`
+	Error        string          `json:"error,omitempty"`
 	LeaderUserID string          `json:"-"`
 	Children     []*DeptTreeNode `json:"children"`
 }
@@ -594,6 +599,13 @@ type DepartmentTreeResponse struct {
 
 // GetDepartmentTree fetches the department tree, caches raw data, and trims by user permissions.
 func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanyDepartmentTree(userID, userRole)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}
@@ -685,13 +697,17 @@ func getActiveUserThreshold(startTimestamp, endTimestamp int64) activeUserThresh
 
 // DepartmentStatsRequest is the request body for department stats.
 type DepartmentStatsRequest struct {
-	DepartmentID   string `json:"department_id"`
-	StartTimestamp int64  `json:"start_timestamp"`
-	EndTimestamp   int64  `json:"end_timestamp"`
+	CompanyID       int    `json:"company_id"`
+	DepartmentID    string `json:"department_id"`
+	StartTimestamp  int64  `json:"start_timestamp"`
+	EndTimestamp    int64  `json:"end_timestamp"`
+	RequestUserID   int    `json:"-"`
+	RequestUserRole int    `json:"-"`
 }
 
 // DepartmentLogsRequest is the request body for department usage logs.
 type DepartmentLogsRequest struct {
+	CompanyID         int    `json:"company_id"`
 	DepartmentID      string `json:"department_id"`
 	StartTimestamp    int64  `json:"start_timestamp"`
 	EndTimestamp      int64  `json:"end_timestamp"`
@@ -705,19 +721,32 @@ type DepartmentLogsRequest struct {
 	Group             string `json:"group"`
 	RequestID         string `json:"request_id"`
 	UpstreamRequestID string `json:"upstream_request_id"`
+	RequestUserID     int    `json:"-"`
+	RequestUserRole   int    `json:"-"`
 }
 
 // DepartmentUserLogsRequest is the request body for one user's usage logs.
 type DepartmentUserLogsRequest struct {
-	UserID         int   `json:"user_id"`
-	StartTimestamp int64 `json:"start_timestamp"`
-	EndTimestamp   int64 `json:"end_timestamp"`
-	Page           int   `json:"p"`
-	PageSize       int   `json:"page_size"`
+	CompanyID       int    `json:"company_id"`
+	DepartmentID    string `json:"department_id"`
+	UserID          int    `json:"user_id"`
+	StartTimestamp  int64  `json:"start_timestamp"`
+	EndTimestamp    int64  `json:"end_timestamp"`
+	Page            int    `json:"p"`
+	PageSize        int    `json:"page_size"`
+	RequestUserID   int    `json:"-"`
+	RequestUserRole int    `json:"-"`
 }
 
 // GetDepartmentLogs fetches usage logs for registered users under a department.
 func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanyDepartmentLogs(req)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}
@@ -778,6 +807,9 @@ func GetDepartmentLogs(req *DepartmentLogsRequest) (*common.PageInfo, error) {
 
 // GetDepartmentUserLogs fetches logs by immutable user ID for the user statistics dialog.
 func GetDepartmentUserLogs(req *DepartmentUserLogsRequest) (*common.PageInfo, error) {
+	if err := authorizeCompanyOverviewUser(req.CompanyID, req.DepartmentID, req.UserID, req.RequestUserID, req.RequestUserRole); err != nil {
+		return nil, err
+	}
 	pageInfo := departmentLogsPageInfo(req.Page, req.PageSize)
 	logs, total, err := model.GetLogsByUserIds(
 		[]int{req.UserID},
@@ -820,6 +852,13 @@ func departmentLogsPageInfo(page int, pageSize int) *common.PageInfo {
 // then matches open_id against the user table to find registered usernames,
 // and finally aggregates logs for those usernames.
 func GetDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanyDepartmentStats(req)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}
@@ -907,6 +946,13 @@ type SubDepartmentStatItem struct {
 
 // GetSubDepartmentStats returns per-child-department statistics for the given parent department.
 func GetSubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentStatItem, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanySubDepartmentStats(req)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}
@@ -1505,6 +1551,13 @@ func buildUsageAnalysisForUsers(userIds []int, startTimestamp, endTimestamp int6
 
 // GetUsageAnalysis fetches model ranking and daily trend for the selected department.
 func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanyUsageAnalysis(req)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}
@@ -1543,18 +1596,26 @@ func GetUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisResponse, erro
 
 // UserUsageAnalysisRequest holds the request params for single-user usage analysis.
 type UserUsageAnalysisRequest struct {
-	UserID         int   `json:"user_id"`
-	StartTimestamp int64 `json:"start_timestamp"`
-	EndTimestamp   int64 `json:"end_timestamp"`
+	CompanyID       int    `json:"company_id"`
+	DepartmentID    string `json:"department_id"`
+	UserID          int    `json:"user_id"`
+	StartTimestamp  int64  `json:"start_timestamp"`
+	EndTimestamp    int64  `json:"end_timestamp"`
+	RequestUserID   int    `json:"-"`
+	RequestUserRole int    `json:"-"`
 }
 
 // GetUserUsageAnalysis fetches model ranking and daily trend for a single user.
 func GetUserUsageAnalysis(req *UserUsageAnalysisRequest) (*UsageAnalysisResponse, error) {
+	if err := authorizeCompanyOverviewUser(req.CompanyID, req.DepartmentID, req.UserID, req.RequestUserID, req.RequestUserRole); err != nil {
+		return nil, err
+	}
 	return buildUsageAnalysisForUsers([]int{req.UserID}, req.StartTimestamp, req.EndTimestamp)
 }
 
 // DepartmentUsersRequest holds the request params for fetching department user list.
 type DepartmentUsersRequest struct {
+	CompanyID           int    `json:"company_id"`
 	DepartmentID        string `json:"department_id"`
 	StartTimestamp      int64  `json:"start_timestamp"`
 	EndTimestamp        int64  `json:"end_timestamp"`
@@ -1564,6 +1625,8 @@ type DepartmentUsersRequest struct {
 	SortOrder           string `json:"sort_order"`
 	RegistrationStatus  string `json:"registration_status"`
 	IncludeUnregistered bool   `json:"include_unregistered"`
+	RequestUserID       int    `json:"-"`
+	RequestUserRole     int    `json:"-"`
 }
 
 const (
@@ -1688,6 +1751,13 @@ type DepartmentUsersResponse struct {
 
 // GetDepartmentUsers returns paginated user list for a department with stats in the given time range.
 func GetDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersResponse, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanyDepartmentUsers(req)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}
@@ -1956,6 +2026,13 @@ type UserRankingItem struct {
 
 // GetDepartmentUserRankings returns top 10 users by consumption for the given department and time range.
 func GetDepartmentUserRankings(req *DepartmentUsersRequest) ([]UserRankingItem, error) {
+	companyMode, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if companyMode {
+		return getCompanyDepartmentUserRankings(req)
+	}
 	if !system_setting.FeishuEnabled() {
 		return nil, fmt.Errorf("feishu integration is not configured")
 	}

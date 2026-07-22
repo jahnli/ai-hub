@@ -38,6 +38,11 @@ func GetDepartmentStats(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	stat, err := service.GetDepartmentStats(&req)
 	if err != nil {
@@ -64,6 +69,11 @@ func GetSubDepartmentStats(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	items, err := service.GetSubDepartmentStats(&req)
 	if err != nil {
@@ -90,6 +100,11 @@ func GetUsageAnalysis(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	data, err := service.GetUsageAnalysis(&req)
 	if err != nil {
@@ -116,6 +131,11 @@ func GetDepartmentLogs(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	data, err := service.GetDepartmentLogs(&req)
 	if err != nil {
@@ -142,6 +162,11 @@ func GetDepartmentUserLogs(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentUserCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	data, err := service.GetDepartmentUserLogs(&req)
 	if err != nil {
@@ -168,6 +193,11 @@ func GetDepartmentUsers(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	data, err := service.GetDepartmentUsers(&req)
 	if err != nil {
@@ -194,6 +224,11 @@ func GetUserUsageAnalysis(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentUserCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	data, err := service.GetUserUsageAnalysis(&req)
 	if err != nil {
@@ -220,6 +255,11 @@ func GetDepartmentUserRankings(c *gin.Context) {
 		})
 		return
 	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
 
 	data, err := service.GetDepartmentUserRankings(&req)
 	if err != nil {
@@ -231,4 +271,27 @@ func GetDepartmentUserRankings(c *gin.Context) {
 		"success": true,
 		"data":    data,
 	})
+}
+
+func validateDepartmentCompanyID(c *gin.Context, companyID int) bool {
+	enabled, err := service.CompanyDataOverviewEnabled()
+	if err != nil {
+		common.ApiError(c, err)
+		return false
+	}
+	if enabled && companyID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": service.ErrCompanyIDRequired.Error(),
+		})
+		return false
+	}
+	return true
+}
+
+func validateDepartmentUserCompanyID(c *gin.Context, companyID int) bool {
+	if companyID <= 0 && c.GetInt("role") >= common.RoleRootUser {
+		return true
+	}
+	return validateDepartmentCompanyID(c, companyID)
 }

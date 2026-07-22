@@ -2,7 +2,19 @@ export interface DeptTreeNode {
   value: string
   label: string
   disabled: boolean
+  company_id?: number
+  platform?: string
+  node_type?: 'company' | 'department' | string
+  department_id?: string
+  error?: string
   children: DeptTreeNode[]
+}
+
+export interface DepartmentQueryParams {
+  company_id: number
+  department_id: string
+  start_timestamp: number
+  end_timestamp: number
 }
 
 export interface TenantInfo {

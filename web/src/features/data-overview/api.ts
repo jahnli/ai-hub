@@ -12,6 +12,7 @@ import type {
   ReportNotifySetting,
   DepartmentUsersResponse,
   UserRankingItem,
+  DepartmentQueryParams,
 } from './types'
 
 export async function getDepartmentTree(): Promise<{
@@ -24,11 +25,9 @@ export async function getDepartmentTree(): Promise<{
   return res.data
 }
 
-export async function getDepartmentStats(params: {
-  department_id: string
-  start_timestamp: number
-  end_timestamp: number
-}): Promise<{ success: boolean; data: DepartmentStat }> {
+export async function getDepartmentStats(
+  params: DepartmentQueryParams
+): Promise<{ success: boolean; data: DepartmentStat }> {
   const res = await api.post<{ success: boolean; data: DepartmentStat }>(
     '/api/department/stats',
     params
@@ -36,11 +35,9 @@ export async function getDepartmentStats(params: {
   return res.data
 }
 
-export async function getSubDepartmentStats(params: {
-  department_id: string
-  start_timestamp: number
-  end_timestamp: number
-}): Promise<{ success: boolean; data: SubDepartmentStat[] }> {
+export async function getSubDepartmentStats(
+  params: DepartmentQueryParams
+): Promise<{ success: boolean; data: SubDepartmentStat[] }> {
   const res = await api.post<{
     success: boolean
     data: SubDepartmentStat[]
@@ -48,11 +45,9 @@ export async function getSubDepartmentStats(params: {
   return res.data
 }
 
-export async function getUsageAnalysis(params: {
-  department_id: string
-  start_timestamp: number
-  end_timestamp: number
-}): Promise<{ success: boolean; data: UsageAnalysis }> {
+export async function getUsageAnalysis(
+  params: DepartmentQueryParams
+): Promise<{ success: boolean; data: UsageAnalysis }> {
   const res = await api.post<{
     success: boolean
     data: UsageAnalysis
@@ -61,13 +56,15 @@ export async function getUsageAnalysis(params: {
 }
 
 export async function getDepartmentLogs(
-  params: GetLogsParams & { department_id: string }
+  params: GetLogsParams & { company_id: number; department_id: string }
 ): Promise<GetLogsResponse> {
   const res = await api.post<GetLogsResponse>('/api/department/logs', params)
   return res.data
 }
 
 export async function getDepartmentUserLogs(params: {
+  company_id: number
+  department_id: string
   user_id: number
   start_timestamp: number
   end_timestamp: number
@@ -103,6 +100,7 @@ export async function updateReportNotifySetting(
 }
 
 export async function getDepartmentUsers(params: {
+  company_id: number
   department_id: string
   start_timestamp: number
   end_timestamp: number
@@ -121,6 +119,7 @@ export async function getDepartmentUsers(params: {
 }
 
 export async function getDepartmentUserRankings(params: {
+  company_id: number
   department_id: string
   start_timestamp: number
   end_timestamp: number
@@ -133,6 +132,8 @@ export async function getDepartmentUserRankings(params: {
 }
 
 export async function getUserUsageAnalysis(params: {
+  company_id: number
+  department_id: string
   user_id: number
   start_timestamp: number
   end_timestamp: number

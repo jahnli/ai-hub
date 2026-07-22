@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +23,9 @@ const (
 	dingTalkTokenRefreshMarginSeconds = 300
 	dingTalkDeptRootID                = int64(1)
 	dingTalkDeptPathMaxDepth          = 20
+	dingTalkMemberListRequestsPerSec  = 30
+	dingTalkRateLimitRetryAttempts    = 3
+	dingTalkRateLimitRetryBaseDelay   = time.Second
 )
 
 // dingtalkTokenEntry caches an access token together with its expiry time.
@@ -31,8 +35,11 @@ type dingtalkTokenEntry struct {
 }
 
 var (
-	dingtalkTokenCacheMap   = make(map[string]*dingtalkTokenEntry)
-	dingtalkTokenCacheMutex sync.Mutex
+	dingtalkTokenCacheMap            = make(map[string]*dingtalkTokenEntry)
+	dingtalkTokenCacheMutex          sync.Mutex
+	dingTalkMemberListLimiterMutex   sync.Mutex
+	dingTalkMemberListLimiterByAppID = make(map[string]<-chan time.Time)
+	errDingTalkRateLimitExceeded     = errors.New("dingtalk rate limit exceeded after retries")
 )
 
 type dingtalkSyncConfig struct {
@@ -58,13 +65,13 @@ func SyncDingTalkUserAsync(user *model.User, dingTalkUserID string) {
 // value from LDAP extensionAttribute12.
 //
 // API call plan (minimal):
-//   1. GET /gettoken                 — access token (package-level cached)
-//   2. POST /topapi/v2/user/get      — user detail (name, avatar, email, mobile,
-//                                      job_number, title, manager, hired_date,
-//                                      dept_id_list, leader_in_dept)
-//   3. POST /topapi/v2/department/get — one call per unique dept node in the
-//                                      ancestry chain, de-duplicated by a per-sync
-//                                      in-memory cache.
+//  1. GET /gettoken                 — access token (package-level cached)
+//  2. POST /topapi/v2/user/get      — user detail (name, avatar, email, mobile,
+//     job_number, title, manager, hired_date,
+//     dept_id_list, leader_in_dept)
+//  3. POST /topapi/v2/department/get — one call per unique dept node in the
+//     ancestry chain, de-duplicated by a per-sync
+//     in-memory cache.
 func SyncDingTalkUser(user *model.User, dingTalkUserID string) error {
 	if user == nil || user.Username == "" || dingTalkUserID == "" {
 		return nil
@@ -371,6 +378,55 @@ func buildDingTalkDepartments(
 	return departments, departmentName, nil
 }
 
+func executeDingTalkRateLimitedRequest(
+	wait func(),
+	sleep func(time.Duration),
+	request func() ([]byte, int, error),
+) ([]byte, int, error) {
+	for attempt := 0; attempt < dingTalkRateLimitRetryAttempts; attempt++ {
+		wait()
+		body, status, err := request()
+		if err != nil || status != http.StatusOK || !isDingTalkRateLimitResponse(body) {
+			return body, status, err
+		}
+		if attempt == dingTalkRateLimitRetryAttempts-1 {
+			return nil, status, errDingTalkRateLimitExceeded
+		}
+		delay := dingTalkRateLimitRetryBaseDelay * time.Duration(1<<attempt)
+		sleep(delay)
+	}
+	return nil, 0, errors.New("dingtalk rate limit retry failed")
+}
+
+func isDingTalkRateLimitResponse(body []byte) bool {
+	var response struct {
+		Errcode int    `json:"errcode"`
+		Errmsg  string `json:"errmsg"`
+		SubCode string `json:"sub_code"`
+		Subcode string `json:"subcode"`
+	}
+	if err := common.Unmarshal(body, &response); err != nil {
+		return false
+	}
+	if response.Errcode != 88 {
+		return false
+	}
+	return response.SubCode == "90018" ||
+		response.Subcode == "90018" ||
+		strings.Contains(response.Errmsg, "subcode=90018")
+}
+
+func waitForDingTalkMemberListRequest(clientID string) {
+	dingTalkMemberListLimiterMutex.Lock()
+	ticks, ok := dingTalkMemberListLimiterByAppID[clientID]
+	if !ok {
+		ticks = time.NewTicker(time.Second / dingTalkMemberListRequestsPerSec).C
+		dingTalkMemberListLimiterByAppID[clientID] = ticks
+	}
+	dingTalkMemberListLimiterMutex.Unlock()
+	<-ticks
+}
+
 // --- HTTP helper ---
 
 func dingtalkDoRequest(method, url string, body any) ([]byte, int, error) {
@@ -385,7 +441,7 @@ func dingtalkDoRequest(method, url string, body any) ([]byte, int, error) {
 
 	req, err := http.NewRequest(method, url, reader)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.New("dingtalk request creation failed")
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -394,10 +450,13 @@ func dingtalkDoRequest(method, url string, body any) ([]byte, int, error) {
 	client := &http.Client{Timeout: dingTalkHTTPTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.New("dingtalk request failed")
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
-	return respBody, resp.StatusCode, err
+	if err != nil {
+		return nil, resp.StatusCode, errors.New("dingtalk response read failed")
+	}
+	return respBody, resp.StatusCode, nil
 }

@@ -21,6 +21,7 @@ interface SubDepartmentStatsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   department: SubDepartmentStat | null
+  companyId: number
   startTimestamp: number
   endTimestamp: number
 }
@@ -37,11 +38,12 @@ export function SubDepartmentStatsDialog(props: SubDepartmentStatsDialogProps) {
   const queryParams = useMemo(() => {
     if (!departmentId) return null
     return {
+      company_id: props.companyId,
       department_id: departmentId,
       start_timestamp: props.startTimestamp,
       end_timestamp: props.endTimestamp,
     }
-  }, [departmentId, props.startTimestamp, props.endTimestamp])
+  }, [departmentId, props.companyId, props.startTimestamp, props.endTimestamp])
 
   const statsQuery = useQuery({
     queryKey: ['department', 'stats', 'sub-dialog', queryParams],

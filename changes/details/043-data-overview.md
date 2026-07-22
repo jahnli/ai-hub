@@ -1,6 +1,6 @@
-# 数据总览页：飞书部门树筛选、统计卡片、子部门统计与使用分析
+# 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 07-20（最后更新 07-20）
+**日期**: 2026-06-25 ~ 07-22（最后更新 07-22）
 
 ## 涉及文件
 
@@ -52,3 +52,49 @@
 - `model/log.go` — 模型统计支持获取完整聚合结果，并按合并后的 Top N 模型集合查询每日趋势数据
 - `service/feishu_department.go` — 解析“展示模型名 → 原始模型名数组”映射，统一合并模型 Token、额度、调用次数和每日趋势，并在合并后执行 Top 10 排名
 - `service/feishu_department.go` — 注册人数、注册状态、部门/子部门统计、使用分析及部门日志统一按筛选结束时间判断；`users.created_at` 晚于筛选结束时间的员工在该时间范围内视为未注册
+
+### 2026-07-22 公司配置与多公司数据总览
+
+- `model/company.go` — 新增唯一的 `companies` 表模型，以公司名称精确关联 `users.company`，并用 JSON 配置登录方式、飞书/钉钉凭据；支持排序、启停、平台与配置校验，不修改现有用户表结构
+- `model/main.go` — 将 `Company` 加入普通迁移与快速迁移，仅创建公司表
+- `controller/company.go` — 新增公司列表、详情、创建、更新、启停和连接测试接口；Secret 仅返回配置状态，更新时空 Secret 保留原值，公司改名不迁移现有用户
+- `service/company.go` — 新增无平台、飞书和钉钉公司连接测试，并校验平台根组织名称是否与公司名称完全一致
+- `router/api-router.go` — 注册仅 Root 可访问的公司管理接口，并保留数据总览部门接口的既有权限入口
+- `service/data_overview_provider.go` — 抽象飞书/钉钉统一组织目录与成员 Provider，按公司隔离 Token、目录和成员缓存并使用 singleflight 合并并发请求；飞书 `open_id` 与钉钉 `userid` 统一映射到本地 `users.open_id`
+- `service/data_overview_company.go` — 新增多公司部门树、公司别名显示、根组织精确匹配、无平台公司聚合及按公司/部门裁剪权限；平台用户同时按成员 ID 与 `users.company` 精确匹配，公司表为空时继续使用旧全局飞书模式
+- `service/feishu_department.go` — 部门树和各统计、排行、日志、导出服务接入公司模式 audience；请求携带公司 ID 与当前用户身份，并在服务端重新校验公司和部门访问范围
+- `controller/department.go` — 数据总览统计接口校验 `company_id`，注入请求用户 ID 和角色，并将公司或部门越权统一返回 403
+- `service/dingtalk_sync.go` — 钉钉 `user.list` 按 Client ID 平滑限制为单进程 30 QPS；识别 `errcode=88/subcode=90018` 后按 1 秒、2 秒有限退避重试，重试耗尽及底层请求错误不再泄露凭据 URL
+- `web/src/features/companies/api.ts` — 新增公司分页读取、创建、更新、启停和连接测试 API，前端只接收 Secret 的 configured 标记
+- `web/src/features/companies/types.ts` — 新增公司、平台、状态、登录方式和连接测试类型
+- `web/src/features/companies/lib/company-form.ts` — 新增公司表单 Zod 校验、平台与登录方式选项、凭据字段选择、Secret 掩码和无删除操作的行操作规则
+- `web/src/features/companies/components/company-credentials-fields.tsx` — 按平台显示飞书或钉钉凭据输入，已配置 Secret 使用掩码占位且不会回显明文
+- `web/src/features/companies/components/company-login-methods-field.tsx` — 新增公司登录方式元数据选择；不改变现有 LDAP、密码或平台登录流程
+- `web/src/features/companies/components/companies-table.tsx` — 新增公司表格、搜索、平台与状态标签、连接测试、编辑和启停操作，不提供物理删除
+- `web/src/features/companies/components/company-mutate-sheet.tsx` — 新增公司创建/编辑表单并改用居中 Dialog 展示；保留固定操作区和滚动内容区，删除冗余的“编辑时留空保留 Secret”提示
+- `web/src/features/companies/index.tsx` — 新增公司管理页面，整合查询、创建、编辑、连接测试和启停确认，并在变更后刷新公司及部门树缓存
+- `web/src/routes/_authenticated/companies/index.tsx` — 新增公司管理路由并在前端限制为超级管理员访问
+- `web/src/routeTree.gen.ts` — 注册生成的公司管理路由
+- `web/src/features/system-settings/maintenance/config.ts` — 在系统设置维护模块中登记公司管理模块
+- `web/src/features/system-settings/maintenance/sidebar-modules-section.tsx` — 支持在侧边栏模块配置中管理公司入口
+- `web/src/hooks/use-sidebar-config.ts` — 增加公司管理模块与 URL 映射
+- `web/src/hooks/use-sidebar-data.ts` — 向系统管理分区添加仅超级管理员可见的公司管理菜单
+- `web/src/features/data-overview/types.ts` — 部门节点和查询参数补充公司、平台、节点类型、禁用状态及错误信息
+- `web/src/features/data-overview/api.ts` — 统计、子部门、使用分析、排行、日志和用户列表请求统一透传 `company_id`
+- `web/src/features/data-overview/lib/department-selection.ts` — 集中处理公司感知的节点选择、请求参数构造、禁用状态和组织加载错误文案
+- `web/src/features/data-overview/index.tsx` — 数据总览根据所选公司节点生成查询参数，支持无平台公司一级节点，并隔离不同公司的 Query 缓存
+- `web/src/features/data-overview/components/department-tree-select.tsx` — 部门选择器支持公司一级节点、平台信息、禁用公司及组织名称不匹配错误提示
+- `web/src/features/data-overview/components/department-users-table.tsx` — 部门用户、排行和日志查询携带当前公司 ID
+- `web/src/features/data-overview/components/sub-department-stats.tsx` — 子部门统计与弹窗操作携带公司 ID
+- `web/src/features/data-overview/components/sub-department-stats-dialog.tsx` — 子部门统计弹窗按公司隔离统计和使用分析查询
+- `web/src/features/data-overview/components/department-logs-dialog.tsx` — 部门日志弹窗透传公司 ID
+- `web/src/features/data-overview/components/user-stats-dialog.tsx` — 用户统计弹窗透传公司 ID 并按公司校验目标用户
+- `web/src/features/data-overview/components/user-logs-section.tsx` — 用户与部门日志请求携带公司 ID
+- `web/src/features/data-overview/components/export-dialog.tsx` — 数据总览导出按公司范围加载统计与用户数据
+- `web/src/components/data-table/hooks/use-data-table.ts` — 为未显式传入的列筛选和全局筛选初始化受控状态，修复公司管理表格工具栏读取 `columnFilters.length` 时崩溃
+- `web/src/components/data-table/hooks/__tests__/state.test.tsx` — 覆盖仅启用全局搜索时列筛选状态仍初始化为空数组的回归场景
+- `web/src/features/companies/__tests__/company-behavior.test.ts` — 覆盖平台凭据字段、Secret 掩码、配置状态和无删除操作等公司管理契约
+- `web/src/features/companies/__tests__/editor-dialog.test.tsx` — 覆盖公司创建和编辑均使用 Dialog，且不显示已删除的冗余 Secret 提示
+- `web/src/features/data-overview/__tests__/company-selection.test.ts` — 覆盖公司参数透传、旧模式兼容、无平台公司选择和错误公司跳过逻辑
+- `web/src/i18n/static-keys.ts` — 登记公司管理、平台、登录方式和组织错误提示等静态翻译键
+- `web/src/i18n/locales/en.json`、`web/src/i18n/locales/zh.json`、`web/src/i18n/locales/zh-TW.json`、`web/src/i18n/locales/fr.json`、`web/src/i18n/locales/ja.json`、`web/src/i18n/locales/ru.json`、`web/src/i18n/locales/vi.json` — 补齐公司管理和多公司数据总览七语言文案，并移除废弃的 Secret 留空提示键
