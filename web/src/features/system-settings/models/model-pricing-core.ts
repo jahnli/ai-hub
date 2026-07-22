@@ -184,6 +184,17 @@ export function createInitialLaneState(data?: ModelRatioData | null) {
 
   const promptPrice = ratioToBasePrice(data.ratio)
   const audioInputPrice = deriveLanePrice(data.audioRatio, promptPrice)
+  const hasConfiguredPricing = [
+    data.price,
+    data.ratio,
+    data.cacheRatio,
+    data.createCacheRatio,
+    data.completionRatio,
+    data.imageRatio,
+    data.audioRatio,
+    data.audioCompletionRatio,
+    data.billingExpr,
+  ].some(hasValue)
   const prices: Record<LaneKey, string> = {
     completion: deriveLanePrice(data.completionRatio, promptPrice),
     cache: deriveLanePrice(data.cacheRatio, promptPrice),
@@ -196,14 +207,16 @@ export function createInitialLaneState(data?: ModelRatioData | null) {
   return {
     promptPrice,
     prices,
-    enabled: {
-      completion: hasValue(data.completionRatio),
-      cache: hasValue(data.cacheRatio),
-      createCache: hasValue(data.createCacheRatio),
-      image: hasValue(data.imageRatio),
-      audioInput: hasValue(data.audioRatio),
-      audioOutput: hasValue(data.audioCompletionRatio),
-    },
+    enabled: hasConfiguredPricing
+      ? {
+          completion: hasValue(data.completionRatio),
+          cache: hasValue(data.cacheRatio),
+          createCache: hasValue(data.createCacheRatio),
+          image: hasValue(data.imageRatio),
+          audioInput: hasValue(data.audioRatio),
+          audioOutput: hasValue(data.audioCompletionRatio),
+        }
+      : { ...EMPTY_LANE_ENABLED },
   }
 }
 
