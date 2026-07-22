@@ -49,6 +49,9 @@
 - `web/default/src/features/system-settings/security/index.tsx` — 安全审计设置补充与后端一致的关闭默认值
 - `web/default/src/features/system-settings/security/__tests__/audit-settings.test.tsx` — 回归测试覆盖请求内容记录开关在安全审计页面的展示和启用状态
 - `web/default/src/features/system-settings/types.ts` — 将 RecordRequestMessageEnabled 从 OperationsSettings 迁移到 SecuritySettings
+- `web/src/features/system-settings/security/audit-section.tsx` — 安全审计设置改为响应式卡片布局，统一功能说明、时间设置区域与开关层级；桌面端非工作时间审计和请求内容审计并排半宽展示，移动端保持单列。
+- `web/src/features/system-settings/security/__tests__/audit-settings.test.tsx` — 补充安全审计卡片结构、半宽布局、时间区域及开关状态的回归断言。
+- `web/src/i18n/locales/*.json` — 补齐非工作时间审计和图片审计卡片说明的七语言翻译。
 - `relay/common/relay_info.go` — RelayInfo 新增 ClientApp 字段，在基础中继信息生成时保存原始 User-Agent
 - `relay/common/client_app.go` — 新增 DetectClientApp，返回请求携带的原始 User-Agent，不做客户端名称映射
 - `relay/common/client_app_test.go` — 覆盖 DetectClientApp 原始 User-Agent 返回、缺失头与 nil 安全场景

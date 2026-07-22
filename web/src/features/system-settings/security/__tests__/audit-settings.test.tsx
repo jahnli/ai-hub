@@ -61,6 +61,11 @@ describe('security audit settings presentation', () => {
     expect(html).toContain(
       'Store the user prompts and model parameters of each relay request for auditing.'
     )
+    expect(html).toContain('data-audit-setting-card="off-hours"')
+    expect(html).not.toContain('md:col-span-2')
+    expect(html).toContain('data-audit-time-range="true"')
+    expect(html).toContain('data-audit-setting-card="request-content"')
+    expect(html).toContain('data-audit-setting-card="image-audit"')
     expect(html).toContain('role="switch"')
     expect(html).toContain('aria-checked="true"')
   })

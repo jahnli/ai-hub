@@ -41,7 +41,6 @@ import { Switch } from '@/components/ui/switch'
 import {
   SettingsForm,
   SettingsSwitchContent,
-  SettingsSwitchItem,
 } from '../components/settings-form-layout'
 import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
@@ -140,122 +139,165 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
             isSaving={updateOption.isPending}
             saveLabel='Save audit settings'
           />
-          <h3 className='text-sm font-semibold'>{t('Off-hours audit')}</h3>
-          <div className='grid items-center gap-4 pl-4 md:grid-cols-3'>
-            <FormField
-              control={form.control}
-              name='offHours.enabled'
-              render={({ field }) => (
-                <SettingsSwitchItem className='h-8 py-0'>
-                  <SettingsSwitchContent>
-                    <FormLabel>{t('Enable')}</FormLabel>
-                  </SettingsSwitchContent>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </SettingsSwitchItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='offHours.start_hour'
-              render={({ field }) => (
-                <FormItem className='flex min-w-0 items-center gap-3 space-y-0'>
-                  <FormLabel className='shrink-0'>{t('Start time')}</FormLabel>
-                  <FormControl>
-                    <InputGroup className='flex-1'>
-                      <InputGroupInput
-                        type='number'
-                        min={0}
-                        max={23}
-                        step={1}
-                        value={field.value}
-                        onBlur={field.onBlur}
-                        onChange={(event) =>
-                          field.onChange(parseAuditHour(event.target.value))
-                        }
-                      />
-                      <InputGroupAddon align='inline-end'>:00</InputGroupAddon>
-                    </InputGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='offHours.end_hour'
-              render={({ field }) => (
-                <FormItem className='flex min-w-0 items-center gap-3 space-y-0'>
-                  <FormLabel className='shrink-0'>{t('End time')}</FormLabel>
-                  <FormControl>
-                    <InputGroup className='flex-1'>
-                      <InputGroupInput
-                        type='number'
-                        min={0}
-                        max={23}
-                        step={1}
-                        value={field.value}
-                        onBlur={field.onBlur}
-                        onChange={(event) =>
-                          field.onChange(parseAuditHour(event.target.value))
-                        }
-                      />
-                      <InputGroupAddon align='inline-end'>:00</InputGroupAddon>
-                    </InputGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <h3 className='text-sm font-semibold'>
-            {t('Record request content')}
-          </h3>
-          <div className='pl-4'>
+          <div className='grid gap-4 md:grid-cols-2'>
+            <section
+              aria-labelledby='off-hours-audit-title'
+              data-audit-setting-card='off-hours'
+              className='bg-card overflow-hidden rounded-2xl border shadow-sm'
+            >
+              <div className='flex items-center justify-between gap-6 p-5'>
+                <div className='min-w-0 space-y-1'>
+                  <h3
+                    id='off-hours-audit-title'
+                    className='text-base font-semibold'
+                  >
+                    {t('Off-hours audit')}
+                  </h3>
+                  <p className='text-muted-foreground text-sm'>
+                    {t('Enable auditing only during the configured time range')}
+                  </p>
+                </div>
+                <FormField
+                  control={form.control}
+                  name='offHours.enabled'
+                  render={({ field }) => (
+                    <FormItem className='shrink-0 space-y-0'>
+                      <FormLabel className='sr-only'>{t('Enable')}</FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div
+                data-audit-time-range
+                className='bg-muted/35 grid gap-4 border-t p-5 sm:grid-cols-2'
+              >
+                <FormField
+                  control={form.control}
+                  name='offHours.start_hour'
+                  render={({ field }) => (
+                    <FormItem className='space-y-2'>
+                      <FormLabel>{t('Start time')}</FormLabel>
+                      <FormControl>
+                        <InputGroup className='bg-background'>
+                          <InputGroupInput
+                            type='number'
+                            min={0}
+                            max={23}
+                            step={1}
+                            value={field.value}
+                            onBlur={field.onBlur}
+                            onChange={(event) =>
+                              field.onChange(parseAuditHour(event.target.value))
+                            }
+                          />
+                          <InputGroupAddon align='inline-end'>
+                            :00
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name='offHours.end_hour'
+                  render={({ field }) => (
+                    <FormItem className='space-y-2'>
+                      <FormLabel>{t('End time')}</FormLabel>
+                      <FormControl>
+                        <InputGroup className='bg-background'>
+                          <InputGroupInput
+                            type='number'
+                            min={0}
+                            max={23}
+                            step={1}
+                            value={field.value}
+                            onBlur={field.onBlur}
+                            onChange={(event) =>
+                              field.onChange(parseAuditHour(event.target.value))
+                            }
+                          />
+                          <InputGroupAddon align='inline-end'>
+                            :00
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </section>
+
             <FormField
               control={form.control}
               name='requestContentEnabled'
               render={({ field }) => (
-                <SettingsSwitchItem>
-                  <SettingsSwitchContent>
-                    <FormLabel>{t('Enable')}</FormLabel>
-                    <FormDescription>
+                <FormItem
+                  data-audit-setting-card='request-content'
+                  className='bg-card flex min-h-40 flex-col justify-between gap-6 rounded-2xl border p-5 shadow-sm'
+                >
+                  <SettingsSwitchContent className='space-y-2'>
+                    <FormLabel className='text-base font-semibold'>
+                      {t('Record request content')}
+                    </FormLabel>
+                    <FormDescription className='text-sm leading-relaxed'>
                       {t(
                         'Store the user prompts and model parameters of each relay request for auditing. Keeping this on increases database writes and storage usage.'
                       )}
                     </FormDescription>
                   </SettingsSwitchContent>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </SettingsSwitchItem>
+                  <div className='flex items-center justify-between border-t pt-4'>
+                    <span className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                      {t('Enable')}
+                    </span>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
               )}
             />
-          </div>
-          <h3 className='text-sm font-semibold'>{t('Image audit')}</h3>
-          <div className='grid items-center gap-4 pl-4 md:grid-cols-3'>
+
             <FormField
               control={form.control}
               name='imageStudioEnabled'
               render={({ field }) => (
-                <SettingsSwitchItem className='h-8 py-0'>
-                  <SettingsSwitchContent>
-                    <FormLabel>{t('Enable')}</FormLabel>
+                <FormItem
+                  data-audit-setting-card='image-audit'
+                  className='bg-card flex min-h-40 flex-col justify-between gap-6 rounded-2xl border p-5 shadow-sm'
+                >
+                  <SettingsSwitchContent className='space-y-2'>
+                    <FormLabel className='text-base font-semibold'>
+                      {t('Image audit')}
+                    </FormLabel>
+                    <FormDescription className='text-sm leading-relaxed'>
+                      {t('Audit image generation requests and generated content')}
+                    </FormDescription>
                   </SettingsSwitchContent>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </SettingsSwitchItem>
+                  <div className='flex items-center justify-between border-t pt-4'>
+                    <span className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                      {t('Enable')}
+                    </span>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
               )}
             />
           </div>
