@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/tooltip'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
 import type { UserColumnRow } from '@/features/users/types'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { stringToColor } from '@/lib/colors'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
@@ -52,6 +53,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { getUserInfo } from '../../api'
 import { LOG_TYPE_ALL_VALUE, LOG_TYPE_ENUM } from '../../constants'
 import type { UsageLog } from '../../data/schema'
+import { getUsageLogChannelDisplay } from '../../lib/channel-visibility'
 import {
   formatModelName,
   getFirstResponseTimeColor,
@@ -318,6 +320,7 @@ export function useCommonLogsColumns(
   options: UseCommonLogsColumnsOptions = {}
 ): ColumnDef<UsageLog>[] {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const canFetchUserDetails = options.canFetchUserDetails ?? isAdmin
@@ -750,11 +753,13 @@ export function useCommonLogsColumns(
           : []
         const hasRetryChain = useChannel.length > 1
         const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
-        const channelDisplay = log.channel_name
-          ? `${log.channel_name} #${log.channel}`
-          : `#${log.channel}`
         const channelIdDisplay = `#${log.channel}`
-        const channelName = sensitiveVisible ? log.channel_name : '••••'
+        const channelDisplay = getUsageLogChannelDisplay(
+          log.channel_name,
+          log.channel,
+          sensitiveVisible,
+          demoMode
+        )
         const multiKeyIndex = other?.admin_info?.multi_key_index
         const showMultiKeyIndex =
           other?.admin_info?.is_multi_key === true &&
@@ -839,15 +844,15 @@ export function useCommonLogsColumns(
                     </button>
                   )}
                 </div>
-                {log.channel_name && (
+                {channelDisplay.name && (
                   <span className='text-muted-foreground/70 truncate [font-family:var(--font-body)] !text-xs'>
-                    {channelName}
+                    {channelDisplay.name}
                   </span>
                 )}
               </TooltipTrigger>
               <TooltipContent>
                 <div className='space-y-1'>
-                  <p>{sensitiveVisible ? channelDisplay : channelIdDisplay}</p>
+                  <p>{channelDisplay.tooltip}</p>
                   {channelChain && (
                     <p className='text-muted-foreground text-xs'>
                       {t('Chain')}: {channelChain}

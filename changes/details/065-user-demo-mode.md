@@ -26,6 +26,8 @@
 - `web/src/features/profile/types.ts` — 补充演示模式相关前端类型
 - `web/src/hooks/use-demo-mode.ts` — 新增响应式演示模式 Hook
 - `web/src/lib/demo-mode.ts` — 解析用户演示模式设置并定义统一价格遮罩
+- `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 使用日志渠道列接入演示模式，开启时遮罩渠道名称及悬停提示中的名称
+- `web/src/features/usage-logs/lib/channel-visibility.ts` — 集中处理使用日志渠道名称在演示模式和敏感信息关闭状态下的显示规则
 - `web/src/i18n/locales/en.json` — 补充英文演示模式文案
 - `web/src/i18n/locales/fr.json` — 补充法文演示模式文案
 - `web/src/i18n/locales/ja.json` — 补充日文演示模式文案
