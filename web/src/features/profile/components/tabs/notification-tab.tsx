@@ -82,6 +82,7 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
     accept_unset_model_ratio_model: false,
     record_ip_log: true,
     upstream_model_update_notify_enabled: false,
+    demo_mode: false,
   })
 
   // Update form field helper
@@ -111,6 +112,7 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
         record_ip_log: parsed.record_ip_log ?? true,
         upstream_model_update_notify_enabled:
           parsed.upstream_model_update_notify_enabled || false,
+        demo_mode: parsed.demo_mode ?? false,
       })
     }
   }, [profile])
@@ -332,6 +334,22 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
           <p className='text-muted-foreground mt-1 text-xs'>
             {t('Configure your account behavior preferences')}
           </p>
+        </div>
+
+        {/* Demo Mode */}
+        <div className='flex items-start justify-between gap-3 rounded-lg border p-3 sm:items-center sm:p-4'>
+          <div className='space-y-0.5'>
+            <Label htmlFor='demoMode'>{t('Demo Mode')}</Label>
+            <p className='text-muted-foreground text-xs sm:text-sm'>
+              {t('Enable Demo Mode')}
+            </p>
+          </div>
+          <Switch
+            id='demoMode'
+            className='shrink-0'
+            checked={settings.demo_mode}
+            onCheckedChange={(checked) => updateField('demo_mode', checked)}
+          />
         </div>
 
         {/* Receive Upstream Model Update Notifications (admin only) */}

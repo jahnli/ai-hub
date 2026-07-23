@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 
 import { StaticDataTable } from '@/components/data-table'
 import { Badge } from '@/components/ui/badge'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
@@ -64,6 +65,7 @@ type DynamicPricingBreakdownProps = {
    * icon header and uses the dialog's small text sizes. Defaults to false.
    */
   compact?: boolean
+  maskPrices?: boolean
 }
 
 const VAR_LABELS: Record<string, string> = {
@@ -158,6 +160,7 @@ export function DynamicPricingBreakdown({
   matchedTierLabel,
   hideCacheColumns = false,
   compact = false,
+  maskPrices = false,
 }: DynamicPricingBreakdownProps) {
   const { t } = useTranslation()
   const expr = billingExpr || ''
@@ -216,7 +219,7 @@ export function DynamicPricingBreakdown({
           {t('Raw expression')}
         </div>
         <code className='text-muted-foreground block text-xs break-all'>
-          {expr}
+          {maskPrices ? DEMO_MODE_MASK : expr}
         </code>
       </section>
     )
@@ -260,7 +263,7 @@ export function DynamicPricingBreakdown({
             {t('Tiered price table')}
           </div>
           <div className='space-y-1.5 sm:hidden'>
-            {tiers.map((tier, i) => {
+            {tiers.map((tier) => {
               const condSummary = formatConditionSummary(tier.conditions, t)
               const isMatched =
                 matchedTierLabel != null &&
@@ -268,7 +271,7 @@ export function DynamicPricingBreakdown({
                 tier.label === matchedTierLabel
               return (
                 <div
-                  key={`tier-mobile-${i}`}
+                  key={`${normalizeTierLabel(tier.label)}-${condSummary}`}
                   className={cn(
                     'rounded-md border p-2',
                     isMatched && 'border-emerald-500/40 bg-emerald-500/10'
@@ -300,6 +303,12 @@ export function DynamicPricingBreakdown({
                       const value = Number(
                         tier[v.field as string as keyof ParsedTier] || 0
                       )
+                      let displayedPrice = '-'
+                      if (maskPrices) {
+                        displayedPrice = DEMO_MODE_MASK
+                      } else if (value > 0) {
+                        displayedPrice = `${symbol}${(value * rate).toFixed(4)}`
+                      }
                       return (
                         <div key={v.field} className='min-w-0'>
                           <div className='text-muted-foreground truncate text-[10px] font-medium tracking-wider uppercase'>
@@ -311,9 +320,7 @@ export function DynamicPricingBreakdown({
                               compact ? 'text-xs' : 'text-sm font-semibold'
                             )}
                           >
-                            {value > 0
-                              ? `${symbol}${(value * rate).toFixed(4)}`
-                              : '-'}
+                            {displayedPrice}
                           </div>
                         </div>
                       )
@@ -399,6 +406,13 @@ export function DynamicPricingBreakdown({
                   const value = Number(
                     tier[v.field as string as keyof ParsedTier] || 0
                   )
+                  if (maskPrices) {
+                    return (
+                      <span className={cn(!compact && 'font-semibold')}>
+                        {DEMO_MODE_MASK}
+                      </span>
+                    )
+                  }
                   return value > 0 ? (
                     <span className={cn(!compact && 'font-semibold')}>
                       {`${symbol}${(value * rate).toFixed(4)}`}
@@ -425,9 +439,9 @@ export function DynamicPricingBreakdown({
             {t('Conditional multipliers')}
           </div>
           <ul className='space-y-1.5'>
-            {ruleGroups.map((group, gi) => (
+            {ruleGroups.map((group) => (
               <li
-                key={`group-${gi}`}
+                key={`${describeGroup(group, t)}-${group.multiplier}`}
                 className='bg-muted/50 flex items-center justify-between gap-3 rounded-md px-3 py-2'
               >
                 <span
@@ -442,7 +456,7 @@ export function DynamicPricingBreakdown({
                   variant='secondary'
                   className='shrink-0 bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300'
                 >
-                  {group.multiplier}x
+                  {maskPrices ? DEMO_MODE_MASK : `${group.multiplier}x`}
                 </Badge>
               </li>
             ))}

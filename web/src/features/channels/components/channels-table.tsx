@@ -58,6 +58,7 @@ import {
   isTagAggregateRow,
   getChannelTypeIcon,
   getChannelTypeLabel,
+  getChannelSensitiveMask,
 } from '../lib'
 import type { Channel, ChannelSortBy } from '../types'
 import { ChannelCard } from './channel-card'
@@ -93,6 +94,7 @@ export function ChannelsTable() {
     batchMode,
     sensitiveVisible,
     setSensitiveVisible,
+    demoMode,
   } = useChannels()
   const isMobile = useMediaQuery('(max-width: 640px)')
 
@@ -400,7 +402,8 @@ export function ChannelsTable() {
     { label: t('All Groups'), value: 'all' },
     ...groupOptions.map((option) => ({
       ...option,
-      label: sensitiveVisible ? option.label : '••••',
+      label:
+        getChannelSensitiveMask(sensitiveVisible, demoMode) ?? option.label,
     })),
   ]
 

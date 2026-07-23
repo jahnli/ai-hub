@@ -16,13 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-// Re-export all library functions
-export * from './channel-actions'
-export * from './advanced-custom'
-export * from './channel-form-errors'
-export * from './channel-form'
-export * from './channel-type-config'
-export * from './channel-utils'
-export * from './channel-visibility'
-export * from './multi-key-utils'
-export * from './model-mapping-validation'
+import { isDemoModeEnabled } from '@/lib/demo-mode'
+import { useAuthStore } from '@/stores/auth-store'
+
+export function useDemoMode(): boolean {
+  return useAuthStore((state) => isDemoModeEnabled(state.auth.user?.setting))
+}

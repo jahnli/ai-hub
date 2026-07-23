@@ -26,6 +26,7 @@ import {
 } from '@/components/data-table'
 import { GroupBadge } from '@/components/group-badge'
 import { StatusBadge } from '@/components/status-badge'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { getLobeIcon } from '@/lib/lobe-icon'
 
 import { DEFAULT_TOKEN_UNIT } from '../constants'
@@ -53,6 +54,7 @@ export interface PricingColumnsOptions {
   usdExchangeRate?: number
   showRechargePrice?: boolean
   selectedGroup?: string
+  maskPrices?: boolean
 }
 
 export function usePricingColumns(
@@ -65,6 +67,7 @@ export function usePricingColumns(
     usdExchangeRate = 1,
     showRechargePrice = false,
     selectedGroup,
+    maskPrices = false,
   } = options
 
   const tokenUnitLabel = tokenUnit === 'K' ? '1K' : '1M'
@@ -136,7 +139,7 @@ export function usePricingColumns(
                   {t('Unable to parse structured pricing')}
                 </div>
                 <code className='text-muted-foreground/70 mt-1 line-clamp-2 block font-mono text-[10px] leading-relaxed break-all'>
-                  {dynamicSummary.rawExpression}
+                  {maskPrices ? DEMO_MODE_MASK : dynamicSummary.rawExpression}
                 </code>
               </div>
             )
@@ -159,7 +162,9 @@ export function usePricingColumns(
                     {index > 0 && (
                       <span className='text-muted-foreground/40 mx-1'>/</span>
                     )}
-                    {stripTrailingZeros(entry.formatted)}
+                    {maskPrices
+                      ? DEMO_MODE_MASK
+                      : stripTrailingZeros(entry.formatted)}
                   </span>
                 ))}
               </span>
@@ -203,9 +208,9 @@ export function usePricingColumns(
           return (
             <div className='max-w-full min-w-0'>
               <span className='font-mono text-sm tabular-nums'>
-                {inputPrice}
+                {maskPrices ? DEMO_MODE_MASK : inputPrice}
                 <span className='text-muted-foreground/40 mx-1'>/</span>
-                {outputPrice}
+                {maskPrices ? DEMO_MODE_MASK : outputPrice}
               </span>
               <div className='text-muted-foreground/50 text-[10px]'>
                 / {tokenUnitLabel} tokens
@@ -226,7 +231,9 @@ export function usePricingColumns(
 
         return (
           <div className='max-w-full min-w-0'>
-            <span className='font-mono text-sm tabular-nums'>{price}</span>
+            <span className='font-mono text-sm tabular-nums'>
+              {maskPrices ? DEMO_MODE_MASK : price}
+            </span>
             <div className='text-muted-foreground/50 text-[10px]'>
               / {t('request')}
             </div>
@@ -273,7 +280,9 @@ export function usePricingColumns(
           return (
             <div className='max-w-full min-w-0'>
               <span className='font-mono text-sm tabular-nums'>
-                {stripTrailingZeros(cacheEntry.formatted)}
+                {maskPrices
+                  ? DEMO_MODE_MASK
+                  : stripTrailingZeros(cacheEntry.formatted)}
               </span>
               <div className='text-muted-foreground/50 text-[10px]'>
                 / {tokenUnitLabel}
@@ -303,7 +312,7 @@ export function usePricingColumns(
         return (
           <div className='max-w-full min-w-0'>
             <span className='font-mono text-sm tabular-nums'>
-              {cachedPrice}
+              {maskPrices ? DEMO_MODE_MASK : cachedPrice}
             </span>
             <div className='text-muted-foreground/50 text-[10px]'>
               / {tokenUnitLabel}

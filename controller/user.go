@@ -1451,6 +1451,7 @@ type UpdateUserSettingRequest struct {
 	UpstreamModelUpdateNotifyEnabled *bool   `json:"upstream_model_update_notify_enabled,omitempty"`
 	AcceptUnsetModelRatioModel       bool    `json:"accept_unset_model_ratio_model"`
 	RecordIpLog                      *bool   `json:"record_ip_log,omitempty"`
+	DemoMode                         *bool   `json:"demo_mode,omitempty"`
 }
 
 func UpdateUserSetting(c *gin.Context) {
@@ -1541,23 +1542,28 @@ func UpdateUserSetting(c *gin.Context) {
 		return
 	}
 	existingSettings := user.GetSetting()
-	upstreamModelUpdateNotifyEnabled := existingSettings.UpstreamModelUpdateNotifyEnabled
 	if user.Role >= common.RoleAdminUser && req.UpstreamModelUpdateNotifyEnabled != nil {
-		upstreamModelUpdateNotifyEnabled = *req.UpstreamModelUpdateNotifyEnabled
+		existingSettings.UpstreamModelUpdateNotifyEnabled = *req.UpstreamModelUpdateNotifyEnabled
 	}
-	recordIpLog := existingSettings.RecordIpLog
 	if user.Role >= common.RoleRootUser && req.RecordIpLog != nil {
-		recordIpLog = *req.RecordIpLog
+		existingSettings.RecordIpLog = *req.RecordIpLog
+	}
+	if req.DemoMode != nil {
+		existingSettings.DemoMode = *req.DemoMode
 	}
 
-	// 构建设置
-	settings := dto.UserSetting{
-		NotifyType:                       req.QuotaWarningType,
-		QuotaWarningThreshold:            req.QuotaWarningThreshold,
-		UpstreamModelUpdateNotifyEnabled: upstreamModelUpdateNotifyEnabled,
-		AcceptUnsetRatioModel:            req.AcceptUnsetModelRatioModel,
-		RecordIpLog:                      recordIpLog,
-	}
+	// 更新表单管理的设置，同时保留语言、侧边栏、扣费偏好等独立配置。
+	settings := existingSettings
+	settings.NotifyType = req.QuotaWarningType
+	settings.QuotaWarningThreshold = req.QuotaWarningThreshold
+	settings.AcceptUnsetRatioModel = req.AcceptUnsetModelRatioModel
+	settings.WebhookUrl = ""
+	settings.WebhookSecret = ""
+	settings.NotificationEmail = ""
+	settings.BarkUrl = ""
+	settings.GotifyUrl = ""
+	settings.GotifyToken = ""
+	settings.GotifyPriority = 0
 
 	// 如果是webhook类型,添加webhook相关设置
 	if req.QuotaWarningType == dto.NotifyTypeWebhook {

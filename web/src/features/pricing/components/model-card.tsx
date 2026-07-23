@@ -21,6 +21,7 @@ import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -44,6 +45,7 @@ export interface ModelCardProps {
   tokenUnit?: TokenUnit
   showRechargePrice?: boolean
   selectedGroup?: string
+  maskPrices?: boolean
   perf?: ModelPerfBadgeData
 }
 
@@ -100,7 +102,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
             {t('Special billing expression')}
           </span>
           <code className='text-muted-foreground/70 mt-0.5 line-clamp-1 block font-mono text-[11px] break-all'>
-            {dynamicSummary.rawExpression}
+            {props.maskPrices ? DEMO_MODE_MASK : dynamicSummary.rawExpression}
           </code>
         </span>
       )
@@ -114,7 +116,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
             >
               {t(entry.shortLabel)}{' '}
               <span className='text-foreground font-mono font-semibold'>
-                {entry.formatted}
+                {props.maskPrices ? DEMO_MODE_MASK : entry.formatted}
               </span>
             </span>
           ))}
@@ -133,44 +135,50 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
         <span className='text-muted-foreground whitespace-nowrap'>
           {t('Input')}{' '}
           <span className='text-foreground font-mono font-semibold'>
-            {formatPrice(
-              props.model,
-              'input',
-              tokenUnit,
-              showRechargePrice,
-              priceRate,
-              usdExchangeRate,
-              props.selectedGroup
-            )}
+            {props.maskPrices
+              ? DEMO_MODE_MASK
+              : formatPrice(
+                  props.model,
+                  'input',
+                  tokenUnit,
+                  showRechargePrice,
+                  priceRate,
+                  usdExchangeRate,
+                  props.selectedGroup
+                )}
           </span>
         </span>
         <span className='text-muted-foreground whitespace-nowrap'>
           {t('Output')}{' '}
           <span className='text-foreground font-mono font-semibold'>
-            {formatPrice(
-              props.model,
-              'output',
-              tokenUnit,
-              showRechargePrice,
-              priceRate,
-              usdExchangeRate,
-              props.selectedGroup
-            )}
+            {props.maskPrices
+              ? DEMO_MODE_MASK
+              : formatPrice(
+                  props.model,
+                  'output',
+                  tokenUnit,
+                  showRechargePrice,
+                  priceRate,
+                  usdExchangeRate,
+                  props.selectedGroup
+                )}
           </span>
         </span>
         {hasCachedPrice && (
           <span className='text-muted-foreground whitespace-nowrap'>
             {t('Cached')}{' '}
             <span className='text-foreground font-mono font-semibold'>
-              {formatPrice(
-                props.model,
-                'cache',
-                tokenUnit,
-                showRechargePrice,
-                priceRate,
-                usdExchangeRate,
-                props.selectedGroup
-              )}
+              {props.maskPrices
+                ? DEMO_MODE_MASK
+                : formatPrice(
+                    props.model,
+                    'cache',
+                    tokenUnit,
+                    showRechargePrice,
+                    priceRate,
+                    usdExchangeRate,
+                    props.selectedGroup
+                  )}
             </span>
           </span>
         )}
@@ -180,13 +188,15 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
     priceSummary = (
       <span className='text-muted-foreground whitespace-nowrap'>
         <span className='text-foreground font-mono font-semibold'>
-          {formatRequestPrice(
-            props.model,
-            showRechargePrice,
-            priceRate,
-            usdExchangeRate,
-            props.selectedGroup
-          )}
+          {props.maskPrices
+            ? DEMO_MODE_MASK
+            : formatRequestPrice(
+                props.model,
+                showRechargePrice,
+                priceRate,
+                usdExchangeRate,
+                props.selectedGroup
+              )}
         </span>{' '}
         / {t('request')}
       </span>

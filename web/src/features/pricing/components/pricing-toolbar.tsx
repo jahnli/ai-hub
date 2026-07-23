@@ -88,6 +88,7 @@ export interface PricingToolbarProps {
   groups: string[]
   groupRatios?: Record<string, number>
   showGroupRatios?: boolean
+  maskGroupRatios?: boolean
   tags: string[]
   models: PricingModel[]
   hasActiveFilters: boolean
@@ -301,6 +302,7 @@ export function PricingToolbar(props: PricingToolbarProps) {
               groups={props.groups}
               groupRatios={props.groupRatios}
               showGroupRatios={props.showGroupRatios}
+              maskGroupRatios={props.maskGroupRatios}
               tags={props.tags}
               models={props.models}
               hasActiveFilters={props.hasActiveFilters}

@@ -20,6 +20,8 @@ import i18next from 'i18next'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 
+import { useAuthStore } from '@/stores/auth-store'
+
 import { getUserProfile, updateUserProfile, updateUserSettings } from '../api'
 import type {
   UserProfile,
@@ -32,33 +34,41 @@ import type {
 // ============================================================================
 
 export function useProfile() {
+  const setAuthUser = useAuthStore((state) => state.auth.setUser)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
 
   // Fetch user profile (with optional silent mode)
-  const fetchProfile = useCallback(async (silent = false) => {
-    try {
-      if (!silent) {
-        setLoading(true)
-      }
-      const response = await getUserProfile()
+  const fetchProfile = useCallback(
+    async (silent = false) => {
+      try {
+        if (!silent) {
+          setLoading(true)
+        }
+        const response = await getUserProfile()
 
-      if (response.success && response.data) {
-        setProfile(response.data)
+        if (response.success && response.data) {
+          setProfile(response.data)
+          const authUser = useAuthStore.getState().auth.user
+          if (authUser) {
+            setAuthUser({ ...authUser, ...response.data })
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch profile:', error)
+        if (!silent) {
+          toast.error(i18next.t('Failed to load profile'))
+        }
+      } finally {
+        if (!silent) {
+          setLoading(false)
+        }
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to fetch profile:', error)
-      if (!silent) {
-        toast.error(i18next.t('Failed to load profile'))
-      }
-    } finally {
-      if (!silent) {
-        setLoading(false)
-      }
-    }
-  }, [])
+    },
+    [setAuthUser]
+  )
 
   // Refresh profile silently (without loading state)
   const refreshProfile = useCallback(async () => {

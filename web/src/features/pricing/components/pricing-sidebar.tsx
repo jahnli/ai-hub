@@ -27,6 +27,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +71,7 @@ export interface PricingSidebarProps {
   groups: string[]
   groupRatios?: Record<string, number>
   showGroupRatios?: boolean
+  maskGroupRatios?: boolean
   tags: string[]
   models: PricingModel[]
   hasActiveFilters: boolean
@@ -186,13 +188,15 @@ export function PricingSidebar(props: PricingSidebarProps) {
       value: FILTER_ALL,
       label: t('All Groups'),
     },
-    ...props.groups.map((group) => ({
-      value: group,
-      label: group,
-      suffix: props.showGroupRatios
-        ? formatGroupRatio(props.groupRatios?.[group])
-        : undefined,
-    })),
+    ...props.groups.map((group) => {
+      let suffix: string | undefined
+      if (props.showGroupRatios) {
+        suffix = props.maskGroupRatios
+          ? DEMO_MODE_MASK
+          : formatGroupRatio(props.groupRatios?.[group])
+      }
+      return { value: group, label: group, suffix }
+    }),
   ]
 
   const quotaOptions: FilterOption[] = [

@@ -26,6 +26,8 @@ import React, {
   useMemo,
 } from 'react'
 
+import { useDemoMode } from '@/hooks/use-demo-mode'
+
 import { useChannelUpstreamUpdates } from '../hooks/use-channel-upstream-updates'
 import { channelsQueryKeys } from '../lib'
 import type { Channel } from '../types'
@@ -64,6 +66,7 @@ type ChannelsContextType = {
   setBatchMode: (enabled: boolean) => void
   sensitiveVisible: boolean
   setSensitiveVisible: (visible: boolean) => void
+  demoMode: boolean
   upstream: UpstreamUpdateState
 }
 
@@ -80,6 +83,7 @@ const ChannelsContext = createContext<ChannelsContextType | undefined>(
 // ============================================================================
 
 export function ChannelsProvider({ children }: { children: React.ReactNode }) {
+  const demoMode = useDemoMode()
   const [open, setOpen] = useState<DialogType>(null)
   const [currentRow, setCurrentRow] = useState<Channel | null>(null)
   const [currentTag, setCurrentTag] = useState<string | null>(null)
@@ -117,6 +121,7 @@ export function ChannelsProvider({ children }: { children: React.ReactNode }) {
       setBatchMode,
       sensitiveVisible,
       setSensitiveVisible,
+      demoMode,
       upstream,
     }),
     [
@@ -127,6 +132,7 @@ export function ChannelsProvider({ children }: { children: React.ReactNode }) {
       idSort,
       batchMode,
       sensitiveVisible,
+      demoMode,
       upstream,
     ]
   )

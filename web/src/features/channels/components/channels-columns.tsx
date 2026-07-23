@@ -63,6 +63,8 @@ import {
   handleUpdateChannelField,
   handleUpdateTagField,
   isTagAggregateRow,
+  CHANNEL_SENSITIVE_MASK,
+  getChannelSensitiveMask,
   type TagRow,
 } from '../lib'
 import { parseUpstreamUpdateMeta } from '../lib/upstream-update-utils'
@@ -270,8 +272,6 @@ function WeightCell({ channel }: { channel: Channel }) {
   )
 }
 
-const SENSITIVE_MASK = '••••'
-
 /**
  * Generate channels columns configuration
  */
@@ -281,7 +281,7 @@ export function useChannelsColumns(
   } = {}
 ): ColumnDef<Channel>[] {
   const { t, i18n } = useTranslation()
-  const { sensitiveVisible } = useChannels()
+  const { sensitiveVisible, demoMode } = useChannels()
   const enableSelection = options.enableSelection ?? true
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   // The column definitions only depend on the translation function, the active
@@ -336,7 +336,9 @@ export function useChannelsColumns(
         meta: { mobileHidden: true },
         cell: ({ row }) => {
           const id = row.getValue('id') as number
-          return <TableId value={sensitiveVisible ? id : SENSITIVE_MASK} />
+          return (
+            <TableId value={sensitiveVisible ? id : CHANNEL_SENSITIVE_MASK} />
+          )
         },
         size: 80,
       },
@@ -370,7 +372,10 @@ export function useChannelsColumns(
                   )}
                 </Button>
                 <div className='flex items-center gap-1.5'>
-                  <span className='font-semibold'>Tag：{tag}</span>
+                  <span className='font-semibold'>
+                    Tag：
+                    {getChannelSensitiveMask(sensitiveVisible, demoMode) ?? tag}
+                  </span>
                   <StatusBadge
                     label={`${childrenCount} channels`}
                     variant='blue'
@@ -392,7 +397,10 @@ export function useChannelsColumns(
               <div className='flex max-w-full min-w-0 flex-col gap-1'>
                 <div className='flex max-w-full min-w-0 items-center gap-1.5'>
                   <TruncatedText
-                    text={sensitiveVisible ? name : SENSITIVE_MASK}
+                    text={
+                      getChannelSensitiveMask(sensitiveVisible, demoMode) ??
+                      name
+                    }
                     className='font-medium'
                     maxWidth='max-w-full'
                   />
@@ -758,7 +766,7 @@ export function useChannelsColumns(
                 <GroupBadge
                   key={g}
                   group={g}
-                  label={sensitiveVisible ? undefined : SENSITIVE_MASK}
+                  label={getChannelSensitiveMask(sensitiveVisible, demoMode)}
                   size='sm'
                 />
               ))}
@@ -908,6 +916,6 @@ export function useChannelsColumns(
         meta: { pinned: 'right' as const },
       },
     ],
-    [enableSelection, t, locale, sensitiveVisible]
+    [demoMode, enableSelection, t, locale, sensitiveVisible]
   )
 }

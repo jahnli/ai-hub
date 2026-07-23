@@ -55,6 +55,8 @@ import {
   formatUptimePct,
   getSuccessRateTextClass,
 } from '@/features/performance-metrics/lib/format'
+import { useDemoMode } from '@/hooks/use-demo-mode'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -572,8 +574,10 @@ function PriceSection(props: {
   usdExchangeRate: number
   tokenUnit: TokenUnit
   showRechargePrice: boolean
+  maskPrices?: boolean
 }) {
   const { t } = useTranslation()
+
   const isTokenBased = isTokenBasedModel(props.model)
   const tokenUnitLabel = props.tokenUnit === 'K' ? '1K' : '1M'
   const baseGroupKey = '_base'
@@ -641,7 +645,9 @@ function PriceSection(props: {
                 {t('Raw expression')}
               </div>
               <code className='text-muted-foreground bg-background/80 block max-h-28 overflow-auto rounded-md border px-2 py-1.5 font-mono text-xs break-all'>
-                {dynamicSummary.rawExpression}
+                {props.maskPrices
+                  ? DEMO_MODE_MASK
+                  : dynamicSummary.rawExpression}
               </code>
             </div>
           </div>
@@ -663,7 +669,7 @@ function PriceSection(props: {
                   {t(entry.shortLabel)}
                 </div>
                 <div className='text-foreground mt-1 font-mono text-base font-semibold tabular-nums'>
-                  {entry.formatted}
+                  {props.maskPrices ? DEMO_MODE_MASK : entry.formatted}
                   <span className='text-muted-foreground/40 ml-1 text-xs font-normal'>
                     / {tokenUnitLabel}
                   </span>
@@ -688,7 +694,7 @@ function PriceSection(props: {
                     {t(entry.shortLabel)}
                   </span>
                   <span className='text-muted-foreground font-mono text-sm tabular-nums'>
-                    {entry.formatted}
+                    {props.maskPrices ? DEMO_MODE_MASK : entry.formatted}
                     <span className='text-muted-foreground/40 ml-1 text-xs font-normal'>
                       / {tokenUnitLabel}
                     </span>
@@ -711,14 +717,16 @@ function PriceSection(props: {
             {t('Per request')}
           </span>
           <span className='text-foreground font-mono text-sm font-semibold tabular-nums'>
-            {formatFixedPrice(
-              props.model,
-              baseGroupKey,
-              props.showRechargePrice,
-              props.priceRate,
-              props.usdExchangeRate,
-              baseGroupRatioMap
-            )}
+            {props.maskPrices
+              ? DEMO_MODE_MASK
+              : formatFixedPrice(
+                  props.model,
+                  baseGroupKey,
+                  props.showRechargePrice,
+                  props.priceRate,
+                  props.usdExchangeRate,
+                  baseGroupRatioMap
+                )}
           </span>
         </div>
       </section>
@@ -728,16 +736,18 @@ function PriceSection(props: {
   const secondaryItems = secondaryPriceTypes.filter((p) => p.available)
   const renderPrice = (type: PriceType) => (
     <>
-      {formatGroupPrice(
-        props.model,
-        baseGroupKey,
-        type,
-        props.tokenUnit,
-        props.showRechargePrice,
-        props.priceRate,
-        props.usdExchangeRate,
-        baseGroupRatioMap
-      )}
+      {props.maskPrices
+        ? DEMO_MODE_MASK
+        : formatGroupPrice(
+            props.model,
+            baseGroupKey,
+            type,
+            props.tokenUnit,
+            props.showRechargePrice,
+            props.priceRate,
+            props.usdExchangeRate,
+            baseGroupRatioMap
+          )}
       <span className='text-muted-foreground/40 ml-1 text-xs font-normal'>
         / {tokenUnitLabel}
       </span>
@@ -858,6 +868,7 @@ function GroupPricingSection(props: {
   usdExchangeRate: number
   tokenUnit: TokenUnit
   showRechargePrice?: boolean
+  maskPrices?: boolean
 }) {
   const { t } = useTranslation()
   const showRechargePrice = props.showRechargePrice ?? false
@@ -932,7 +943,7 @@ function GroupPricingSection(props: {
                 {t('Raw expression')}
               </div>
               <code className='text-muted-foreground bg-background/80 block max-h-28 overflow-auto rounded-md border px-2 py-1.5 font-mono text-xs break-all'>
-                {props.model.billing_expr}
+                {props.maskPrices ? DEMO_MODE_MASK : props.model.billing_expr}
               </code>
             </div>
           </div>
@@ -979,7 +990,7 @@ function GroupPricingSection(props: {
                 <div className='bg-muted/20 flex items-center justify-between gap-3 border-b px-3 py-2'>
                   <GroupBadge group={group} size='sm' />
                   <span className='text-muted-foreground font-mono text-xs'>
-                    {ratio}x
+                    {props.maskPrices ? DEMO_MODE_MASK : `${ratio}x`}
                   </span>
                 </div>
                 <StaticDataTable
@@ -1004,9 +1015,11 @@ function GroupPricingSection(props: {
                       className: `${thClass} text-right`,
                       cellClassName: 'py-2.5 text-right font-mono',
                       cell: (tier: (typeof dynamicTiers)[number]) =>
-                        formattedPricesByTier
-                          .get(tier)
-                          ?.get(fieldEntry.field) ?? '-',
+                        props.maskPrices
+                          ? DEMO_MODE_MASK
+                          : (formattedPricesByTier
+                              .get(tier)
+                              ?.get(fieldEntry.field) ?? '-'),
                     })),
                   ]}
                 />
@@ -1065,7 +1078,10 @@ function GroupPricingSection(props: {
             header: t('Ratio'),
             className: thClass,
             cellClassName: 'text-muted-foreground py-2.5 font-mono',
-            cell: (group) => `${props.groupRatio[group] || 1}x`,
+            cell: (group) =>
+              props.maskPrices
+                ? DEMO_MODE_MASK
+                : `${props.groupRatio[group] || 1}x`,
           },
           ...(isTokenBased
             ? [
@@ -1074,21 +1090,30 @@ function GroupPricingSection(props: {
                   header: t('Input'),
                   className: `${thClass} text-right`,
                   cellClassName: 'py-2.5 text-right font-mono',
-                  cell: (group: string) => renderGroupPrice(group, 'input'),
+                  cell: (group: string) =>
+                    props.maskPrices
+                      ? DEMO_MODE_MASK
+                      : renderGroupPrice(group, 'input'),
                 },
                 {
                   id: 'output',
                   header: t('Output'),
                   className: `${thClass} text-right`,
                   cellClassName: 'py-2.5 text-right font-mono',
-                  cell: (group: string) => renderGroupPrice(group, 'output'),
+                  cell: (group: string) =>
+                    props.maskPrices
+                      ? DEMO_MODE_MASK
+                      : renderGroupPrice(group, 'output'),
                 },
                 ...extraPriceTypes.map((ep) => ({
                   id: ep.type,
                   header: ep.label,
                   className: `${thClass} text-right`,
                   cellClassName: 'py-2.5 text-right font-mono',
-                  cell: (group: string) => renderGroupPrice(group, ep.type),
+                  cell: (group: string) =>
+                    props.maskPrices
+                      ? DEMO_MODE_MASK
+                      : renderGroupPrice(group, ep.type),
                 })),
               ]
             : [
@@ -1097,7 +1122,10 @@ function GroupPricingSection(props: {
                   header: t('Price'),
                   className: `${thClass} text-right`,
                   cellClassName: 'py-2.5 text-right font-mono',
-                  cell: renderFixedGroupPrice,
+                  cell: (group: string) =>
+                    props.maskPrices
+                      ? DEMO_MODE_MASK
+                      : renderFixedGroupPrice(group),
                 },
               ]),
         ]}
@@ -1135,6 +1163,7 @@ export interface ModelDetailsContentProps {
   usdExchangeRate: number
   tokenUnit: TokenUnit
   showRechargePrice?: boolean
+  maskPrices?: boolean
 }
 
 export function ModelDetailsContent(props: ModelDetailsContentProps) {
@@ -1177,9 +1206,13 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
               usdExchangeRate={props.usdExchangeRate}
               tokenUnit={props.tokenUnit}
               showRechargePrice={showRechargePrice}
+              maskPrices={props.maskPrices}
             />
             {isDynamic && (
-              <DynamicPricingBreakdown billingExpr={props.model.billing_expr} />
+              <DynamicPricingBreakdown
+                billingExpr={props.model.billing_expr}
+                maskPrices={props.maskPrices}
+              />
             )}
             <GroupPricingSection
               model={props.model}
@@ -1190,6 +1223,7 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
               usdExchangeRate={props.usdExchangeRate}
               tokenUnit={props.tokenUnit}
               showRechargePrice={showRechargePrice}
+              maskPrices={props.maskPrices}
             />
           </section>
 
@@ -1246,6 +1280,7 @@ export function ModelDetailsDrawer(props: ModelDetailsDrawerProps) {
 
 export function ModelDetails() {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const { modelId } = useParams({ from: '/pricing/$modelId/' })
   const search = useSearch({ from: '/pricing/$modelId/' })
   const navigate = useNavigate()
@@ -1338,6 +1373,7 @@ export function ModelDetails() {
           usdExchangeRate={usdExchangeRate ?? 1}
           tokenUnit={tokenUnit}
           showRechargePrice={search.rechargePrice ?? false}
+          maskPrices={demoMode}
           endpointMap={
             (endpointMap as Record<
               string,

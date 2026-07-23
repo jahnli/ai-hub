@@ -16,13 +16,27 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-// Re-export all library functions
-export * from './channel-actions'
-export * from './advanced-custom'
-export * from './channel-form-errors'
-export * from './channel-form'
-export * from './channel-type-config'
-export * from './channel-utils'
-export * from './channel-visibility'
-export * from './multi-key-utils'
-export * from './model-mapping-validation'
+import type { AuthUser } from '@/stores/auth-store'
+
+export const DEMO_MODE_MASK = '*'
+
+export function isDemoModeEnabled(
+  setting: AuthUser['setting'] | undefined
+): boolean {
+  if (!setting) return false
+
+  if (typeof setting === 'string') {
+    try {
+      const parsed = JSON.parse(setting) as unknown
+      return isDemoModeEnabled(
+        typeof parsed === 'object' && parsed !== null
+          ? (parsed as Record<string, unknown>)
+          : undefined
+      )
+    } catch {
+      return false
+    }
+  }
+
+  return setting.demo_mode === true
+}
