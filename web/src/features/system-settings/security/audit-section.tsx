@@ -55,6 +55,8 @@ const createAuditSchema = (t: (key: string) => string) =>
         end_hour: z.number().int().min(0).max(23),
       }),
       imageStudioEnabled: z.boolean(),
+      autoSaveApiImageGeneration: z.boolean(),
+      imageStudioMaxHistory: z.number().int().min(1).max(1000),
       requestContentEnabled: z.boolean(),
     })
     .refine(
@@ -74,6 +76,8 @@ type OffHoursAuditSetting = {
 type AuditFormValues = {
   offHours: OffHoursAuditSetting
   imageStudioEnabled: boolean
+  autoSaveApiImageGeneration: boolean
+  imageStudioMaxHistory: number
   requestContentEnabled: boolean
 }
 
@@ -81,6 +85,8 @@ type AuditSectionProps = {
   defaultValues: {
     offHours: OffHoursAuditSetting
     imageStudioEnabled: boolean
+    autoSaveApiImageGeneration: boolean
+    imageStudioMaxHistory: number
     requestContentEnabled: boolean
   }
 }
@@ -96,6 +102,8 @@ const buildFormDefaults = (
 ): AuditFormValues => ({
   offHours: { ...defaults.offHours },
   imageStudioEnabled: defaults.imageStudioEnabled,
+  autoSaveApiImageGeneration: defaults.autoSaveApiImageGeneration,
+  imageStudioMaxHistory: defaults.imageStudioMaxHistory || 10,
   requestContentEnabled: defaults.requestContentEnabled,
 })
 
@@ -122,6 +130,14 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
       updateOption.mutateAsync({
         key: 'audit_setting.image_studio',
         value: values.imageStudioEnabled,
+      }),
+      updateOption.mutateAsync({
+        key: 'audit_setting.auto_save_api_image_generation',
+        value: values.autoSaveApiImageGeneration,
+      }),
+      updateOption.mutateAsync({
+        key: 'audit_setting.image_studio_max_history',
+        value: values.imageStudioMaxHistory,
       }),
       updateOption.mutateAsync({
         key: 'RecordRequestMessageEnabled',
@@ -297,6 +313,90 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
                       />
                     </FormControl>
                   </div>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='autoSaveApiImageGeneration'
+              render={({ field }) => (
+                <FormItem
+                  data-audit-setting-card='auto-save-api-image'
+                  className='bg-card flex min-h-40 flex-col justify-between gap-6 rounded-2xl border p-5 shadow-sm'
+                >
+                  <SettingsSwitchContent className='space-y-2'>
+                    <FormLabel className='text-base font-semibold'>
+                      {t('Auto-save API image generations')}
+                    </FormLabel>
+                    <FormDescription className='text-sm leading-relaxed'>
+                      {t(
+                        'Also record images generated through the raw API (not just the Image Studio) into the image studio history. This downloads and stores each generated image, increasing storage usage.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <div className='flex items-center justify-between border-t pt-4'>
+                    <span className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                      {t('Enable')}
+                    </span>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='imageStudioMaxHistory'
+              render={({ field }) => (
+                <FormItem
+                  data-audit-setting-card='image-studio-max-history'
+                  className='bg-card flex min-h-40 flex-col justify-between gap-6 rounded-2xl border p-5 shadow-sm'
+                >
+                  <SettingsSwitchContent className='space-y-2'>
+                    <FormLabel className='text-base font-semibold'>
+                      {t('Image studio history limit')}
+                    </FormLabel>
+                    <FormDescription className='text-sm leading-relaxed'>
+                      {t(
+                        'Maximum number of image generations kept per user. Older records beyond this limit are deleted along with their stored images.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <div className='flex items-center justify-between border-t pt-4'>
+                    <span className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                      {t('Max records')}
+                    </span>
+                    <FormControl>
+                      <InputGroup className='bg-background w-32'>
+                        <InputGroupInput
+                          type='number'
+                          min={1}
+                          max={1000}
+                          step={1}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onChange={(event) => {
+                            const parsed = Number.parseInt(
+                              event.target.value,
+                              10
+                            )
+                            if (Number.isNaN(parsed)) {
+                              field.onChange(1)
+                              return
+                            }
+                            field.onChange(Math.min(1000, Math.max(1, parsed)))
+                          }}
+                        />
+                      </InputGroup>
+                    </FormControl>
+                  </div>
+                  <FormMessage />
                 </FormItem>
               )}
             />

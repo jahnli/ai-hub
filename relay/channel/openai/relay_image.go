@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -51,12 +53,82 @@ func OpenaiImageHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.
 
 	updateOpenAIImageCount(info, gjson.GetBytes(responseBody, "data.#").Int())
 
+	captureImageResponseSources(c, info, responseBody)
+
 	// 写入新的 response body
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 
 	normalizeOpenAIUsage(&usageResp.Usage)
 	applyUsagePostProcessing(info, &usageResp.Usage, responseBody)
 	return &usageResp.Usage, nil
+}
+
+// captureImageResponseSources extracts the generated image sources (URL or
+// base64 data-URL) from a successful upstream response and stashes them on the
+// gin context. The relay image handler reads them back after the response is
+// sent to persist an image studio history record. Extraction is skipped unless
+// auto-recording is enabled, so the base64 payloads are not copied needlessly.
+func captureImageResponseSources(c *gin.Context, info *relaycommon.RelayInfo, responseBody []byte) {
+	if c == nil || !system_setting.GetAuditSetting().AutoSaveApiImageGeneration {
+		return
+	}
+	// The Image Studio UI (playground) stores its own records from the frontend,
+	// so skip those to avoid duplicate history entries.
+	if info != nil && info.IsPlayground {
+		return
+	}
+
+	dataArray := gjson.GetBytes(responseBody, "data")
+	if !dataArray.IsArray() {
+		return
+	}
+
+	mimeType := imageMimeTypeForRequest(info)
+	sources := make([]dto.ImageAutoRecordSource, 0, len(dataArray.Array()))
+	for _, item := range dataArray.Array() {
+		source := ""
+		if url := strings.TrimSpace(item.Get("url").String()); url != "" {
+			source = url
+		} else if b64 := strings.TrimSpace(item.Get("b64_json").String()); b64 != "" {
+			source = "data:" + mimeType + ";base64," + b64
+		}
+		if source == "" {
+			continue
+		}
+		sources = append(sources, dto.ImageAutoRecordSource{
+			Source:        source,
+			RevisedPrompt: item.Get("revised_prompt").String(),
+		})
+	}
+	if len(sources) == 0 {
+		return
+	}
+	c.Set(string(constant.ContextKeyRelayImageResponseData), sources)
+}
+
+// imageMimeTypeForRequest maps the request's output_format to an image MIME
+// type, mirroring the Image Studio frontend. Providers return PNG when no
+// output_format was requested.
+func imageMimeTypeForRequest(info *relaycommon.RelayInfo) string {
+	if info == nil {
+		return "image/png"
+	}
+	request, ok := info.Request.(*dto.ImageRequest)
+	if !ok || len(request.OutputFormat) == 0 {
+		return "image/png"
+	}
+	var outputFormat string
+	if err := common.Unmarshal(request.OutputFormat, &outputFormat); err != nil {
+		return "image/png"
+	}
+	switch strings.ToLower(strings.TrimSpace(outputFormat)) {
+	case "jpeg", "jpg":
+		return "image/jpeg"
+	case "webp":
+		return "image/webp"
+	default:
+		return "image/png"
+	}
 }
 
 // normalizeOpenAIUsage maps the OpenAI Images usage shape (input_tokens /
@@ -254,6 +326,8 @@ func openaiImageJSONAsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo,
 
 	imageCount := gjson.GetBytes(responseBody, "data.#").Int()
 	updateOpenAIImageCount(info, imageCount)
+
+	captureImageResponseSources(c, info, responseBody)
 
 	helper.SetEventStreamHeaders(c)
 	c.Status(http.StatusOK)

@@ -66,6 +66,12 @@ const (
 	// ContextKeyImageGenerationDetails stores image request parameters for localized usage-log rendering.
 	ContextKeyImageGenerationDetails ContextKey = "image_generation_details"
 
+	// ContextKeyRelayImageResponseData stores the image sources (URL or data-URL)
+	// extracted from a successful upstream image response, so the relay image
+	// handler can auto-record them into the image studio history after the
+	// response has been sent to the client.
+	ContextKeyRelayImageResponseData ContextKey = "relay_image_response_data"
+
 	// ContextKeyLanguage stores the user's language preference for i18n
 	ContextKeyLanguage ContextKey = "language"
 	ContextKeyIsStream ContextKey = "is_stream"

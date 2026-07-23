@@ -230,6 +230,11 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (AIGatewayError *t
 
 	common.SetContextKey(c, constant.ContextKeyImageGenerationDetails, buildImageGenerationDetails(request, imageN, quality))
 
+	// Persist the generation into the image studio history so images produced
+	// via the raw API (not just the Image Studio UI) show up in the gallery.
+	// No-op unless a recorder is registered and sources were captured.
+	scheduleImageAutoRecord(c, info, request)
+
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), logContent)
 	return nil
 }

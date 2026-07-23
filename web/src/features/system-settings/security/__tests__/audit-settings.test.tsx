@@ -51,6 +51,8 @@ describe('security audit settings presentation', () => {
               end_hour: 7,
             },
             imageStudioEnabled: true,
+            autoSaveApiImageGeneration: false,
+            imageStudioMaxHistory: 10,
             requestContentEnabled: true,
           }}
         />

@@ -387,6 +387,8 @@ export type SecuritySettings = {
   'token_setting.max_user_tokens': number
   'audit_setting.off_hours': OffHoursAuditSetting
   'audit_setting.image_studio': boolean
+  'audit_setting.auto_save_api_image_generation': boolean
+  'audit_setting.image_studio_max_history': number
   RecordRequestMessageEnabled: boolean
 }
 

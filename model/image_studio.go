@@ -6,9 +6,19 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
-const ImageStudioHistoryLimit = 10
+// ImageStudioHistoryLimit 是在线生图历史每用户保留条数的默认兜底值。实际生效的上限
+// 由 system_setting.GetImageStudioMaxHistory() 提供（可在安全审计设置中调整）；此常量
+// 仅用于设置尚未加载等边界场景。
+const ImageStudioHistoryLimit = system_setting.DefaultImageStudioMaxHistory
+
+// imageStudioHistoryLimit 返回当前生效的历史保留条数。集中在此，避免各调用点重复读取
+// 设置并处理归一化。
+func imageStudioHistoryLimit() int {
+	return system_setting.GetImageStudioMaxHistory()
+}
 
 type ImageStudioGeneration struct {
 	ID               string             `json:"id" gorm:"type:varchar(64);primaryKey"`
@@ -76,8 +86,9 @@ func CreateImageStudioGeneration(record *ImageStudioGeneration) error {
 }
 
 func GetUserImageStudioGenerations(userID int, limit int) ([]ImageStudioGeneration, error) {
-	if limit <= 0 || limit > ImageStudioHistoryLimit {
-		limit = ImageStudioHistoryLimit
+	maxLimit := imageStudioHistoryLimit()
+	if limit <= 0 || limit > maxLimit {
+		limit = maxLimit
 	}
 	var records []ImageStudioGeneration
 	if err := DB.Where("user_id = ?", userID).Order("created_at DESC").Limit(limit).Find(&records).Error; err != nil {
@@ -119,7 +130,7 @@ func DeleteUserImageStudioGenerations(userID int) ([]ImageStudioGeneration, erro
 
 func PruneUserImageStudioGenerations(userID int, limit int) ([]ImageStudioGeneration, error) {
 	if limit <= 0 {
-		limit = ImageStudioHistoryLimit
+		limit = imageStudioHistoryLimit()
 	}
 	var records []ImageStudioGeneration
 	if err := DB.Where("user_id = ?", userID).Order("created_at DESC").Offset(limit).Find(&records).Error; err != nil {

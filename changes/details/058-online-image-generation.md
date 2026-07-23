@@ -40,3 +40,7 @@
 - `model/image_studio.go` — 图片生成记录新增安全审计查询，关联用户展示信息并批量加载图片资源，兼容 SQLite、MySQL 和 PostgreSQL。
 - `web/default/src/features/security-audit/` — 安全审计新增图片审计页，提供日期与用户筛选、图片缩略图及大图预览、请求内容 Tooltip、生成详情、图片下载和分页；安全审计入口与页面仅超级管理员可见，关闭图片审计开关时隐藏对应区块；图片审计表格默认分页调整为每页 10 条；预览界面移除冗余提示词标签，统一详情标签尺寸；生成详情与请求内容弹框统一为最大 78rem、视口 85% 高度，头像和用户资料展示保持一致并放大详情文字，图片数量改为主题色标签；审计大图预览同步统一图片和提示词宽度、视口居中及三部分间距；请求内容列改为可点击入口，打开参考使用日志布局的独立弹框，左右展示完整提示词与生成参数并支持复制；弹框底部以 `contain` 完整比例展示最多 4 张生成图片，点击图片时叠层打开大图预览且关闭后返回请求内容弹框；头像悬停按需加载并展示完整用户资料卡片；移除图片审计表格详情列；图片审计默认选中本月，非工作时间请求默认筛选当天。
 - `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json` — 补充图片审计界面多语言文案并更新同步报告。
+- `constant/context_key.go`、`dto/openai_image.go`、`relay/channel/openai/relay_image.go`、`relay/image_handler.go`、`relay/image_studio_hook.go` — 新增原生 API 生图自动归档链路：从成功响应提取 URL 或 base64 图片，跳过 Playground 重复记录，并在响应完成后异步调度存储。
+- `controller/image_studio_relay_hook.go` — 下载或解码原生 API 生成图片，写入对象存储和在线生图历史；失败时清理已存文件，并按配置裁剪超限历史。
+- `setting/system_setting/audit_setting.go`、`model/image_studio.go`、`controller/image_studio_storage.go` — 新增原生 API 生图自动保存开关与每用户历史保留上限（1–1000，默认 10），列表和裁剪统一读取管理员配置，超限记录连同对象存储图片一并删除。
+- `web/src/features/system-settings/security/`、`web/src/features/system-settings/types.ts`、`web/src/i18n/locales/*.json` — 安全审计设置新增自动保存开关和历史上限输入，串接默认值、类型、表单校验、回归测试及七语言文案。

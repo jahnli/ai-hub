@@ -139,7 +139,8 @@ func StoreImageStudioImages(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	pruned, err := model.PruneUserImageStudioGenerations(userID, model.ImageStudioHistoryLimit)
+	// Pass 0 so the model applies the admin-configured history limit.
+	pruned, err := model.PruneUserImageStudioGenerations(userID, 0)
 	if err != nil {
 		common.SysLog("failed to prune image studio history: " + err.Error())
 	} else {
@@ -150,7 +151,8 @@ func StoreImageStudioImages(c *gin.Context) {
 }
 
 func ListImageStudioGenerations(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", strconv.Itoa(model.ImageStudioHistoryLimit)))
+	// Default limit 0 lets the model apply the admin-configured history limit.
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
 	records, err := model.GetUserImageStudioGenerations(c.GetInt("id"), limit)
 	if err != nil {
 		common.ApiError(c, err)

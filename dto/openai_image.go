@@ -191,3 +191,12 @@ type ImageData struct {
 	B64Json       string `json:"b64_json"`
 	RevisedPrompt string `json:"revised_prompt"`
 }
+
+// ImageAutoRecordSource carries a single generated image's source (either a
+// remote URL or a base64 data-URL) together with its revised prompt. The relay
+// image handler extracts these from a successful upstream response so they can
+// be persisted asynchronously into the image studio history.
+type ImageAutoRecordSource struct {
+	Source        string
+	RevisedPrompt string
+}
