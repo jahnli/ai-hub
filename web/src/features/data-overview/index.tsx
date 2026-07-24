@@ -21,7 +21,11 @@ import dayjs from '@/lib/dayjs'
 import {
   getDepartmentTree,
   getCompanySubtree,
-  getDepartmentOverview,
+  getDepartmentStats,
+  getSubDepartmentStats,
+  getUsageAnalysis,
+  getDepartmentUsers,
+  getDepartmentUserRankings,
 } from './api'
 import { DepartmentStatsCards } from './components/department-stats-cards'
 import { DepartmentTreeSelect } from './components/department-tree-select'
@@ -41,6 +45,7 @@ import {
   DEPARTMENT_USERS_INITIAL_SORT_BY,
   DEPARTMENT_USERS_INITIAL_SORT_ORDER,
 } from './lib/department-users-query'
+import { getOverviewLoadingState } from './lib/overview-loading'
 import type { DepartmentQueryParams, DeptTreeNode } from './types'
 
 const STATS_SKELETON_KEYS = Array.from(
@@ -82,11 +87,41 @@ export function DataOverview() {
     retry: 2,
   })
 
-  const overviewQuery = useQuery({
-    queryKey: ['department', 'overview', queryParams],
+  const statsQuery = useQuery({
+    queryKey: ['department', 'stats', queryParams],
     queryFn: () => {
       if (!queryParams) throw new Error('Missing query params')
-      return getDepartmentOverview({
+      return getDepartmentStats(queryParams)
+    },
+    enabled: !!queryParams,
+    staleTime: 60 * 1000,
+  })
+
+  const subStatsQuery = useQuery({
+    queryKey: ['department', 'sub-stats', queryParams],
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getSubDepartmentStats(queryParams)
+    },
+    enabled: !!queryParams,
+    staleTime: 60 * 1000,
+  })
+
+  const usageQuery = useQuery({
+    queryKey: ['department', 'usage-analysis', queryParams],
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getUsageAnalysis(queryParams)
+    },
+    enabled: !!queryParams,
+    staleTime: 60 * 1000,
+  })
+
+  const usersQuery = useQuery({
+    queryKey: ['department', 'initial-users', queryParams],
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getDepartmentUsers({
         ...queryParams,
         page: 1,
         page_size: DEPARTMENT_USERS_INITIAL_PAGE_SIZE,
@@ -97,6 +132,29 @@ export function DataOverview() {
     },
     enabled: !!queryParams,
     staleTime: 60 * 1000,
+  })
+
+  const rankingsQuery = useQuery({
+    queryKey: ['department', 'user-rankings', queryParams],
+    queryFn: () => {
+      if (!queryParams) throw new Error('Missing query params')
+      return getDepartmentUserRankings(queryParams)
+    },
+    enabled: !!queryParams,
+    staleTime: 60 * 1000,
+  })
+
+  const loadingState = getOverviewLoadingState({
+    statsFetching: statsQuery.isFetching,
+    hasStatsData: Boolean(statsQuery.data),
+    subStatsFetching: subStatsQuery.isFetching,
+    hasSubStatsData: Boolean(subStatsQuery.data),
+    usageFetching: usageQuery.isFetching,
+    hasUsageData: Boolean(usageQuery.data),
+    usersFetching: usersQuery.isFetching,
+    hasUsersData: Boolean(usersQuery.data),
+    rankingsFetching: rankingsQuery.isFetching,
+    hasRankingsData: Boolean(rankingsQuery.data),
   })
 
   const treeData = treeQuery.data?.data
@@ -222,9 +280,9 @@ export function DataOverview() {
               <Button
                 className='gap-1.5'
                 onClick={handleSearch}
-                disabled={overviewQuery.isFetching}
+                disabled={loadingState.isSearching}
               >
-                {overviewQuery.isFetching ? (
+                {loadingState.isSearching ? (
                   <Loader2 className='size-3.5 animate-spin' />
                 ) : (
                   <Search className='size-3.5' />
@@ -234,8 +292,8 @@ export function DataOverview() {
               <ExportDialog
                 queryParams={queryParams}
                 treeData={displayTreeData}
-                stats={overviewQuery.data?.data.stats}
-                subStats={overviewQuery.data?.data.sub_stats ?? []}
+                stats={statsQuery.data?.data}
+                subStats={subStatsQuery.data?.data ?? []}
               />
               <NotifySettingsDialog />
             </div>
@@ -265,19 +323,19 @@ export function DataOverview() {
             </div>
           )}
 
-          {overviewQuery.isError && (
+          {statsQuery.isError && (
             <Alert variant='destructive'>
               <AlertCircle className='size-4' />
               <AlertTitle>{t('Failed to load statistics')}</AlertTitle>
               <AlertDescription>
-                {overviewQuery.error instanceof Error
-                  ? overviewQuery.error.message
+                {statsQuery.error instanceof Error
+                  ? statsQuery.error.message
                   : t('An unexpected error occurred')}
               </AlertDescription>
             </Alert>
           )}
 
-          {overviewQuery.isFetching && !overviewQuery.data && (
+          {loadingState.showStatsSkeleton && (
             <div className='overflow-hidden rounded-lg border'>
               <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
                 {STATS_SKELETON_KEYS.map((key) => (
@@ -293,11 +351,23 @@ export function DataOverview() {
             </div>
           )}
 
-          {overviewQuery.data?.data.stats && (
-            <DepartmentStatsCards stat={overviewQuery.data.data.stats} />
+          {statsQuery.data?.data && (
+            <DepartmentStatsCards stat={statsQuery.data.data} />
           )}
 
-          {overviewQuery.isFetching && !overviewQuery.data && (
+          {subStatsQuery.isError && (
+            <Alert variant='destructive' className='mt-4'>
+              <AlertCircle className='size-4' />
+              <AlertTitle>{t('Failed to load statistics')}</AlertTitle>
+              <AlertDescription>
+                {subStatsQuery.error instanceof Error
+                  ? subStatsQuery.error.message
+                  : t('An unexpected error occurred')}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {loadingState.showSubStatsSkeleton && (
             <Card className='mt-4'>
               <CardHeader className='pb-3'>
                 <CardTitle className='flex items-center gap-2 text-base'>
@@ -313,34 +383,68 @@ export function DataOverview() {
             </Card>
           )}
 
-          {overviewQuery.data?.data.sub_stats &&
-            overviewQuery.data.data.sub_stats.length > 0 &&
+          {subStatsQuery.data?.data &&
+            subStatsQuery.data.data.length > 0 &&
             queryParams && (
               <SubDepartmentStats
-                data={overviewQuery.data.data.sub_stats}
+                data={subStatsQuery.data.data}
                 companyId={queryParams.company_id}
-                activityFormula={
-                  overviewQuery.data.data.stats.active_user_formula ?? [
-                    10, 1_000_000, 0.85,
-                  ]
-                }
+                activityFormula={statsQuery.data?.data.active_user_formula}
                 startTimestamp={queryParams.start_timestamp}
                 endTimestamp={queryParams.end_timestamp}
               />
             )}
 
-          {queryParams && overviewQuery.data?.data && (
+          {usersQuery.isError && (
+            <Alert variant='destructive' className='mt-4'>
+              <AlertCircle className='size-4' />
+              <AlertTitle>{t('Failed to load statistics')}</AlertTitle>
+              <AlertDescription>
+                {usersQuery.error instanceof Error
+                  ? usersQuery.error.message
+                  : t('An unexpected error occurred')}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {rankingsQuery.isError && (
+            <Alert variant='destructive' className='mt-4'>
+              <AlertCircle className='size-4' />
+              <AlertTitle>{t('Failed to load statistics')}</AlertTitle>
+              <AlertDescription>
+                {rankingsQuery.error instanceof Error
+                  ? rankingsQuery.error.message
+                  : t('An unexpected error occurred')}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {queryParams && (
             <DepartmentUsersTable
               companyId={queryParams.company_id}
               departmentId={queryParams.department_id}
               startTimestamp={queryParams.start_timestamp}
               endTimestamp={queryParams.end_timestamp}
-              initialUsers={overviewQuery.data.data.users}
-              initialRankings={overviewQuery.data.data.user_rankings}
+              initialUsers={usersQuery.data?.data}
+              initialRankings={rankingsQuery.data?.data}
+              initialUsersLoading={loadingState.showUsersSkeleton}
+              initialRankingsLoading={loadingState.showRankingsSkeleton}
             />
           )}
 
-          {overviewQuery.isFetching && !overviewQuery.data && (
+          {usageQuery.isError && (
+            <Alert variant='destructive' className='mt-4'>
+              <AlertCircle className='size-4' />
+              <AlertTitle>{t('Failed to load statistics')}</AlertTitle>
+              <AlertDescription>
+                {usageQuery.error instanceof Error
+                  ? usageQuery.error.message
+                  : t('An unexpected error occurred')}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {loadingState.showUsageSkeleton && (
             <Card className='mt-4'>
               <CardHeader className='pb-3'>
                 <CardTitle className='flex items-center gap-2 text-base'>
@@ -371,10 +475,8 @@ export function DataOverview() {
             </Card>
           )}
 
-          {overviewQuery.data?.data.usage_analysis && (
-            <UsageAnalysisSection
-              data={overviewQuery.data.data.usage_analysis}
-            />
+          {usageQuery.data?.data && (
+            <UsageAnalysisSection data={usageQuery.data.data} />
           )}
         </FadeIn>
       </SectionPageLayout.Content>

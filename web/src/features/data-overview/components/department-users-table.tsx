@@ -10,6 +10,7 @@ import {
   BarChart3,
   CheckCircle2,
   Funnel,
+  Loader2,
   ScrollText,
   UserRoundX,
   Users,
@@ -53,8 +54,10 @@ interface DepartmentUsersTableProps {
   departmentId: string
   startTimestamp: number
   endTimestamp: number
-  initialUsers: DepartmentUsersResponse
-  initialRankings: UserRankingItem[]
+  initialUsers?: DepartmentUsersResponse
+  initialRankings?: UserRankingItem[]
+  initialUsersLoading: boolean
+  initialRankingsLoading: boolean
 }
 
 const DEPT_COLUMN_SORT_MAP: Record<string, string> = {
@@ -364,8 +367,8 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
         <DataTablePage
           table={table}
           columns={columns}
-          isLoading={!isInitialQuery && isLoading}
-          isFetching={!isInitialQuery && isFetching}
+          isLoading={isInitialQuery ? props.initialUsersLoading : isLoading}
+          isFetching={isInitialQuery ? props.initialUsersLoading : isFetching}
           emptyTitle={t('No Users Found')}
           emptyDescription={t('No users in this department.')}
           skeletonKeyPrefix='dept-users-skeleton'
@@ -376,7 +379,12 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
           paginationInFooter={false}
           tableClassName='border-0 rounded-none'
         />
-        {props.initialRankings.length > 0 && (
+        {props.initialRankingsLoading && (
+          <div className='flex items-center justify-center py-12'>
+            <Loader2 className='text-muted-foreground size-6 animate-spin' />
+          </div>
+        )}
+        {props.initialRankings && props.initialRankings.length > 0 && (
           <div className='pt-8'>
             <UserConsumptionCharts data={props.initialRankings} />
           </div>

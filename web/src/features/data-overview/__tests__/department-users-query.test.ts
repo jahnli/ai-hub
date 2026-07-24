@@ -16,7 +16,7 @@ const initialQuery = {
 }
 
 describe('department users bootstrap query', () => {
-  test('uses aggregated users for the initial table state', () => {
+  test('uses the standalone users result for the initial table state', () => {
     assert.equal(isInitialDepartmentUsersQuery(initialQuery), true)
   })
 

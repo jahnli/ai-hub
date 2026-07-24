@@ -37,7 +37,7 @@ import { SubDepartmentStatsDialog } from './sub-department-stats-dialog'
 interface SubDepartmentStatsProps {
   data: SubDepartmentStat[]
   companyId: number
-  activityFormula: [number, number, number]
+  activityFormula?: [number, number, number]
   startTimestamp: number
   endTimestamp: number
 }
@@ -72,7 +72,7 @@ function formatRequests(count: number): string {
 }
 
 function useSubDepartmentColumns(
-  activityFormula: [number, number, number],
+  activityFormula: [number, number, number] | undefined,
   onViewStats: (department: SubDepartmentStat) => void,
   onViewLogs: (department: SubDepartmentStat) => void
 ): ColumnDef<SubDepartmentStat>[] {
@@ -201,7 +201,9 @@ function useSubDepartmentColumns(
         header: () => (
           <span className='inline-flex items-center gap-1'>
             {t('Users / Share')}
-            <ActivityFormulaTooltip formula={activityFormula} />
+            {activityFormula && (
+              <ActivityFormulaTooltip formula={activityFormula} />
+            )}
           </span>
         ),
         cell: ({ row }) => (

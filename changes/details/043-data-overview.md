@@ -110,22 +110,25 @@
 - `web/src/features/data-overview/components/department-tree-select.tsx` — 新增 `onLoadNodeChildren` 和 `loadingNodeValues` props；悬停 `loading` 公司节点时触发懒加载；列计算改为从最新 `treeData` 按值查找节点，加载中显示独立 `LoadingColumn` 列与行内旋转图标
 - `web/src/features/data-overview/index.tsx` — 新增 `lazyCompanySubtrees` 和 `loadingCompanyValues` 状态；`handleLoadCompanyChildren` 防重复拉取，成功后将子树合并进 `displayTreeData`（`useMemo` 按 node value 替换）
 
-### 2026-07-24 首屏性能优化：移除旧模式 + 聚合接口
+### 2026-07-24 首屏性能优化：移除旧模式 + 后端聚合 + 前端并行渐进加载
 
 - `service/feishu_department.go` — 彻底移除旧飞书单租户模式：`GetDepartmentTree`、`GetDepartmentStats`、`GetSubDepartmentStats`、`GetUsageAnalysis`、`GetDepartmentUsers`、`GetDepartmentUserRankings`、`GetDepartmentLogs` 中的 `if companyMode` 分支全部移除，直接调用公司模式实现；删除旧飞书路径下的 `getAllMembersUnderDepts`、`findRegisteredUserIdsByOpenIDs`、`collectOpenDeptIDsUnder` 等辅助函数（共减少约 736 行）
 - `model/company.go` — 删除 `CountCompanies()` 函数（已无调用方）
 - `service/data_overview_company.go` — 删除 `CompanyDataOverviewEnabled()` 及其内部 `CountCompanies()` 调用，`resolveCompanyOverviewAudience` 改为直接以 `companyID <= 0` 快速拒绝；新增 `DepartmentOverviewRequest`、`DepartmentOverviewResponse` 类型；新增 `GetDepartmentOverview`：一次调用 `resolveCompanyOverviewAudience` 解析 audience 后，通过 `errgroup` 并行执行 `buildCompanyDepartmentStats`、`buildCompanySubDepartmentStats`、`buildCompanyUsageAnalysis`、`buildCompanyDepartmentUsers`、`buildCompanyDepartmentUserRankings` 五个计算，聚合为单一响应返回；`getCompanyDepartmentTree` 新增空公司列表快速返回路径；`createDepartmentQueryParams` 改为对缺失 `company_id` 抛出明确错误
 - `controller/department.go` — 新增 `GetDepartmentOverview` controller；`validateDepartmentCompanyID` 移除对 `CompanyDataOverviewEnabled()` 的调用，直接以 `companyID <= 0` 拒绝；`validateDepartmentUserCompanyID` 移除 root 用户豁免分支，统一走 `validateDepartmentCompanyID`
 - `router/api-router.go` — 注册 `POST /api/department/overview` 路由
-- `web/src/features/data-overview/types.ts` — 新增 `DepartmentOverviewResponse` 接口（含 `stats`、`sub_stats`、`usage_analysis`、`users`、`user_rankings`）
-- `web/src/features/data-overview/api.ts` — 新增 `getDepartmentOverview` API 封装，透传分页、排序和注册状态参数
-- `web/src/features/data-overview/lib/department-selection.ts` — `isDepartmentNodeDisabled` 新增对缺失 `company_id` 的节点禁用；`createDepartmentQueryParams` 改为对 `company_id` 缺失抛出异常而非默认 0
-- `web/src/features/data-overview/index.tsx` — 原 `statsQuery`、`subStatsQuery`、`usageQuery` 三个独立 React Query 合并为单一 `overviewQuery`，调用聚合接口；首屏用户列表与排行通过 `initialUsers`/`initialRankings` 直接传入 `DepartmentUsersTable`，无需额外请求；首屏请求由 tree + 3 个统计 + users + rankings（共 6 个）降为 tree + overview（共 2 个）
-- `web/src/features/data-overview/components/department-users-table.tsx` — 新增 `initialUsers` 和 `initialRankings` props，首屏直接消费聚合响应数据，翻页或排序变化后再发独立查询
-- `web/src/features/data-overview/lib/department-users-query.ts` — 新增，集中定义用户列表查询的初始分页大小、排序字段和排序方向常量
-- `service/data_overview_company_test.go` — 新增，覆盖 `GetDepartmentOverview` 的无公司快速返回、缺失 `company_id` 拒绝和 audience 解析失败行为
-- `web/src/features/data-overview/__tests__/department-users-query.test.ts` — 新增，覆盖用户列表查询初始常量与参数构造
+- `service/data_overview_company_test.go` — 覆盖 `GetDepartmentOverview` 的无公司快速返回、缺失 `company_id` 拒绝和 audience 解析失败行为
+- `web/src/features/data-overview/index.tsx` — 首屏改为并行发起 stats、sub-stats、usage-analysis、users、user-rankings 五个独立请求，各板块就绪后立即渲染；`getOverviewLoadingState` 控制搜索按钮与分板块骨架，避免单接口最慢任务拖慢整页
+- `web/src/features/data-overview/lib/overview-loading.ts` — 新增，根据各查询 fetching/data 状态计算搜索中状态与 stats/sub-stats/usage/users/rankings 骨架展示
+- `web/src/features/data-overview/components/department-users-table.tsx` — `initialUsers`/`initialRankings` 改为可选，并新增 `initialUsersLoading`/`initialRankingsLoading`，首屏加载中展示表格骨架与排行旋转指示
+- `web/src/features/data-overview/components/sub-department-stats.tsx` — `activityFormula` 改为可选，统计卡片未返回前均价/活跃公式说明可安全降级
+- `web/src/features/data-overview/api.ts` — 前端移除对 `getDepartmentOverview` 的调用（后端 overview 聚合接口仍保留）
+- `web/src/features/data-overview/types.ts` — 移除仅供前端聚合消费的 `DepartmentOverviewResponse` 类型
+- `web/src/features/data-overview/lib/department-users-query.ts` — 集中定义用户列表查询的初始分页大小、排序字段和排序方向常量
+- `web/src/features/data-overview/__tests__/overview-loading.test.ts` — 覆盖分板块骨架与搜索中状态的渐进加载契约
+- `web/src/features/data-overview/__tests__/department-users-query.test.ts` — 覆盖用户列表查询初始常量与参数构造，并改为断言独立 users 结果作为首屏表格数据
 - `web/src/features/data-overview/__tests__/company-selection.test.ts` — 补充缺失 `company_id` 节点的禁用和抛出行为回归
+- `web/src/features/data-overview/lib/department-selection.ts` — `isDepartmentNodeDisabled` 新增对缺失 `company_id` 的节点禁用；`createDepartmentQueryParams` 改为对 `company_id` 缺失抛出异常而非默认 0
 
 ### 2026-07-24 overview 共享用户用量统计
 
