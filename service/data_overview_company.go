@@ -17,6 +17,8 @@ var ErrCompanyIDRequired = errors.New("company_id is required when company data 
 var ErrCompanyAccessDenied = errors.New("company is disabled, missing, or not accessible")
 var ErrDepartmentAccessDenied = errors.New("department is not accessible")
 
+const companyDirectoryFetchConcurrency = 5
+
 type overviewAudience struct {
 	company             *model.Company
 	directory           *overviewDirectory
@@ -129,47 +131,69 @@ func getCompanyDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
-	response := &DepartmentTreeResponse{TreeData: []*DeptTreeNode{}, LeaderDeptIDs: []string{}}
+	visibleCompanies := make([]*model.Company, 0, len(companies))
 	for _, company := range companies {
 		if userRole < common.RoleRootUser && user.Company != company.Name {
 			continue
 		}
-		label := company.Name
-		if company.Alias != "" {
-			label = company.Alias
-		}
-		companyNode := &DeptTreeNode{
-			Value:     companyNodeValue(company.Id),
-			Label:     label,
-			CompanyID: company.Id,
-			Platform:  company.Platform,
-			NodeType:  "company",
-			Children:  []*DeptTreeNode{},
-		}
-		if company.Platform == model.CompanyPlatformNone {
-			response.TreeData = append(response.TreeData, companyNode)
-			continue
-		}
-		directory, loadErr := fetchCompanyDirectory(company)
-		if loadErr != nil {
-			companyNode.Disabled = true
-			companyNode.Error = loadErr.Error()
-			response.TreeData = append(response.TreeData, companyNode)
-			continue
-		}
-		if directory.OrganizationName != company.Name {
-			companyNode.Disabled = true
-			companyNode.Error = fmt.Sprintf("organization name %q does not exactly match company name %q", directory.OrganizationName, company.Name)
-			response.TreeData = append(response.TreeData, companyNode)
-			continue
-		}
-		fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
-		leaderIDs := prefixLeaderDepartmentIDs(company.Id, user.GetLeaderDepartmentIDs())
-		trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs)
-		companyNode.Disabled = userRole < common.RoleRootUser
-		companyNode.Children = trimmed
-		response.LeaderDeptIDs = append(response.LeaderDeptIDs, visibleLeaderIDs...)
-		response.TreeData = append(response.TreeData, companyNode)
+		visibleCompanies = append(visibleCompanies, company)
+	}
+	type companyTreeResult struct {
+		node          *DeptTreeNode
+		leaderDeptIDs []string
+	}
+	results := make([]companyTreeResult, len(visibleCompanies))
+	leaderDepartmentIDs := user.GetLeaderDepartmentIDs()
+	sem := make(chan struct{}, companyDirectoryFetchConcurrency)
+	var wg sync.WaitGroup
+	for index, company := range visibleCompanies {
+		wg.Add(1)
+		go func(index int, company *model.Company) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			label := company.Name
+			if company.Alias != "" {
+				label = company.Alias
+			}
+			companyNode := &DeptTreeNode{
+				Value:     companyNodeValue(company.Id),
+				Label:     label,
+				CompanyID: company.Id,
+				Platform:  company.Platform,
+				NodeType:  "company",
+				Children:  []*DeptTreeNode{},
+			}
+			results[index].node = companyNode
+			if company.Platform == model.CompanyPlatformNone {
+				return
+			}
+			directory, loadErr := fetchCompanyDirectory(company)
+			if loadErr != nil {
+				companyNode.Disabled = true
+				companyNode.Error = loadErr.Error()
+				return
+			}
+			if directory.OrganizationName != company.Name {
+				companyNode.Disabled = true
+				companyNode.Error = fmt.Sprintf("organization name %q does not exactly match company name %q", directory.OrganizationName, company.Name)
+				return
+			}
+			fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
+			leaderIDs := prefixLeaderDepartmentIDs(company.Id, leaderDepartmentIDs)
+			trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs)
+			companyNode.Disabled = userRole < common.RoleRootUser
+			companyNode.Children = trimmed
+			results[index].leaderDeptIDs = visibleLeaderIDs
+		}(index, company)
+	}
+	wg.Wait()
+
+	response := &DepartmentTreeResponse{TreeData: make([]*DeptTreeNode, 0, len(results)), LeaderDeptIDs: []string{}}
+	for _, result := range results {
+		response.TreeData = append(response.TreeData, result.node)
+		response.LeaderDeptIDs = append(response.LeaderDeptIDs, result.leaderDeptIDs...)
 	}
 	return response, nil
 }
@@ -524,17 +548,116 @@ func getCompanySubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentS
 		return nil, err
 	}
 	children := directOverviewChildren(audience.directory, audience.departmentID, companyRoot)
-	result := make([]SubDepartmentStatItem, 0, len(children))
-	for _, child := range children {
-		childRequest := *req
-		childRequest.DepartmentID = departmentNodeValue(req.CompanyID, child.ID)
-		stat, err := getCompanyDepartmentStats(&childRequest)
-		if err != nil {
-			if errors.Is(err, ErrDepartmentAccessDenied) {
+	type childOverviewData struct {
+		members []overviewMember
+		users   []*model.User
+	}
+	childData := make([]childOverviewData, len(children))
+	errs := make([]error, len(children))
+	var wg sync.WaitGroup
+	for index, child := range children {
+		wg.Add(1)
+		go func(index int, child overviewDepartment) {
+			defer wg.Done()
+			if childErr := ensureDepartmentAccessible(
+				audience.company,
+				audience.directory,
+				child.ID,
+				false,
+				req.RequestUserID,
+				req.RequestUserRole,
+			); childErr != nil {
+				errs[index] = childErr
+				return
+			}
+			departmentIDs := collectOverviewDepartmentIDs(
+				audience.directory.Departments,
+				child.ID,
+				false,
+				audience.company.Platform,
+			)
+			members, childErr := collectCompanyMembers(audience.company, departmentIDs)
+			if childErr != nil {
+				errs[index] = childErr
+				return
+			}
+			openIDs := make([]string, 0, len(members))
+			for _, member := range members {
+				openIDs = append(openIDs, member.OpenID)
+			}
+			users, childErr := queryOverviewUsers(audience.company.Name, openIDs, req.EndTimestamp)
+			if childErr != nil {
+				errs[index] = childErr
+				return
+			}
+			childData[index] = childOverviewData{members: members, users: users}
+		}(index, child)
+	}
+	wg.Wait()
+
+	visibleChildren := make([]bool, len(children))
+	allUserIDs := make([]int, 0)
+	userToChild := make(map[int]int)
+	for index, data := range childData {
+		if errs[index] != nil {
+			if errors.Is(errs[index], ErrDepartmentAccessDenied) {
 				continue
 			}
-			return nil, err
+			return nil, errs[index]
 		}
+		visibleChildren[index] = true
+		for _, user := range data.users {
+			if _, exists := userToChild[user.Id]; exists {
+				continue
+			}
+			userToChild[user.Id] = index
+			allUserIDs = append(allUserIDs, user.Id)
+		}
+	}
+
+	rows, err := model.GetUserStatsBatch(allUserIDs, req.StartTimestamp, req.EndTimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("get user stats batch: %w", err)
+	}
+	type childAggregate struct {
+		totalTokens   int64
+		totalQuota    int64
+		totalRequests int64
+		activeUsers   int64
+	}
+	aggregates := make([]childAggregate, len(children))
+	threshold := getActiveUserThreshold(req.StartTimestamp, req.EndTimestamp)
+	for _, row := range rows {
+		index, ok := userToChild[row.UserID]
+		if !ok {
+			continue
+		}
+		aggregates[index].totalTokens += row.TotalTokens
+		aggregates[index].totalQuota += row.TotalQuota
+		aggregates[index].totalRequests += row.TotalReqs
+		if row.TotalReqs >= threshold.RequestCount || row.TotalTokens >= threshold.TokenCount {
+			aggregates[index].activeUsers++
+		}
+	}
+
+	result := make([]SubDepartmentStatItem, 0, len(children))
+	for index, child := range children {
+		if !visibleChildren[index] {
+			continue
+		}
+		stat := &model.DepartmentStat{
+			RegisteredUsers: int64(len(childData[index].users)),
+			UnregisteredUsers: int64(len(childData[index].members)) -
+				int64(len(childData[index].users)),
+			TotalQuota:    aggregates[index].totalQuota,
+			TotalTokens:   aggregates[index].totalTokens,
+			TotalRequests: aggregates[index].totalRequests,
+			ActiveUsers:   aggregates[index].activeUsers,
+		}
+		if stat.UnregisteredUsers < 0 {
+			stat.UnregisteredUsers = 0
+		}
+		finalizeDepartmentStat(stat)
 		result = append(result, SubDepartmentStatItem{
 			DepartmentID:             departmentNodeValue(req.CompanyID, child.ID),
 			DepartmentName:           child.Name,

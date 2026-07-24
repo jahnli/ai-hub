@@ -1,6 +1,6 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 07-22（最后更新 07-22）
+**日期**: 2026-06-25 ~ 07-24（最后更新 07-24）
 
 ## 涉及文件
 
@@ -61,7 +61,7 @@
 - `service/company.go` — 新增无平台、飞书和钉钉公司连接测试，并校验平台根组织名称是否与公司名称完全一致
 - `router/api-router.go` — 注册仅 Root 可访问的公司管理接口，并保留数据总览部门接口的既有权限入口
 - `service/data_overview_provider.go` — 抽象飞书/钉钉统一组织目录与成员 Provider，按公司隔离 Token、目录和成员缓存并使用 singleflight 合并并发请求；飞书 `open_id` 与钉钉 `userid` 统一映射到本地 `users.open_id`；钉钉 `department.listsub` 部门树遍历接入按应用和接口隔离的 30 QPS 限速及 90018 有限退避重试，避免大型组织首次加载触发服务端流控
-- `service/data_overview_company.go` — 新增多公司部门树、公司别名显示、根组织精确匹配、无平台公司聚合及按公司/部门裁剪权限；平台用户同时按成员 ID 与 `users.company` 精确匹配，公司表为空时继续使用旧全局飞书模式
+- `service/data_overview_company.go` — 新增多公司部门树、公司别名显示、根组织精确匹配、无平台公司聚合及按公司/部门裁剪权限；平台用户同时按成员 ID 与 `users.company` 精确匹配，公司表为空时继续使用旧全局飞书模式；公司目录按固定并发上限并行加载且保持原顺序，子部门统计并发收集成员与注册用户后统一批量聚合用量，减少重复查询
 - `service/feishu_department.go` — 部门树和各统计、排行、日志、导出服务接入公司模式 audience；请求携带公司 ID 与当前用户身份，并在服务端重新校验公司和部门访问范围
 - `controller/department.go` — 数据总览统计接口校验 `company_id`，注入请求用户 ID 和角色，并将公司或部门越权统一返回 403
 - `service/dingtalk_sync.go` — 钉钉 `department.listsub` 与 `user.list` 按 Client ID 和 API 路径分别平滑限制为单进程 30 QPS；识别 `errcode=88/subcode=90018` 后按 1 秒、2 秒有限退避重试，重试耗尽及底层请求错误不再泄露凭据 URL
