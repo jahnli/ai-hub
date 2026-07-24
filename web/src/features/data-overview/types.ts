@@ -153,3 +153,11 @@ export interface UserRankingItem {
   total_cost: number
   total_tokens: number
 }
+
+export interface DepartmentOverviewResponse {
+  stats: DepartmentStat
+  sub_stats: SubDepartmentStat[]
+  usage_analysis: UsageAnalysis
+  users: DepartmentUsersResponse
+  user_rankings: UserRankingItem[]
+}

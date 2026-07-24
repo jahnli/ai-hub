@@ -11,9 +11,10 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"golang.org/x/sync/errgroup"
 )
 
-var ErrCompanyIDRequired = errors.New("company_id is required when company data overview is enabled")
+var ErrCompanyIDRequired = errors.New("company_id is required")
 var ErrCompanyAccessDenied = errors.New("company is disabled, missing, or not accessible")
 var ErrDepartmentAccessDenied = errors.New("department is not accessible")
 
@@ -28,11 +29,6 @@ type overviewAudience struct {
 	registeredUserIDs   []int
 	totalUsers          int
 	forceRegisteredOnly bool
-}
-
-func CompanyDataOverviewEnabled() (bool, error) {
-	count, err := model.CountCompanies()
-	return count > 0, err
 }
 
 func companyNodeValue(companyID int) string {
@@ -127,6 +123,12 @@ func getCompanyDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse
 	if err != nil {
 		return nil, err
 	}
+	if len(companies) == 0 {
+		return &DepartmentTreeResponse{
+			TreeData:      []*DeptTreeNode{},
+			LeaderDeptIDs: []string{},
+		}, nil
+	}
 	user, err := model.GetUserById(userID, false)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
@@ -218,13 +220,6 @@ type CompanySubtreeResponse struct {
 // invoked lazily when the user expands a company node that was returned with
 // Loading=true. It enforces the same access checks and permission trimming.
 func GetCompanySubtreeNode(companyID int, userID int, userRole int) (*CompanySubtreeResponse, error) {
-	enabled, err := CompanyDataOverviewEnabled()
-	if err != nil {
-		return nil, err
-	}
-	if !enabled {
-		return nil, ErrCompanyIDRequired
-	}
 	if companyID <= 0 {
 		return nil, ErrCompanyIDRequired
 	}
@@ -349,13 +344,6 @@ func collectOverviewDepartmentIDs(departments []overviewDepartment, departmentID
 }
 
 func resolveCompanyOverviewAudience(companyID int, departmentValue string, userID int, userRole int, registeredBefore int64) (*overviewAudience, bool, error) {
-	enabled, err := CompanyDataOverviewEnabled()
-	if err != nil {
-		return nil, false, err
-	}
-	if !enabled {
-		return nil, false, nil
-	}
 	if companyID <= 0 {
 		return nil, true, ErrCompanyIDRequired
 	}
@@ -479,12 +467,8 @@ func userIDsFromUsers(users []*model.User) []int {
 }
 
 func authorizeCompanyOverviewUser(companyID int, departmentID string, targetUserID int, requestUserID int, requestUserRole int) error {
-	enabled, err := CompanyDataOverviewEnabled()
-	if err != nil || !enabled {
-		return err
-	}
-	if companyID <= 0 && requestUserRole >= common.RoleRootUser {
-		return nil
+	if companyID <= 0 {
+		return ErrCompanyIDRequired
 	}
 	audience, _, err := resolveCompanyOverviewAudience(companyID, departmentID, requestUserID, requestUserRole, 0)
 	if err != nil {
@@ -518,11 +502,117 @@ func directOverviewChildren(directory *overviewDirectory, parentID string, compa
 	return children
 }
 
+type DepartmentOverviewRequest struct {
+	CompanyID           int    `json:"company_id"`
+	DepartmentID        string `json:"department_id"`
+	StartTimestamp      int64  `json:"start_timestamp"`
+	EndTimestamp        int64  `json:"end_timestamp"`
+	Page                int    `json:"page"`
+	PageSize            int    `json:"page_size"`
+	SortBy              string `json:"sort_by"`
+	SortOrder           string `json:"sort_order"`
+	RegistrationStatus  string `json:"registration_status"`
+	IncludeUnregistered bool   `json:"include_unregistered"`
+	RequestUserID       int    `json:"-"`
+	RequestUserRole     int    `json:"-"`
+}
+
+type DepartmentOverviewResponse struct {
+	Stats        *model.DepartmentStat    `json:"stats"`
+	SubStats     []SubDepartmentStatItem  `json:"sub_stats"`
+	Usage        *UsageAnalysisResponse   `json:"usage_analysis"`
+	Users        *DepartmentUsersResponse `json:"users"`
+	UserRankings []UserRankingItem        `json:"user_rankings"`
+}
+
+func GetDepartmentOverview(req *DepartmentOverviewRequest) (*DepartmentOverviewResponse, error) {
+	audience, _, err := resolveCompanyOverviewAudience(
+		req.CompanyID,
+		req.DepartmentID,
+		req.RequestUserID,
+		req.RequestUserRole,
+		req.EndTimestamp,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	statsReq := &DepartmentStatsRequest{
+		CompanyID:       req.CompanyID,
+		DepartmentID:    req.DepartmentID,
+		StartTimestamp:  req.StartTimestamp,
+		EndTimestamp:    req.EndTimestamp,
+		RequestUserID:   req.RequestUserID,
+		RequestUserRole: req.RequestUserRole,
+	}
+	usersReq := &DepartmentUsersRequest{
+		CompanyID:           req.CompanyID,
+		DepartmentID:        req.DepartmentID,
+		StartTimestamp:      req.StartTimestamp,
+		EndTimestamp:        req.EndTimestamp,
+		Page:                req.Page,
+		PageSize:            req.PageSize,
+		SortBy:              req.SortBy,
+		SortOrder:           req.SortOrder,
+		RegistrationStatus:  req.RegistrationStatus,
+		IncludeUnregistered: req.IncludeUnregistered,
+		RequestUserID:       req.RequestUserID,
+		RequestUserRole:     req.RequestUserRole,
+	}
+
+	var stats *model.DepartmentStat
+	var subStats []SubDepartmentStatItem
+	var usage *UsageAnalysisResponse
+	var users *DepartmentUsersResponse
+	var userRankings []UserRankingItem
+	var group errgroup.Group
+	group.Go(func() error {
+		var taskErr error
+		stats, taskErr = buildCompanyDepartmentStats(statsReq, audience)
+		return taskErr
+	})
+	group.Go(func() error {
+		var taskErr error
+		subStats, taskErr = buildCompanySubDepartmentStats(statsReq, audience)
+		return taskErr
+	})
+	group.Go(func() error {
+		var taskErr error
+		usage, taskErr = buildCompanyUsageAnalysis(statsReq, audience)
+		return taskErr
+	})
+	group.Go(func() error {
+		var taskErr error
+		users, taskErr = buildCompanyDepartmentUsers(usersReq, audience)
+		return taskErr
+	})
+	group.Go(func() error {
+		var taskErr error
+		userRankings, taskErr = buildCompanyDepartmentUserRankings(usersReq, audience)
+		return taskErr
+	})
+	if err := group.Wait(); err != nil {
+		return nil, err
+	}
+
+	return &DepartmentOverviewResponse{
+		Stats:        stats,
+		SubStats:     subStats,
+		Usage:        usage,
+		Users:        users,
+		UserRankings: userRankings,
+	}, nil
+}
+
 func getCompanyDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentStat, error) {
 	audience, _, err := resolveCompanyOverviewAudience(req.CompanyID, req.DepartmentID, req.RequestUserID, req.RequestUserRole, req.EndTimestamp)
 	if err != nil {
 		return nil, err
 	}
+	return buildCompanyDepartmentStats(req, audience)
+}
+
+func buildCompanyDepartmentStats(req *DepartmentStatsRequest, audience *overviewAudience) (*model.DepartmentStat, error) {
 	threshold := getActiveUserThreshold(req.StartTimestamp, req.EndTimestamp)
 	stat, err := model.GetDepartmentStats(
 		audience.registeredUserIDs,
@@ -604,6 +694,10 @@ func getCompanyUsageAnalysis(req *DepartmentStatsRequest) (*UsageAnalysisRespons
 	if err != nil {
 		return nil, err
 	}
+	return buildCompanyUsageAnalysis(req, audience)
+}
+
+func buildCompanyUsageAnalysis(req *DepartmentStatsRequest, audience *overviewAudience) (*UsageAnalysisResponse, error) {
 	if len(audience.registeredUserIDs) == 0 {
 		return &UsageAnalysisResponse{}, nil
 	}
@@ -615,6 +709,10 @@ func getCompanySubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentS
 	if err != nil {
 		return nil, err
 	}
+	return buildCompanySubDepartmentStats(req, audience)
+}
+
+func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overviewAudience) ([]SubDepartmentStatItem, error) {
 	if audience.company.Platform == model.CompanyPlatformNone {
 		return []SubDepartmentStatItem{}, nil
 	}
@@ -756,6 +854,10 @@ func getCompanyDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersRes
 	if err != nil {
 		return nil, err
 	}
+	return buildCompanyDepartmentUsers(req, audience)
+}
+
+func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overviewAudience) (*DepartmentUsersResponse, error) {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -871,6 +973,10 @@ func getCompanyDepartmentUserRankings(req *DepartmentUsersRequest) ([]UserRankin
 	if err != nil {
 		return nil, err
 	}
+	return buildCompanyDepartmentUserRankings(req, audience)
+}
+
+func buildCompanyDepartmentUserRankings(req *DepartmentUsersRequest, audience *overviewAudience) ([]UserRankingItem, error) {
 	if len(audience.registeredUserIDs) == 0 {
 		return []UserRankingItem{}, nil
 	}

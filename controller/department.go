@@ -86,6 +86,37 @@ func GetDepartmentStats(c *gin.Context) {
 	})
 }
 
+func GetDepartmentOverview(c *gin.Context) {
+	var req service.DepartmentOverviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if req.DepartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "department_id is required",
+		})
+		return
+	}
+	if !validateDepartmentCompanyID(c, req.CompanyID) {
+		return
+	}
+	req.RequestUserID = c.GetInt("id")
+	req.RequestUserRole = c.GetInt("role")
+
+	data, err := service.GetDepartmentOverview(&req)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
 func GetSubDepartmentStats(c *gin.Context) {
 	var req service.DepartmentStatsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -304,12 +335,7 @@ func GetDepartmentUserRankings(c *gin.Context) {
 }
 
 func validateDepartmentCompanyID(c *gin.Context, companyID int) bool {
-	enabled, err := service.CompanyDataOverviewEnabled()
-	if err != nil {
-		common.ApiError(c, err)
-		return false
-	}
-	if enabled && companyID <= 0 {
+	if companyID <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": service.ErrCompanyIDRequired.Error(),
@@ -320,8 +346,5 @@ func validateDepartmentCompanyID(c *gin.Context, companyID int) bool {
 }
 
 func validateDepartmentUserCompanyID(c *gin.Context, companyID int) bool {
-	if companyID <= 0 && c.GetInt("role") >= common.RoleRootUser {
-		return true
-	}
 	return validateDepartmentCompanyID(c, companyID)
 }

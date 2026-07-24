@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import type {
   DepartmentTreeResponse,
   CompanySubtreeResponse,
+  DepartmentOverviewResponse,
   DepartmentStat,
   SubDepartmentStat,
   UsageAnalysis,
@@ -15,6 +16,22 @@ import type {
   UserRankingItem,
   DepartmentQueryParams,
 } from './types'
+
+export async function getDepartmentOverview(
+  params: DepartmentQueryParams & {
+    page: number
+    page_size: number
+    sort_by: string
+    sort_order: string
+    include_unregistered: boolean
+  }
+): Promise<{ success: boolean; data: DepartmentOverviewResponse }> {
+  const res = await api.post<{
+    success: boolean
+    data: DepartmentOverviewResponse
+  }>('/api/department/overview', params)
+  return res.data
+}
 
 export async function getDepartmentTree(): Promise<{
   success: boolean

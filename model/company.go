@@ -163,14 +163,6 @@ func ListCompanies(offset, limit int) ([]*Company, int64, error) {
 	return companies, total, nil
 }
 
-func CountCompanies() (int64, error) {
-	var count int64
-	if err := DB.Model(&Company{}).Count(&count).Error; err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
 func ListEnabledCompanies() ([]*Company, error) {
 	var companies []*Company
 	if err := DB.Where("status = ?", CompanyStatusEnabled).

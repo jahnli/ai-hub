@@ -34,8 +34,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useSharedUserColumns } from '@/features/users/components/shared-user-columns'
 
-import { getDepartmentUsers, getDepartmentUserRankings } from '../api'
-import type { DepartmentUser } from '../types'
+import { getDepartmentUsers } from '../api'
+import {
+  DEPARTMENT_USERS_INITIAL_PAGE_SIZE,
+  isInitialDepartmentUsersQuery,
+} from '../lib/department-users-query'
+import type {
+  DepartmentUser,
+  DepartmentUsersResponse,
+  UserRankingItem,
+} from '../types'
 import { DepartmentLogsDialog } from './department-logs-dialog'
 import { UserConsumptionCharts } from './user-consumption-charts'
 import { UserStatsDialog } from './user-stats-dialog'
@@ -45,6 +53,8 @@ interface DepartmentUsersTableProps {
   departmentId: string
   startTimestamp: number
   endTimestamp: number
+  initialUsers: DepartmentUsersResponse
+  initialRankings: UserRankingItem[]
 }
 
 const DEPT_COLUMN_SORT_MAP: Record<string, string> = {
@@ -246,6 +256,14 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
     sortOrder = sortParam.desc ? 'desc' : 'asc'
   }
 
+  const isInitialQuery = isInitialDepartmentUsersQuery({
+    pageIndex: pagination.pageIndex,
+    pageSize: pagination.pageSize,
+    sortBy,
+    sortOrder,
+    registrationStatus: registrationStatusFilter,
+  })
+
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
       'department',
@@ -274,13 +292,13 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
         include_unregistered:
           registrationStatusFilter !== REGISTRATION_STATUS.REGISTERED,
       }),
-    enabled: !!departmentId,
+    enabled: !!departmentId && !isInitialQuery,
     staleTime: 60 * 1000,
   })
 
-  const users = data?.data?.items ?? []
-  const total = data?.data?.total ?? 0
-  const userSummary = data?.data
+  const userSummary = isInitialQuery ? props.initialUsers : data?.data
+  const users = userSummary?.items ?? []
+  const total = userSummary?.total ?? 0
   const totalUsers = userSummary?.total_users ?? 0
   const registeredUsers = userSummary?.registered_users ?? 0
   const unregisteredUsers = userSummary?.unregistered_users ?? 0
@@ -307,26 +325,6 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
     manualFiltering: true,
     manualSorting: true,
     totalCount: total,
-  })
-
-  const rankingsQuery = useQuery({
-    queryKey: [
-      'department',
-      'user-rankings',
-      companyId,
-      departmentId,
-      startTimestamp,
-      endTimestamp,
-    ],
-    queryFn: () =>
-      getDepartmentUserRankings({
-        company_id: companyId,
-        department_id: departmentId,
-        start_timestamp: startTimestamp,
-        end_timestamp: endTimestamp,
-      }),
-    enabled: !!departmentId,
-    staleTime: 60 * 1000,
   })
 
   return (
@@ -366,8 +364,8 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
         <DataTablePage
           table={table}
           columns={columns}
-          isLoading={isLoading}
-          isFetching={isFetching}
+          isLoading={!isInitialQuery && isLoading}
+          isFetching={!isInitialQuery && isFetching}
           emptyTitle={t('No Users Found')}
           emptyDescription={t('No users in this department.')}
           skeletonKeyPrefix='dept-users-skeleton'
@@ -378,9 +376,9 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
           paginationInFooter={false}
           tableClassName='border-0 rounded-none'
         />
-        {rankingsQuery.data?.data && rankingsQuery.data.data.length > 0 && (
+        {props.initialRankings.length > 0 && (
           <div className='pt-8'>
-            <UserConsumptionCharts data={rankingsQuery.data.data} />
+            <UserConsumptionCharts data={props.initialRankings} />
           </div>
         )}
       </CardContent>
@@ -417,7 +415,7 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
 function usePagination(): [PaginationState, OnChangeFn<PaginationState>] {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: DEPARTMENT_USERS_INITIAL_PAGE_SIZE,
   })
   const onPaginationChange: OnChangeFn<PaginationState> = useCallback(
     (updater) => {

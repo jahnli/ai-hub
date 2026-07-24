@@ -259,6 +259,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			departmentRoute.GET("/tree", controller.GetDepartmentTree)
 			departmentRoute.GET("/company-subtree", controller.GetCompanyDepartmentSubtree)
+			departmentRoute.POST("/overview", controller.GetDepartmentOverview)
 			departmentRoute.POST("/stats", controller.GetDepartmentStats)
 			departmentRoute.POST("/sub-stats", controller.GetSubDepartmentStats)
 			departmentRoute.POST("/usage-analysis", controller.GetUsageAnalysis)

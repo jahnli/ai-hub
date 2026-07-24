@@ -1,7 +1,7 @@
 import type { DepartmentQueryParams, DeptTreeNode } from '../types'
 
 export function isDepartmentNodeDisabled(node: DeptTreeNode): boolean {
-  return node.disabled || Boolean(node.error)
+  return node.disabled || Boolean(node.error) || !node.company_id
 }
 
 export function findDepartmentNodeByValue(
@@ -32,8 +32,11 @@ export function createDepartmentQueryParams(
   startTimestamp: number,
   endTimestamp: number
 ): DepartmentQueryParams {
+  if (!node.company_id) {
+    throw new Error('Company department node is missing company_id')
+  }
   return {
-    company_id: node.company_id ?? 0,
+    company_id: node.company_id,
     department_id: node.value,
     start_timestamp: startTimestamp,
     end_timestamp: endTimestamp,

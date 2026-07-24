@@ -35,15 +35,14 @@ describe('company-aware department selection', () => {
     })
   })
 
-  test('sends zero for a legacy node without company metadata', () => {
+  test('rejects a legacy node without company metadata', () => {
     const node = createNode({ value: 'legacy-department-id' })
 
-    assert.deepEqual(createDepartmentQueryParams(node, 100, 200), {
-      company_id: 0,
-      department_id: 'legacy-department-id',
-      start_timestamp: 100,
-      end_timestamp: 200,
-    })
+    assert.equal(isDepartmentNodeDisabled(node), true)
+    assert.throws(
+      () => createDepartmentQueryParams(node, 100, 200),
+      /missing company_id/
+    )
   })
 
   test('allows a none-platform company without children to be selected', () => {
