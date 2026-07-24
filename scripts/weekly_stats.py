@@ -28,6 +28,7 @@ DEFAULT_QUOTA_PER_UNIT = 500_000.0
 TOKENS_PER_MILLION = 1_000_000.0
 TOKENS_PER_HUNDRED_MILLION = 100_000_000.0
 CONSUME_LOG_TYPE = 2
+TARGET_COMPANY = "赛美特集团"
 ALLOCATION_BUCKETS = ("input", "output", "cache_input", "cache_output")
 
 ModelMapping = tuple[str, list[str]]
@@ -554,9 +555,10 @@ def collect_statistics(
             (CONSUME_LOG_TYPE, start_ts, end_ts),
         )
         for _log_id, user_id, model_name, prompt_tokens, completion_tokens, quota_value, raw_other in cur:
+            if user_id not in user_quotas:
+                continue
             quota = int(quota_value or 0)
-            if user_id in user_quotas:
-                user_quotas[user_id] += quota
+            user_quotas[user_id] += quota
             other, malformed_other = parse_log_other(raw_other)
             tokens = extract_token_categories(prompt_tokens, completion_tokens, other)
 
@@ -621,9 +623,9 @@ def get_positive_option(options: dict[str, Any], keys: tuple[str, ...], default:
     return default
 
 
-def fetch_registered_user_ids(conn: Any) -> set[int]:
+def fetch_registered_user_ids(conn: Any, company: str) -> set[int]:
     with conn.cursor() as cur:
-        cur.execute("SELECT id FROM users")
+        cur.execute("SELECT id FROM users WHERE company = %s", (company,))
         return {int(row[0]) for row in cur.fetchall()}
 
 
@@ -856,7 +858,7 @@ def main() -> int:
     end_ts = int(end.timestamp())
     conn = psycopg2.connect(DEFAULT_DSN)
     try:
-        registered_user_ids = fetch_registered_user_ids(conn)
+        registered_user_ids = fetch_registered_user_ids(conn, TARGET_COMPANY)
         total_users = len(registered_user_ids)
         options = load_options(conn)
         exchange_rate = get_positive_option(
