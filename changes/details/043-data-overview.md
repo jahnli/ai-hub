@@ -126,3 +126,8 @@
 - `service/data_overview_company_test.go` — 新增，覆盖 `GetDepartmentOverview` 的无公司快速返回、缺失 `company_id` 拒绝和 audience 解析失败行为
 - `web/src/features/data-overview/__tests__/department-users-query.test.ts` — 新增，覆盖用户列表查询初始常量与参数构造
 - `web/src/features/data-overview/__tests__/company-selection.test.ts` — 补充缺失 `company_id` 节点的禁用和抛出行为回归
+
+### 2026-07-24 overview 共享用户用量统计
+
+- `service/data_overview_company.go` — 新增 `overviewUserStats` 与 `loadOverviewUserStats`，在 `GetDepartmentOverview` 内先并行预加载一次注册用户 `GetUserStatsBatch`；`buildCompanySubDepartmentStats`、`buildCompanyDepartmentUsers`、`buildCompanyDepartmentUserRankings` 改为接收共享统计并复用，独立接口路径仍可传 `nil` 自行加载；消除 overview 聚合内对同一用户集合的重复日志扫表
+- `service/data_overview_company_test.go` — 覆盖共享用户统计只查询一次、子部门/用户列表/排行复用同一批结果，以及独立路径仍可自行加载的行为

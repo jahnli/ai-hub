@@ -31,6 +31,28 @@ type overviewAudience struct {
 	forceRegisteredOnly bool
 }
 
+type overviewUserStats struct {
+	rows     []model.UserStatRow
+	byUserID map[int]model.UserStatRow
+}
+
+var getOverviewUserStatsBatch = model.GetUserStatsBatch
+
+func loadOverviewUserStats(userIDs []int, startTimestamp int64, endTimestamp int64) (*overviewUserStats, error) {
+	rows, err := getOverviewUserStatsBatch(userIDs, startTimestamp, endTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	stats := &overviewUserStats{
+		rows:     rows,
+		byUserID: make(map[int]model.UserStatRow, len(rows)),
+	}
+	for _, row := range rows {
+		stats.byUserID[row.UserID] = row
+	}
+	return stats, nil
+}
+
 func companyNodeValue(companyID int) string {
 	return fmt.Sprintf("company:%d", companyID)
 }
@@ -565,15 +587,31 @@ func GetDepartmentOverview(req *DepartmentOverviewRequest) (*DepartmentOverviewR
 	var usage *UsageAnalysisResponse
 	var users *DepartmentUsersResponse
 	var userRankings []UserRankingItem
+	var sharedUserStats *overviewUserStats
+	var sharedUserStatsErr error
+	sharedUserStatsReady := make(chan struct{})
 	var group errgroup.Group
+	group.Go(func() error {
+		defer close(sharedUserStatsReady)
+		sharedUserStats, sharedUserStatsErr = loadOverviewUserStats(
+			audience.registeredUserIDs,
+			req.StartTimestamp,
+			req.EndTimestamp,
+		)
+		return sharedUserStatsErr
+	})
 	group.Go(func() error {
 		var taskErr error
 		stats, taskErr = buildCompanyDepartmentStats(statsReq, audience)
 		return taskErr
 	})
 	group.Go(func() error {
+		<-sharedUserStatsReady
+		if sharedUserStatsErr != nil {
+			return sharedUserStatsErr
+		}
 		var taskErr error
-		subStats, taskErr = buildCompanySubDepartmentStats(statsReq, audience)
+		subStats, taskErr = buildCompanySubDepartmentStats(statsReq, audience, sharedUserStats)
 		return taskErr
 	})
 	group.Go(func() error {
@@ -582,13 +620,21 @@ func GetDepartmentOverview(req *DepartmentOverviewRequest) (*DepartmentOverviewR
 		return taskErr
 	})
 	group.Go(func() error {
+		<-sharedUserStatsReady
+		if sharedUserStatsErr != nil {
+			return sharedUserStatsErr
+		}
 		var taskErr error
-		users, taskErr = buildCompanyDepartmentUsers(usersReq, audience)
+		users, taskErr = buildCompanyDepartmentUsers(usersReq, audience, sharedUserStats)
 		return taskErr
 	})
 	group.Go(func() error {
+		<-sharedUserStatsReady
+		if sharedUserStatsErr != nil {
+			return sharedUserStatsErr
+		}
 		var taskErr error
-		userRankings, taskErr = buildCompanyDepartmentUserRankings(usersReq, audience)
+		userRankings, taskErr = buildCompanyDepartmentUserRankings(usersReq, audience, sharedUserStats)
 		return taskErr
 	})
 	if err := group.Wait(); err != nil {
@@ -709,10 +755,10 @@ func getCompanySubDepartmentStats(req *DepartmentStatsRequest) ([]SubDepartmentS
 	if err != nil {
 		return nil, err
 	}
-	return buildCompanySubDepartmentStats(req, audience)
+	return buildCompanySubDepartmentStats(req, audience, nil)
 }
 
-func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overviewAudience) ([]SubDepartmentStatItem, error) {
+func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overviewAudience, userStats *overviewUserStats) ([]SubDepartmentStatItem, error) {
 	if audience.company.Platform == model.CompanyPlatformNone {
 		return []SubDepartmentStatItem{}, nil
 	}
@@ -788,9 +834,11 @@ func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overv
 		}
 	}
 
-	rows, err := model.GetUserStatsBatch(allUserIDs, req.StartTimestamp, req.EndTimestamp)
-	if err != nil {
-		return nil, fmt.Errorf("get user stats batch: %w", err)
+	if userStats == nil {
+		userStats, err = loadOverviewUserStats(allUserIDs, req.StartTimestamp, req.EndTimestamp)
+		if err != nil {
+			return nil, fmt.Errorf("get user stats batch: %w", err)
+		}
 	}
 	type childAggregate struct {
 		totalTokens   int64
@@ -800,7 +848,11 @@ func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overv
 	}
 	aggregates := make([]childAggregate, len(children))
 	threshold := getActiveUserThreshold(req.StartTimestamp, req.EndTimestamp)
-	for _, row := range rows {
+	for _, userID := range allUserIDs {
+		row, exists := userStats.byUserID[userID]
+		if !exists {
+			continue
+		}
 		index, ok := userToChild[row.UserID]
 		if !ok {
 			continue
@@ -854,10 +906,10 @@ func getCompanyDepartmentUsers(req *DepartmentUsersRequest) (*DepartmentUsersRes
 	if err != nil {
 		return nil, err
 	}
-	return buildCompanyDepartmentUsers(req, audience)
+	return buildCompanyDepartmentUsers(req, audience, nil)
 }
 
-func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overviewAudience) (*DepartmentUsersResponse, error) {
+func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overviewAudience, userStats *overviewUserStats) (*DepartmentUsersResponse, error) {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -895,7 +947,7 @@ func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overview
 			ids = append(ids, item.User.Id)
 		}
 	}
-	populateDepartmentUserStats(items, ids, req.StartTimestamp, req.EndTimestamp)
+	populateDepartmentUserStats(items, ids, req.StartTimestamp, req.EndTimestamp, userStats)
 	sortDepartmentUserItems(items, req.SortBy, req.SortOrder)
 	start := (page - 1) * pageSize
 	if start > len(items) {
@@ -921,16 +973,15 @@ func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overview
 	}, nil
 }
 
-func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTimestamp int64, endTimestamp int64) {
+func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTimestamp int64, endTimestamp int64, userStats *overviewUserStats) {
 	if len(ids) == 0 {
 		return
 	}
 	subscriptions, _ := model.GetActiveSubscriptionQuotaByUserIds(ids)
-	stats := make(map[int]model.UserStatRow)
-	rows, err := model.GetUserStatsBatch(ids, startTimestamp, endTimestamp)
-	if err == nil {
-		for _, row := range rows {
-			stats[row.UserID] = row
+	if userStats == nil {
+		loadedStats, err := loadOverviewUserStats(ids, startTimestamp, endTimestamp)
+		if err == nil {
+			userStats = loadedStats
 		}
 	}
 	models := make(map[int]string)
@@ -956,12 +1007,14 @@ func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTim
 			items[index].SubQuotaUsed = subscription.AmountUsed
 			items[index].SubQuotaTotal = subscription.AmountTotal
 		}
-		if stat, ok := stats[userID]; ok {
-			items[index].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * exchangeRate
-			items[index].TotalTokens = stat.TotalTokens
-			items[index].TotalRequests = stat.TotalReqs
-			if stat.TotalTokens > 0 {
-				items[index].AvgPricePerMT = items[index].TotalAmountCNY / (float64(stat.TotalTokens) / 1000000)
+		if userStats != nil {
+			if stat, ok := userStats.byUserID[userID]; ok {
+				items[index].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * exchangeRate
+				items[index].TotalTokens = stat.TotalTokens
+				items[index].TotalRequests = stat.TotalReqs
+				if stat.TotalTokens > 0 {
+					items[index].AvgPricePerMT = items[index].TotalAmountCNY / (float64(stat.TotalTokens) / 1000000)
+				}
 			}
 		}
 		items[index].CommonModel = models[userID]
@@ -973,17 +1026,21 @@ func getCompanyDepartmentUserRankings(req *DepartmentUsersRequest) ([]UserRankin
 	if err != nil {
 		return nil, err
 	}
-	return buildCompanyDepartmentUserRankings(req, audience)
+	return buildCompanyDepartmentUserRankings(req, audience, nil)
 }
 
-func buildCompanyDepartmentUserRankings(req *DepartmentUsersRequest, audience *overviewAudience) ([]UserRankingItem, error) {
+func buildCompanyDepartmentUserRankings(req *DepartmentUsersRequest, audience *overviewAudience, userStats *overviewUserStats) ([]UserRankingItem, error) {
 	if len(audience.registeredUserIDs) == 0 {
 		return []UserRankingItem{}, nil
 	}
-	rows, err := model.GetUserStatsBatch(audience.registeredUserIDs, req.StartTimestamp, req.EndTimestamp)
-	if err != nil {
-		return nil, err
+	if userStats == nil {
+		var err error
+		userStats, err = loadOverviewUserStats(audience.registeredUserIDs, req.StartTimestamp, req.EndTimestamp)
+		if err != nil {
+			return nil, err
+		}
 	}
+	rows := append([]model.UserStatRow(nil), userStats.rows...)
 	sort.Slice(rows, func(i, j int) bool { return rows[i].TotalQuota > rows[j].TotalQuota })
 	names := make(map[int][2]string, len(audience.users))
 	for _, user := range audience.users {
