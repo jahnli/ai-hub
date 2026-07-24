@@ -2,6 +2,7 @@ export interface DeptTreeNode {
   value: string
   label: string
   disabled: boolean
+  loading?: boolean
   company_id?: number
   platform?: string
   node_type?: 'company' | 'department' | string
@@ -26,6 +27,11 @@ export interface DepartmentTreeResponse {
   tree_data: DeptTreeNode[]
   leader_dept_ids: string[]
   tenant_info: TenantInfo | null
+}
+
+export interface CompanySubtreeResponse {
+  node: DeptTreeNode
+  leader_dept_ids: string[]
 }
 
 export interface SubDepartmentStat {

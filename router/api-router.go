@@ -258,6 +258,7 @@ func SetApiRouter(router *gin.Engine) {
 		departmentRoute.Use(middleware.UserAuth(), middleware.DataOverviewAccessCheck())
 		{
 			departmentRoute.GET("/tree", controller.GetDepartmentTree)
+			departmentRoute.GET("/company-subtree", controller.GetCompanyDepartmentSubtree)
 			departmentRoute.POST("/stats", controller.GetDepartmentStats)
 			departmentRoute.POST("/sub-stats", controller.GetSubDepartmentStats)
 			departmentRoute.POST("/usage-analysis", controller.GetUsageAnalysis)

@@ -169,6 +169,14 @@ func getCompanyDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse
 			if company.Platform == model.CompanyPlatformNone {
 				return
 			}
+			// Lazily load department trees: only the first company is fetched
+			// eagerly. Other companies expose a company-level node with
+			// Loading=true so the frontend can fetch their subtree on demand
+			// when the user expands them in the selector.
+			if index != 0 {
+				companyNode.Loading = true
+				return
+			}
 			directory, loadErr := fetchCompanyDirectory(company)
 			if loadErr != nil {
 				companyNode.Disabled = true
@@ -195,6 +203,73 @@ func getCompanyDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse
 		response.TreeData = append(response.TreeData, result.node)
 		response.LeaderDeptIDs = append(response.LeaderDeptIDs, result.leaderDeptIDs...)
 	}
+	return response, nil
+}
+
+// CompanySubtreeResponse is the on-demand payload for a single company's
+// department subtree, returned when the frontend lazily expands a company node.
+type CompanySubtreeResponse struct {
+	Node          *DeptTreeNode `json:"node"`
+	LeaderDeptIDs []string      `json:"leader_dept_ids"`
+}
+
+// GetCompanySubtreeNode fetches and builds the department subtree for a single
+// company. It mirrors the per-company logic in getCompanyDepartmentTree but is
+// invoked lazily when the user expands a company node that was returned with
+// Loading=true. It enforces the same access checks and permission trimming.
+func GetCompanySubtreeNode(companyID int, userID int, userRole int) (*CompanySubtreeResponse, error) {
+	enabled, err := CompanyDataOverviewEnabled()
+	if err != nil {
+		return nil, err
+	}
+	if !enabled {
+		return nil, ErrCompanyIDRequired
+	}
+	if companyID <= 0 {
+		return nil, ErrCompanyIDRequired
+	}
+	company, err := getAuthorizedOverviewCompany(companyID, userID, userRole)
+	if err != nil {
+		return nil, err
+	}
+	user, err := model.GetUserById(userID, false)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
+	label := company.Name
+	if company.Alias != "" {
+		label = company.Alias
+	}
+	companyNode := &DeptTreeNode{
+		Value:     companyNodeValue(company.Id),
+		Label:     label,
+		CompanyID: company.Id,
+		Platform:  company.Platform,
+		NodeType:  "company",
+		Children:  []*DeptTreeNode{},
+	}
+	response := &CompanySubtreeResponse{Node: companyNode, LeaderDeptIDs: []string{}}
+	if company.Platform == model.CompanyPlatformNone {
+		return response, nil
+	}
+	directory, loadErr := fetchCompanyDirectory(company)
+	if loadErr != nil {
+		companyNode.Disabled = true
+		companyNode.Error = loadErr.Error()
+		return response, nil
+	}
+	if directory.OrganizationName != company.Name {
+		companyNode.Disabled = true
+		companyNode.Error = fmt.Sprintf("organization name %q does not exactly match company name %q", directory.OrganizationName, company.Name)
+		return response, nil
+	}
+	fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
+	leaderIDs := prefixLeaderDepartmentIDs(company.Id, user.GetLeaderDepartmentIDs())
+	trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs)
+	companyNode.Disabled = userRole < common.RoleRootUser
+	companyNode.Children = trimmed
+	response.LeaderDeptIDs = visibleLeaderIDs
 	return response, nil
 }
 

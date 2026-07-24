@@ -364,6 +364,7 @@ type DeptTreeNode struct {
 	Value        string          `json:"value"`
 	Label        string          `json:"label"`
 	Disabled     bool            `json:"disabled"`
+	Loading      bool            `json:"loading,omitempty"`
 	CompanyID    int             `json:"company_id,omitempty"`
 	Platform     string          `json:"platform,omitempty"`
 	NodeType     string          `json:"node_type,omitempty"`

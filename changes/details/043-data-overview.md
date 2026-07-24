@@ -98,3 +98,14 @@
 - `web/src/features/data-overview/__tests__/company-selection.test.ts` — 覆盖公司参数透传、旧模式兼容、无平台公司选择和错误公司跳过逻辑
 - `web/src/i18n/static-keys.ts` — 登记公司管理、平台、登录方式和组织错误提示等静态翻译键
 - `web/src/i18n/locales/en.json`、`web/src/i18n/locales/zh.json`、`web/src/i18n/locales/zh-TW.json`、`web/src/i18n/locales/fr.json`、`web/src/i18n/locales/ja.json`、`web/src/i18n/locales/ru.json`、`web/src/i18n/locales/vi.json` — 补齐公司管理和多公司数据总览七语言文案，并移除废弃的 Secret 留空提示键
+
+### 2026-07-24 部门树选择器懒加载
+
+- `service/feishu_department.go` — `DeptTreeNode` 新增 `Loading bool` 字段（`omitempty`），标记子部门尚未拉取
+- `service/data_overview_company.go` — `getCompanyDepartmentTree` 改为仅预加载第一个公司的部门树，其余公司节点置 `Loading=true`；新增 `GetCompanySubtreeNode` 与 `CompanySubtreeResponse`，按需拉取单个公司的完整子树（含访问校验和权限裁剪）
+- `controller/department.go` — 新增 `GetCompanyDepartmentSubtree`，读取 `company_id` 查询参数并调用 `GetCompanySubtreeNode`
+- `router/api-router.go` — 注册 `GET /api/department/company-subtree` 路由
+- `web/src/features/data-overview/types.ts` — `DeptTreeNode` 新增 `loading?: boolean`；新增 `CompanySubtreeResponse` 接口
+- `web/src/features/data-overview/api.ts` — 新增 `getCompanySubtree(companyId)` API 封装
+- `web/src/features/data-overview/components/department-tree-select.tsx` — 新增 `onLoadNodeChildren` 和 `loadingNodeValues` props；悬停 `loading` 公司节点时触发懒加载；列计算改为从最新 `treeData` 按值查找节点，加载中显示独立 `LoadingColumn` 列与行内旋转图标
+- `web/src/features/data-overview/index.tsx` — 新增 `lazyCompanySubtrees` 和 `loadingCompanyValues` 状态；`handleLoadCompanyChildren` 防重复拉取，成功后将子树合并进 `displayTreeData`（`useMemo` 按 node value 替换）

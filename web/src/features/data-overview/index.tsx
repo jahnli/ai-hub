@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, Building2, Loader2, Search } from 'lucide-react'
-import { useState, useEffect, type ReactNode } from 'react'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
@@ -14,6 +20,7 @@ import dayjs from '@/lib/dayjs'
 
 import {
   getDepartmentTree,
+  getCompanySubtree,
   getDepartmentStats,
   getSubDepartmentStats,
   getUsageAnalysis,
@@ -55,6 +62,15 @@ export function DataOverview() {
   const [queryParams, setQueryParams] = useState<DepartmentQueryParams | null>(
     null
   )
+  // Company subtrees fetched lazily when the user expands a company node,
+  // keyed by the company node value (e.g. "company:2").
+  const [lazyCompanySubtrees, setLazyCompanySubtrees] = useState<
+    Record<string, DeptTreeNode>
+  >({})
+  // Company node values whose subtree request is currently in-flight.
+  const [loadingCompanyValues, setLoadingCompanyValues] = useState<Set<string>>(
+    () => new Set()
+  )
 
   const treeQuery = useQuery({
     queryKey: ['department', 'tree'],
@@ -94,7 +110,49 @@ export function DataOverview() {
   })
 
   const treeData = treeQuery.data?.data
-  const displayTreeData = treeData?.tree_data ?? EMPTY_DEPARTMENT_TREE
+  const baseTreeData = treeData?.tree_data ?? EMPTY_DEPARTMENT_TREE
+
+  // Merge lazily-loaded company subtrees into the base tree so that companies
+  // whose departments were fetched on demand render their children.
+  const displayTreeData = useMemo(() => {
+    if (Object.keys(lazyCompanySubtrees).length === 0) return baseTreeData
+    return baseTreeData.map(
+      (companyNode) => lazyCompanySubtrees[companyNode.value] ?? companyNode
+    )
+  }, [baseTreeData, lazyCompanySubtrees])
+
+  const handleLoadCompanyChildren = useCallback(
+    async (companyNode: DeptTreeNode) => {
+      const companyId = companyNode.company_id
+      if (!companyId) return
+      // Skip if already loaded or a request is already in-flight.
+      if (
+        lazyCompanySubtrees[companyNode.value] ||
+        loadingCompanyValues.has(companyNode.value)
+      ) {
+        return
+      }
+      setLoadingCompanyValues((prev) => {
+        const next = new Set(prev)
+        next.add(companyNode.value)
+        return next
+      })
+      try {
+        const result = await getCompanySubtree(companyId)
+        setLazyCompanySubtrees((prev) => ({
+          ...prev,
+          [companyNode.value]: result.data.node,
+        }))
+      } finally {
+        setLoadingCompanyValues((prev) => {
+          const next = new Set(prev)
+          next.delete(companyNode.value)
+          return next
+        })
+      }
+    },
+    [lazyCompanySubtrees, loadingCompanyValues]
+  )
 
   useEffect(() => {
     if (!treeData || selectedNode) return
@@ -150,6 +208,8 @@ export function DataOverview() {
         treeData={displayTreeData}
         value={selectedNode?.value}
         onValueChange={handleDeptChange}
+        onLoadNodeChildren={handleLoadCompanyChildren}
+        loadingNodeValues={loadingCompanyValues}
         disabled={treeQuery.isFetching}
       />
     )

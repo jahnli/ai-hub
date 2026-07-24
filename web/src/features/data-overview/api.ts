@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 
 import type {
   DepartmentTreeResponse,
+  CompanySubtreeResponse,
   DepartmentStat,
   SubDepartmentStat,
   UsageAnalysis,
@@ -22,6 +23,17 @@ export async function getDepartmentTree(): Promise<{
   const res = await api.get<{ success: boolean; data: DepartmentTreeResponse }>(
     '/api/department/tree'
   )
+  return res.data
+}
+
+export async function getCompanySubtree(companyId: number): Promise<{
+  success: boolean
+  data: CompanySubtreeResponse
+}> {
+  const res = await api.get<{
+    success: boolean
+    data: CompanySubtreeResponse
+  }>('/api/department/company-subtree', { params: { company_id: companyId } })
   return res.data
 }
 
