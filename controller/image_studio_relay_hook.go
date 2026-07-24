@@ -68,6 +68,7 @@ func recordRelayImageGeneration(ctx context.Context, input relay.ImageAutoRecord
 		OutputFormat: input.OutputFormat,
 		N:            input.N,
 		DurationMs:   input.DurationMs,
+		UserAgent:    input.UserAgent,
 		Images:       make([]model.ImageStudioAsset, 0, len(input.Images)),
 	}
 

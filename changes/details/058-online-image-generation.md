@@ -44,3 +44,5 @@
 - `controller/image_studio_relay_hook.go` — 下载或解码原生 API 生成图片，写入对象存储和在线生图历史；失败时清理已存文件，并按配置裁剪超限历史。
 - `setting/system_setting/audit_setting.go`、`model/image_studio.go`、`controller/image_studio_storage.go` — 新增原生 API 生图自动保存开关与每用户历史保留上限（1–1000，默认 10），列表和裁剪统一读取管理员配置，超限记录连同对象存储图片一并删除。
 - `web/src/features/system-settings/security/`、`web/src/features/system-settings/types.ts`、`web/src/i18n/locales/*.json` — 安全审计设置新增自动保存开关和历史上限输入，串接默认值、类型、表单校验、回归测试及七语言文案。
+- `model/image_studio.go`、`controller/image_studio_storage.go`、`controller/image_studio_relay_hook.go`、`relay/image_studio_hook.go` — 生图记录采集 User-Agent：ImageStudioGeneration 新增 UserAgent 字段（varchar(512)，随 AutoMigrate 加列），在线生图 UI 存储路径取 `c.Request.UserAgent()`，原生 API 中继路径 ImageAutoRecordInput 携带 `info.ClientApp`；与使用日志同源，仅记录原始 User-Agent 不做客户端名称映射。
+- `web/src/features/security-audit/types.ts`、`web/src/features/security-audit/components/image-audit-request-content-dialog.tsx` — ImageAuditItem 新增可选 user_agent 字段，图片审计请求内容弹框在头像右侧模型/模式/时间行下方单独一行完整展示 User-Agent（break-all 不截断），与使用日志请求内容弹框展示口径一致。

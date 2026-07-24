@@ -38,6 +38,7 @@ type ImageStudioGeneration struct {
 	Quota            int                `json:"quota,omitempty"`
 	PromptTokens     int                `json:"prompt_tokens,omitempty"`
 	CompletionTokens int                `json:"completion_tokens,omitempty"`
+	UserAgent        string             `json:"user_agent,omitempty" gorm:"type:varchar(512)"`
 	Favorite         bool               `json:"favorite" gorm:"index"`
 	ImagesText       string             `json:"-" gorm:"type:text;column:images"`
 	Images           []ImageStudioAsset `json:"images" gorm:"-"`

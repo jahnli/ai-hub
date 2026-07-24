@@ -164,16 +164,24 @@ export function ImageAuditRequestContentDialog(
                 </span>
               )}
             </div>
-            <div className='text-muted-foreground flex min-w-0 flex-1 flex-wrap items-center gap-1 text-sm'>
-              <ModelBadge modelName={item.model} className='font-normal' />
-              <span className='text-muted-foreground/60'>·</span>
-              <Badge variant='secondary' className='font-normal'>
-                {t(imageAuditModeLabelKey(item.mode))}
-              </Badge>
-              <span className='text-muted-foreground/60'>·</span>
-              <span className='tabular-nums'>
-                {dayjs(item.created_at).format('YYYY-MM-DD HH:mm:ss')}
-              </span>
+            <div className='min-w-0 flex-1 space-y-1'>
+              <div className='text-muted-foreground flex min-w-0 flex-wrap items-center gap-1 text-sm'>
+                <ModelBadge modelName={item.model} className='font-normal' />
+                <span className='text-muted-foreground/60'>·</span>
+                <Badge variant='secondary' className='font-normal'>
+                  {t(imageAuditModeLabelKey(item.mode))}
+                </Badge>
+                <span className='text-muted-foreground/60'>·</span>
+                <span className='tabular-nums'>
+                  {dayjs(item.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                </span>
+              </div>
+              {item.user_agent && (
+                <div className='text-muted-foreground flex min-w-0 items-start gap-1 text-sm'>
+                  <span className='shrink-0'>{t('User-Agent')}:</span>
+                  <span className='min-w-0 break-all'>{item.user_agent}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

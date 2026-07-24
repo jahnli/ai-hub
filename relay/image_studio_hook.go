@@ -31,6 +31,7 @@ type ImageAutoRecordInput struct {
 	OutputFormat string
 	N            int
 	DurationMs   int64
+	UserAgent    string // 发起请求的原始 User-Agent，空串表示请求未携带
 	Images       []dto.ImageAutoRecordSource
 }
 
@@ -110,6 +111,7 @@ func scheduleImageAutoRecord(c *gin.Context, info *relaycommon.RelayInfo, reques
 		OutputFormat: rawMessageToString(request.OutputFormat),
 		N:            imageN,
 		DurationMs:   durationMs,
+		UserAgent:    info.ClientApp,
 		Images:       imageSources,
 	}
 

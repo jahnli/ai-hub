@@ -132,6 +132,7 @@ export interface ImageAuditItem {
   quota?: number
   prompt_tokens?: number
   completion_tokens?: number
+  user_agent?: string
   favorite: boolean
   images: ImageAuditAsset[]
 }

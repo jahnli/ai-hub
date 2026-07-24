@@ -106,6 +106,7 @@ func StoreImageStudioImages(c *gin.Context) {
 		OutputFormat: req.OutputFormat,
 		N:            req.N,
 		DurationMs:   req.DurationMs,
+		UserAgent:    c.Request.UserAgent(),
 		Images:       make([]model.ImageStudioAsset, 0, len(req.Images)),
 	}
 	for _, image := range req.Images {
