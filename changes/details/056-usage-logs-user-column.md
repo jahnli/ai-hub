@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-22
+**日期**: 2026-07-24
 
 ## 涉及文件
 
@@ -29,7 +29,8 @@
 - `web/default/src/i18n/locales/zh.json` — 新增 "耗时 / 首字"、"请求内容"、"记录请求内容" 等翻译
 - `model/request_message.go` — 新增 RequestMessage 模型（request_id 关联 logs 表），存储用户提示词和模型参数
 - `controller/request_message.go` — 管理员和普通用户批量查询 request_message 接口；新增 POST body 批量查询解析，避免分页 100 时 request_ids 拼入 URL 导致线上网关 502；新增违规通知接口，校验用户 open_id 后发送飞书安全审计提醒
-- `service/request_message.go` — 中继请求后异步记录用户输入：提取多模态内容为占位符、截断超长对话、序列化参数
+- `service/request_message.go` — 中继请求后异步记录用户输入：提取多模态内容为占位符、截断超长对话、序列化参数；支持从生图与图片编辑请求中提取 Prompt，使使用日志可展示图片请求内容
+- `service/request_message_test.go` — 补充生图 Prompt 记录、首尾空白清理和空提示词跳过的回归测试
 - `service/feishu_department.go` — 新增飞书交互卡片发送与违规通知卡片构造，卡片展示请求时间、模型、Request ID，并提示误告警可忽略
 - `controller/relay.go` — 中继入口调用 RecordRequestMessage 记录请求内容
 - `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由；管理端批量查询接口改为 RootAuth，仅超级管理员可读取任意用户请求内容；补充 /batch 与 /self/batch POST 路由承载批量 request_ids；新增 /notify-violation 违规通知路由

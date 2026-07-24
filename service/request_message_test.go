@@ -3,8 +3,45 @@ package service
 import (
 	"testing"
 
+	"github.com/QuantumNous/new-api/dto"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestExtractImageUserMessages(t *testing.T) {
+	tests := []struct {
+		name     string
+		prompt   string
+		expected []string
+	}{
+		{
+			name:     "records image generation prompt",
+			prompt:   "一只坐在月亮上的橘猫",
+			expected: []string{"一只坐在月亮上的橘猫"},
+		},
+		{
+			name:     "trims surrounding whitespace",
+			prompt:   "  watercolor mountain landscape  ",
+			expected: []string{"watercolor mountain landscape"},
+		},
+		{
+			name:   "skips empty prompt",
+			prompt: "   ",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := &dto.ImageRequest{Prompt: test.prompt}
+
+			messages := extractImageUserMessages(request)
+
+			require.Len(t, messages, len(test.expected))
+			assert.Equal(t, test.expected, messages)
+		})
+	}
+}
 
 func TestFilterUserTextKeepsOnlyCursorUserQuery(t *testing.T) {
 	inputText := `<user_info>

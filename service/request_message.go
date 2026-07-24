@@ -250,6 +250,9 @@ func RecordRequestMessage(relayInfo *relaycommon.RelayInfo, request dto.Request)
 	case *dto.OpenAIResponsesRequest:
 		messages = extractResponsesUserMessages(r)
 		parameters = buildResponsesParameters(r)
+	case *dto.ImageRequest:
+		messages = extractImageUserMessages(r)
+		parameters = map[string]any{}
 	default:
 		return
 	}
@@ -334,6 +337,13 @@ func extractOpenAIUserMessages(r *dto.GeneralOpenAIRequest) []string {
 		}
 	}
 	return messages
+}
+
+func extractImageUserMessages(r *dto.ImageRequest) []string {
+	if prompt := filterUserText(r.Prompt); prompt != "" {
+		return []string{prompt}
+	}
+	return nil
 }
 
 func extractClaudeUserMessages(r *dto.ClaudeRequest) []string {
