@@ -36,8 +36,8 @@ import (
 )
 
 type testResult struct {
-	context     *gin.Context
-	localErr    error
+	context        *gin.Context
+	localErr       error
 	AIGatewayError *types.AIGatewayError
 }
 
@@ -159,7 +159,7 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	cache, err := model.GetUserCache(testUserID)
 	if err != nil {
 		return testResult{
-			localErr:    err,
+			localErr:       err,
 			AIGatewayError: nil,
 		}
 	}
@@ -176,8 +176,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	AIGatewayError := middleware.SetupContextForSelectedChannel(c, channel, testModel)
 	if AIGatewayError != nil {
 		return testResult{
-			context:     c,
-			localErr:    AIGatewayError,
+			context:        c,
+			localErr:       AIGatewayError,
 			AIGatewayError: AIGatewayError,
 		}
 	}
@@ -238,8 +238,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewError(err, types.ErrorCodeGenRelayInfoFailed),
 		}
 	}
@@ -250,8 +250,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	err = attachTestBillingRequestInput(info, request)
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewError(err, types.ErrorCodeJsonMarshalFailed),
 		}
 	}
@@ -259,8 +259,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewError(err, types.ErrorCodeChannelModelMappedError),
 		}
 	}
@@ -274,16 +274,16 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 		apiType != constant.APITypeOpenAI &&
 		apiType != constant.APITypeCodex {
 		return testResult{
-			context:     c,
-			localErr:    fmt.Errorf("responses compaction test only supports openai/codex channels, got api type %d", apiType),
+			context:        c,
+			localErr:       fmt.Errorf("responses compaction test only supports openai/codex channels, got api type %d", apiType),
 			AIGatewayError: types.NewError(fmt.Errorf("unsupported api type: %d", apiType), types.ErrorCodeInvalidApiType),
 		}
 	}
 	adaptor := relay.GetAdaptor(apiType)
 	if adaptor == nil {
 		return testResult{
-			context:     c,
-			localErr:    fmt.Errorf("invalid api type: %d, adaptor is nil", apiType),
+			context:        c,
+			localErr:       fmt.Errorf("invalid api type: %d, adaptor is nil", apiType),
 			AIGatewayError: types.NewError(fmt.Errorf("invalid api type: %d, adaptor is nil", apiType), types.ErrorCodeInvalidApiType),
 		}
 	}
@@ -296,8 +296,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	priceData, err := helper.ModelPriceHelper(c, info, 0, request.GetTokenCountMeta())
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewError(err, types.ErrorCodeModelPriceError, types.ErrOptionWithStatusCode(http.StatusBadRequest)),
 		}
 	}
@@ -313,8 +313,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			convertedRequest, err = adaptor.ConvertEmbeddingRequest(c, info, *embeddingReq)
 		} else {
 			return testResult{
-				context:     c,
-				localErr:    errors.New("invalid embedding request type"),
+				context:        c,
+				localErr:       errors.New("invalid embedding request type"),
 				AIGatewayError: types.NewError(errors.New("invalid embedding request type"), types.ErrorCodeConvertRequestFailed),
 			}
 		}
@@ -324,8 +324,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			convertedRequest, err = adaptor.ConvertImageRequest(c, info, *imageReq)
 		} else {
 			return testResult{
-				context:     c,
-				localErr:    errors.New("invalid image request type"),
+				context:        c,
+				localErr:       errors.New("invalid image request type"),
 				AIGatewayError: types.NewError(errors.New("invalid image request type"), types.ErrorCodeConvertRequestFailed),
 			}
 		}
@@ -335,8 +335,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			convertedRequest, err = adaptor.ConvertRerankRequest(c, info.RelayMode, *rerankReq)
 		} else {
 			return testResult{
-				context:     c,
-				localErr:    errors.New("invalid rerank request type"),
+				context:        c,
+				localErr:       errors.New("invalid rerank request type"),
 				AIGatewayError: types.NewError(errors.New("invalid rerank request type"), types.ErrorCodeConvertRequestFailed),
 			}
 		}
@@ -346,8 +346,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			convertedRequest, err = adaptor.ConvertOpenAIResponsesRequest(c, info, *responseReq)
 		} else {
 			return testResult{
-				context:     c,
-				localErr:    errors.New("invalid response request type"),
+				context:        c,
+				localErr:       errors.New("invalid response request type"),
 				AIGatewayError: types.NewError(errors.New("invalid response request type"), types.ErrorCodeConvertRequestFailed),
 			}
 		}
@@ -365,8 +365,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			convertedRequest, err = adaptor.ConvertOpenAIResponsesRequest(c, info, *req)
 		default:
 			return testResult{
-				context:     c,
-				localErr:    errors.New("invalid response compaction request type"),
+				context:        c,
+				localErr:       errors.New("invalid response compaction request type"),
 				AIGatewayError: types.NewError(errors.New("invalid response compaction request type"), types.ErrorCodeConvertRequestFailed),
 			}
 		}
@@ -376,8 +376,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			convertedRequest, err = adaptor.ConvertOpenAIRequest(c, info, generalReq)
 		} else {
 			return testResult{
-				context:     c,
-				localErr:    errors.New("invalid general request type"),
+				context:        c,
+				localErr:       errors.New("invalid general request type"),
 				AIGatewayError: types.NewError(errors.New("invalid general request type"), types.ErrorCodeConvertRequestFailed),
 			}
 		}
@@ -385,16 +385,16 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewError(err, types.ErrorCodeConvertRequestFailed),
 		}
 	}
 	jsonData, err := common.Marshal(convertedRequest)
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewError(err, types.ErrorCodeJsonMarshalFailed),
 		}
 	}
@@ -413,14 +413,14 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 		if err != nil {
 			if fixedErr, ok := relaycommon.AsParamOverrideReturnError(err); ok {
 				return testResult{
-					context:     c,
-					localErr:    fixedErr,
+					context:        c,
+					localErr:       fixedErr,
 					AIGatewayError: relaycommon.AIGatewayErrorFromParamOverride(fixedErr),
 				}
 			}
 			return testResult{
-				context:     c,
-				localErr:    err,
+				context:        c,
+				localErr:       err,
 				AIGatewayError: types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid),
 			}
 		}
@@ -431,8 +431,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError),
 		}
 	}
@@ -452,8 +452,8 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 				err,
 			))
 			return testResult{
-				context:     c,
-				localErr:    err,
+				context:        c,
+				localErr:       err,
 				AIGatewayError: types.NewOpenAIError(err, types.ErrorCodeBadResponse, http.StatusInternalServerError),
 			}
 		}
@@ -461,16 +461,16 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	usageA, respErr := adaptor.DoResponse(c, httpResp, info)
 	if respErr != nil {
 		return testResult{
-			context:     c,
-			localErr:    respErr,
+			context:        c,
+			localErr:       respErr,
 			AIGatewayError: respErr,
 		}
 	}
 	usage, usageErr := coerceTestUsage(usageA, isStream, info.GetEstimatePromptTokens())
 	if usageErr != nil {
 		return testResult{
-			context:     c,
-			localErr:    usageErr,
+			context:        c,
+			localErr:       usageErr,
 			AIGatewayError: types.NewOpenAIError(usageErr, types.ErrorCodeBadResponseBody, http.StatusInternalServerError),
 		}
 	}
@@ -478,15 +478,15 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	respBody, err := readTestResponseBody(result.Body, isStream)
 	if err != nil {
 		return testResult{
-			context:     c,
-			localErr:    err,
+			context:        c,
+			localErr:       err,
 			AIGatewayError: types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError),
 		}
 	}
 	if bodyErr := validateTestResponseBody(respBody, isStream); bodyErr != nil {
 		return testResult{
-			context:     c,
-			localErr:    bodyErr,
+			context:        c,
+			localErr:       bodyErr,
 			AIGatewayError: types.NewOpenAIError(bodyErr, types.ErrorCodeBadResponseBody, http.StatusInternalServerError),
 		}
 	}
@@ -498,22 +498,24 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	consumedTime := float64(milliseconds) / 1000.0
 	other := buildTestLogOther(c, info, priceData, usage, tieredResult)
 	model.RecordConsumeLog(c, testUserID, model.RecordConsumeLogParams{
-		ChannelId:        channel.Id,
-		PromptTokens:     usage.PromptTokens,
-		CompletionTokens: usage.CompletionTokens,
-		ModelName:        info.OriginModelName,
-		TokenName:        "模型测试",
-		Quota:            quota,
-		Content:          "模型测试",
-		UseTimeSeconds:   int(consumedTime),
-		IsStream:         info.IsStream,
-		Group:            info.UsingGroup,
-		Other:            other,
+		ChannelId:            channel.Id,
+		PromptTokens:         usage.PromptTokens,
+		CompletionTokens:     usage.CompletionTokens,
+		ModelName:            info.OriginModelName,
+		TokenName:            "模型测试",
+		Quota:                quota,
+		Content:              "模型测试",
+		UseTimeSeconds:       int(consumedTime),
+		IsStream:             info.IsStream,
+		Group:                info.UsingGroup,
+		Other:                other,
+		UncachedInputTokens:  usage.PromptTokens,
+		UncachedOutputTokens: usage.CompletionTokens,
 	})
 	common.SysLog(fmt.Sprintf("testing channel #%d, response: \n%s", channel.Id, string(respBody)))
 	return testResult{
-		context:     c,
-		localErr:    nil,
+		context:        c,
+		localErr:       nil,
 		AIGatewayError: nil,
 	}
 }

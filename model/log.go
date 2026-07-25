@@ -462,6 +462,11 @@ type RecordConsumeLogParams struct {
 	IsStream         bool                   `json:"is_stream"`
 	Group            string                 `json:"group"`
 	Other            map[string]interface{} `json:"other"`
+	// 非缓存输入 / 非缓存输出 / 缓存读取 / 缓存写入 token 数（用于数据看板 quota_data）
+	UncachedInputTokens  int `json:"uncached_input_tokens"`
+	UncachedOutputTokens int `json:"uncached_output_tokens"`
+	CacheReadTokens      int `json:"cache_read_tokens"`
+	CacheWriteTokens     int `json:"cache_write_tokens"`
 }
 
 func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams) {
@@ -513,16 +518,20 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	}
 	if common.DataExportEnabled {
 		LogQuotaData(QuotaDataLogParams{
-			UserID:    userId,
-			Username:  username,
-			ModelName: params.ModelName,
-			Quota:     params.Quota,
-			CreatedAt: createdAt,
-			TokenUsed: params.PromptTokens + params.CompletionTokens,
-			UseGroup:  params.Group,
-			TokenID:   params.TokenId,
-			ChannelID: params.ChannelId,
-			NodeName:  common.NodeName,
+			UserID:               userId,
+			Username:             username,
+			ModelName:            params.ModelName,
+			Quota:                params.Quota,
+			CreatedAt:            createdAt,
+			TokenUsed:            params.PromptTokens + params.CompletionTokens,
+			UseGroup:             params.Group,
+			TokenID:              params.TokenId,
+			ChannelID:            params.ChannelId,
+			NodeName:             common.NodeName,
+			UncachedInputTokens:  params.UncachedInputTokens,
+			UncachedOutputTokens: params.UncachedOutputTokens,
+			CacheReadTokens:      params.CacheReadTokens,
+			CacheWriteTokens:     params.CacheWriteTokens,
 		})
 	}
 }

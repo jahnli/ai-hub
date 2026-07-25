@@ -1,6 +1,6 @@
 # 数据看板筛选与权限优化
 
-**日期**: 2026-07-17
+**日期**: 2026-07-25
 
 ## 涉及文件
 
@@ -11,8 +11,11 @@
 - `web/default/src/features/dashboard/types.ts` — QuotaDataItem 补充 display_name 和 avatar_url 字段，支撑用户消耗图表头像与显示名展示。
 - `web/default/src/features/dashboard/components/models/log-stat-cards.tsx` — 均价卡片使用与总费用一致的格式化方式展示为金额/MT，并将统计卡片大屏布局扩展为 6 列。
 - `web/default/src/features/dashboard/lib/filters.ts` — 数据看板默认时间范围从滚动 1 天改为当天 00:00:00 到 23:59:59。
-- `model/usedata.go` — 模型调用分析用户名筛选支持通过用户表匹配 username 与 display_name 后回查 quota_data；用户消耗分组查询关联 users 表返回 display_name 与 avatar_url。
-- `model/usedata_flow.go` — Flow 数据查询复用用户名/display_name 筛选逻辑，保持与模型分析筛选行为一致。
+- `model/log.go` — 消费日志向 quota_data 写入非缓存输入、非缓存输出、缓存读取和缓存写入 Token 分类数据。
+- `model/usedata.go` — 模型调用分析用户名筛选支持通过用户表匹配 username 与 display_name 后回查 quota_data；用户消耗分组查询关联 users 表返回 display_name 与 avatar_url；quota_data 新增四类 Token 字段，并在内存缓存、数据库累加与各维度聚合查询中完整传递。
+- `model/usedata_flow.go` — Flow 数据查询复用用户名/display_name 筛选逻辑，保持与模型分析筛选行为一致；聚合结果新增四类 Token 统计。
+- `service/quota.go` — Realtime 与音频消费结算按上游 usage 拆分非缓存输入、非缓存输出、缓存读取和缓存写入 Token，并写入数据看板日志。
+- `service/text_quota.go` — 文本消费结算兼容 Claude 与 OpenAI usage 语义，计算非缓存输入 Token 并将四类 Token 统计写入数据看板日志。
 - `controller/usedata.go` — 移除普通用户模型分析与 Flow 数据接口的 1 个月时间跨度限制，允许按所选时间范围查询。
 - `web/default/src/i18n/locales/en.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关英文翻译。
 - `web/default/src/i18n/locales/zh.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关中文翻译。

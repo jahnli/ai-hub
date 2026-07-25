@@ -23,6 +23,7 @@ import (
 
 type textQuotaSummary struct {
 	PromptTokens             int
+	UncachedPromptTokens     int
 	CompletionTokens         int
 	TotalTokens              int
 	CacheTokens              int
@@ -228,6 +229,16 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 			}
 		}
 		summary.PromptTokens -= summary.CacheCreationTokens
+	}
+
+	// 非缓存输入：Claude 语义下 PromptTokens 本身已不含缓存 token；
+	// OpenAI 语义下需从 PromptTokens 中扣除缓存读取与缓存写入部分。
+	summary.UncachedPromptTokens = summary.PromptTokens
+	if !summary.IsClaudeUsageSemantic && !legacyClaudeDerived {
+		summary.UncachedPromptTokens -= summary.CacheTokens + cacheWriteTokensTotal(summary)
+	}
+	if summary.UncachedPromptTokens < 0 {
+		summary.UncachedPromptTokens = 0
 	}
 
 	dPromptTokens := decimal.NewFromInt(int64(summary.PromptTokens))
@@ -492,18 +503,22 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	attachQuotaSaturation(ctx, relayInfo, other)
 
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
-		ChannelId:        relayInfo.ChannelId,
-		PromptTokens:     summary.PromptTokens,
-		CompletionTokens: summary.CompletionTokens,
-		ModelName:        logModel,
-		TokenName:        summary.TokenName,
-		Quota:            summary.Quota,
-		Content:          logContent,
-		TokenId:          relayInfo.TokenId,
-		UseTimeSeconds:   int(summary.UseTimeSeconds),
-		IsStream:         relayInfo.IsStream,
-		Group:            relayInfo.UsingGroup,
-		Other:            other,
+		ChannelId:            relayInfo.ChannelId,
+		PromptTokens:         summary.PromptTokens,
+		CompletionTokens:     summary.CompletionTokens,
+		ModelName:            logModel,
+		TokenName:            summary.TokenName,
+		Quota:                summary.Quota,
+		Content:              logContent,
+		TokenId:              relayInfo.TokenId,
+		UseTimeSeconds:       int(summary.UseTimeSeconds),
+		IsStream:             relayInfo.IsStream,
+		Group:                relayInfo.UsingGroup,
+		Other:                other,
+		UncachedInputTokens:  summary.UncachedPromptTokens,
+		UncachedOutputTokens: summary.CompletionTokens,
+		CacheReadTokens:      summary.CacheTokens,
+		CacheWriteTokens:     cacheWriteTokens,
 	})
 	gopool.Go(func() {
 		perfmetrics.RecordRelaySample(relayInfo, true, int64(summary.CompletionTokens))

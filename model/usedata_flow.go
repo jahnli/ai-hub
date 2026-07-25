@@ -20,6 +20,11 @@ type FlowQuotaData struct {
 	TokenUsed   int    `json:"token_used" gorm:"column:token_used"`
 	Count       int    `json:"count" gorm:"column:count"`
 	Quota       int    `json:"quota" gorm:"column:quota"`
+	// 非缓存输入 / 非缓存输出 / 缓存读取 / 缓存写入 token 数
+	UncachedInputTokens  int `json:"uncached_input_tokens" gorm:"column:uncached_input_tokens"`
+	UncachedOutputTokens int `json:"uncached_output_tokens" gorm:"column:uncached_output_tokens"`
+	CacheReadTokens      int `json:"cache_read_tokens" gorm:"column:cache_read_tokens"`
+	CacheWriteTokens     int `json:"cache_write_tokens" gorm:"column:cache_write_tokens"`
 }
 
 func GetFlowQuotaData(startTime int64, endTime int64, username string, userID int, role int) ([]*FlowQuotaData, error) {
@@ -43,7 +48,7 @@ func flowQuotaBaseQuery(startTime int64, endTime int64) *gorm.DB {
 func getSelfFlowQuotaData(startTime int64, endTime int64, userID int) ([]*FlowQuotaData, error) {
 	rows := make([]*FlowQuotaData, 0)
 	err := flowQuotaBaseQuery(startTime, endTime).
-		Select("token_id, use_group, model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
+		Select("token_id, use_group, model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, sum(uncached_input_tokens) as uncached_input_tokens, sum(uncached_output_tokens) as uncached_output_tokens, sum(cache_read_tokens) as cache_read_tokens, sum(cache_write_tokens) as cache_write_tokens").
 		Where("user_id = ?", userID).
 		Group("token_id, use_group, model_name").
 		Order("quota DESC").
@@ -57,7 +62,7 @@ func getSelfFlowQuotaData(startTime int64, endTime int64, userID int) ([]*FlowQu
 func getAdminFlowQuotaData(startTime int64, endTime int64, username string) ([]*FlowQuotaData, error) {
 	rows := make([]*FlowQuotaData, 0)
 	query := flowQuotaBaseQuery(startTime, endTime).
-		Select("user_id, username, use_group, model_name, channel_id, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used")
+		Select("user_id, username, use_group, model_name, channel_id, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, sum(uncached_input_tokens) as uncached_input_tokens, sum(uncached_output_tokens) as uncached_output_tokens, sum(cache_read_tokens) as cache_read_tokens, sum(cache_write_tokens) as cache_write_tokens")
 	if username != "" {
 		filteredQuery, err := applyQuotaDataUsernameFilter(query, username)
 		if err != nil {
@@ -78,7 +83,7 @@ func getAdminFlowQuotaData(startTime int64, endTime int64, username string) ([]*
 func getRootFlowQuotaData(startTime int64, endTime int64, username string) ([]*FlowQuotaData, error) {
 	rows := make([]*FlowQuotaData, 0)
 	query := flowQuotaBaseQuery(startTime, endTime).
-		Select("user_id, username, node_name, token_id, use_group, model_name, channel_id, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used")
+		Select("user_id, username, node_name, token_id, use_group, model_name, channel_id, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, sum(uncached_input_tokens) as uncached_input_tokens, sum(uncached_output_tokens) as uncached_output_tokens, sum(cache_read_tokens) as cache_read_tokens, sum(cache_write_tokens) as cache_write_tokens")
 	if username != "" {
 		filteredQuery, err := applyQuotaDataUsernameFilter(query, username)
 		if err != nil {

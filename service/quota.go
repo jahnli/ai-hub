@@ -242,19 +242,29 @@ func PostWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, mod
 		InjectTieredBillingInfo(other, relayInfo, tieredResult)
 	}
 	attachQuotaSaturation(ctx, relayInfo, other)
+	// Realtime 上游会在 input_token_details.cached_tokens 中报告缓存命中，
+	// 它是 InputTokens 的子集；分类统计时从输入中扣除并记为缓存读取
+	cachedInputTokens := usage.InputTokenDetails.CachedTokens
+	uncachedInputTokens := usage.InputTokens - cachedInputTokens
+	if uncachedInputTokens < 0 {
+		uncachedInputTokens = 0
+	}
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
-		ChannelId:        relayInfo.ChannelId,
-		PromptTokens:     usage.InputTokens,
-		CompletionTokens: usage.OutputTokens,
-		ModelName:        logModel,
-		TokenName:        tokenName,
-		Quota:            quota,
-		Content:          logContent,
-		TokenId:          relayInfo.TokenId,
-		UseTimeSeconds:   int(useTimeSeconds),
-		IsStream:         relayInfo.IsStream,
-		Group:            relayInfo.UsingGroup,
-		Other:            other,
+		ChannelId:            relayInfo.ChannelId,
+		PromptTokens:         usage.InputTokens,
+		CompletionTokens:     usage.OutputTokens,
+		ModelName:            logModel,
+		TokenName:            tokenName,
+		Quota:                quota,
+		Content:              logContent,
+		TokenId:              relayInfo.TokenId,
+		UseTimeSeconds:       int(useTimeSeconds),
+		IsStream:             relayInfo.IsStream,
+		Group:                relayInfo.UsingGroup,
+		Other:                other,
+		UncachedInputTokens:  uncachedInputTokens,
+		UncachedOutputTokens: usage.OutputTokens,
+		CacheReadTokens:      cachedInputTokens,
 	})
 }
 
@@ -365,19 +375,32 @@ func PostAudioConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, u
 		InjectTieredBillingInfo(other, relayInfo, tieredResult)
 	}
 	attachQuotaSaturation(ctx, relayInfo, other)
+	// 带音频 token 的 chat/responses 请求也会走到这里，其 usage 可能携带
+	// prompt cache 命中与缓存写入（OpenAI 语义下均为 PromptTokens 的子集）；
+	// 分类统计时从输入中扣除并分别记为缓存读取 / 缓存写入
+	cachedInputTokens := usage.PromptTokensDetails.CachedTokens
+	cacheWriteTokens := usage.PromptTokensDetails.CacheCreationTokensTotal()
+	uncachedInputTokens := usage.PromptTokens - cachedInputTokens - cacheWriteTokens
+	if uncachedInputTokens < 0 {
+		uncachedInputTokens = 0
+	}
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
-		ChannelId:        relayInfo.ChannelId,
-		PromptTokens:     usage.PromptTokens,
-		CompletionTokens: usage.CompletionTokens,
-		ModelName:        logModel,
-		TokenName:        tokenName,
-		Quota:            quota,
-		Content:          logContent,
-		TokenId:          relayInfo.TokenId,
-		UseTimeSeconds:   int(useTimeSeconds),
-		IsStream:         relayInfo.IsStream,
-		Group:            relayInfo.UsingGroup,
-		Other:            other,
+		ChannelId:            relayInfo.ChannelId,
+		PromptTokens:         usage.PromptTokens,
+		CompletionTokens:     usage.CompletionTokens,
+		ModelName:            logModel,
+		TokenName:            tokenName,
+		Quota:                quota,
+		Content:              logContent,
+		TokenId:              relayInfo.TokenId,
+		UseTimeSeconds:       int(useTimeSeconds),
+		IsStream:             relayInfo.IsStream,
+		Group:                relayInfo.UsingGroup,
+		Other:                other,
+		UncachedInputTokens:  uncachedInputTokens,
+		UncachedOutputTokens: usage.CompletionTokens,
+		CacheReadTokens:      cachedInputTokens,
+		CacheWriteTokens:     cacheWriteTokens,
 	})
 	gopool.Go(func() {
 		perfmetrics.RecordRelaySample(relayInfo, true, int64(usage.CompletionTokens))
