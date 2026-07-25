@@ -963,6 +963,9 @@ func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64,
 	return total, nil
 }
 
+// quotaDataTotalTokensExpr 数据总览的总 Token 数：按 quota_data 四种类型 Token 相加
+const quotaDataTotalTokensExpr = "COALESCE(SUM(uncached_input_tokens + uncached_output_tokens + cache_read_tokens + cache_write_tokens), 0)"
+
 // UserStatRow holds per-user aggregated log data, used by batch department queries.
 type UserStatRow struct {
 	UserID      int   `gorm:"column:user_id"`
@@ -979,7 +982,7 @@ func GetUserStatsBatch(userIds []int, startTimestamp, endTimestamp int64) ([]Use
 	var rows []UserStatRow
 	tx := DB.Table("quota_data").
 		Select(`user_id,
-			COALESCE(SUM(token_used), 0) as total_tokens,
+			` + quotaDataTotalTokensExpr + ` as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
@@ -1024,7 +1027,7 @@ func GetUserModelStatsBatch(userIds []int, startTimestamp, endTimestamp int64) (
 		Select(`user_id,
 			model_name,
 			COALESCE(SUM(quota), 0) as total_quota,
-			COALESCE(SUM(token_used), 0) as total_tokens,
+			` + quotaDataTotalTokensExpr + ` as total_tokens,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds).
 		Where("model_name != ''")
@@ -1051,7 +1054,7 @@ func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int)
 	var rows []ModelStatRow
 	tx := DB.Table("quota_data").
 		Select(`model_name,
-			COALESCE(SUM(token_used), 0) as total_tokens,
+			` + quotaDataTotalTokensExpr + ` as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds).
@@ -1098,7 +1101,7 @@ func GetDailyStats(userIds []int, startTimestamp, endTimestamp int64) ([]DailySt
 	var rows []DailyStatRow
 	tx := DB.Table("quota_data").
 		Select(dateExpr+` as date,
-			COALESCE(SUM(token_used), 0) as total_tokens,
+			`+quotaDataTotalTokensExpr+` as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
@@ -1159,7 +1162,7 @@ func GetModelDailyStatsForModels(userIds []int, startTimestamp, endTimestamp int
 	var rows []ModelDailyStatRow
 	tx := DB.Table("quota_data").
 		Select(dateExpr+` as date, model_name,
-			COALESCE(SUM(token_used), 0) as total_tokens`).
+			`+quotaDataTotalTokensExpr+` as total_tokens`).
 		Where("user_id IN ?", userIds).
 		Where("model_name IN ?", modelNames)
 
@@ -1179,6 +1182,10 @@ func GetModelDailyStatsForModels(userIds []int, startTimestamp, endTimestamp int
 // DepartmentStat holds aggregated statistics for a department.
 type DepartmentStat struct {
 	TotalTokens                int64      `json:"total_tokens"`
+	UncachedInputTokens        int64      `json:"uncached_input_tokens"`
+	UncachedOutputTokens       int64      `json:"uncached_output_tokens"`
+	CacheReadTokens            int64      `json:"cache_read_tokens"`
+	CacheWriteTokens           int64      `json:"cache_write_tokens"`
 	TotalQuota                 int64      `json:"total_quota"`
 	TotalAmountCNY             float64    `json:"total_amount_cny"`
 	TotalRequests              int64      `json:"total_requests"`
@@ -1209,14 +1216,22 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activ
 	}
 
 	type quotaResult struct {
-		TotalTokens int64 `gorm:"column:total_tokens"`
-		TotalQuota  int64 `gorm:"column:total_quota"`
-		TotalReqs   int64 `gorm:"column:total_reqs"`
+		TotalTokens          int64 `gorm:"column:total_tokens"`
+		UncachedInputTokens  int64 `gorm:"column:uncached_input_tokens"`
+		UncachedOutputTokens int64 `gorm:"column:uncached_output_tokens"`
+		CacheReadTokens      int64 `gorm:"column:cache_read_tokens"`
+		CacheWriteTokens     int64 `gorm:"column:cache_write_tokens"`
+		TotalQuota           int64 `gorm:"column:total_quota"`
+		TotalReqs            int64 `gorm:"column:total_reqs"`
 	}
 
 	var qr quotaResult
 	tx := DB.Table("quota_data").
-		Select(`COALESCE(SUM(token_used), 0) as total_tokens,
+		Select(quotaDataTotalTokensExpr + ` as total_tokens,
+			COALESCE(SUM(uncached_input_tokens), 0) as uncached_input_tokens,
+			COALESCE(SUM(uncached_output_tokens), 0) as uncached_output_tokens,
+			COALESCE(SUM(cache_read_tokens), 0) as cache_read_tokens,
+			COALESCE(SUM(cache_write_tokens), 0) as cache_write_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
@@ -1272,6 +1287,10 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activ
 
 	stat := &DepartmentStat{
 		TotalTokens:                qr.TotalTokens,
+		UncachedInputTokens:        qr.UncachedInputTokens,
+		UncachedOutputTokens:       qr.UncachedOutputTokens,
+		CacheReadTokens:            qr.CacheReadTokens,
+		CacheWriteTokens:           qr.CacheWriteTokens,
 		TotalQuota:                 qr.TotalQuota,
 		TotalRequests:              qr.TotalReqs,
 		TotalErrors:                er.TotalErrors,

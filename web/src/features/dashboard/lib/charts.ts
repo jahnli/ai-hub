@@ -236,7 +236,11 @@ export function processChartData(
     const model = item.model_name || 'Unknown'
     const quota = Number(item.quota) || 0
     const count = Number(item.count) || 0
-    const tokens = Number(item.token_used) || 0
+    const tokens =
+      (Number(item.uncached_input_tokens) || 0) +
+      (Number(item.uncached_output_tokens) || 0) +
+      (Number(item.cache_read_tokens) || 0) +
+      (Number(item.cache_write_tokens) || 0)
 
     // Aggregate by time and model
     if (!timeModelMap.has(timeKey)) {

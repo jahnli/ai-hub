@@ -40,7 +40,12 @@ export function calculateDashboardStats(data: QuotaDataItem[]) {
     (acc, item) => ({
       totalQuota: acc.totalQuota + (Number(item.quota) || 0),
       totalCount: acc.totalCount + (Number(item.count) || 0),
-      totalTokens: acc.totalTokens + (Number(item.token_used) || 0),
+      totalTokens:
+        acc.totalTokens +
+        (Number(item.uncached_input_tokens) || 0) +
+        (Number(item.uncached_output_tokens) || 0) +
+        (Number(item.cache_read_tokens) || 0) +
+        (Number(item.cache_write_tokens) || 0),
     }),
     { totalQuota: 0, totalCount: 0, totalTokens: 0 }
   )

@@ -165,10 +165,10 @@ func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *tes
 	}
 	require.NoError(t, db.Create(&users).Error)
 	require.NoError(t, db.Create([]model.QuotaData{
-		{UserID: users[0].Id, Username: users[0].Username, ModelName: "model-a", CreatedAt: startTimestamp + 10, TokenUsed: 200, Count: 3, Quota: 1_000},
-		{UserID: users[0].Id, Username: users[0].Username, ModelName: "model-b", CreatedAt: startTimestamp + 20, TokenUsed: 100, Count: 2, Quota: 500},
-		{UserID: users[1].Id, Username: users[1].Username, ModelName: "model-a", CreatedAt: startTimestamp + 30, TokenUsed: 50, Count: 1, Quota: 250},
-		{UserID: users[2].Id, Username: users[2].Username, ModelName: "model-c", CreatedAt: startTimestamp + 40, TokenUsed: 25, Count: 1, Quota: 100},
+		{UserID: users[0].Id, Username: users[0].Username, ModelName: "model-a", CreatedAt: startTimestamp + 10, TokenUsed: 200, UncachedInputTokens: 120, UncachedOutputTokens: 60, CacheReadTokens: 15, CacheWriteTokens: 5, Count: 3, Quota: 1_000},
+		{UserID: users[0].Id, Username: users[0].Username, ModelName: "model-b", CreatedAt: startTimestamp + 20, TokenUsed: 100, UncachedInputTokens: 70, UncachedOutputTokens: 30, Count: 2, Quota: 500},
+		{UserID: users[1].Id, Username: users[1].Username, ModelName: "model-a", CreatedAt: startTimestamp + 30, TokenUsed: 50, UncachedInputTokens: 20, UncachedOutputTokens: 10, CacheReadTokens: 20, Count: 1, Quota: 250},
+		{UserID: users[2].Id, Username: users[2].Username, ModelName: "model-c", CreatedAt: startTimestamp + 40, TokenUsed: 25, UncachedInputTokens: 15, UncachedOutputTokens: 10, Count: 1, Quota: 100},
 	}).Error)
 	require.NoError(t, db.Create([]model.UserSubscription{
 		{UserId: users[0].Id, AmountTotal: 5_000, AmountUsed: 2_000, Status: "active"},

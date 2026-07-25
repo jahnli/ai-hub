@@ -156,7 +156,11 @@ function isFlowNodeKind(value: unknown): value is FlowNodeKind {
 function rowMetrics(row: FlowQuotaDataItem): FlowMetrics {
   return {
     quota: numberValue(row.quota),
-    tokens: numberValue(row.token_used),
+    tokens:
+      numberValue(row.uncached_input_tokens) +
+      numberValue(row.uncached_output_tokens) +
+      numberValue(row.cache_read_tokens) +
+      numberValue(row.cache_write_tokens),
     requests: numberValue(row.count),
   }
 }

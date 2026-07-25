@@ -78,6 +78,10 @@ export interface UsageAnalysis {
 
 export interface DepartmentStat {
   total_tokens: number
+  uncached_input_tokens?: number
+  uncached_output_tokens?: number
+  cache_read_tokens?: number
+  cache_write_tokens?: number
   total_quota: number
   total_amount_cny: number
   total_requests: number

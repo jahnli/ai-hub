@@ -1,6 +1,6 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 07-24（最后更新 07-24）
+**日期**: 2026-06-25 ~ 07-25（最后更新 07-25）
 
 ## 涉及文件
 
@@ -134,3 +134,11 @@
 
 - `service/data_overview_company.go` — 新增 `overviewUserStats` 与 `loadOverviewUserStats`，在 `GetDepartmentOverview` 内先并行预加载一次注册用户 `GetUserStatsBatch`；`buildCompanySubDepartmentStats`、`buildCompanyDepartmentUsers`、`buildCompanyDepartmentUserRankings` 改为接收共享统计并复用，独立接口路径仍可传 `nil` 自行加载；消除 overview 聚合内对同一用户集合的重复日志扫表
 - `service/data_overview_company_test.go` — 覆盖共享用户统计只查询一次、子部门/用户列表/排行复用同一批结果，以及独立路径仍可自行加载的行为
+
+### 2026-07-25 四类 Token 统计口径与明细
+
+- `model/log.go` — 用户、模型、每日趋势和部门统计的总 Token 统一改为非缓存输入、非缓存输出、缓存读取与缓存写入四类字段相加；部门统计响应同时下发四类 Token 明细
+- `service/data_overview_company_test.go` — overview 共享统计回归数据补充四类 Token，确保聚合结果不再依赖旧 `token_used` 字段
+- `web/src/features/data-overview/types.ts` — 部门统计类型补充四类 Token 明细字段
+- `web/src/features/data-overview/components/department-stats-cards.tsx` — 总 Token 卡片 Tooltip 展示四类 Token 数值与口径说明
+- `web/src/i18n/locales/en.json`、`web/src/i18n/locales/zh.json`、`web/src/i18n/locales/zh-TW.json`、`web/src/i18n/locales/fr.json`、`web/src/i18n/locales/ja.json`、`web/src/i18n/locales/ru.json`、`web/src/i18n/locales/vi.json` — 补齐四类 Token 名称与说明文案

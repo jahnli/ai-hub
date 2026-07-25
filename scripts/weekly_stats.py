@@ -173,16 +173,18 @@ def extract_token_categories(prompt_tokens: Any, completion_tokens: Any, other: 
     cache_creation = first_token_count(other, "cache_creation_tokens")
     cache_creation_5m = first_token_count(other, "cache_creation_tokens_5m")
     cache_creation_1h = first_token_count(other, "cache_creation_tokens_1h")
-    cache_output = max(
-        cache_write,
-        cache_creation,
-        cache_creation_5m + cache_creation_1h,
-    )
+    split_cache_creation = cache_creation_5m + cache_creation_1h
+    if "cache_write_tokens" in other:
+        cache_output = cache_write
+    else:
+        cache_output = max(cache_creation, split_cache_creation)
 
     semantic = str(other.get("usage_semantic") or "").strip().lower()
-    anthropic_semantic = semantic == "anthropic"
-    if not semantic and other.get("claude") is True and (cache_creation_5m or cache_creation_1h):
-        anthropic_semantic = True
+    anthropic_semantic = (
+        semantic == "anthropic"
+        or other.get("claude") is True
+        or (not semantic and split_cache_creation > 0)
+    )
 
     input_tokens = prompt
     if not anthropic_semantic:

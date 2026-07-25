@@ -39,6 +39,8 @@ const rows: FlowQuotaDataItem[] = [
     model_name: 'gpt-4.1',
     quota: 100,
     token_used: 40,
+    uncached_input_tokens: 25,
+    uncached_output_tokens: 15,
     count: 2,
   },
   {
@@ -53,6 +55,8 @@ const rows: FlowQuotaDataItem[] = [
     model_name: 'gpt-4.1',
     quota: 50,
     token_used: 20,
+    uncached_input_tokens: 14,
+    uncached_output_tokens: 6,
     count: 1,
   },
   {
@@ -67,6 +71,8 @@ const rows: FlowQuotaDataItem[] = [
     model_name: 'claude-4-sonnet',
     quota: 70,
     token_used: 30,
+    uncached_input_tokens: 20,
+    uncached_output_tokens: 10,
     count: 3,
   },
 ]
@@ -81,6 +87,8 @@ const topLimitRows: FlowQuotaDataItem[] = [
     model_name: 'model-a',
     quota: 100,
     token_used: 1_000,
+    uncached_input_tokens: 600,
+    uncached_output_tokens: 400,
     count: 1,
   },
   {
@@ -92,6 +100,8 @@ const topLimitRows: FlowQuotaDataItem[] = [
     model_name: 'model-b',
     quota: 80,
     token_used: 10,
+    uncached_input_tokens: 6,
+    uncached_output_tokens: 4,
     count: 20,
   },
   {
@@ -103,6 +113,8 @@ const topLimitRows: FlowQuotaDataItem[] = [
     model_name: 'model-c',
     quota: 10,
     token_used: 2_000,
+    uncached_input_tokens: 1_200,
+    uncached_output_tokens: 800,
     count: 5,
   },
 ]

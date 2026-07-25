@@ -31,6 +31,10 @@ export interface QuotaDataItem {
   model_name?: string
   created_at: number
   token_used?: number
+  uncached_input_tokens?: number
+  uncached_output_tokens?: number
+  cache_read_tokens?: number
+  cache_write_tokens?: number
   count?: number
   quota?: number
 }
@@ -46,6 +50,10 @@ export interface FlowQuotaDataItem {
   channel_name?: string
   model_name?: string
   token_used?: number
+  uncached_input_tokens?: number
+  uncached_output_tokens?: number
+  cache_read_tokens?: number
+  cache_write_tokens?: number
   count?: number
   quota?: number
 }

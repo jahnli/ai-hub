@@ -23,3 +23,11 @@
 - `web/default/src/i18n/locales/ja.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关日文翻译。
 - `web/default/src/i18n/locales/ru.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关俄文翻译。
 - `web/default/src/i18n/locales/vi.json` — 新增用户名称、用户消耗等文案并清理数据看板筛选相关越南文翻译。
+
+## 四类 Token 总量口径统一
+
+- `web/src/features/dashboard/lib/stats.ts` — 汇总统计卡片的总 Token 改为非缓存输入、非缓存输出、缓存读取与缓存写入四类字段相加
+- `web/src/features/dashboard/lib/charts.ts` — 模型调用分析图表统一使用四类 Token 合计值
+- `web/src/features/dashboard/lib/flow.ts` — Flow 节点 Token 指标统一使用四类 Token 合计值
+- `web/src/features/dashboard/types.ts` — 数据看板与 Flow 数据类型补充四类 Token 字段
+- `web/src/features/dashboard/lib/flow.test.ts` — Flow 回归数据补充四类 Token 明细，保护新统计口径
