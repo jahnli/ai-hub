@@ -119,6 +119,20 @@ type User struct {
 	AdminPermissions  map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
 }
 
+// GetPrimaryDepartmentID returns the first department ID stored by directory sync.
+func (user *User) GetPrimaryDepartmentID() string {
+	if user == nil || user.Departments == "" || user.Departments == "[]" {
+		return ""
+	}
+	var departments []struct {
+		DepartmentID string `json:"department_id"`
+	}
+	if err := common.UnmarshalJsonStr(user.Departments, &departments); err != nil || len(departments) == 0 {
+		return ""
+	}
+	return departments[0].DepartmentID
+}
+
 // GetLeaderDepartmentIDs returns department IDs where the user's OpenId is listed as leader_id.
 func (user *User) GetLeaderDepartmentIDs() []string {
 	if user.OpenId == "" || user.Departments == "" || user.Departments == "[]" {

@@ -100,6 +100,69 @@ func TestGetDepartmentOverviewReturnsCompleteEmptyCompanySnapshot(t *testing.T) 
 	assert.Equal(t, int32(1), userQueryCount.Load())
 }
 
+func TestMatchOverviewDepartmentMembersUsesFirstDepartmentID(t *testing.T) {
+	previousDB := model.DB
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.User{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		_ = sqlDB.Close()
+	})
+
+	users := []*model.User{
+		{
+			Username:    "primary-department-user",
+			Password:    "password",
+			Company:     "department-match-company",
+			OpenId:      "primary-open-id",
+			Departments: `[{"department_id":"target"},{"department_id":"secondary"}]`,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "secondary-department-user",
+			Password:    "password",
+			Company:     "department-match-company",
+			OpenId:      "secondary-open-id",
+			Departments: `[{"department_id":"other"},{"department_id":"target"}]`,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "future-department-user",
+			Password:    "password",
+			Company:     "department-match-company",
+			OpenId:      "future-open-id",
+			Departments: `[{"department_id":"child"}]`,
+			CreatedAt:   300,
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	matchedMembers, matchedUsers, err := matchOverviewDepartmentMembers(
+		"department-match-company",
+		[]overviewMember{
+			{OpenID: "primary-open-id"},
+			{OpenID: "secondary-open-id"},
+			{OpenID: "future-open-id"},
+			{OpenID: "unregistered-open-id"},
+		},
+		[]string{"target", "child"},
+		200,
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, []overviewMember{
+		{OpenID: "primary-open-id"},
+		{OpenID: "future-open-id"},
+		{OpenID: "unregistered-open-id"},
+	}, matchedMembers)
+	require.Len(t, matchedUsers, 1)
+	assert.Equal(t, "primary-open-id", matchedUsers[0].OpenId)
+}
+
 func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *testing.T) {
 	previousDB, previousLogDB := model.DB, model.LOG_DB
 	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers
@@ -144,6 +207,7 @@ func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *tes
 			DisplayName: "Shared Stats User 1",
 			Company:     company.Name,
 			OpenId:      "open-id-1",
+			Departments: `[{"department_id":"department-1"}]`,
 			CreatedAt:   startTimestamp - 1,
 		},
 		{
@@ -152,6 +216,7 @@ func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *tes
 			DisplayName: "Shared Stats User 2",
 			Company:     company.Name,
 			OpenId:      "open-id-2",
+			Departments: `[{"department_id":"department-1"}]`,
 			CreatedAt:   startTimestamp - 1,
 		},
 		{
@@ -160,6 +225,7 @@ func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *tes
 			DisplayName: "Shared Stats User 3",
 			Company:     company.Name,
 			OpenId:      "open-id-3",
+			Departments: `[{"department_id":"0"}]`,
 			CreatedAt:   startTimestamp - 1,
 		},
 	}

@@ -142,3 +142,9 @@
 - `web/src/features/data-overview/types.ts` — 部门统计类型补充四类 Token 明细字段
 - `web/src/features/data-overview/components/department-stats-cards.tsx` — 总 Token 卡片 Tooltip 展示四类 Token 数值与口径说明
 - `web/src/i18n/locales/en.json`、`web/src/i18n/locales/zh.json`、`web/src/i18n/locales/zh-TW.json`、`web/src/i18n/locales/fr.json`、`web/src/i18n/locales/ja.json`、`web/src/i18n/locales/ru.json`、`web/src/i18n/locales/vi.json` — 补齐四类 Token 名称与说明文案
+
+### 2026-07-25 人员主归属部门匹配
+
+- `model/user.go` — 新增主归属部门解析，固定读取 `users.departments` JSON 数组中首个对象的 `department_id`
+- `service/data_overview_company.go` — 数据总览的平台成员匹配增加主归属部门校验，仅当 `open_id`、公司及首个 `department_id` 均匹配当前部门或其下级范围时才计入注册用户和部门统计，避免多部门人员重复归属
+- `service/data_overview_company_test.go` — 覆盖只认首个部门 ID、忽略后续部门命中、保留真实未注册成员及按统计结束时间判断注册状态的回归场景

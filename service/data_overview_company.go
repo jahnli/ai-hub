@@ -407,11 +407,7 @@ func resolveCompanyOverviewAudience(companyID int, departmentValue string, userI
 	if err != nil {
 		return nil, true, err
 	}
-	openIDs := make([]string, 0, len(members))
-	for _, member := range members {
-		openIDs = append(openIDs, member.OpenID)
-	}
-	users, err := queryOverviewUsers(company.Name, openIDs, registeredBefore)
+	members, users, err := matchOverviewDepartmentMembers(company.Name, members, departmentIDs, registeredBefore)
 	if err != nil {
 		return nil, true, err
 	}
@@ -478,6 +474,46 @@ func queryOverviewUsers(companyName string, openIDs []string, registeredBefore i
 		}
 	}
 	return exactUsers, nil
+}
+
+func matchOverviewDepartmentMembers(companyName string, members []overviewMember, departmentIDs []string, registeredBefore int64) ([]overviewMember, []*model.User, error) {
+	openIDs := make([]string, 0, len(members))
+	for _, member := range members {
+		openIDs = append(openIDs, member.OpenID)
+	}
+	users, err := queryOverviewUsers(companyName, openIDs, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	allowedDepartmentIDs := make(map[string]bool, len(departmentIDs))
+	for _, departmentID := range departmentIDs {
+		allowedDepartmentIDs[departmentID] = true
+	}
+	usersByOpenID := make(map[string]*model.User, len(users))
+	for _, user := range users {
+		if user.OpenId != "" {
+			usersByOpenID[user.OpenId] = user
+		}
+	}
+
+	matchedMembers := make([]overviewMember, 0, len(members))
+	matchedUsers := make([]*model.User, 0, len(users))
+	for _, member := range members {
+		user := usersByOpenID[member.OpenID]
+		if user == nil {
+			matchedMembers = append(matchedMembers, member)
+			continue
+		}
+		if !allowedDepartmentIDs[user.GetPrimaryDepartmentID()] {
+			continue
+		}
+		matchedMembers = append(matchedMembers, member)
+		if registeredBefore <= 0 || user.CreatedAt <= registeredBefore {
+			matchedUsers = append(matchedUsers, user)
+		}
+	}
+	return matchedMembers, matchedUsers, nil
 }
 
 func userIDsFromUsers(users []*model.User) []int {
@@ -800,11 +836,12 @@ func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overv
 				errs[index] = childErr
 				return
 			}
-			openIDs := make([]string, 0, len(members))
-			for _, member := range members {
-				openIDs = append(openIDs, member.OpenID)
-			}
-			users, childErr := queryOverviewUsers(audience.company.Name, openIDs, req.EndTimestamp)
+			members, users, childErr := matchOverviewDepartmentMembers(
+				audience.company.Name,
+				members,
+				departmentIDs,
+				req.EndTimestamp,
+			)
 			if childErr != nil {
 				errs[index] = childErr
 				return
