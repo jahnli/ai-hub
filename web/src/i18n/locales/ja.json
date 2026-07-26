@@ -2526,6 +2526,7 @@
     "Include sub-department detail sheets": "サブ部門の詳細シートを含める",
     "Include user list sheet": "ユーザー一覧シートを含める",
     "Includes request rules": "リクエストルールを含む",
+    "Includes tool-call surcharge": "ツール呼び出しの追加料金を含む",
     "Including failed requests, 0 = unlimited": "失敗したリクエストを含む、0 = 無制限",
     "Incoming path": "受信パス",
     "Incoming path is required": "受信パスは必須です",

@@ -73,6 +73,7 @@ import {
 import type { LogOtherData } from '../../types'
 import { DetailsDialog } from '../dialogs/details-dialog'
 import { RequestContentDialog } from '../dialogs/request-content-dialog'
+import { LogCostDisplay } from '../log-cost-display'
 import { ModelBadge } from '../model-badge'
 import {
   parseUserMessages,
@@ -118,12 +119,6 @@ function getChannelBadgeVariant(
   if (generatedColor === 'red') return 'orange'
   if (generatedColor === 'slate') return 'neutral'
   return generatedColor
-}
-
-function splitQuotaDisplay(value: string): { prefix: string; amount: string } {
-  const match = value.match(/^([^0-9+\-.,\s]+)(.+)$/)
-  if (!match) return { prefix: '', amount: value }
-  return { prefix: match[1], amount: match[2] }
 }
 
 function buildDetailSegments(
@@ -700,38 +695,9 @@ export function useCommonLogsColumns(
 
         const quota = row.getValue('quota') as number
         const other = parseLogOther(log.other)
-        const isSubscription = other?.billing_source === 'subscription'
-
-        const quotaStr = formatLogQuota(quota)
-        const quotaDisplay = splitQuotaDisplay(quotaStr)
-        const quotaNode = (
-          <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 [font-family:var(--font-body)] text-sm leading-none font-normal tabular-nums'>
-            {quotaDisplay.prefix && (
-              <span className='mr-1'>{quotaDisplay.prefix}</span>
-            )}
-            <span>{quotaDisplay.amount}</span>
-          </span>
-        )
-
-        if (isSubscription) {
-          return (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger render={<div className='w-fit cursor-help' />}>
-                  {quotaNode}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <span>{t('Subscription')}</span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )
-        }
-
-        return <div className='flex flex-col gap-0.5'>{quotaNode}</div>
+        return <LogCostDisplay quota={quota} other={other} />
       },
-      size: 115,
-      maxSize: 130,
+      size: 130,
     }
   )
 
