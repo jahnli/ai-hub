@@ -55,6 +55,7 @@ import {
 import {
   channelsQueryKeys,
   aggregateChannelsByTag,
+  getChannelTableRowId,
   isTagAggregateRow,
   getChannelTypeIcon,
   getChannelTypeLabel,
@@ -331,6 +332,7 @@ export function ChannelsTable() {
     onColumnFiltersChange: handleColumnFiltersChange,
     onPaginationChange,
     onGlobalFilterChange,
+    getRowId: getChannelTableRowId,
     getSubRows: (row: Channel & { children?: Channel[] }) => row.children,
     manualPagination: true,
     manualSorting: true,
@@ -470,6 +472,7 @@ export function ChannelsTable() {
                   variant='ghost'
                   size='icon'
                   onClick={() => setSensitiveVisible(!sensitiveVisible)}
+                  disabled={demoMode}
                   aria-label={sensitiveVisible ? t('Hide') : t('Show')}
                   className='text-muted-foreground hover:text-foreground size-8'
                 />
