@@ -1,6 +1,6 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 07-25（最后更新 07-25）
+**日期**: 2026-06-25 ~ 07-28（最后更新 07-28）
 
 ## 涉及文件
 
@@ -148,3 +148,8 @@
 - `model/user.go` — 新增主归属部门解析，固定读取 `users.departments` JSON 数组中首个对象的 `department_id`
 - `service/data_overview_company.go` — 数据总览的平台成员匹配增加主归属部门校验，仅当 `open_id`、公司及首个 `department_id` 均匹配当前部门或其下级范围时才计入注册用户和部门统计，避免多部门人员重复归属
 - `service/data_overview_company_test.go` — 覆盖只认首个部门 ID、忽略后续部门命中、保留真实未注册成员及按统计结束时间判断注册状态的回归场景
+
+### 2026-07-28 管理员跨公司查看用户统计
+
+- `controller/department.go` — 用户统计相关接口允许管理员在未传 `company_id` 时继续请求；BP、部门负责人及普通用户仍返回公司 ID 必填错误
+- `service/data_overview_company.go` — 单用户统计授权允许管理员省略公司范围并查看全局用户，其他角色继续通过公司组织树校验目标用户可见性

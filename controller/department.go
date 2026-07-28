@@ -346,5 +346,16 @@ func validateDepartmentCompanyID(c *gin.Context, companyID int) bool {
 }
 
 func validateDepartmentUserCompanyID(c *gin.Context, companyID int) bool {
-	return validateDepartmentCompanyID(c, companyID)
+	if companyID <= 0 {
+		userRole := c.GetInt("role")
+		if userRole >= common.RoleAdminUser {
+			return true
+		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": service.ErrCompanyIDRequired.Error(),
+		})
+		return false
+	}
+	return true
 }

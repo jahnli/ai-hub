@@ -524,8 +524,15 @@ func userIDsFromUsers(users []*model.User) []int {
 	return ids
 }
 
+// authorizeCompanyOverviewUser checks whether the requester may read statistics for
+// targetUserID. Admins manage every user from the global user list, so they are allowed
+// to omit the company scope. Department leaders and BP roles stay bound to a company,
+// because their visibility is derived from that company's directory tree.
 func authorizeCompanyOverviewUser(companyID int, departmentID string, targetUserID int, requestUserID int, requestUserRole int) error {
 	if companyID <= 0 {
+		if requestUserRole >= common.RoleAdminUser {
+			return nil
+		}
 		return ErrCompanyIDRequired
 	}
 	audience, _, err := resolveCompanyOverviewAudience(companyID, departmentID, requestUserID, requestUserRole, 0)
