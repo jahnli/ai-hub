@@ -692,6 +692,7 @@ def print_report(
     stats: list[ModelStats],
     department_name: str | None = None,
     per_capita_million_tokens: float | None = None,
+    department_label: str = "二级部门",
 ) -> None:
     input_tokens = sum(item.input_tokens for item in stats)
     output_tokens = sum(item.output_tokens for item in stats)
@@ -729,7 +730,7 @@ def print_report(
     total_output_tokens = output_tokens + cache_output_tokens
     input_output_ratio = total_input_tokens / total_output_tokens if total_output_tokens else 0.0
     cache_hit_rate = cache_input_tokens / total_input_tokens * 100 if total_input_tokens else 0.0
-    department_line = f"\n二级部门：{department_name}" if department_name else ""
+    department_line = f"\n{department_label}：{department_name}" if department_name else ""
     per_capita_text = (
         f"，人均 Token 量 {per_capita_million_tokens:,.2f} 百万"
         if per_capita_million_tokens is not None
