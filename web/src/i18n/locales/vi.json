@@ -5454,7 +5454,7 @@
     "Username or Email": "Tên đăng nhập hoặc Email",
     "Username or password is empty": "Username or password is empty",
     "Users": "Người dùng",
-    "Users / Share": "Người dùng / Tỷ lệ",
+    "Users / Share": "Người dùng / Tỷ lệ sử dụng",
     "Users and their share during the selected period": "Số lượng và tỷ lệ người dùng trong khoảng thời gian đã chọn",
     "Users call the model on the left. The platform forwards the request to the upstream model on the right.": "Người dùng gọi mô hình bên trái. Nền tảng chuyển tiếp yêu cầu đến mô hình thượng nguồn bên phải.",
     "Users in {{group}}": "Người dùng trong {{group}}",

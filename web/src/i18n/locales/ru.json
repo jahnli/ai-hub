@@ -5454,7 +5454,7 @@
     "Username or Email": "Имя пользователя или Email",
     "Username or password is empty": "Username or password is empty",
     "Users": "Пользователи",
-    "Users / Share": "Пользователи / Доля",
+    "Users / Share": "Пользователи / Процент использования",
     "Users and their share during the selected period": "Количество и доля пользователей за выбранный период",
     "Users call the model on the left. The platform forwards the request to the upstream model on the right.": "Пользователи вызывают модель слева. Платформа перенаправляет запрос вышестоящей модели справа.",
     "Users in {{group}}": "Пользователи группы {{group}}",

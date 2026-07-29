@@ -5454,7 +5454,7 @@
     "Username or Email": "用戶名或電郵",
     "Username or password is empty": "Username or password is empty",
     "Users": "用戶",
-    "Users / Share": "使用人數 / 佔比",
+    "Users / Share": "使用人數 / 使用率",
     "Users and their share during the selected period": "所選時段內的使用人數及佔比",
     "Users call the model on the left. The platform forwards the request to the upstream model on the right.": "用戶呼叫左側的模型。平台將請求轉發給右側的上游模型。",
     "Users in {{group}}": "{{group}} 分組的用戶",

@@ -5454,7 +5454,7 @@
     "Username or Email": "Nom d'utilisateur ou e-mail",
     "Username or password is empty": "Username or password is empty",
     "Users": "Utilisateurs",
-    "Users / Share": "Utilisateurs / Part",
+    "Users / Share": "Utilisateurs / Taux d’utilisation",
     "Users and their share during the selected period": "Nombre et part des utilisateurs sur la période sélectionnée",
     "Users call the model on the left. The platform forwards the request to the upstream model on the right.": "Les utilisateurs appellent le modèle à gauche. La plateforme transmet la requête au modèle amont à droite.",
     "Users in {{group}}": "Utilisateurs du groupe {{group}}",

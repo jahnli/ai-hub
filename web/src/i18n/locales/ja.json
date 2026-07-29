@@ -5454,7 +5454,7 @@
     "Username or Email": "ユーザー名またはメールアドレス",
     "Username or password is empty": "Username or password is empty",
     "Users": "ユーザー",
-    "Users / Share": "利用者数 / 割合",
+    "Users / Share": "利用者数 / 利用率",
     "Users and their share during the selected period": "選択期間内の利用者数とその割合",
     "Users call the model on the left. The platform forwards the request to the upstream model on the right.": "ユーザーは左側のモデルを呼び出します。プラットフォームはリクエストを右側のアップストリームモデルに転送します。",
     "Users in {{group}}": "{{group}} のユーザー",
