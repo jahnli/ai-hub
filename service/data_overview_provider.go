@@ -226,15 +226,15 @@ func fetchFeishuCompanyDirectory(company *model.Company, config model.CompanyFei
 	if err != nil {
 		return nil, err
 	}
-	tenant, err := feishuFetchTenantInfo(token)
-	if err != nil {
-		return nil, err
-	}
+	// Do not call /tenant/v2/tenant/query here. That API is optional for display
+	// naming only and frequently fails (e.g. 99991663) even when contact APIs
+	// work. OrganizationName uses company.Name so the multi-company name check
+	// stays consistent; connection testing still uses feishuFetchTenantInfo.
 	departments, err := feishuFetchAllDepartments(token)
 	if err != nil {
 		return nil, err
 	}
-	result := &overviewDirectory{OrganizationName: tenant.Name, Departments: make([]overviewDepartment, 0, len(departments))}
+	result := &overviewDirectory{OrganizationName: company.Name, Departments: make([]overviewDepartment, 0, len(departments))}
 	for _, department := range departments {
 		result.Departments = append(result.Departments, overviewDepartment{
 			ID:           department.OpenDepartmentID,

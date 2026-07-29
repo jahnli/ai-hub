@@ -2,6 +2,10 @@
 
 **日期**: 2026-06-25 ~ 07-29（最后更新 07-29）
 
+### 2026-07-29 飞书公司目录跳过租户查询
+
+- `service/data_overview_provider.go` — `fetchFeishuCompanyDirectory` 不再调用 `feishuFetchTenantInfo`（`/tenant/v2/tenant/query`）；组织名直接使用 `company.Name`，仅依赖通讯录部门列表构建目录，避免租户接口 99991663 等失败导致部门树节点「公司数据不可用」；公司连接测试仍可单独校验租户信息
+
 ## 涉及文件
 
 - `controller/department.go` — 部门树、部门统计、子部门统计、用户排行接口控制器；新增 GetUserUsageAnalysis 单用户使用分析接口；新增 GetDepartmentLogs 部门使用日志接口；新增 GetDepartmentUserLogs 用户统计弹窗精确日志接口及 user_id 校验
@@ -60,7 +64,7 @@
 - `controller/company.go` — 新增公司列表、详情、创建、更新、启停和连接测试接口；Secret 仅返回配置状态，更新时空 Secret 保留原值，公司改名不迁移现有用户
 - `service/company.go` — 新增无平台、飞书和钉钉公司连接测试，并校验平台根组织名称是否与公司名称完全一致
 - `router/api-router.go` — 注册仅 Root 可访问的公司管理接口，并保留数据总览部门接口的既有权限入口
-- `service/data_overview_provider.go` — 抽象飞书/钉钉统一组织目录与成员 Provider，按公司隔离 Token、目录和成员缓存并使用 singleflight 合并并发请求；飞书 `open_id` 与钉钉 `userid` 统一映射到本地 `users.open_id`；钉钉 `department.listsub` 部门树遍历接入按应用和接口隔离的 30 QPS 限速及 90018 有限退避重试，避免大型组织首次加载触发服务端流控；飞书统计成员读取改用轻量 open_id 列表，成员详情使用独立缓存并仅供未注册用户姓名按需补全
+- `service/data_overview_provider.go` — 抽象飞书/钉钉统一组织目录与成员 Provider，按公司隔离 Token、目录和成员缓存并使用 singleflight 合并并发请求；飞书 `open_id` 与钉钉 `userid` 统一映射到本地 `users.open_id`；钉钉 `department.listsub` 部门树遍历接入按应用和接口隔离的 30 QPS 限速及 90018 有限退避重试，避免大型组织首次加载触发服务端流控；飞书统计成员读取改用轻量 open_id 列表，成员详情使用独立缓存并仅供未注册用户姓名按需补全；飞书公司目录构建跳过 `/tenant/v2/tenant/query`，组织名使用公司配置名称，避免租户接口失败阻断部门树
 - `service/data_overview_company.go` — 新增多公司部门树、公司别名显示、根组织精确匹配、无平台公司聚合及按公司/部门裁剪权限；平台用户同时按成员 ID 与 `users.company` 精确匹配，公司表为空时继续使用旧全局飞书模式；公司目录按固定并发上限并行加载且保持原顺序；company audience 增加 30 秒缓存并以 singleflight 合并并发解析，子部门统计直接按主归属部门复用父级成员分桶，用户列表仅为当前分页拉取未注册成员姓名，overview 内子部门统计、用户列表和排行共享一次用户聚合查询，减少平台接口与数据库重复请求
 - `service/feishu_department.go` — 部门树和各统计、排行、日志、导出服务接入公司模式 audience；请求携带公司 ID 与当前用户身份，并在服务端重新校验公司和部门访问范围
 - `controller/department.go` — 数据总览统计接口校验 `company_id`，注入请求用户 ID 和角色，并将公司或部门越权统一返回 403
