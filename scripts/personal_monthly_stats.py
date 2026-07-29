@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """按个人和月份生成 AI 中转站用量总览。
 
-通过 users.username 精确匹配用户，Token 和 quota 均直接汇总 quota_data。
+通过 users.username 精确匹配用户，统计与计费口径复用
+secondary_department_stats.py 的 logs 逐条汇总逻辑。
 
 用法：
     python personal_monthly_stats.py zhangsan 6 --year 2027
@@ -11,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -32,14 +34,6 @@ class ReportUser:
     department_name: str
     created_at: int
     last_login_at: int
-
-
-@dataclass(frozen=True)
-class MonthlyOverview:
-    total_tokens: int
-    total_quota: int
-    top_model: str
-    top_model_tokens: int
 
 
 def parse_args() -> argparse.Namespace:
@@ -105,49 +99,6 @@ def format_login_time(timestamp: int) -> str:
     )
 
 
-def fetch_monthly_overview(
-    conn: Any,
-    username: str,
-    start_ts: int,
-    end_ts: int,
-) -> MonthlyOverview:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT COALESCE(SUM(token_used), 0), COALESCE(SUM(quota), 0)
-            FROM quota_data
-            WHERE username = %s
-              AND created_at >= %s
-              AND created_at <= %s
-            """,
-            (username, start_ts, end_ts),
-        )
-        totals = cur.fetchone()
-
-        cur.execute(
-            """
-            SELECT model_name, SUM(token_used) AS total_tokens
-            FROM quota_data
-            WHERE username = %s
-              AND created_at >= %s
-              AND created_at <= %s
-              AND model_name <> ''
-            GROUP BY model_name
-            ORDER BY total_tokens DESC, model_name ASC
-            LIMIT 1
-            """,
-            (username, start_ts, end_ts),
-        )
-        top_model = cur.fetchone()
-
-    return MonthlyOverview(
-        total_tokens=int(totals[0] or 0),
-        total_quota=int(totals[1] or 0),
-        top_model=str(top_model[0]) if top_model else "无",
-        top_model_tokens=int(top_model[1] or 0) if top_model else 0,
-    )
-
-
 def main() -> int:
     args = parse_args()
     username = args.username.strip()
@@ -166,7 +117,6 @@ def main() -> int:
                 f"用户 {user.username} 在统计周期结束后注册，本月无可统计数据。"
             )
 
-        overview = fetch_monthly_overview(conn, user.username, start_ts, end_ts)
         options = stats.load_options(conn)
         exchange_rate = stats.get_positive_option(
             options,
@@ -178,27 +128,76 @@ def main() -> int:
             ("QuotaPerUnit", "quota_per_unit"),
             stats.DEFAULT_QUOTA_PER_UNIT,
         )
+        model_stats, total_quota, fallback_rows = stats.collect_statistics(
+            conn,
+            start_ts,
+            end_ts,
+            user_ids=[user.id],
+        )
+        stats.apply_quota_costs(model_stats, quota_per_unit, exchange_rate)
+        if sum(item.quota for item in model_stats) != total_quota:
+            raise RuntimeError("模型汇总 quota 与日志总 quota 不一致")
     finally:
         conn.close()
 
-    total_cost = overview.total_quota / quota_per_unit * exchange_rate
-    unit_price = (
-        total_cost / overview.total_tokens * stats.TOKENS_PER_MILLION
-        if overview.total_tokens > 0
-        else 0.0
+    if fallback_rows:
+        print(
+            f"提示：{fallback_rows:,} 条日志因历史计费快照不完整或表达式无法线性拆分，"
+            "已按该条日志的四类 Token 占比分配最终 quota。",
+            file=sys.stderr,
+        )
+
+    input_tokens = sum(item.input_tokens for item in model_stats)
+    output_tokens = sum(item.output_tokens for item in model_stats)
+    cache_input_tokens = sum(item.cache_input_tokens for item in model_stats)
+    cache_output_tokens = sum(item.cache_output_tokens for item in model_stats)
+    input_cost = sum(item.input_cost_cny for item in model_stats)
+    output_cost = sum(item.output_cost_cny for item in model_stats)
+    cache_input_cost = sum(item.cache_input_cost_cny for item in model_stats)
+    cache_output_cost = sum(item.cache_output_cost_cny for item in model_stats)
+    total_tokens = (
+        input_tokens + output_tokens + cache_input_tokens + cache_output_tokens
     )
-    print(f"""AI 中转站个人月报｜{args.year} 年 {args.month} 月
+    total_cost = input_cost + output_cost + cache_input_cost + cache_output_cost
+    total_input_tokens = input_tokens + cache_input_tokens
+    total_output_tokens = output_tokens + cache_output_tokens
+    input_output_ratio = (
+        total_input_tokens / total_output_tokens if total_output_tokens else 0.0
+    )
+    cache_hit_rate = (
+        cache_input_tokens / total_input_tokens * 100 if total_input_tokens else 0.0
+    )
 
-姓名：{user.display_name or user.username}（ID：{user.id}）
+    print(f"""Hi 各位领导：
+AI 中转站 {args.year} 年 {args.month} 月个人统计
+统计用户：{user.display_name or user.username}（ID：{user.id}）
 岗位职级：{user.job_title or '-'}
-部门：{user.department_name or '-'}
+所属部门：{user.department_name or '-'}
 最后登录：{format_login_time(user.last_login_at)}
-统计周期：{start.strftime('%Y-%m-%d')} 至 {end.strftime('%Y-%m-%d')}
+统计周期：{start.strftime('%Y-%m-%d %H:%M:%S')} － {end.strftime('%Y-%m-%d %H:%M')}
 
-Token 总量：{format_token_amount(overview.total_tokens)}
-总费用：{total_cost:,.2f} 元
-单价：{unit_price:,.2f} 元/百万 Token
-最常用模型：{overview.top_model}（{format_token_amount(overview.top_model_tokens)} Token）""")
+非缓存输入，Token 量 {format_token_amount(input_tokens)}，费用 {stats.format_cost(input_cost)} 元，单价 {stats.unit_price(input_cost, input_tokens):.2f} 元
+非缓存输出，Token 量 {format_token_amount(output_tokens)}，费用 {stats.format_cost(output_cost)} 元，单价 {stats.unit_price(output_cost, output_tokens):.2f} 元
+缓存输入，Token 量 {format_token_amount(cache_input_tokens)}，费用 {stats.format_cost(cache_input_cost)} 元，单价 {stats.unit_price(cache_input_cost, cache_input_tokens):.2f} 元
+缓存输出，Token 量 {format_token_amount(cache_output_tokens)}，费用 {stats.format_cost(cache_output_cost)} 元，单价 {stats.unit_price(cache_output_cost, cache_output_tokens):.2f} 元
+
+Token 总量 {format_token_amount(total_tokens)}，总费用 {stats.format_cost(total_cost)} 元，均价 {stats.unit_price(total_cost, total_tokens):.2f} 元
+输入输出倍数：{input_output_ratio:.1f} 倍，综合缓存命中率：{cache_hit_rate:.0f}%
+
+Top 5 最常用模型：""")
+    top_models = sorted(
+        model_stats,
+        key=lambda item: item.total_tokens,
+        reverse=True,
+    )[:5]
+    if not top_models:
+        print("无")
+    for index, item in enumerate(top_models, start=1):
+        print(
+            f"{index}. {item.name}，费用 {stats.format_cost(item.quota_cost_cny)} 元，"
+            f"Token 量 {format_token_amount(item.total_tokens)}，"
+            f"单价 {stats.unit_price(item.quota_cost_cny, item.total_tokens):.2f} 元"
+        )
     return 0
 
 
