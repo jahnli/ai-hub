@@ -30,6 +30,10 @@ type overviewDirectory struct {
 type overviewMember struct {
 	OpenID string
 	Name   string
+	// ObservedDepartmentID is the department that returned this open_id from the
+	// provider. Used to place unregistered members into sub-department buckets
+	// without a second Feishu details fetch.
+	ObservedDepartmentID string
 }
 
 type companyOverviewCacheEntry struct {
@@ -75,6 +79,7 @@ func InvalidateCompanyOverviewCache(companyID int) {
 
 var fetchCompanyDirectory = fetchCompanyDirectoryFromProvider
 var fetchCompanyMembers = fetchCompanyMembersFromProvider
+var fetchCompanyMemberDetails = fetchCompanyMemberDetailsFromProvider
 
 func fetchCompanyDirectoryFromProvider(company *model.Company) (*overviewDirectory, error) {
 	cacheKey := companyOverviewCacheKey(company.Id, "directory", "")
@@ -107,8 +112,11 @@ func fetchCompanyDirectoryFromProvider(company *model.Company) (*overviewDirecto
 	return value.(*overviewDirectory), nil
 }
 
+// fetchCompanyMembersFromProvider returns lightweight open_id members for
+// stats/usage/rankings/sub-stats. Feishu uses contact/v3/users (open_id only),
+// matching the pre-multi-company data overview path. Do not call find_by_department here.
 func fetchCompanyMembersFromProvider(company *model.Company, departmentID string) ([]overviewMember, error) {
-	cacheKey := companyOverviewCacheKey(company.Id, "members", departmentID)
+	cacheKey := companyOverviewCacheKey(company.Id, "member-ids", departmentID)
 	if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
 		return cached.([]overviewMember), nil
 	}
@@ -124,13 +132,16 @@ func fetchCompanyMembersFromProvider(company *model.Company, departmentID string
 			if err != nil {
 				return nil, err
 			}
-			items, err := fetchDepartmentMemberDetails(token, departmentID)
+			openIDs, err := getCachedDepartmentMembers(token, departmentID)
 			if err != nil {
 				return nil, err
 			}
-			members = make([]overviewMember, 0, len(items))
-			for _, item := range items {
-				members = append(members, overviewMember{OpenID: item.OpenID, Name: item.Name})
+			members = make([]overviewMember, 0, len(openIDs))
+			for _, openID := range openIDs {
+				if openID == "" {
+					continue
+				}
+				members = append(members, overviewMember{OpenID: openID})
 			}
 		case model.CompanyPlatformDingTalk:
 			token, err := getCompanyDingTalkToken(company.Id, config.DingTalk)
@@ -145,6 +156,45 @@ func fetchCompanyMembersFromProvider(company *model.Company, departmentID string
 			if err != nil {
 				return nil, err
 			}
+		}
+		storeCompanyOverviewCache(cacheKey, members, departmentMemberCacheTTL)
+		return members, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.([]overviewMember), nil
+}
+
+// fetchCompanyMemberDetailsFromProvider returns members with display names.
+// Only the department users table should call this when unregistered names are needed.
+func fetchCompanyMemberDetailsFromProvider(company *model.Company, departmentID string) ([]overviewMember, error) {
+	cacheKey := companyOverviewCacheKey(company.Id, "member-details", departmentID)
+	if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
+		return cached.([]overviewMember), nil
+	}
+	value, err, _ := companyOverviewSingleflight.Do(cacheKey, func() (any, error) {
+		config, err := company.GetConfig()
+		if err != nil {
+			return nil, err
+		}
+		var members []overviewMember
+		switch company.Platform {
+		case model.CompanyPlatformFeishu:
+			token, err := getCompanyFeishuToken(company.Id, config.Feishu)
+			if err != nil {
+				return nil, err
+			}
+			items, err := getCachedDepartmentMemberDetails(token, departmentID)
+			if err != nil {
+				return nil, err
+			}
+			members = make([]overviewMember, 0, len(items))
+			for _, item := range items {
+				members = append(members, overviewMember{OpenID: item.OpenID, Name: item.Name})
+			}
+		case model.CompanyPlatformDingTalk:
+			return fetchCompanyMembersFromProvider(company, departmentID)
 		}
 		storeCompanyOverviewCache(cacheKey, members, departmentMemberCacheTTL)
 		return members, nil

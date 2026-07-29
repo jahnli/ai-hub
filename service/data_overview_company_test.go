@@ -100,6 +100,237 @@ func TestGetDepartmentOverviewReturnsCompleteEmptyCompanySnapshot(t *testing.T) 
 	assert.Equal(t, int32(1), userQueryCount.Load())
 }
 
+func TestPartitionMatchedMembersByPrimaryDepartmentBucketsChildSubtrees(t *testing.T) {
+	directory := &overviewDirectory{
+		OrganizationName: "partition-company",
+		Departments: []overviewDepartment{
+			{ID: "child-a", ParentID: "0", Name: "Child A"},
+			{ID: "child-a-1", ParentID: "child-a", Name: "Child A1"},
+			{ID: "child-b", ParentID: "0", Name: "Child B"},
+		},
+	}
+	children := []overviewDepartment{
+		{ID: "child-a", ParentID: "0", Name: "Child A"},
+		{ID: "child-b", ParentID: "0", Name: "Child B"},
+	}
+	users := []*model.User{
+		{
+			Id:          1,
+			OpenId:      "user-a",
+			Departments: `[{"department_id":"child-a-1"}]`,
+		},
+		{
+			Id:          2,
+			OpenId:      "user-b",
+			Departments: `[{"department_id":"child-b"}]`,
+		},
+	}
+	members := []overviewMember{
+		{OpenID: "user-a"},
+		{OpenID: "user-b"},
+		{OpenID: "unregistered-a", ObservedDepartmentID: "child-a-1"},
+		{OpenID: "unregistered-b", ObservedDepartmentID: "child-b"},
+		{OpenID: "unregistered-root", ObservedDepartmentID: "0"},
+	}
+
+	childMembers, childUsers := partitionMatchedMembersByPrimaryDepartment(
+		members,
+		users,
+		directory,
+		children,
+		model.CompanyPlatformFeishu,
+	)
+
+	require.Len(t, childMembers, 2)
+	require.Len(t, childUsers, 2)
+	assert.Equal(t, []overviewMember{
+		{OpenID: "user-a"},
+		{OpenID: "unregistered-a", ObservedDepartmentID: "child-a-1"},
+	}, childMembers[0])
+	assert.Equal(t, []overviewMember{
+		{OpenID: "user-b"},
+		{OpenID: "unregistered-b", ObservedDepartmentID: "child-b"},
+	}, childMembers[1])
+	require.Len(t, childUsers[0], 1)
+	assert.Equal(t, "user-a", childUsers[0][0].OpenId)
+	require.Len(t, childUsers[1], 1)
+	assert.Equal(t, "user-b", childUsers[1][0].OpenId)
+}
+
+func TestResolveCompanyOverviewAudienceSharesSingleMemberFetch(t *testing.T) {
+	previousDB := model.DB
+	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Company{}, &model.User{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		fetchCompanyDirectory = previousDirectoryFetcher
+		fetchCompanyMembers = previousMemberFetcher
+		InvalidateCompanyOverviewCache(1)
+		_ = sqlDB.Close()
+	})
+
+	company := &model.Company{
+		Id:       1,
+		Name:     "audience-share-company",
+		Platform: model.CompanyPlatformFeishu,
+		Status:   model.CompanyStatusEnabled,
+		Config:   "{}",
+	}
+	require.NoError(t, db.Create(company).Error)
+	require.NoError(t, db.Create(&model.User{
+		Username:    "audience-share-user",
+		Password:    "password",
+		Company:     company.Name,
+		OpenId:      "open-id-1",
+		Departments: `[{"department_id":"department-1"}]`,
+		CreatedAt:   100,
+	}).Error)
+
+	var memberFetchCount atomic.Int32
+	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {
+		return &overviewDirectory{
+			OrganizationName: company.Name,
+			Departments: []overviewDepartment{
+				{ID: "department-1", ParentID: "0", Name: "Department 1"},
+			},
+		}, nil
+	}
+	fetchCompanyMembers = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		memberFetchCount.Add(1)
+		if departmentID == "department-1" {
+			return []overviewMember{{OpenID: "open-id-1"}}, nil
+		}
+		return []overviewMember{}, nil
+	}
+
+	departmentValue := companyNodeValue(company.Id)
+	first, _, err := resolveCompanyOverviewAudience(company.Id, departmentValue, 1, common.RoleRootUser, 200)
+	require.NoError(t, err)
+	require.NotNil(t, first)
+	firstFetchCount := memberFetchCount.Load()
+	require.Greater(t, firstFetchCount, int32(0))
+
+	second, _, err := resolveCompanyOverviewAudience(company.Id, departmentValue, 1, common.RoleRootUser, 200)
+	require.NoError(t, err)
+	require.NotNil(t, second)
+	assert.Equal(t, firstFetchCount, memberFetchCount.Load(), "second resolve should reuse audience cache")
+	assert.Equal(t, first.totalUsers, second.totalUsers)
+	assert.Equal(t, len(first.registeredUserIDs), len(second.registeredUserIDs))
+}
+
+func TestBuildCompanyDepartmentUsersEnrichesOnlyCurrentPageDetails(t *testing.T) {
+	previousDB, previousLogDB := model.DB, model.LOG_DB
+	previousDirectoryFetcher := fetchCompanyDirectory
+	previousMemberFetcher := fetchCompanyMembers
+	previousDetailsFetcher := fetchCompanyMemberDetails
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Company{}, &model.User{}, &model.QuotaData{}, &model.UserSubscription{}))
+	model.DB = db
+	model.LOG_DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		model.LOG_DB = previousLogDB
+		fetchCompanyDirectory = previousDirectoryFetcher
+		fetchCompanyMembers = previousMemberFetcher
+		fetchCompanyMemberDetails = previousDetailsFetcher
+		_ = sqlDB.Close()
+	})
+
+	company := &model.Company{
+		Name:     "page-lazy-company",
+		Platform: model.CompanyPlatformFeishu,
+		Status:   model.CompanyStatusEnabled,
+		Config:   "{}",
+	}
+	require.NoError(t, db.Create(company).Error)
+	registered := &model.User{
+		Username:    "page-lazy-registered",
+		Password:    "password",
+		DisplayName: "Registered User",
+		Company:     company.Name,
+		OpenId:      "open-registered",
+		Departments: `[{"department_id":"department-1"}]`,
+		CreatedAt:   100,
+	}
+	require.NoError(t, db.Create(registered).Error)
+
+	var detailFetchCount atomic.Int32
+	var detailDepartments []string
+	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {
+		return &overviewDirectory{
+			OrganizationName: company.Name,
+			Departments: []overviewDepartment{
+				{ID: "department-1", ParentID: "0", Name: "Department 1"},
+				{ID: "department-2", ParentID: "0", Name: "Department 2"},
+			},
+		}, nil
+	}
+	fetchCompanyMembers = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		switch departmentID {
+		case "department-1":
+			return []overviewMember{
+				{OpenID: "open-registered", ObservedDepartmentID: "department-1"},
+				{OpenID: "open-unreg-1", ObservedDepartmentID: "department-1"},
+			}, nil
+		case "department-2":
+			return []overviewMember{
+				{OpenID: "open-unreg-2", ObservedDepartmentID: "department-2"},
+			}, nil
+		default:
+			return []overviewMember{}, nil
+		}
+	}
+	fetchCompanyMemberDetails = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		detailFetchCount.Add(1)
+		detailDepartments = append(detailDepartments, departmentID)
+		switch departmentID {
+		case "department-1":
+			return []overviewMember{
+				{OpenID: "open-registered", Name: "Registered User"},
+				{OpenID: "open-unreg-1", Name: "Unregistered One"},
+			}, nil
+		case "department-2":
+			return []overviewMember{
+				{OpenID: "open-unreg-2", Name: "Unregistered Two"},
+			}, nil
+		default:
+			return []overviewMember{}, nil
+		}
+	}
+
+	// Page size 1 with non-computed sort: only enrich the single unregistered
+	// row on this page, not every department in the company tree.
+	response, err := getCompanyDepartmentUsers(&DepartmentUsersRequest{
+		CompanyID:           company.Id,
+		DepartmentID:        companyNodeValue(company.Id),
+		StartTimestamp:      1,
+		EndTimestamp:        200,
+		Page:                1,
+		PageSize:            1,
+		SortBy:              "id",
+		SortOrder:           "asc",
+		IncludeUnregistered: true,
+		RequestUserRole:     common.RoleRootUser,
+	})
+	require.NoError(t, err)
+	require.Len(t, response.Items, 1)
+	assert.Equal(t, int64(3), response.Total)
+	assert.False(t, response.Items[0].IsRegistered)
+	assert.Contains(t, []string{"Unregistered One", "Unregistered Two"}, response.Items[0].DisplayName)
+	assert.Equal(t, int32(1), detailFetchCount.Load(), "should only fetch details for page departments")
+	require.Len(t, detailDepartments, 1)
+	assert.Contains(t, []string{"department-1", "department-2"}, detailDepartments[0])
+	assert.NotContains(t, detailDepartments, "0")
+}
+
 func TestMatchOverviewDepartmentMembersUsesFirstDepartmentID(t *testing.T) {
 	previousDB := model.DB
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

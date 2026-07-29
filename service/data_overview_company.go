@@ -7,11 +7,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
 )
 
 var ErrCompanyIDRequired = errors.New("company_id is required")
@@ -20,10 +22,17 @@ var ErrDepartmentAccessDenied = errors.New("department is not accessible")
 
 const companyDirectoryFetchConcurrency = 5
 
+// overviewAudienceCacheTTL lets the five parallel overview endpoints share one
+// lightweight member resolve. Keep short so role/department changes still refresh.
+const overviewAudienceCacheTTL = 30 * time.Second
+
+var overviewAudienceSingleflight singleflight.Group
+
 type overviewAudience struct {
 	company             *model.Company
 	directory           *overviewDirectory
 	departmentID        string
+	departmentIDs       []string
 	members             []overviewMember
 	users               []*model.User
 	registeredUserIDs   []int
@@ -369,57 +378,97 @@ func resolveCompanyOverviewAudience(companyID int, departmentValue string, userI
 	if companyID <= 0 {
 		return nil, true, ErrCompanyIDRequired
 	}
-	company, err := getAuthorizedOverviewCompany(companyID, userID, userRole)
+	cacheKey := companyOverviewCacheKey(
+		companyID,
+		"audience",
+		fmt.Sprintf("%s:%d:%d:%d", departmentValue, userID, userRole, registeredBefore),
+	)
+	if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
+		return cached.(*overviewAudience), true, nil
+	}
+	value, err, _ := overviewAudienceSingleflight.Do(cacheKey, func() (any, error) {
+		if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
+			return cached.(*overviewAudience), nil
+		}
+		audience, err := buildCompanyOverviewAudience(companyID, departmentValue, userID, userRole, registeredBefore)
+		if err != nil {
+			return nil, err
+		}
+		storeCompanyOverviewCache(cacheKey, audience, overviewAudienceCacheTTL)
+		return audience, nil
+	})
 	if err != nil {
 		return nil, true, err
 	}
+	return value.(*overviewAudience), true, nil
+}
+
+func buildCompanyOverviewAudience(companyID int, departmentValue string, userID int, userRole int, registeredBefore int64) (*overviewAudience, error) {
+	company, err := getAuthorizedOverviewCompany(companyID, userID, userRole)
+	if err != nil {
+		return nil, err
+	}
 	departmentID, companyRoot, err := parseCompanyDepartmentValue(company.Id, departmentValue)
 	if err != nil {
-		return nil, true, err
+		return nil, err
 	}
 	audience := &overviewAudience{company: company, departmentID: departmentID}
 	if company.Platform == model.CompanyPlatformNone {
 		if !companyRoot {
-			return nil, true, ErrDepartmentAccessDenied
+			return nil, ErrDepartmentAccessDenied
 		}
 		users, err := queryOverviewUsers(company.Name, nil, registeredBefore)
 		if err != nil {
-			return nil, true, err
+			return nil, err
 		}
 		audience.users = users
 		audience.registeredUserIDs = userIDsFromUsers(users)
 		audience.totalUsers = len(users)
 		audience.forceRegisteredOnly = true
-		return audience, true, nil
+		return audience, nil
 	}
 	directory, err := fetchCompanyDirectory(company)
 	if err != nil {
-		return nil, true, err
+		return nil, err
 	}
 	if err := ensureDepartmentAccessible(company, directory, departmentID, companyRoot, userID, userRole); err != nil {
-		return nil, true, err
+		return nil, err
 	}
 	departmentIDs := collectOverviewDepartmentIDs(directory.Departments, departmentID, companyRoot, company.Platform)
 	if len(departmentIDs) == 0 {
-		return audience, true, nil
+		audience.directory = directory
+		return audience, nil
 	}
 	members, err := collectCompanyMembers(company, departmentIDs)
 	if err != nil {
-		return nil, true, err
+		return nil, err
 	}
 	members, users, err := matchOverviewDepartmentMembers(company.Name, members, departmentIDs, registeredBefore)
 	if err != nil {
-		return nil, true, err
+		return nil, err
 	}
 	audience.directory = directory
+	audience.departmentIDs = departmentIDs
 	audience.members = members
 	audience.users = users
 	audience.registeredUserIDs = userIDsFromUsers(users)
 	audience.totalUsers = len(members)
-	return audience, true, nil
+	return audience, nil
 }
 
 func collectCompanyMembers(company *model.Company, departmentIDs []string) ([]overviewMember, error) {
+	return collectCompanyMembersWithFetcher(company, departmentIDs, fetchCompanyMembers)
+}
+
+func collectCompanyMemberDetails(company *model.Company, departmentIDs []string) ([]overviewMember, error) {
+	return collectCompanyMembersWithFetcher(company, departmentIDs, fetchCompanyMemberDetails)
+}
+
+func collectCompanyMembersWithFetcher(
+	company *model.Company,
+	departmentIDs []string,
+	fetcher func(*model.Company, string) ([]overviewMember, error),
+) ([]overviewMember, error) {
 	seen := make(map[string]bool)
 	result := make([]overviewMember, 0)
 	var mu sync.Mutex
@@ -433,17 +482,21 @@ func collectCompanyMembers(company *model.Company, departmentIDs []string) ([]ov
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			members, err := fetchCompanyMembers(company, rawID)
+			members, err := fetcher(company, rawID)
 			if err != nil {
 				once.Do(func() { firstErr = err })
 				return
 			}
 			mu.Lock()
 			for _, member := range members {
-				if member.OpenID != "" && !seen[member.OpenID] {
-					seen[member.OpenID] = true
-					result = append(result, member)
+				if member.OpenID == "" || seen[member.OpenID] {
+					continue
 				}
+				seen[member.OpenID] = true
+				if member.ObservedDepartmentID == "" {
+					member.ObservedDepartmentID = rawID
+				}
+				result = append(result, member)
 			}
 			mu.Unlock()
 		}(departmentID)
@@ -514,6 +567,60 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 		}
 	}
 	return matchedMembers, matchedUsers, nil
+}
+
+// partitionMatchedMembersByPrimaryDepartment buckets parent audience members
+// into each direct child subtree using local primary department IDs. This avoids
+// re-fetching Feishu/DingTalk members for every child during sub-stats.
+func partitionMatchedMembersByPrimaryDepartment(
+	parentMembers []overviewMember,
+	parentUsers []*model.User,
+	directory *overviewDirectory,
+	children []overviewDepartment,
+	platform string,
+) ([][]overviewMember, [][]*model.User) {
+	childMembers := make([][]overviewMember, len(children))
+	childUsers := make([][]*model.User, len(children))
+	if directory == nil || len(children) == 0 {
+		return childMembers, childUsers
+	}
+
+	departmentToChildIndex := make(map[string]int)
+	for index, child := range children {
+		for _, departmentID := range collectOverviewDepartmentIDs(directory.Departments, child.ID, false, platform) {
+			if _, exists := departmentToChildIndex[departmentID]; !exists {
+				departmentToChildIndex[departmentID] = index
+			}
+		}
+	}
+
+	usersByOpenID := make(map[string]*model.User, len(parentUsers))
+	for _, user := range parentUsers {
+		if user.OpenId != "" {
+			usersByOpenID[user.OpenId] = user
+		}
+	}
+	for _, member := range parentMembers {
+		user := usersByOpenID[member.OpenID]
+		if user != nil {
+			childIndex, ok := departmentToChildIndex[user.GetPrimaryDepartmentID()]
+			if !ok {
+				continue
+			}
+			childMembers[childIndex] = append(childMembers[childIndex], member)
+			childUsers[childIndex] = append(childUsers[childIndex], user)
+			continue
+		}
+		if member.ObservedDepartmentID == "" {
+			continue
+		}
+		childIndex, ok := departmentToChildIndex[member.ObservedDepartmentID]
+		if !ok {
+			continue
+		}
+		childMembers[childIndex] = append(childMembers[childIndex], member)
+	}
+	return childMembers, childUsers
 }
 
 func userIDsFromUsers(users []*model.User) []int {
@@ -815,58 +922,47 @@ func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overv
 		users   []*model.User
 	}
 	childData := make([]childOverviewData, len(children))
-	errs := make([]error, len(children))
-	var wg sync.WaitGroup
+	accessibleChildren := make([]bool, len(children))
 	for index, child := range children {
-		wg.Add(1)
-		go func(index int, child overviewDepartment) {
-			defer wg.Done()
-			if childErr := ensureDepartmentAccessible(
-				audience.company,
-				audience.directory,
-				child.ID,
-				false,
-				req.RequestUserID,
-				req.RequestUserRole,
-			); childErr != nil {
-				errs[index] = childErr
-				return
+		if childErr := ensureDepartmentAccessible(
+			audience.company,
+			audience.directory,
+			child.ID,
+			false,
+			req.RequestUserID,
+			req.RequestUserRole,
+		); childErr != nil {
+			if errors.Is(childErr, ErrDepartmentAccessDenied) {
+				continue
 			}
-			departmentIDs := collectOverviewDepartmentIDs(
-				audience.directory.Departments,
-				child.ID,
-				false,
-				audience.company.Platform,
-			)
-			members, childErr := collectCompanyMembers(audience.company, departmentIDs)
-			if childErr != nil {
-				errs[index] = childErr
-				return
-			}
-			members, users, childErr := matchOverviewDepartmentMembers(
-				audience.company.Name,
-				members,
-				departmentIDs,
-				req.EndTimestamp,
-			)
-			if childErr != nil {
-				errs[index] = childErr
-				return
-			}
-			childData[index] = childOverviewData{members: members, users: users}
-		}(index, child)
+			return nil, childErr
+		}
+		accessibleChildren[index] = true
 	}
-	wg.Wait()
+
+	partitionedMembers, partitionedUsers := partitionMatchedMembersByPrimaryDepartment(
+		audience.members,
+		audience.users,
+		audience.directory,
+		children,
+		audience.company.Platform,
+	)
+	for index := range children {
+		if !accessibleChildren[index] {
+			continue
+		}
+		childData[index] = childOverviewData{
+			members: partitionedMembers[index],
+			users:   partitionedUsers[index],
+		}
+	}
 
 	visibleChildren := make([]bool, len(children))
 	allUserIDs := make([]int, 0)
 	userToChild := make(map[int]int)
 	for index, data := range childData {
-		if errs[index] != nil {
-			if errors.Is(errs[index], ErrDepartmentAccessDenied) {
-				continue
-			}
-			return nil, errs[index]
+		if !accessibleChildren[index] {
+			continue
 		}
 		visibleChildren[index] = true
 		for _, user := range data.users {
@@ -974,24 +1070,31 @@ func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overview
 			}
 		}
 	} else {
+		// Keep the lightweight open_id audience for merge/count. Do not call
+		// find_by_department for the whole subtree here — only enrich the
+		// current page after sort + slice (same lazy pattern as before).
+		includeUnregistered := req.RegistrationStatus == departmentRegistrationStatusUnregistered ||
+			(req.RegistrationStatus != departmentRegistrationStatusRegistered && req.IncludeUnregistered)
 		memberOpenIDs := make([]string, 0, len(audience.members))
 		memberDetails := make(map[string]feishuDeptMember, len(audience.members))
 		for _, member := range audience.members {
 			memberOpenIDs = append(memberOpenIDs, member.OpenID)
 			memberDetails[member.OpenID] = feishuDeptMember{OpenID: member.OpenID, Name: member.Name}
 		}
-		includeUnregistered := req.RegistrationStatus == departmentRegistrationStatusUnregistered ||
-			(req.RegistrationStatus != departmentRegistrationStatusRegistered && req.IncludeUnregistered)
 		items = mergeDepartmentUsersWithMembers(audience.users, memberOpenIDs, memberDetails, req.EndTimestamp, includeUnregistered, req.RegistrationStatus)
 	}
 
-	ids := make([]int, 0, len(items))
+	// Computed sorts (quota/tokens/...) need registered usage on every row before
+	// slicing. Unregistered display names are still page-local only.
+	registeredIDsForSort := make([]int, 0, len(items))
 	for _, item := range items {
-		if item.User.Id > 0 && item.IsRegistered {
-			ids = append(ids, item.User.Id)
+		if item.User != nil && item.User.Id > 0 && item.IsRegistered {
+			registeredIDsForSort = append(registeredIDsForSort, item.User.Id)
 		}
 	}
-	populateDepartmentUserStats(items, ids, req.StartTimestamp, req.EndTimestamp, userStats)
+	if common.IsComputedSortColumn(req.SortBy) || req.SortBy == "" {
+		populateDepartmentUserStats(items, registeredIDsForSort, req.StartTimestamp, req.EndTimestamp, userStats)
+	}
 	sortDepartmentUserItems(items, req.SortBy, req.SortOrder)
 	start := (page - 1) * pageSize
 	if start > len(items) {
@@ -1001,13 +1104,28 @@ func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overview
 	if end > len(items) {
 		end = len(items)
 	}
+	pageItems := items[start:end]
+
+	if !common.IsComputedSortColumn(req.SortBy) && req.SortBy != "" {
+		pageRegisteredIDs := make([]int, 0, len(pageItems))
+		for _, item := range pageItems {
+			if item.User != nil && item.User.Id > 0 && item.IsRegistered {
+				pageRegisteredIDs = append(pageRegisteredIDs, item.User.Id)
+			}
+		}
+		populateDepartmentUserStats(pageItems, pageRegisteredIDs, req.StartTimestamp, req.EndTimestamp, userStats)
+	}
+	if !audience.forceRegisteredOnly && audience.company != nil {
+		enrichDepartmentUserPageDisplayNames(pageItems, audience)
+	}
+
 	registered, unregistered := departmentUserRegistrationCounts(audience.users, audience.totalUsers, req.EndTimestamp)
 	if audience.forceRegisteredOnly {
 		registered = int64(len(audience.users))
 		unregistered = 0
 	}
 	return &DepartmentUsersResponse{
-		Items:             items[start:end],
+		Items:             pageItems,
 		Total:             int64(len(items)),
 		Page:              page,
 		Size:              pageSize,
@@ -1015,6 +1133,67 @@ func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overview
 		RegisteredUsers:   registered,
 		UnregisteredUsers: unregistered,
 	}, nil
+}
+
+// enrichDepartmentUserPageDisplayNames fills unregistered names for the current
+// page only. It fetches Feishu/DingTalk member details solely for departments
+// that own those open_ids on this page, instead of loading the whole subtree.
+func enrichDepartmentUserPageDisplayNames(pageItems []DepartmentUserItem, audience *overviewAudience) {
+	if len(pageItems) == 0 || audience == nil || audience.company == nil {
+		return
+	}
+	unregisteredOpenIDs := make(map[string]bool)
+	for _, item := range pageItems {
+		if item.IsRegistered || item.User == nil || item.User.OpenId == "" {
+			continue
+		}
+		unregisteredOpenIDs[item.User.OpenId] = true
+	}
+	if len(unregisteredOpenIDs) == 0 {
+		return
+	}
+
+	departmentIDs := make([]string, 0)
+	seenDepartments := make(map[string]bool)
+	for _, member := range audience.members {
+		if !unregisteredOpenIDs[member.OpenID] {
+			continue
+		}
+		if member.ObservedDepartmentID == "" || seenDepartments[member.ObservedDepartmentID] {
+			continue
+		}
+		seenDepartments[member.ObservedDepartmentID] = true
+		departmentIDs = append(departmentIDs, member.ObservedDepartmentID)
+	}
+	if len(departmentIDs) == 0 {
+		departmentIDs = audience.departmentIDs
+	}
+	if len(departmentIDs) == 0 {
+		return
+	}
+
+	detailedMembers, err := collectCompanyMemberDetails(audience.company, departmentIDs)
+	if err != nil || len(detailedMembers) == 0 {
+		return
+	}
+	nameByOpenID := make(map[string]string, len(detailedMembers))
+	for _, member := range detailedMembers {
+		if member.OpenID == "" || member.Name == "" {
+			continue
+		}
+		nameByOpenID[member.OpenID] = member.Name
+	}
+	for index := range pageItems {
+		if pageItems[index].IsRegistered || pageItems[index].User == nil {
+			continue
+		}
+		name := nameByOpenID[pageItems[index].User.OpenId]
+		if name == "" {
+			continue
+		}
+		pageItems[index].User.Username = name
+		pageItems[index].User.DisplayName = name
+	}
 }
 
 func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTimestamp int64, endTimestamp int64, userStats *overviewUserStats) {

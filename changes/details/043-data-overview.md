@@ -1,6 +1,6 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 07-28（最后更新 07-28）
+**日期**: 2026-06-25 ~ 07-29（最后更新 07-29）
 
 ## 涉及文件
 
@@ -60,8 +60,8 @@
 - `controller/company.go` — 新增公司列表、详情、创建、更新、启停和连接测试接口；Secret 仅返回配置状态，更新时空 Secret 保留原值，公司改名不迁移现有用户
 - `service/company.go` — 新增无平台、飞书和钉钉公司连接测试，并校验平台根组织名称是否与公司名称完全一致
 - `router/api-router.go` — 注册仅 Root 可访问的公司管理接口，并保留数据总览部门接口的既有权限入口
-- `service/data_overview_provider.go` — 抽象飞书/钉钉统一组织目录与成员 Provider，按公司隔离 Token、目录和成员缓存并使用 singleflight 合并并发请求；飞书 `open_id` 与钉钉 `userid` 统一映射到本地 `users.open_id`；钉钉 `department.listsub` 部门树遍历接入按应用和接口隔离的 30 QPS 限速及 90018 有限退避重试，避免大型组织首次加载触发服务端流控
-- `service/data_overview_company.go` — 新增多公司部门树、公司别名显示、根组织精确匹配、无平台公司聚合及按公司/部门裁剪权限；平台用户同时按成员 ID 与 `users.company` 精确匹配，公司表为空时继续使用旧全局飞书模式；公司目录按固定并发上限并行加载且保持原顺序，子部门统计并发收集成员与注册用户后统一批量聚合用量，减少重复查询
+- `service/data_overview_provider.go` — 抽象飞书/钉钉统一组织目录与成员 Provider，按公司隔离 Token、目录和成员缓存并使用 singleflight 合并并发请求；飞书 `open_id` 与钉钉 `userid` 统一映射到本地 `users.open_id`；钉钉 `department.listsub` 部门树遍历接入按应用和接口隔离的 30 QPS 限速及 90018 有限退避重试，避免大型组织首次加载触发服务端流控；飞书统计成员读取改用轻量 open_id 列表，成员详情使用独立缓存并仅供未注册用户姓名按需补全
+- `service/data_overview_company.go` — 新增多公司部门树、公司别名显示、根组织精确匹配、无平台公司聚合及按公司/部门裁剪权限；平台用户同时按成员 ID 与 `users.company` 精确匹配，公司表为空时继续使用旧全局飞书模式；公司目录按固定并发上限并行加载且保持原顺序；company audience 增加 30 秒缓存并以 singleflight 合并并发解析，子部门统计直接按主归属部门复用父级成员分桶，用户列表仅为当前分页拉取未注册成员姓名，overview 内子部门统计、用户列表和排行共享一次用户聚合查询，减少平台接口与数据库重复请求
 - `service/feishu_department.go` — 部门树和各统计、排行、日志、导出服务接入公司模式 audience；请求携带公司 ID 与当前用户身份，并在服务端重新校验公司和部门访问范围
 - `controller/department.go` — 数据总览统计接口校验 `company_id`，注入请求用户 ID 和角色，并将公司或部门越权统一返回 403
 - `service/dingtalk_sync.go` — 钉钉 `department.listsub` 与 `user.list` 按 Client ID 和 API 路径分别平滑限制为单进程 30 QPS；识别 `errcode=88/subcode=90018` 后按 1 秒、2 秒有限退避重试，重试耗尽及底层请求错误不再泄露凭据 URL
@@ -117,7 +117,7 @@
 - `service/data_overview_company.go` — 删除 `CompanyDataOverviewEnabled()` 及其内部 `CountCompanies()` 调用，`resolveCompanyOverviewAudience` 改为直接以 `companyID <= 0` 快速拒绝；新增 `DepartmentOverviewRequest`、`DepartmentOverviewResponse` 类型；新增 `GetDepartmentOverview`：一次调用 `resolveCompanyOverviewAudience` 解析 audience 后，通过 `errgroup` 并行执行 `buildCompanyDepartmentStats`、`buildCompanySubDepartmentStats`、`buildCompanyUsageAnalysis`、`buildCompanyDepartmentUsers`、`buildCompanyDepartmentUserRankings` 五个计算，聚合为单一响应返回；`getCompanyDepartmentTree` 新增空公司列表快速返回路径；`createDepartmentQueryParams` 改为对缺失 `company_id` 抛出明确错误
 - `controller/department.go` — 新增 `GetDepartmentOverview` controller；`validateDepartmentCompanyID` 移除对 `CompanyDataOverviewEnabled()` 的调用，直接以 `companyID <= 0` 拒绝；`validateDepartmentUserCompanyID` 移除 root 用户豁免分支，统一走 `validateDepartmentCompanyID`
 - `router/api-router.go` — 注册 `POST /api/department/overview` 路由
-- `service/data_overview_company_test.go` — 覆盖 `GetDepartmentOverview` 的无公司快速返回、缺失 `company_id` 拒绝和 audience 解析失败行为
+- `service/data_overview_company_test.go` — 覆盖 `GetDepartmentOverview` 的无公司快速返回、缺失 `company_id` 拒绝和 audience 解析失败行为；补充子部门主归属分桶、audience 缓存复用及未注册用户姓名仅按当前分页加载的回归测试
 - `web/src/features/data-overview/index.tsx` — 首屏改为并行发起 stats、sub-stats、usage-analysis、users、user-rankings 五个独立请求，各板块就绪后立即渲染；`getOverviewLoadingState` 控制搜索按钮与分板块骨架，避免单接口最慢任务拖慢整页
 - `web/src/features/data-overview/lib/overview-loading.ts` — 新增，根据各查询 fetching/data 状态计算搜索中状态与 stats/sub-stats/usage/users/rankings 骨架展示
 - `web/src/features/data-overview/components/department-users-table.tsx` — `initialUsers`/`initialRankings` 改为可选，并新增 `initialUsersLoading`/`initialRankingsLoading`，首屏加载中展示表格骨架与排行旋转指示
