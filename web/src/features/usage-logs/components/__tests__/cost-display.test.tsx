@@ -136,7 +136,7 @@ describe('log cost display', () => {
     await unmountCost(rendered)
   })
 
-  test('preserves the subscription badge and adds the same legacy surcharge marker', async () => {
+  test('keeps the subscription cost visible and adds the same legacy surcharge marker', async () => {
     const rendered = await renderCost({
       quota: 5000,
       other: {
@@ -147,7 +147,20 @@ describe('log cost display', () => {
       },
     })
 
-    assert.equal(rendered.container.textContent?.includes('Subscription'), true)
+    assert.equal(
+      normalizedText(rendered.container.textContent).includes(
+        normalizedText(formatLogQuota(5000))
+      ),
+      true
+    )
+    const subscriptionTrigger = rendered.container.querySelector<HTMLElement>(
+      '[data-slot="tooltip-trigger"]'
+    )
+    assert.ok(subscriptionTrigger)
+
+    await act(async () => subscriptionTrigger.focus())
+
+    assert.equal(document.body.textContent?.includes('Subscription'), true)
     assert.ok(
       rendered.container.querySelector('[data-tool-surcharge-indicator="true"]')
     )
