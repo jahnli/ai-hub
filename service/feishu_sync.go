@@ -319,30 +319,36 @@ func feishuCheckResult(respBody []byte, status int) (*feishuAPIResult, error) {
 }
 
 func feishuGetTenantAccessToken(cfg feishuSyncConfig) (string, error) {
+	token, _, err := feishuGetTenantAccessTokenWithExpiry(cfg)
+	return token, err
+}
+
+func feishuGetTenantAccessTokenWithExpiry(cfg feishuSyncConfig) (string, time.Duration, error) {
 	body := map[string]string{
 		"app_id":     cfg.AppID,
 		"app_secret": cfg.AppSecret,
 	}
 	respBody, _, err := feishuDoRequest(http.MethodPost, feishuBaseURL+"/auth/v3/tenant_access_token/internal", body, "")
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	// tenant_access_token 接口的响应不在标准 data 壳内，单独解析。
 	var resp struct {
 		Code              int    `json:"code"`
 		Msg               string `json:"msg"`
 		TenantAccessToken string `json:"tenant_access_token"`
+		Expire            int    `json:"expire"`
 	}
 	if err := common.Unmarshal(respBody, &resp); err != nil {
-		return "", fmt.Errorf("decode token response: %w", err)
+		return "", 0, fmt.Errorf("decode token response: %w", err)
 	}
 	if resp.Code != 0 {
-		return "", fmt.Errorf("feishu code=%d msg=%s", resp.Code, resp.Msg)
+		return "", 0, fmt.Errorf("feishu code=%d msg=%s", resp.Code, resp.Msg)
 	}
 	if resp.TenantAccessToken == "" {
-		return "", fmt.Errorf("empty tenant_access_token")
+		return "", 0, fmt.Errorf("empty tenant_access_token")
 	}
-	return resp.TenantAccessToken, nil
+	return resp.TenantAccessToken, time.Duration(resp.Expire) * time.Second, nil
 }
 
 // feishuGetOpenIDByEmail 通过邮箱查询用户的 open_id。

@@ -193,6 +193,12 @@ func dingtalkGetAccessToken(cfg dingtalkSyncConfig) (string, error) {
 	return token, nil
 }
 
+func invalidateDingTalkAccessToken(clientID string) {
+	dingtalkTokenCacheMutex.Lock()
+	delete(dingtalkTokenCacheMap, clientID)
+	dingtalkTokenCacheMutex.Unlock()
+}
+
 func dingtalkFetchNewToken(appKey, appSecret string) (token string, expiresIn int64, err error) {
 	url := fmt.Sprintf("%s/gettoken?appkey=%s&appsecret=%s", dingTalkBaseURL, appKey, appSecret)
 	respBody, status, reqErr := dingtalkDoRequest(http.MethodGet, url, nil)

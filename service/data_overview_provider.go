@@ -81,6 +81,14 @@ var fetchCompanyDirectory = fetchCompanyDirectoryFromProvider
 var fetchCompanyMembers = fetchCompanyMembersFromProvider
 var fetchCompanyMemberDetails = fetchCompanyMemberDetailsFromProvider
 
+var (
+	requestCompanyFeishuToken         = feishuGetTenantAccessTokenWithExpiry
+	requestCompanyFeishuDepartments   = feishuFetchAllDepartments
+	requestCompanyDingTalkToken       = dingtalkGetAccessToken
+	requestCompanyDingTalkRoot        = dingtalkFetchDeptDetail
+	requestCompanyDingTalkDepartments = dingtalkFetchAllDepartments
+)
+
 func fetchCompanyDirectoryFromProvider(company *model.Company) (*overviewDirectory, error) {
 	cacheKey := companyOverviewCacheKey(company.Id, "directory", "")
 	if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
@@ -128,11 +136,9 @@ func fetchCompanyMembersFromProvider(company *model.Company, departmentID string
 		var members []overviewMember
 		switch company.Platform {
 		case model.CompanyPlatformFeishu:
-			token, err := getCompanyFeishuToken(company.Id, config.Feishu)
-			if err != nil {
-				return nil, err
-			}
-			openIDs, err := getCachedDepartmentMembers(token, departmentID)
+			openIDs, err := withRefreshedCompanyFeishuToken(company.Id, config.Feishu, func(token string) ([]string, error) {
+				return getCachedDepartmentMembers(token, departmentID)
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -144,15 +150,13 @@ func fetchCompanyMembersFromProvider(company *model.Company, departmentID string
 				members = append(members, overviewMember{OpenID: openID})
 			}
 		case model.CompanyPlatformDingTalk:
-			token, err := getCompanyDingTalkToken(company.Id, config.DingTalk)
-			if err != nil {
-				return nil, err
-			}
-			members, err = dingtalkFetchDepartmentMembers(
-				config.DingTalk.ClientID,
-				token,
-				departmentID,
-			)
+			members, err = withRefreshedCompanyDingTalkToken(company.Id, config.DingTalk, func(token string) ([]overviewMember, error) {
+				return dingtalkFetchDepartmentMembers(
+					config.DingTalk.ClientID,
+					token,
+					departmentID,
+				)
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -181,11 +185,9 @@ func fetchCompanyMemberDetailsFromProvider(company *model.Company, departmentID 
 		var members []overviewMember
 		switch company.Platform {
 		case model.CompanyPlatformFeishu:
-			token, err := getCompanyFeishuToken(company.Id, config.Feishu)
-			if err != nil {
-				return nil, err
-			}
-			items, err := getCachedDepartmentMemberDetails(token, departmentID)
+			items, err := withRefreshedCompanyFeishuToken(company.Id, config.Feishu, func(token string) ([]feishuDeptMember, error) {
+				return getCachedDepartmentMemberDetails(token, departmentID)
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -213,24 +215,22 @@ func getCompanyFeishuToken(companyID int, config model.CompanyFeishuConfig) (str
 	if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
 		return cached.(string), nil
 	}
-	token, err := feishuGetTenantAccessToken(feishuSyncConfig{AppID: config.AppID, AppSecret: config.AppSecret})
+	token, expiresIn, err := requestCompanyFeishuToken(feishuSyncConfig{AppID: config.AppID, AppSecret: config.AppSecret})
 	if err != nil {
 		return "", err
 	}
-	storeCompanyOverviewCache(cacheKey, token, time.Hour)
+	cacheTTL := expiresIn - time.Minute
+	if cacheTTL > 0 {
+		storeCompanyOverviewCache(cacheKey, token, cacheTTL)
+	}
 	return token, nil
 }
 
 func fetchFeishuCompanyDirectory(company *model.Company, config model.CompanyFeishuConfig) (*overviewDirectory, error) {
-	token, err := getCompanyFeishuToken(company.Id, config)
-	if err != nil {
-		return nil, err
-	}
 	// Do not call /tenant/v2/tenant/query here. That API is optional for display
-	// naming only and frequently fails (e.g. 99991663) even when contact APIs
-	// work. OrganizationName uses company.Name so the multi-company name check
-	// stays consistent; connection testing still uses feishuFetchTenantInfo.
-	departments, err := feishuFetchAllDepartments(token)
+	// naming only. OrganizationName uses company.Name so the multi-company name
+	// check stays consistent; connection testing still uses feishuFetchTenantInfo.
+	departments, err := withRefreshedCompanyFeishuToken(company.Id, config, requestCompanyFeishuDepartments)
 	if err != nil {
 		return nil, err
 	}
@@ -250,32 +250,79 @@ func getCompanyDingTalkToken(companyID int, config model.CompanyDingTalkConfig) 
 	if config.ClientID == "" || config.ClientSecret == "" {
 		return "", fmt.Errorf("company %d dingtalk credentials are incomplete", companyID)
 	}
-	cacheKey := companyOverviewCacheKey(companyID, "dingtalk-token", "")
-	if cached, ok := loadCompanyOverviewCache(cacheKey); ok {
-		return cached.(string), nil
-	}
-	token, err := dingtalkGetAccessToken(dingtalkSyncConfig{ClientID: config.ClientID, ClientSecret: config.ClientSecret})
-	if err != nil {
-		return "", err
-	}
-	storeCompanyOverviewCache(cacheKey, token, time.Hour)
-	return token, nil
+	return requestCompanyDingTalkToken(dingtalkSyncConfig{ClientID: config.ClientID, ClientSecret: config.ClientSecret})
 }
 
 func fetchDingTalkCompanyDirectory(company *model.Company, config model.CompanyDingTalkConfig) (*overviewDirectory, error) {
-	token, err := getCompanyDingTalkToken(company.Id, config)
-	if err != nil {
-		return nil, err
+	return withRefreshedCompanyDingTalkToken(company.Id, config, func(token string) (*overviewDirectory, error) {
+		root, err := requestCompanyDingTalkRoot(token, dingTalkDeptRootID, make(map[int64]*dingtalkDeptDetail))
+		if err != nil {
+			return nil, err
+		}
+		departments, err := requestCompanyDingTalkDepartments(config.ClientID, token)
+		if err != nil {
+			return nil, err
+		}
+		return &overviewDirectory{OrganizationName: root.Name, Departments: departments}, nil
+	})
+}
+
+func withRefreshedCompanyFeishuToken[T any](companyID int, config model.CompanyFeishuConfig, request func(string) (T, error)) (T, error) {
+	var zero T
+	for attempt := 0; attempt < 2; attempt++ {
+		token, err := getCompanyFeishuToken(companyID, config)
+		if err != nil {
+			return zero, err
+		}
+		result, err := request(token)
+		if err == nil {
+			return result, nil
+		}
+		if attempt == 1 || !isFeishuInvalidAccessTokenError(err) {
+			return zero, err
+		}
+		companyOverviewCache.Delete(companyOverviewCacheKey(companyID, "feishu-token", ""))
 	}
-	root, err := dingtalkFetchDeptDetail(token, dingTalkDeptRootID, make(map[int64]*dingtalkDeptDetail))
-	if err != nil {
-		return nil, err
+	return zero, errors.New("feishu access token refresh failed")
+}
+
+func withRefreshedCompanyDingTalkToken[T any](companyID int, config model.CompanyDingTalkConfig, request func(string) (T, error)) (T, error) {
+	var zero T
+	for attempt := 0; attempt < 2; attempt++ {
+		token, err := getCompanyDingTalkToken(companyID, config)
+		if err != nil {
+			return zero, err
+		}
+		result, err := request(token)
+		if err == nil {
+			return result, nil
+		}
+		if attempt == 1 || !isDingTalkInvalidAccessTokenError(err) {
+			return zero, err
+		}
+		invalidateDingTalkAccessToken(config.ClientID)
 	}
-	departments, err := dingtalkFetchAllDepartments(config.ClientID, token)
-	if err != nil {
-		return nil, err
+	return zero, errors.New("dingtalk access token refresh failed")
+}
+
+func isFeishuInvalidAccessTokenError(err error) bool {
+	if err == nil {
+		return false
 	}
-	return &overviewDirectory{OrganizationName: root.Name, Departments: departments}, nil
+	message := err.Error()
+	return strings.Contains(message, "99991663") ||
+		strings.Contains(message, "9991663") ||
+		strings.Contains(message, "Invalid access token for authorization")
+}
+
+func isDingTalkInvalidAccessTokenError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "40014") ||
+		strings.Contains(message, "不合法的access_token") ||
+		strings.Contains(message, "invalid access token")
 }
 
 type dingTalkRequestExecutor func(request func() ([]byte, int, error)) ([]byte, int, error)
