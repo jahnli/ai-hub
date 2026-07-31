@@ -106,6 +106,11 @@ export interface ReportNotifySetting {
   quota_leave: number
 }
 
+export type DepartmentRegistrationStatus =
+  | 'registered'
+  | 'unregistered'
+  | 'departed'
+
 export interface DepartmentUser {
   id: number
   username: string
@@ -119,6 +124,7 @@ export interface DepartmentUser {
   total_tokens: number
   total_requests: number
   is_registered?: boolean
+  registration_status?: DepartmentRegistrationStatus
   common_model?: string
   request_count: number
   group: string

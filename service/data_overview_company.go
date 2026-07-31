@@ -538,6 +538,14 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 	if err != nil {
 		return nil, nil, err
 	}
+	var disabledUsers []*model.User
+	if err := model.DB.Model(&model.User{}).
+		Where("company = ? AND status = ?", companyName, common.UserStatusDisabled).
+		Where("open_id <> ?", "").
+		Omit("password").
+		Find(&disabledUsers).Error; err != nil {
+		return nil, nil, err
+	}
 
 	allowedDepartmentIDs := make(map[string]bool, len(departmentIDs))
 	for _, departmentID := range departmentIDs {
@@ -549,10 +557,17 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 			usersByOpenID[user.OpenId] = user
 		}
 	}
+	for _, user := range disabledUsers {
+		if user.OpenId != "" {
+			usersByOpenID[user.OpenId] = user
+		}
+	}
 
 	matchedMembers := make([]overviewMember, 0, len(members))
-	matchedUsers := make([]*model.User, 0, len(users))
+	matchedUsers := make([]*model.User, 0, len(users)+len(disabledUsers))
+	seenMemberOpenIDs := make(map[string]bool, len(members)+len(disabledUsers))
 	for _, member := range members {
+		seenMemberOpenIDs[member.OpenID] = true
 		user := usersByOpenID[member.OpenID]
 		if user == nil {
 			matchedMembers = append(matchedMembers, member)
@@ -562,6 +577,19 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 			continue
 		}
 		matchedMembers = append(matchedMembers, member)
+		if registeredBefore <= 0 || user.CreatedAt <= registeredBefore {
+			matchedUsers = append(matchedUsers, user)
+		}
+	}
+	for _, user := range disabledUsers {
+		departmentID := user.GetPrimaryDepartmentID()
+		if seenMemberOpenIDs[user.OpenId] || !allowedDepartmentIDs[departmentID] {
+			continue
+		}
+		matchedMembers = append(matchedMembers, overviewMember{
+			OpenID:               user.OpenId,
+			ObservedDepartmentID: departmentID,
+		})
 		if registeredBefore <= 0 || user.CreatedAt <= registeredBefore {
 			matchedUsers = append(matchedUsers, user)
 		}
@@ -1064,10 +1092,16 @@ func buildCompanyDepartmentUsers(req *DepartmentUsersRequest, audience *overview
 
 	items := make([]DepartmentUserItem, 0)
 	if audience.forceRegisteredOnly {
-		if req.RegistrationStatus != departmentRegistrationStatusUnregistered {
-			for _, user := range audience.users {
-				items = append(items, DepartmentUserItem{User: user, IsRegistered: true})
+		for _, user := range audience.users {
+			registrationStatus := getDepartmentUserRegistrationStatus(user, req.EndTimestamp)
+			if req.RegistrationStatus != "" && req.RegistrationStatus != registrationStatus {
+				continue
 			}
+			items = append(items, DepartmentUserItem{
+				User:               user,
+				IsRegistered:       registrationStatus != departmentRegistrationStatusUnregistered,
+				RegistrationStatus: registrationStatus,
+			})
 		}
 	} else {
 		// Keep the lightweight open_id audience for merge/count. Do not call

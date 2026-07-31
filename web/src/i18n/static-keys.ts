@@ -594,6 +594,7 @@ export const STATIC_I18N_KEYS = [
   'Registration Status',
   'Registered',
   'Unregistered',
+  'Departed',
   'Upgrade Group',
   'Regenerate',
   'Untitled',

@@ -1267,19 +1267,21 @@ type DepartmentUsersRequest struct {
 const (
 	departmentRegistrationStatusRegistered   = "registered"
 	departmentRegistrationStatusUnregistered = "unregistered"
+	departmentRegistrationStatusDeparted     = "departed"
 )
 
 // DepartmentUserItem holds user info with stats for a specific time range.
 type DepartmentUserItem struct {
 	*model.User
-	TotalAmountCNY float64 `json:"total_amount_cny"`
-	AvgPricePerMT  float64 `json:"avg_price_per_mt"`
-	TotalTokens    int64   `json:"total_tokens"`
-	TotalRequests  int64   `json:"total_requests"`
-	CommonModel    string  `json:"common_model"`
-	IsRegistered   bool    `json:"is_registered"`
-	SubQuotaUsed   int64   `json:"sub_quota_used"`
-	SubQuotaTotal  int64   `json:"sub_quota_total"`
+	TotalAmountCNY     float64 `json:"total_amount_cny"`
+	AvgPricePerMT      float64 `json:"avg_price_per_mt"`
+	TotalTokens        int64   `json:"total_tokens"`
+	TotalRequests      int64   `json:"total_requests"`
+	CommonModel        string  `json:"common_model"`
+	IsRegistered       bool    `json:"is_registered"`
+	RegistrationStatus string  `json:"registration_status"`
+	SubQuotaUsed       int64   `json:"sub_quota_used"`
+	SubQuotaTotal      int64   `json:"sub_quota_total"`
 }
 
 func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *model.User {
@@ -1298,6 +1300,16 @@ func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *mo
 
 func isDepartmentUserRegisteredAt(user *model.User, endTimestamp int64) bool {
 	return user != nil && (endTimestamp <= 0 || user.CreatedAt <= endTimestamp)
+}
+
+func getDepartmentUserRegistrationStatus(user *model.User, endTimestamp int64) string {
+	if !isDepartmentUserRegisteredAt(user, endTimestamp) {
+		return departmentRegistrationStatusUnregistered
+	}
+	if user.Status == common.UserStatusDisabled {
+		return departmentRegistrationStatusDeparted
+	}
+	return departmentRegistrationStatusRegistered
 }
 
 func departmentUserRegistrationCounts(users []*model.User, totalUsers int, endTimestamp int64) (int64, int64) {
@@ -1330,20 +1342,28 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 		}
 		seen[openID] = true
 		if u, ok := userMap[openID]; ok {
-			isRegistered := isDepartmentUserRegisteredAt(u, endTimestamp)
-			if isRegistered && registrationStatus == departmentRegistrationStatusUnregistered {
+			userRegistrationStatus := getDepartmentUserRegistrationStatus(u, endTimestamp)
+			isRegistered := userRegistrationStatus != departmentRegistrationStatusUnregistered
+			if registrationStatus != "" && registrationStatus != userRegistrationStatus {
 				continue
 			}
-			if !isRegistered && (!includeUnregistered || registrationStatus == departmentRegistrationStatusRegistered) {
+			if !isRegistered && !includeUnregistered {
 				continue
 			}
-			result = append(result, DepartmentUserItem{User: u, IsRegistered: isRegistered})
+			result = append(result, DepartmentUserItem{
+				User:               u,
+				IsRegistered:       isRegistered,
+				RegistrationStatus: userRegistrationStatus,
+			})
 			continue
 		}
-		if !includeUnregistered || registrationStatus == departmentRegistrationStatusRegistered {
+		if !includeUnregistered || (registrationStatus != "" && registrationStatus != departmentRegistrationStatusUnregistered) {
 			continue
 		}
-		result = append(result, DepartmentUserItem{User: buildUnregisteredDepartmentUser(openID, memberDetails[openID])})
+		result = append(result, DepartmentUserItem{
+			User:               buildUnregisteredDepartmentUser(openID, memberDetails[openID]),
+			RegistrationStatus: departmentRegistrationStatusUnregistered,
+		})
 	}
 	return result
 }

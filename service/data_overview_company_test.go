@@ -394,6 +394,90 @@ func TestMatchOverviewDepartmentMembersUsesFirstDepartmentID(t *testing.T) {
 	assert.Equal(t, "primary-open-id", matchedUsers[0].OpenId)
 }
 
+func TestMatchOverviewDepartmentMembersIncludesDisabledUserFromStoredDepartment(t *testing.T) {
+	previousDB := model.DB
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.User{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		_ = sqlDB.Close()
+	})
+
+	users := []*model.User{
+		{
+			Username:    "active-member",
+			Password:    "password",
+			Company:     "disabled-member-company",
+			OpenId:      "active-open-id",
+			Departments: `[{"department_id":"target"}]`,
+			Status:      common.UserStatusEnabled,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "departed-member",
+			Password:    "password",
+			Company:     "disabled-member-company",
+			OpenId:      "departed-open-id",
+			Departments: `[{"department_id":"target"}]`,
+			Status:      common.UserStatusDisabled,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "inactive-non-member",
+			Password:    "password",
+			Company:     "disabled-member-company",
+			OpenId:      "other-open-id",
+			Departments: `[{"department_id":"other"}]`,
+			Status:      common.UserStatusDisabled,
+			CreatedAt:   100,
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	matchedMembers, matchedUsers, err := matchOverviewDepartmentMembers(
+		"disabled-member-company",
+		[]overviewMember{{OpenID: "active-open-id", ObservedDepartmentID: "target"}},
+		[]string{"target"},
+		200,
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, []overviewMember{
+		{OpenID: "active-open-id", ObservedDepartmentID: "target"},
+		{OpenID: "departed-open-id", ObservedDepartmentID: "target"},
+	}, matchedMembers)
+	require.Len(t, matchedUsers, 2)
+	assert.Equal(t, []int{users[0].Id, users[1].Id}, userIDsFromUsers(matchedUsers))
+
+	items := mergeDepartmentUsersWithMembers(
+		matchedUsers,
+		[]string{"active-open-id", "departed-open-id"},
+		nil,
+		200,
+		true,
+		"",
+	)
+	require.Len(t, items, 2)
+	assert.Equal(t, departmentRegistrationStatusRegistered, items[0].RegistrationStatus)
+	assert.Equal(t, departmentRegistrationStatusDeparted, items[1].RegistrationStatus)
+	assert.True(t, items[1].IsRegistered)
+
+	departedItems := mergeDepartmentUsersWithMembers(
+		matchedUsers,
+		[]string{"active-open-id", "departed-open-id"},
+		nil,
+		200,
+		true,
+		departmentRegistrationStatusDeparted,
+	)
+	require.Len(t, departedItems, 1)
+	assert.Equal(t, users[1].Id, departedItems[0].Id)
+}
+
 func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *testing.T) {
 	previousDB, previousLogDB := model.DB, model.LOG_DB
 	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers

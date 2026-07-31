@@ -26,6 +26,11 @@ import {
   buildUserRankBarSpec,
   buildUserRankPieSpec,
 } from './chart-to-image'
+import {
+  getDepartmentRegistrationStatusLabel,
+  getDepartmentUserRegistrationStatus,
+  isDepartmentUserRegistered,
+} from './registration-status'
 
 function fmtCny(value: number): string {
   if (value === 0) return '¥0.00'
@@ -360,7 +365,8 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   }
 
   p.users.forEach((u) => {
-    const isRegistered = u.is_registered !== false
+    const registrationStatus = getDepartmentUserRegistrationStatus(u)
+    const isRegistered = isDepartmentUserRegistered(u)
     const row = ws.addRow([
       u.display_name || u.username || '-',
       isRegistered ? fmtCny(u.total_amount_cny ?? 0) : '-',
@@ -373,7 +379,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
       isRegistered && u.created_at
         ? dayjs.unix(u.created_at).format('YYYY-MM-DD HH:mm')
         : '-',
-      isRegistered ? t('Registered') : t('Unregistered'),
+      t(getDepartmentRegistrationStatusLabel(registrationStatus)),
     ])
 
     if (!isRegistered) {

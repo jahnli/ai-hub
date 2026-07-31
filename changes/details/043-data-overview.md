@@ -2,6 +2,14 @@
 
 **日期**: 2026-06-25 ~ 07-30（最后更新 07-30）
 
+### 2026-07-30 离职人员部门统计修复
+
+- `service/data_overview_company.go` — 平台通讯录已不再返回的禁用账号，按本地 `users.departments` 首个 `department_id` 回补到对应部门受众，继续参与部门人数、用量、排行和日志统计
+- `service/feishu_department.go` — 部门用户注册状态新增 `departed`，禁用账号显示为离职并保留已注册账号的统计能力；注册状态筛选同步支持离职
+- `service/data_overview_company_test.go` — 覆盖禁用账号不在平台成员列表中但本地部门匹配时仍被纳入统计的回归路径
+- `web/src/features/data-overview/` — 部门用户列表和 Excel 导出展示离职状态，筛选器新增离职选项，并补充状态兼容逻辑与前端回归测试
+- `web/src/i18n/` — 新增 Departed 的 7 语言翻译及静态翻译键
+
 ### 2026-07-30 公司平台 Token 自动刷新修复
 
 - `service/data_overview_provider.go` — 飞书公司 Token 缓存改为遵循平台返回的真实有效期并提前 60 秒失效；钉钉移除数据总览额外的一小时 Token 缓存，复用原有基于 `expires_in` 的缓存；飞书遇到 99991663 等无效 Token、钉钉遇到 40014 无效 Token 时，清除对应缓存、重新获取 Token，并对部门目录、成员列表和成员详情请求重试一次

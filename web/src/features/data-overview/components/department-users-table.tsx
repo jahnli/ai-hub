@@ -40,6 +40,12 @@ import {
   DEPARTMENT_USERS_INITIAL_PAGE_SIZE,
   isInitialDepartmentUsersQuery,
 } from '../lib/department-users-query'
+import {
+  DEPARTMENT_REGISTRATION_STATUS,
+  getDepartmentRegistrationStatusLabel,
+  getDepartmentUserRegistrationStatus,
+  isDepartmentUserRegistered,
+} from '../lib/registration-status'
 import type {
   DepartmentUser,
   DepartmentUsersResponse,
@@ -80,8 +86,7 @@ const DEPARTMENT_USERS_PINNED_COLUMNS = [
 
 const REGISTRATION_STATUS = {
   ALL: 'all',
-  REGISTERED: 'registered',
-  UNREGISTERED: 'unregistered',
+  ...DEPARTMENT_REGISTRATION_STATUS,
 } as const
 
 function getRegistrationStatusFilter(
@@ -140,10 +145,7 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
   const registrationStatusColumn = useMemo<ColumnDef<DepartmentUser>>(
     () => ({
       id: 'is_registered',
-      accessorFn: (row) =>
-        row.is_registered === false
-          ? REGISTRATION_STATUS.UNREGISTERED
-          : REGISTRATION_STATUS.REGISTERED,
+      accessorFn: getDepartmentUserRegistrationStatus,
       header: () => (
         <div className='flex items-center gap-1.5'>
           <span>{t('Registration Status')}</span>
@@ -181,17 +183,28 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
                   <UserRoundX className='text-muted-foreground size-3.5' />
                   {t('Unregistered')}
                 </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value={REGISTRATION_STATUS.DEPARTED}>
+                  <UserRoundX className='text-warning size-3.5' />
+                  {t('Departed')}
+                </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       ),
       cell: ({ row }) => {
-        const isRegistered = row.original.is_registered !== false
+        const status = getDepartmentUserRegistrationStatus(row.original)
+        const isDeparted = status === REGISTRATION_STATUS.DEPARTED
+        let variant: 'success' | 'neutral' | 'warning' = 'success'
+        if (status === REGISTRATION_STATUS.UNREGISTERED) {
+          variant = 'neutral'
+        } else if (isDeparted) {
+          variant = 'warning'
+        }
         return (
           <StatusBadge
-            label={t(isRegistered ? 'Registered' : 'Unregistered')}
-            variant={isRegistered ? 'success' : 'neutral'}
+            label={t(getDepartmentRegistrationStatusLabel(status))}
+            variant={variant}
             copyable={false}
           />
         )
@@ -232,7 +245,7 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
         enableSorting: false,
         meta: { pinned: 'right' as const },
         cell: ({ row }) => {
-          if (row.original.is_registered === false) {
+          if (!isDepartmentUserRegistered(row.original)) {
             return <span className='text-muted-foreground text-sm'>-</span>
           }
 
