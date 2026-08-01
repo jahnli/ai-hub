@@ -1,4 +1,4 @@
-# CLAUDE.md — new-api 项目规范
+# CLAUDE.md — AI Gateway 项目规范
 
 @AGENTS.md
 
