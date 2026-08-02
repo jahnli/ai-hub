@@ -357,6 +357,37 @@ func AdminUpdateSubscriptionPlanStatus(c *gin.Context) {
 	common.ApiSuccess(c, nil)
 }
 
+type AdminSubscriptionCompanyOption struct {
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Alias string `json:"alias"`
+}
+
+func AdminListSubscriptionCompanyOptions(c *gin.Context) {
+	companies, err := model.ListEnabledCompanies()
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	options := make([]AdminSubscriptionCompanyOption, 0, len(companies))
+	for _, company := range companies {
+		if company == nil {
+			continue
+		}
+		options = append(options, AdminSubscriptionCompanyOption{
+			Id:    company.Id,
+			Name:  company.Name,
+			Alias: company.Alias,
+		})
+	}
+	common.ApiSuccess(c, options)
+}
+
+type AdminSubscribeAllUsersRequest struct {
+	CompanyId int `json:"company_id"`
+}
+
 func AdminSubscribeAllUsersToPlan(c *gin.Context) {
 	if !requirePaymentCompliance(c) {
 		return
@@ -367,7 +398,12 @@ func AdminSubscribeAllUsersToPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "无效的ID")
 		return
 	}
-	result, err := model.AdminSubscribeAllUsers(id)
+	var req AdminSubscribeAllUsersRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.CompanyId <= 0 {
+		common.ApiErrorMsg(c, "请选择公司")
+		return
+	}
+	result, err := model.AdminSubscribeAllUsers(id, req.CompanyId)
 	if err != nil {
 		common.ApiError(c, err)
 		return

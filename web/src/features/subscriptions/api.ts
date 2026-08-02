@@ -30,6 +30,8 @@ import type {
   SubscriptionPayResponse,
   SubscriptionPayRequest,
   SelfSubscriptionData,
+  SubscribeAllCompanyOption,
+  SubscribeAllUsersResult,
 } from './types'
 
 // ============================================================================
@@ -66,11 +68,20 @@ export async function patchPlanStatus(
   return res.data
 }
 
+export async function getSubscribeAllCompanyOptions(): Promise<
+  ApiResponse<SubscribeAllCompanyOption[]>
+> {
+  const res = await api.get('/api/subscription/admin/company-options')
+  return res.data
+}
+
 export async function subscribeAllUsers(
-  id: number
-): Promise<ApiResponse<{ created: number; skipped: number; failed: number }>> {
+  id: number,
+  companyId: number
+): Promise<ApiResponse<SubscribeAllUsersResult>> {
   const res = await api.post(
-    `/api/subscription/admin/plans/${id}/subscribe-all`
+    `/api/subscription/admin/plans/${id}/subscribe-all`,
+    { company_id: companyId }
   )
   return res.data
 }

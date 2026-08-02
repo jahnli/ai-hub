@@ -746,6 +746,10 @@ func ExpireSubscriptionOrder(tradeNo string, expectedPaymentProvider string) err
 
 // Admin bind (no payment). Creates a UserSubscription from a plan.
 func AdminBindSubscription(userId int, planId int, sourceNote string) (string, error) {
+	return adminBindSubscription(userId, planId, sourceNote, false, false)
+}
+
+func adminBindSubscription(userId int, planId int, sourceNote string, includeDeletedUser bool, replaceActivePlanSubscription bool) (string, error) {
 	if userId <= 0 || planId <= 0 {
 		return "", errors.New("invalid userId or planId")
 	}
@@ -759,14 +763,85 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 	}
 	groupChanged := false
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		company, err := getUserCompanyByIdTx(tx, userId)
-		if err != nil {
-			return err
+		company := ""
+		deletedUser := false
+		if includeDeletedUser {
+			var user User
+			if err := tx.Unscoped().Select("company", "deleted_at").First(&user, userId).Error; err != nil {
+				return err
+			}
+			company = NormalizeCompany(user.Company)
+			deletedUser = user.DeletedAt.Valid
+		} else {
+			var err error
+			company, err = getUserCompanyByIdTx(tx, userId)
+			if err != nil {
+				return err
+			}
 		}
 		if !IsSubscriptionPlanVisibleToCompany(plan, company) {
 			return errors.New("套餐不适用于该用户所属公司")
 		}
-		subscription, err := CreateUserSubscriptionFromPlanTx(tx, userId, plan, source)
+		replacementPreviousGroup := ""
+		replacementAmountUsed := int64(0)
+		if replaceActivePlanSubscription {
+			now := GetDBTimestamp()
+			var activeSubscriptions []UserSubscription
+			if err := lockForUpdate(tx).
+				Where("user_id = ? AND plan_id = ? AND status = ? AND end_time > ?", userId, planId, "active", now).
+				Order("id asc").
+				Find(&activeSubscriptions).Error; err != nil {
+				return err
+			}
+			for _, activeSubscription := range activeSubscriptions {
+				activeAmountUsed := activeSubscription.AmountUsed
+				if activeAmountUsed == 0 {
+					var replacedSubscription UserSubscription
+					replacedQuery := tx.
+						Where("user_id = ? AND plan_id = ? AND status = ? AND end_time = ? AND id < ?", userId, planId, "cancelled", activeSubscription.StartTime, activeSubscription.Id).
+						Order("id desc").
+						Limit(1).
+						Find(&replacedSubscription)
+					if replacedQuery.Error != nil {
+						return replacedQuery.Error
+					}
+					if replacedQuery.RowsAffected > 0 {
+						activeAmountUsed = replacedSubscription.AmountUsed
+					}
+				}
+				replacementAmountUsed += activeAmountUsed
+				if replacementPreviousGroup == "" && strings.TrimSpace(activeSubscription.PrevUserGroup) != "" {
+					replacementPreviousGroup = strings.TrimSpace(activeSubscription.PrevUserGroup)
+				}
+			}
+			if len(activeSubscriptions) > 0 {
+				if err := tx.Model(&UserSubscription{}).
+					Where("user_id = ? AND plan_id = ? AND status = ? AND end_time > ?", userId, planId, "active", now).
+					Updates(map[string]interface{}{
+						"status":     "cancelled",
+						"end_time":   now,
+						"updated_at": now,
+					}).Error; err != nil {
+					return err
+				}
+			}
+		}
+		userPlan := plan
+		if deletedUser && strings.TrimSpace(plan.UpgradeGroup) != "" {
+			planWithoutGroupUpgrade := *plan
+			planWithoutGroupUpgrade.UpgradeGroup = ""
+			userPlan = &planWithoutGroupUpgrade
+		}
+		subscription, err := CreateUserSubscriptionFromPlanTx(tx, userId, userPlan, source)
+		if err == nil && (replacementPreviousGroup != "" || replacementAmountUsed > 0) {
+			subscription.PrevUserGroup = replacementPreviousGroup
+			subscription.AmountUsed = replacementAmountUsed
+			err = tx.Model(subscription).Updates(map[string]interface{}{
+				"prev_user_group": replacementPreviousGroup,
+				"amount_used":     replacementAmountUsed,
+				"updated_at":      common.GetTimestamp(),
+			}).Error
+		}
 		if err == nil {
 			groupChanged = subscription.PrevUserGroup != ""
 		}
@@ -788,9 +863,9 @@ type AdminSubscribeAllUsersResult struct {
 	Failed  int `json:"failed"`
 }
 
-func AdminSubscribeAllUsers(planId int) (AdminSubscribeAllUsersResult, error) {
-	if planId <= 0 {
-		return AdminSubscribeAllUsersResult{}, errors.New("invalid planId")
+func AdminSubscribeAllUsers(planId int, companyId int) (AdminSubscribeAllUsersResult, error) {
+	if planId <= 0 || companyId <= 0 {
+		return AdminSubscribeAllUsersResult{}, errors.New("invalid planId or companyId")
 	}
 	plan, err := GetSubscriptionPlanById(planId)
 	if err != nil {
@@ -799,20 +874,26 @@ func AdminSubscribeAllUsers(planId int) (AdminSubscribeAllUsersResult, error) {
 	if !plan.Enabled {
 		return AdminSubscribeAllUsersResult{}, errors.New("禁用套餐不能全员订阅")
 	}
+	company, err := GetEnabledCompanyByID(companyId)
+	if err != nil {
+		return AdminSubscribeAllUsersResult{}, errors.New("所选公司不存在或未启用")
+	}
+	if !IsSubscriptionPlanVisibleToCompany(plan, company.Name) {
+		return AdminSubscribeAllUsersResult{}, errors.New("套餐不适用于所选公司")
+	}
 
 	result := AdminSubscribeAllUsersResult{}
 	var users []User
-	err = DB.Model(&User{}).
+	err = DB.Unscoped().Model(&User{}).
 		Select("id").
-		Where("deleted_at IS NULL").
-		Where("status = ?", common.UserStatusEnabled).
+		Where("company = ?", NormalizeCompany(company.Name)).
 		FindInBatches(&users, 500, func(tx *gorm.DB, batch int) error {
 			for _, user := range users {
 				if user.Id <= 0 {
 					result.Skipped++
 					continue
 				}
-				if _, err := AdminBindSubscription(user.Id, planId, ""); err != nil {
+				if _, err := adminBindSubscription(user.Id, planId, "", true, true); err != nil {
 					result.Failed++
 					continue
 				}

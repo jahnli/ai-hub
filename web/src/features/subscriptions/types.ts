@@ -85,6 +85,18 @@ export interface ApiResponse<T = unknown> {
   data?: T
 }
 
+export interface SubscribeAllCompanyOption {
+  id: number
+  name: string
+  alias: string
+}
+
+export interface SubscribeAllUsersResult {
+  created: number
+  skipped: number
+  failed: number
+}
+
 export interface PlanPayload {
   plan: Partial<SubscriptionPlan>
 }
