@@ -1278,6 +1278,7 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
           <ModelDetailsApi
             model={props.model}
             endpointMap={props.endpointMap}
+            visibleGroups={visibleModelGroups}
           />
         </TabsContent>
       </Tabs>
