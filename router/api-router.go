@@ -19,6 +19,11 @@ func SetApiRouter(router *gin.Engine) {
 	apiRouter.Use(middleware.GlobalAPIRateLimit())
 	anonymousRequestBodyLimit := middleware.AnonymousRequestBodyLimit()
 	{
+		internalReportNotifyRoute := apiRouter.Group("/internal/report-notify")
+		internalReportNotifyRoute.Use(middleware.ReportNotifySignatureAuth())
+		{
+			internalReportNotifyRoute.POST("/user-reports", controller.GetReportNotifyUserReports)
+		}
 		apiRouter.GET("/setup", controller.GetSetup)
 		apiRouter.POST("/setup", anonymousRequestBodyLimit, controller.PostSetup)
 		apiRouter.GET("/status", controller.GetStatus)
