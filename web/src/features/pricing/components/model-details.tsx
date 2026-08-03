@@ -55,10 +55,12 @@ import {
   formatUptimePct,
   getSuccessRateTextClass,
 } from '@/features/performance-metrics/lib/format'
+import { useIsAdmin } from '@/hooks/use-admin'
 import { useDemoMode } from '@/hooks/use-demo-mode'
 import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { DEFAULT_TOKEN_UNIT } from '../constants'
 import { usePricingData } from '../hooks/use-pricing-data'
@@ -121,6 +123,7 @@ const TOKEN_FORMAT = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 1,
 })
 const MODEL_DETAILS_SKELETON_KEYS = ['first', 'second', 'third', 'fourth']
+const EMPTY_GROUPS: string[] = []
 
 function formatCatalogTokenCount(tokens: number): string {
   if (!Number.isFinite(tokens) || tokens <= 0) return ''
@@ -445,10 +448,12 @@ function ModelBackendSignalsSection(props: { model: PricingModel }) {
   )
 }
 
-function ModelBackendProviderSection(props: { model: PricingModel }) {
+function ModelBackendProviderSection(props: {
+  model: PricingModel
+  groups: string[]
+}) {
   const { t } = useTranslation()
   const model = props.model
-  const groups = normalizeCatalogItems(model.enable_groups)
   const endpoints = normalizeCatalogItems(model.supported_endpoint_types)
   const tags = parseTags(model.tags)
   const cells: React.ReactNode[] = []
@@ -467,10 +472,10 @@ function ModelBackendProviderSection(props: { model: PricingModel }) {
     </CatalogInfoCell>
   )
 
-  if (groups.length > 0) {
+  if (props.groups.length > 0) {
     cells.push(
       <CatalogInfoCell key='groups' label={t('Groups')}>
-        <CatalogPillList items={groups} />
+        <CatalogPillList items={props.groups} />
       </CatalogInfoCell>
     )
   }
@@ -511,12 +516,15 @@ function ModelBackendProviderSection(props: { model: PricingModel }) {
   )
 }
 
-function ModelBackendDetailsSection(props: { model: PricingModel }) {
+function ModelBackendDetailsSection(props: {
+  model: PricingModel
+  groups: string[]
+}) {
   return (
     <>
       <ModelBackendQuickStats model={props.model} />
       <ModelBackendSignalsSection model={props.model} />
-      <ModelBackendProviderSection model={props.model} />
+      <ModelBackendProviderSection model={props.model} groups={props.groups} />
     </>
   )
 }
@@ -868,6 +876,7 @@ function GroupPricingSection(props: {
   usdExchangeRate: number
   tokenUnit: TokenUnit
   showRechargePrice?: boolean
+  showGroupRatios: boolean
   maskPrices?: boolean
 }) {
   const { t } = useTranslation()
@@ -989,9 +998,11 @@ function GroupPricingSection(props: {
               <div key={group} className='overflow-hidden rounded-lg border'>
                 <div className='bg-muted/20 flex items-center justify-between gap-3 border-b px-3 py-2'>
                   <GroupBadge group={group} size='sm' />
-                  <span className='text-muted-foreground font-mono text-xs'>
-                    {props.maskPrices ? DEMO_MODE_MASK : `${ratio}x`}
-                  </span>
+                  {props.showGroupRatios && (
+                    <span className='text-muted-foreground font-mono text-xs'>
+                      {props.maskPrices ? DEMO_MODE_MASK : `${ratio}x`}
+                    </span>
+                  )}
                 </div>
                 <StaticDataTable
                   className='rounded-none border-0'
@@ -1073,16 +1084,20 @@ function GroupPricingSection(props: {
             cellClassName: 'py-2.5',
             cell: (group) => <GroupBadge group={group} size='sm' />,
           },
-          {
-            id: 'ratio',
-            header: t('Ratio'),
-            className: thClass,
-            cellClassName: 'text-muted-foreground py-2.5 font-mono',
-            cell: (group) =>
-              props.maskPrices
-                ? DEMO_MODE_MASK
-                : `${props.groupRatio[group] || 1}x`,
-          },
+          ...(props.showGroupRatios
+            ? [
+                {
+                  id: 'ratio',
+                  header: t('Ratio'),
+                  className: thClass,
+                  cellClassName: 'text-muted-foreground py-2.5 font-mono',
+                  cell: (group: string) =>
+                    props.maskPrices
+                      ? DEMO_MODE_MASK
+                      : `${props.groupRatio[group] || 1}x`,
+                },
+              ]
+            : []),
           ...(isTokenBased
             ? [
                 {
@@ -1162,6 +1177,8 @@ export interface ModelDetailsContentProps {
   priceRate: number
   usdExchangeRate: number
   tokenUnit: TokenUnit
+  showGroupRatios: boolean
+  currentUserGroup?: string
   showRechargePrice?: boolean
   maskPrices?: boolean
 }
@@ -1169,6 +1186,25 @@ export interface ModelDetailsContentProps {
 export function ModelDetailsContent(props: ModelDetailsContentProps) {
   const { t } = useTranslation()
   const showRechargePrice = props.showRechargePrice ?? false
+  const visibleUsableGroup = useMemo(() => {
+    if (props.showGroupRatios) return props.usableGroup
+    if (!props.currentUserGroup) return {}
+
+    const currentGroupSettings = props.usableGroup[props.currentUserGroup]
+    if (!currentGroupSettings) return {}
+
+    return { [props.currentUserGroup]: currentGroupSettings }
+  }, [props.currentUserGroup, props.showGroupRatios, props.usableGroup])
+  const visibleAutoGroups = props.showGroupRatios
+    ? props.autoGroups
+    : EMPTY_GROUPS
+  const visibleModelGroups = useMemo(
+    () =>
+      props.showGroupRatios
+        ? normalizeCatalogItems(props.model.enable_groups)
+        : getAvailableGroups(props.model, visibleUsableGroup),
+    [props.model, props.showGroupRatios, visibleUsableGroup]
+  )
 
   const isDynamic =
     props.model.billing_mode === 'tiered_expr' &&
@@ -1217,17 +1253,21 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
             <GroupPricingSection
               model={props.model}
               groupRatio={props.groupRatio}
-              usableGroup={props.usableGroup}
-              autoGroups={props.autoGroups}
+              usableGroup={visibleUsableGroup}
+              autoGroups={visibleAutoGroups}
               priceRate={props.priceRate}
               usdExchangeRate={props.usdExchangeRate}
               tokenUnit={props.tokenUnit}
               showRechargePrice={showRechargePrice}
+              showGroupRatios={props.showGroupRatios}
               maskPrices={props.maskPrices}
             />
           </section>
 
-          <ModelBackendDetailsSection model={props.model} />
+          <ModelBackendDetailsSection
+            model={props.model}
+            groups={visibleModelGroups}
+          />
         </TabsContent>
 
         <TabsContent value='performance' className='outline-none'>
@@ -1281,6 +1321,8 @@ export function ModelDetailsDrawer(props: ModelDetailsDrawerProps) {
 export function ModelDetails() {
   const { t } = useTranslation()
   const demoMode = useDemoMode()
+  const showGroupRatios = useIsAdmin()
+  const currentUserGroup = useAuthStore((state) => state.auth.user?.group)
   const { modelId } = useParams({ from: '/pricing/$modelId/' })
   const search = useSearch({ from: '/pricing/$modelId/' })
   const navigate = useNavigate()
@@ -1372,6 +1414,8 @@ export function ModelDetails() {
           priceRate={priceRate ?? 1}
           usdExchangeRate={usdExchangeRate ?? 1}
           tokenUnit={tokenUnit}
+          showGroupRatios={showGroupRatios}
+          currentUserGroup={currentUserGroup}
           showRechargePrice={search.rechargePrice ?? false}
           maskPrices={demoMode}
           endpointMap={

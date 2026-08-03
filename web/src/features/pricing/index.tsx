@@ -43,6 +43,7 @@ export function Pricing() {
   const { t } = useTranslation()
   const demoMode = useDemoMode()
   const userRole = useAuthStore((state) => state.auth.user?.role)
+  const currentUserGroup = useAuthStore((state) => state.auth.user?.group)
   const isAdmin = (userRole ?? ROLE.GUEST) >= ROLE.ADMIN
   const [selectedModelName, setSelectedModelName] = useState<string | null>(
     null
@@ -291,6 +292,8 @@ export function Pricing() {
               priceRate={priceRate ?? 1}
               usdExchangeRate={usdExchangeRate ?? 1}
               tokenUnit={tokenUnit}
+              showGroupRatios={isAdmin}
+              currentUserGroup={currentUserGroup}
               showRechargePrice={showRechargePrice}
               maskPrices={demoMode}
             />
