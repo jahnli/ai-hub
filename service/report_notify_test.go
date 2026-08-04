@@ -45,7 +45,7 @@ func setupReportNotifyScopeTest(t *testing.T) *model.Company {
 	return company
 }
 
-func TestGetReportNotifyScopesMatchesBUBPDataOverviewScope(t *testing.T) {
+func TestGetReportNotifyScopesUsesBUBPBusinessUnit(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
 		Role: common.RoleBUBP, Company: company.Name,
@@ -60,7 +60,22 @@ func TestGetReportNotifyScopesMatchesBUBPDataOverviewScope(t *testing.T) {
 	assert.Equal(t, "数智产品中心 / AI应用技术部", scopes[0].departmentName)
 }
 
-func TestGetReportNotifyScopesMatchesLeaderDataOverviewScopes(t *testing.T) {
+func TestGetReportNotifyScopesUsesCenter(t *testing.T) {
+	company := setupReportNotifyScopeTest(t)
+	user := &model.User{
+		Role: common.RoleCenterBP, Company: company.Name,
+		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
+	}
+
+	scopes, err := getReportNotifyScopes(user)
+
+	require.NoError(t, err)
+	require.Len(t, scopes, 1)
+	assert.Equal(t, departmentNodeValue(company.Id, "center"), scopes[0].departmentID)
+	assert.Equal(t, "数智产品中心", scopes[0].departmentName)
+}
+
+func TestGetReportNotifyScopesUsesLeaderDepartments(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
 		Role: common.RoleCommonUser, Company: company.Name, OpenId: "ou_leader",
@@ -75,19 +90,34 @@ func TestGetReportNotifyScopesMatchesLeaderDataOverviewScopes(t *testing.T) {
 	assert.Equal(t, "数智产品中心 / AI应用技术部 / AI工程效率科", scopes[0].departmentName)
 }
 
-func TestGetReportNotifyScopesUsesCompanyRootForRootUser(t *testing.T) {
+func TestGetReportNotifyScopesCombinesBPScopeAndLeaderDepartments(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
+	user := &model.User{
+		Role: common.RoleBUBP, Company: company.Name, OpenId: "ou_bp_leader",
+		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
+		Departments:    `[{"department_id":"team","leaders":[{"leader_id":"ou_bp_leader"}]}]`,
+	}
 
-	scopes, err := getReportNotifyScopes(&model.User{Role: common.RoleRootUser})
+	scopes, err := getReportNotifyScopes(user)
 
 	require.NoError(t, err)
-	require.Len(t, scopes, 1)
-	assert.Equal(t, companyNodeValue(company.Id), scopes[0].departmentID)
-	assert.Equal(t, company.Alias, scopes[0].departmentName)
+	require.Len(t, scopes, 2)
+	assert.Equal(t, departmentNodeValue(company.Id, "bu"), scopes[0].departmentID)
+	assert.Equal(t, departmentNodeValue(company.Id, "team"), scopes[1].departmentID)
+}
+
+func TestGetReportNotifyScopesDoesNotExpandRootVisibility(t *testing.T) {
+	company := setupReportNotifyScopeTest(t)
+
+	scopes, err := getReportNotifyScopes(&model.User{Role: common.RoleRootUser, Company: company.Name})
+
+	require.NoError(t, err)
+	assert.Empty(t, scopes)
 }
 
 func TestGetReportNotifyUserReportsUsesDataOverviewStats(t *testing.T) {
 	previousDB, previousLogDB := model.DB, model.LOG_DB
+	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers
 	previousQuotaPerUnit := common.QuotaPerUnit
 	previousExchangeRate := operation_setting.USDExchangeRate
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -100,49 +130,66 @@ func TestGetReportNotifyUserReportsUsesDataOverviewStats(t *testing.T) {
 	operation_setting.USDExchangeRate = 7.3
 	t.Cleanup(func() {
 		model.DB, model.LOG_DB = previousDB, previousLogDB
+		fetchCompanyDirectory, fetchCompanyMembers = previousDirectoryFetcher, previousMemberFetcher
 		common.QuotaPerUnit = previousQuotaPerUnit
 		operation_setting.USDExchangeRate = previousExchangeRate
+		InvalidateCompanyOverviewCache(1)
 		_ = sqlDB.Close()
 	})
 
 	company := &model.Company{
-		Name: "无目录公司", Alias: "无目录公司别名", Platform: model.CompanyPlatformNone,
+		Name: "统计公司", Alias: "统计公司别名", Platform: model.CompanyPlatformFeishu,
 		Status: model.CompanyStatusEnabled, SortOrder: 1, Config: "{}",
 	}
 	require.NoError(t, db.Create(company).Error)
-	root := &model.User{
-		Username: "report-root", Password: "password", Role: common.RoleRootUser,
-		Status: common.UserStatusEnabled, OpenId: "ou_report_root", CreatedAt: 1,
+	InvalidateCompanyOverviewCache(company.Id)
+	bp := &model.User{
+		Username: "report-bp", Password: "password", Role: common.RoleBUBP,
+		Status: common.UserStatusEnabled, Company: company.Name, OpenId: "ou_report_bp", CreatedAt: 1,
+		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
+		Departments:    `[{"department_id":"team"}]`,
 	}
-	member := &model.User{
-		Username: "report-member", Password: "password", Role: common.RoleCommonUser,
-		Status: common.UserStatusEnabled, Company: company.Name, OpenId: "ou_member", CreatedAt: 1,
+	require.NoError(t, db.Create(bp).Error)
+	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {
+		return &overviewDirectory{
+			OrganizationName: company.Name,
+			Departments: []overviewDepartment{
+				{ID: "center", ParentID: "0", Name: "数智产品中心"},
+				{ID: "bu", ParentID: "center", Name: "AI应用技术部"},
+				{ID: "team", ParentID: "bu", Name: "AI工程效率科"},
+			},
+		}, nil
 	}
-	require.NoError(t, db.Create(root).Error)
-	require.NoError(t, db.Create(member).Error)
+	fetchCompanyMembers = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		if departmentID == "team" {
+			return []overviewMember{{OpenID: bp.OpenId, ObservedDepartmentID: "team"}}, nil
+		}
+		return []overviewMember{}, nil
+	}
 	require.NoError(t, db.Create(&model.QuotaData{
-		UserID: member.Id, Username: member.Username, ModelName: "test-model", CreatedAt: 150,
+		UserID: bp.Id, Username: bp.Username, ModelName: "test-model", CreatedAt: 150,
 		TokenUsed: 2_000_000, UncachedInputTokens: 1_000_000, UncachedOutputTokens: 500_000,
 		CacheReadTokens: 400_000, CacheWriteTokens: 100_000, Count: 15, Quota: 500_000,
 	}).Error)
 	require.NoError(t, db.Create(&model.Log{
-		UserId: member.Id, Username: member.Username, Type: model.LogTypeConsume, CreatedAt: 150, UseTime: 30,
+		UserId: bp.Id, Username: bp.Username, Type: model.LogTypeConsume, CreatedAt: 150, UseTime: 30,
 	}).Error)
 
 	response, err := GetReportNotifyUserReports(&ReportNotifyUserReportsRequest{
-		UserID: root.Id, StartTimestamp: 100, EndTimestamp: 200,
+		UserID: bp.Id, StartTimestamp: 100, EndTimestamp: 200,
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, root.OpenId, response.RecipientOpenID)
+	assert.Equal(t, bp.OpenId, response.RecipientOpenID)
 	require.Len(t, response.Reports, 1)
 	report := response.Reports[0]
-	assert.Equal(t, companyNodeValue(company.Id), report.DepartmentID)
-	assert.Equal(t, company.Alias, report.DepartmentName)
+	assert.Equal(t, departmentNodeValue(company.Id, "bu"), report.DepartmentID)
+	assert.Equal(t, "数智产品中心 / AI应用技术部", report.DepartmentName)
 	require.NotNil(t, report.Stats)
 	assert.Equal(t, int64(2_000_000), report.Stats.TotalTokens)
 	assert.Equal(t, int64(1), report.Stats.RegisteredUsers)
 	assert.Equal(t, int64(1), report.Stats.ActiveUsers)
 	assert.InDelta(t, 7.3, report.Stats.TotalAmountCNY, 0.0001)
-	assert.Empty(t, report.SubStats)
+	require.Len(t, report.SubStats, 1)
+	assert.Equal(t, "AI工程效率科", report.SubStats[0].DepartmentName)
 }

@@ -1,6 +1,6 @@
 # 数据总览通知设置与报表服务接口
 
-**日期**: 2026-08-03
+**日期**: 2026-08-04
 
 ## 涉及文件
 
@@ -17,5 +17,5 @@
 - `controller/report_notify_internal.go` — 校验内部报表请求参数并返回用户可访问的统计报表
 - `middleware/report_notify.go` — 新增 HMAC-SHA256 签名认证、时间戳防重放及请求体大小限制
 - `middleware/report_notify_test.go` — 覆盖有效签名、签名异常、过期时间戳、缺少配置与超大请求体
-- `service/report_notify.go` — 按用户角色和部门负责人权限解析数据总览范围，复用部门统计逻辑生成报表与飞书接收人 open_id
-- `service/report_notify_test.go` — 覆盖事业部 BP、部门负责人和超级管理员的范围解析及统计结果
+- `service/report_notify.go` — 按中心 BP、事业部 BP 层级和显式部门负责人关系解析报表范围，合并同一用户的 BP 与负责人范围并阻止管理员角色自动扩张；内部接口在精确派生范围后复用数据总览统计构建逻辑，避免角色优先级隐藏负责人范围，并返回飞书接收人 open_id
+- `service/report_notify_test.go` — 覆盖中心 BP、事业部 BP、部门负责人、BP 与负责人身份叠加、管理员不扩权及真实统计结果
