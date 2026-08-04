@@ -31,7 +31,7 @@ from urllib.request import Request, urlopen
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_OFFICIAL_PRICES = SCRIPT_DIR / "official_model_prices.json"
-DEFAULT_OUTPUT = SCRIPT_DIR / "model_square_prices.xlsx"
+DEFAULT_OUTPUT = Path.home() / "Desktop" / "model_square_prices.xlsx"
 PRICE_FIELDS = ("input", "output", "cache_read", "cache_write")
 TABLE_HEADERS = (
     "模型",
@@ -42,7 +42,8 @@ TABLE_HEADERS = (
     "相对于官网折扣",
 )
 TABLE_NOTES = (
-    "采用精准的按量计费模式，成本透明可控。支持账号限额管理"
+    "采用精准的按量计费模式",
+    "支持账号或子账号限额管理",
 )
 NUMBER_PATTERN = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
 TIER_PATTERN = re.compile(r'tier\("[^"]*",\s*([^)]+)\)')
