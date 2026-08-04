@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
 
-import { API_ENDPOINTS } from './constants'
+import { API_ENDPOINTS, DEFAULT_HISTORY_DISPLAY_LIMIT } from './constants'
 import type {
   GroupOption,
   ImageApiResponse,
@@ -88,13 +88,29 @@ export async function storeImageStudioGeneration(
   )
 }
 
-export async function listImageStudioGenerations(): Promise<
-  ImageStudioGenerationRecord[]
-> {
+export interface ImageStudioGenerationListResult {
+  records: ImageStudioGenerationRecord[]
+  displayLimit: number
+}
+
+export async function listImageStudioGenerations(): Promise<ImageStudioGenerationListResult> {
   const res = await api.get(API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS)
   const { data } = res
-  if (!data.success || !Array.isArray(data.data)) return []
-  return data.data as ImageStudioGenerationRecord[]
+  const headerLimit = Number.parseInt(
+    String(res.headers?.['x-image-studio-display-history-limit'] ?? ''),
+    10
+  )
+  const displayLimit =
+    Number.isInteger(headerLimit) && headerLimit > 0
+      ? Math.min(1000, headerLimit)
+      : DEFAULT_HISTORY_DISPLAY_LIMIT
+  if (!data.success || !Array.isArray(data.data)) {
+    return { records: [], displayLimit }
+  }
+  return {
+    records: data.data as ImageStudioGenerationRecord[],
+    displayLimit,
+  }
 }
 
 export async function deleteImageStudioGeneration(id: string): Promise<void> {

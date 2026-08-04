@@ -56,7 +56,8 @@ const createAuditSchema = (t: (key: string) => string) =>
       }),
       imageStudioEnabled: z.boolean(),
       autoSaveApiImageGeneration: z.boolean(),
-      imageStudioMaxHistory: z.number().int().min(1).max(1000),
+      imageStudioDisplayHistoryLimit: z.number().int().min(1).max(1000),
+      imageStudioStorageHistoryLimit: z.number().int().min(1).max(1000),
       requestContentEnabled: z.boolean(),
     })
     .refine(
@@ -77,7 +78,8 @@ type AuditFormValues = {
   offHours: OffHoursAuditSetting
   imageStudioEnabled: boolean
   autoSaveApiImageGeneration: boolean
-  imageStudioMaxHistory: number
+  imageStudioDisplayHistoryLimit: number
+  imageStudioStorageHistoryLimit: number
   requestContentEnabled: boolean
 }
 
@@ -86,7 +88,8 @@ type AuditSectionProps = {
     offHours: OffHoursAuditSetting
     imageStudioEnabled: boolean
     autoSaveApiImageGeneration: boolean
-    imageStudioMaxHistory: number
+    imageStudioDisplayHistoryLimit: number
+    imageStudioStorageHistoryLimit: number
     requestContentEnabled: boolean
   }
 }
@@ -97,13 +100,20 @@ const parseAuditHour = (rawValue: string): number => {
   return Math.min(23, Math.max(0, parsedHour))
 }
 
+const parseImageStudioLimit = (rawValue: string): number => {
+  const parsed = Number.parseInt(rawValue, 10)
+  if (Number.isNaN(parsed)) return 1
+  return Math.min(1000, Math.max(1, parsed))
+}
+
 const buildFormDefaults = (
   defaults: AuditSectionProps['defaultValues']
 ): AuditFormValues => ({
   offHours: { ...defaults.offHours },
   imageStudioEnabled: defaults.imageStudioEnabled,
   autoSaveApiImageGeneration: defaults.autoSaveApiImageGeneration,
-  imageStudioMaxHistory: defaults.imageStudioMaxHistory || 10,
+  imageStudioDisplayHistoryLimit: defaults.imageStudioDisplayHistoryLimit || 10,
+  imageStudioStorageHistoryLimit: defaults.imageStudioStorageHistoryLimit || 10,
   requestContentEnabled: defaults.requestContentEnabled,
 })
 
@@ -136,8 +146,12 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
         value: values.autoSaveApiImageGeneration,
       }),
       updateOption.mutateAsync({
+        key: 'audit_setting.image_studio_display_history_limit',
+        value: values.imageStudioDisplayHistoryLimit,
+      }),
+      updateOption.mutateAsync({
         key: 'audit_setting.image_studio_max_history',
-        value: values.imageStudioMaxHistory,
+        value: values.imageStudioStorageHistoryLimit,
       }),
       updateOption.mutateAsync({
         key: 'RecordRequestMessageEnabled',
@@ -299,7 +313,9 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
                       {t('Image audit')}
                     </FormLabel>
                     <FormDescription className='text-sm leading-relaxed'>
-                      {t('Audit image generation requests and generated content')}
+                      {t(
+                        'Audit image generation requests and generated content'
+                      )}
                     </FormDescription>
                   </SettingsSwitchContent>
                   <div className='flex items-center justify-between border-t pt-4'>
@@ -352,25 +368,25 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
 
             <FormField
               control={form.control}
-              name='imageStudioMaxHistory'
+              name='imageStudioDisplayHistoryLimit'
               render={({ field }) => (
                 <FormItem
-                  data-audit-setting-card='image-studio-max-history'
+                  data-audit-setting-card='image-studio-display-history-limit'
                   className='bg-card flex min-h-40 flex-col justify-between gap-6 rounded-2xl border p-5 shadow-sm'
                 >
                   <SettingsSwitchContent className='space-y-2'>
                     <FormLabel className='text-base font-semibold'>
-                      {t('Image studio history limit')}
+                      {t('Image studio display limit')}
                     </FormLabel>
                     <FormDescription className='text-sm leading-relaxed'>
                       {t(
-                        'Maximum number of image generations kept per user. Older records beyond this limit are deleted along with their stored images.'
+                        'Maximum number of recent image generations shown in Image Studio per user. Removing them from Image Studio does not delete stored records or images.'
                       )}
                     </FormDescription>
                   </SettingsSwitchContent>
                   <div className='flex items-center justify-between border-t pt-4'>
                     <span className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
-                      {t('Max records')}
+                      {t('Displayed records')}
                     </span>
                     <FormControl>
                       <InputGroup className='bg-background w-32'>
@@ -381,17 +397,56 @@ export function AuditSection({ defaultValues }: AuditSectionProps) {
                           step={1}
                           value={field.value}
                           onBlur={field.onBlur}
-                          onChange={(event) => {
-                            const parsed = Number.parseInt(
-                              event.target.value,
-                              10
+                          onChange={(event) =>
+                            field.onChange(
+                              parseImageStudioLimit(event.target.value)
                             )
-                            if (Number.isNaN(parsed)) {
-                              field.onChange(1)
-                              return
-                            }
-                            field.onChange(Math.min(1000, Math.max(1, parsed)))
-                          }}
+                          }
+                        />
+                      </InputGroup>
+                    </FormControl>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='imageStudioStorageHistoryLimit'
+              render={({ field }) => (
+                <FormItem
+                  data-audit-setting-card='image-studio-storage-history-limit'
+                  className='bg-card flex min-h-40 flex-col justify-between gap-6 rounded-2xl border p-5 shadow-sm'
+                >
+                  <SettingsSwitchContent className='space-y-2'>
+                    <FormLabel className='text-base font-semibold'>
+                      {t('Image studio storage limit')}
+                    </FormLabel>
+                    <FormDescription className='text-sm leading-relaxed'>
+                      {t(
+                        'Maximum number of image generations stored per user. Older records beyond this limit are permanently deleted along with their stored images.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <div className='flex items-center justify-between border-t pt-4'>
+                    <span className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                      {t('Stored records')}
+                    </span>
+                    <FormControl>
+                      <InputGroup className='bg-background w-32'>
+                        <InputGroupInput
+                          type='number'
+                          min={1}
+                          max={1000}
+                          step={1}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onChange={(event) =>
+                            field.onChange(
+                              parseImageStudioLimit(event.target.value)
+                            )
+                          }
                         />
                       </InputGroup>
                     </FormControl>

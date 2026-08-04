@@ -52,7 +52,8 @@ describe('security audit settings presentation', () => {
             },
             imageStudioEnabled: true,
             autoSaveApiImageGeneration: false,
-            imageStudioMaxHistory: 10,
+            imageStudioDisplayHistoryLimit: 12,
+            imageStudioStorageHistoryLimit: 80,
             requestContentEnabled: true,
           }}
         />
@@ -68,6 +69,16 @@ describe('security audit settings presentation', () => {
     expect(html).toContain('data-audit-time-range="true"')
     expect(html).toContain('data-audit-setting-card="request-content"')
     expect(html).toContain('data-audit-setting-card="image-audit"')
+    expect(html).toContain(
+      'data-audit-setting-card="image-studio-display-history-limit"'
+    )
+    expect(html).toContain(
+      'data-audit-setting-card="image-studio-storage-history-limit"'
+    )
+    expect(html).toContain('Image studio display limit')
+    expect(html).toContain('Image studio storage limit')
+    expect(html).toContain('value="12"')
+    expect(html).toContain('value="80"')
     expect(html).toContain('role="switch"')
     expect(html).toContain('aria-checked="true"')
   })

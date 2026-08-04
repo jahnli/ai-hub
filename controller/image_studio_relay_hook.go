@@ -107,7 +107,7 @@ func recordRelayImageGeneration(ctx context.Context, input relay.ImageAutoRecord
 		return
 	}
 
-	// Pass 0 so the model applies the admin-configured history limit.
+	// Pass 0 so the model applies the admin-configured storage limit.
 	pruned, err := model.PruneUserImageStudioGenerations(input.UserID, 0)
 	if err != nil {
 		common.SysLog("failed to prune image studio history after auto-record: " + err.Error())

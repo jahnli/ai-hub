@@ -23,6 +23,7 @@ import {
   updateImageStudioGenerationFavorite,
   updateImageStudioGenerationUsage,
 } from '../api'
+import { DEFAULT_HISTORY_DISPLAY_LIMIT } from '../constants'
 import type { GenerationRecord, ImageStudioGenerationRecord } from '../types'
 
 const LEGACY_DB_NAME = 'image-studio'
@@ -79,14 +80,25 @@ function fromServerRecord(
   }
 }
 
-export async function listGenerations(): Promise<GenerationRecord[]> {
+export interface GenerationHistoryResult {
+  records: GenerationRecord[]
+  displayLimit: number
+}
+
+export async function listGenerations(): Promise<GenerationHistoryResult> {
   try {
     deleteLegacyIndexedDbHistory()
     removeLegacyLocalHistory()
-    const records = await listImageStudioGenerations()
-    return records.map(fromServerRecord)
+    const result = await listImageStudioGenerations()
+    return {
+      records: result.records.map(fromServerRecord),
+      displayLimit: result.displayLimit,
+    }
   } catch {
-    return []
+    return {
+      records: [],
+      displayLimit: DEFAULT_HISTORY_DISPLAY_LIMIT,
+    }
   }
 }
 

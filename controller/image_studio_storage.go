@@ -24,6 +24,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"github.com/gin-gonic/gin"
 )
@@ -140,7 +141,8 @@ func StoreImageStudioImages(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	// Pass 0 so the model applies the admin-configured history limit.
+	// Pass 0 so the model applies the admin-configured storage limit. Only this
+	// pruning path permanently removes database records and stored image files.
 	pruned, err := model.PruneUserImageStudioGenerations(userID, 0)
 	if err != nil {
 		common.SysLog("failed to prune image studio history: " + err.Error())
@@ -152,13 +154,14 @@ func StoreImageStudioImages(c *gin.Context) {
 }
 
 func ListImageStudioGenerations(c *gin.Context) {
-	// Default limit 0 lets the model apply the admin-configured history limit.
+	// Default limit 0 lets the model apply the admin-configured display limit.
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
 	records, err := model.GetUserImageStudioGenerations(c.GetInt("id"), limit)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
+	c.Header("X-Image-Studio-Display-History-Limit", strconv.Itoa(system_setting.GetImageStudioDisplayHistoryLimit()))
 	common.ApiSuccess(c, records)
 }
 
@@ -224,22 +227,18 @@ func UpdateImageStudioGenerationUsage(c *gin.Context) {
 }
 
 func DeleteImageStudioGeneration(c *gin.Context) {
-	record, err := model.DeleteImageStudioGeneration(c.Param("id"), c.GetInt("id"), c.GetInt("role") >= common.RoleAdminUser)
-	if err != nil {
+	if err := model.HideImageStudioGeneration(c.Param("id"), c.GetInt("id"), c.GetInt("role") >= common.RoleAdminUser); err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	deleteImageStudioGenerationFiles([]model.ImageStudioGeneration{*record})
 	common.ApiSuccess(c, nil)
 }
 
 func ClearImageStudioGenerations(c *gin.Context) {
-	records, err := model.DeleteUserImageStudioGenerations(c.GetInt("id"))
-	if err != nil {
+	if err := model.HideUserImageStudioGenerations(c.GetInt("id")); err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	deleteImageStudioGenerationFiles(records)
 	common.ApiSuccess(c, nil)
 }
 

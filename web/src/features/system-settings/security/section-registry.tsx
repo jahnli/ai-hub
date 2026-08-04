@@ -101,7 +101,9 @@ const SECURITY_SECTIONS = [
           imageStudioEnabled: settings['audit_setting.image_studio'],
           autoSaveApiImageGeneration:
             settings['audit_setting.auto_save_api_image_generation'],
-          imageStudioMaxHistory:
+          imageStudioDisplayHistoryLimit:
+            settings['audit_setting.image_studio_display_history_limit'],
+          imageStudioStorageHistoryLimit:
             settings['audit_setting.image_studio_max_history'],
           requestContentEnabled: settings.RecordRequestMessageEnabled,
         }}

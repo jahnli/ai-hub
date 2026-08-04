@@ -104,7 +104,7 @@ export const DEFAULT_ESTIMATE_MS = 60000
 /** number of recent generations used for the moving-average estimate */
 export const ESTIMATE_SAMPLE_SIZE = 5
 
-export const HISTORY_LIMIT = 10
+export const DEFAULT_HISTORY_DISPLAY_LIMIT = 10
 
 /**
  * Built-in prompt presets. Category names are i18n keys; prompts are

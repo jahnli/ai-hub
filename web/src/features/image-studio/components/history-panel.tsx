@@ -116,7 +116,7 @@ export function HistoryPanel({
                   <AlertDialogTitle>{t('Clear history')}</AlertDialogTitle>
                   <AlertDialogDescription>
                     {t(
-                      'This will permanently delete generation history and stored image files.'
+                      'This removes all items from Image Studio history. Stored records and image files are retained until the storage limit removes them.'
                     )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -233,7 +233,7 @@ export function HistoryPanel({
                     if (!disabled) onDelete(record.id)
                   }}
                   disabled={disabled}
-                  aria-label={t('Delete')}
+                  aria-label={t('Remove from history')}
                 >
                   <Trash2 className='size-3' />
                 </Button>

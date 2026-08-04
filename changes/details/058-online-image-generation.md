@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-07-23
+**日期**: 2026-08-04
 
 ## 涉及文件
 
@@ -46,3 +46,9 @@
 - `web/src/features/system-settings/security/`、`web/src/features/system-settings/types.ts`、`web/src/i18n/locales/*.json` — 安全审计设置新增自动保存开关和历史上限输入，串接默认值、类型、表单校验、回归测试及七语言文案。
 - `model/image_studio.go`、`controller/image_studio_storage.go`、`controller/image_studio_relay_hook.go`、`relay/image_studio_hook.go` — 生图记录采集 User-Agent：ImageStudioGeneration 新增 UserAgent 字段（varchar(512)，随 AutoMigrate 加列），在线生图 UI 存储路径取 `c.Request.UserAgent()`，原生 API 中继路径 ImageAutoRecordInput 携带 `info.ClientApp`；与使用日志同源，仅记录原始 User-Agent 不做客户端名称映射。
 - `web/src/features/security-audit/types.ts`、`web/src/features/security-audit/components/image-audit-request-content-dialog.tsx` — ImageAuditItem 新增可选 user_agent 字段，图片审计请求内容弹框在头像右侧模型/模式/时间行下方单独一行完整展示 User-Agent（break-all 不截断），与使用日志请求内容弹框展示口径一致。
+- `setting/system_setting/audit_setting.go`、`setting/system_setting/audit_setting_test.go` — 将历史限制拆分为独立的在线生图展示上限与存储上限，保留旧配置键作为存储上限以兼容已有部署，并覆盖两个上限的默认值、独立配置和边界钳制。
+- `model/image_studio.go`、`model/image_studio_test.go` — 生图记录新增 `hidden_from_studio` 展示隐藏标记；普通历史查询排除隐藏记录，单条移除与清空仅设置隐藏状态，不删除数据库数据；存储裁剪继续统计全部记录并永久删除超限的最旧记录，补充隐藏、清空和裁剪回归测试。
+- `controller/image_studio_storage.go`、`controller/image_studio_relay_hook.go` — 历史列表按展示上限查询并向前端下发展示数量；在线生图删除接口改为仅隐藏记录，只有 UI 保存和原生 API 自动归档后的存储裁剪会永久删除数据库记录及 MinIO 图片。
+- `web/src/features/system-settings/security/`、`web/src/features/system-settings/types.ts` — 安全审计设置将原历史上限拆分为“在线生图展示上限”和“在线生图存储上限”，分别保存独立配置并补充设置界面回归测试。
+- `web/src/features/image-studio/` — 历史加载及新增记录统一使用服务端下发的动态展示上限，移除前端固定 10 条限制；删除和清空文案明确仅从在线生图历史隐藏，补充展示裁剪、删除行为和可访问文案回归测试。
+- `web/src/i18n/locales/*.json` — 补齐展示上限、存储上限及历史隐藏行为的七语言文案。

@@ -9,16 +9,8 @@ import (
 	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
-// ImageStudioHistoryLimit 是在线生图历史每用户保留条数的默认兜底值。实际生效的上限
-// 由 system_setting.GetImageStudioMaxHistory() 提供（可在安全审计设置中调整）；此常量
-// 仅用于设置尚未加载等边界场景。
-const ImageStudioHistoryLimit = system_setting.DefaultImageStudioMaxHistory
-
-// imageStudioHistoryLimit 返回当前生效的历史保留条数。集中在此，避免各调用点重复读取
-// 设置并处理归一化。
-func imageStudioHistoryLimit() int {
-	return system_setting.GetImageStudioMaxHistory()
-}
+// ImageStudioHistoryLimit 是在线生图历史每用户默认展示条数的兼容常量。
+const ImageStudioHistoryLimit = system_setting.DefaultImageStudioDisplayHistoryLimit
 
 type ImageStudioGeneration struct {
 	ID               string             `json:"id" gorm:"type:varchar(64);primaryKey"`
@@ -40,6 +32,7 @@ type ImageStudioGeneration struct {
 	CompletionTokens int                `json:"completion_tokens,omitempty"`
 	UserAgent        string             `json:"user_agent,omitempty" gorm:"type:varchar(512)"`
 	Favorite         bool               `json:"favorite" gorm:"index"`
+	HiddenFromStudio bool               `json:"-" gorm:"index"`
 	ImagesText       string             `json:"-" gorm:"type:text;column:images"`
 	Images           []ImageStudioAsset `json:"images" gorm:"-"`
 }
@@ -87,12 +80,14 @@ func CreateImageStudioGeneration(record *ImageStudioGeneration) error {
 }
 
 func GetUserImageStudioGenerations(userID int, limit int) ([]ImageStudioGeneration, error) {
-	maxLimit := imageStudioHistoryLimit()
+	maxLimit := system_setting.GetImageStudioDisplayHistoryLimit()
 	if limit <= 0 || limit > maxLimit {
 		limit = maxLimit
 	}
 	var records []ImageStudioGeneration
-	if err := DB.Where("user_id = ?", userID).Order("created_at DESC").Limit(limit).Find(&records).Error; err != nil {
+	if err := DB.Where("user_id = ?", userID).
+		Where("hidden_from_studio = ? OR hidden_from_studio IS NULL", false).
+		Order("created_at DESC").Limit(limit).Find(&records).Error; err != nil {
 		return nil, err
 	}
 	return records, loadImageStudioGenerationListImages(records)
@@ -110,28 +105,34 @@ func GetImageStudioGeneration(id string, userID int, isAdmin bool) (*ImageStudio
 	return &record, loadImageStudioGenerationImages(&record)
 }
 
-func DeleteImageStudioGeneration(id string, userID int, isAdmin bool) (*ImageStudioGeneration, error) {
-	record, err := GetImageStudioGeneration(id, userID, isAdmin)
-	if err != nil {
-		return nil, err
+func HideImageStudioGeneration(id string, userID int, isAdmin bool) error {
+	query := DB.Model(&ImageStudioGeneration{}).Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("user_id = ?", userID)
 	}
-	return record, DB.Delete(&ImageStudioGeneration{}, "id = ?", record.ID).Error
+	result := query.Updates(map[string]any{
+		"hidden_from_studio": true,
+		"updated_at":         time.Now().UnixMilli(),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("generation not found")
+	}
+	return nil
 }
 
-func DeleteUserImageStudioGenerations(userID int) ([]ImageStudioGeneration, error) {
-	var records []ImageStudioGeneration
-	if err := DB.Where("user_id = ?", userID).Find(&records).Error; err != nil {
-		return nil, err
-	}
-	if err := loadImageStudioGenerationListImages(records); err != nil {
-		return nil, err
-	}
-	return records, DB.Where("user_id = ?", userID).Delete(&ImageStudioGeneration{}).Error
+func HideUserImageStudioGenerations(userID int) error {
+	return DB.Model(&ImageStudioGeneration{}).Where("user_id = ?", userID).Updates(map[string]any{
+		"hidden_from_studio": true,
+		"updated_at":         time.Now().UnixMilli(),
+	}).Error
 }
 
 func PruneUserImageStudioGenerations(userID int, limit int) ([]ImageStudioGeneration, error) {
 	if limit <= 0 {
-		limit = imageStudioHistoryLimit()
+		limit = system_setting.GetImageStudioMaxHistory()
 	}
 	var records []ImageStudioGeneration
 	if err := DB.Where("user_id = ?", userID).Order("created_at DESC").Offset(limit).Find(&records).Error; err != nil {

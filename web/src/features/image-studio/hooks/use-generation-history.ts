@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useCallback, useEffect, useState } from 'react'
 
-import { HISTORY_LIMIT } from '../constants'
+import { DEFAULT_HISTORY_DISPLAY_LIMIT } from '../constants'
 import {
   clearGenerations,
   deleteGeneration,
@@ -30,13 +30,19 @@ import type { GenerationRecord } from '../types'
 
 export function useGenerationHistory() {
   const [history, setHistory] = useState<GenerationRecord[]>([])
+  const [displayLimit, setDisplayLimit] = useState(
+    DEFAULT_HISTORY_DISPLAY_LIMIT
+  )
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     listGenerations()
-      .then((records) => {
-        if (!cancelled) setHistory(records)
+      .then((result) => {
+        if (!cancelled) {
+          setDisplayLimit(result.displayLimit)
+          setHistory(result.records.slice(0, result.displayLimit))
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoadingHistory(false)
@@ -49,10 +55,13 @@ export function useGenerationHistory() {
     }
   }, [])
 
-  const addRecord = useCallback((record: GenerationRecord) => {
-    setHistory((prev) => [record, ...prev].slice(0, HISTORY_LIMIT))
-    void saveGeneration(record)
-  }, [])
+  const addRecord = useCallback(
+    (record: GenerationRecord) => {
+      setHistory((prev) => [record, ...prev].slice(0, displayLimit))
+      void saveGeneration(record)
+    },
+    [displayLimit]
+  )
 
   const patchRecord = useCallback(
     (id: string, patch: Partial<GenerationRecord>) => {
