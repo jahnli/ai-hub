@@ -24,7 +24,9 @@ import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { getDemoModeUsername } from '@/lib/demo-mode'
 import { formatTimestampToDate } from '@/lib/format'
 import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
@@ -92,6 +94,7 @@ function AudioPreviewCell({ log }: { log: TaskLog }) {
 
 export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const columns: ColumnDef<TaskLog>[] = [
     {
       accessorKey: 'submit_time',
@@ -127,7 +130,19 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
       cell: function UserCell({ row }) {
         const { sensitiveVisible } = useUsageLogsContext()
         const log = row.original
-        const displayName = log.username || String(log.user_id || '?')
+        const displayName = getDemoModeUsername(
+          log.username || String(log.user_id || '?'),
+          demoMode
+        )
+
+        if (demoMode) {
+          return (
+            <span className='text-muted-foreground truncate text-sm'>
+              {displayName}
+            </span>
+          )
+        }
+
         const feishuChatUrl = buildFeishuUserChatUrl(log.open_id)
         const avatarElement = (
           <Avatar className='ring-border/60 size-6 ring-1 max-sm:hidden'>

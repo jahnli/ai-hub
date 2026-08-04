@@ -32,7 +32,9 @@ import { getAllLogs } from '@/features/usage-logs/api'
 import { useCommonLogsColumns } from '@/features/usage-logs/components/columns/common-logs-columns'
 import { RequestMessagesProvider } from '@/features/usage-logs/components/request-messages-provider'
 import { UsageLogsProvider } from '@/features/usage-logs/components/usage-logs-provider'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import dayjs from '@/lib/dayjs'
+import { getDemoModeUsername } from '@/lib/demo-mode'
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -46,9 +48,14 @@ interface OffHoursDetailDialogProps {
 
 export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
 
   if (!props.target) return null
 
+  const displayedUsername = getDemoModeUsername(
+    props.target.displayName,
+    demoMode
+  )
   const windowLabel = `${dayjs.unix(props.target.windowStart).format('HH:mm')} - ${dayjs
     .unix(props.target.windowEnd)
     .format('HH:mm')}`
@@ -58,8 +65,8 @@ export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
       <DialogContent className='flex h-[85vh] max-h-[85vh] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]'>
         <DialogHeader className='shrink-0'>
           <DialogTitle>
-            {t('Usage Logs')} - {props.target.displayName} · {props.target.date}{' '}
-            · {windowLabel}
+            {t('Usage Logs')} - {displayedUsername} · {props.target.date} ·{' '}
+            {windowLabel}
           </DialogTitle>
         </DialogHeader>
 

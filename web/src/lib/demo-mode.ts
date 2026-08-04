@@ -19,6 +19,14 @@ For commercial licensing, please contact support@quantumnous.com
 import type { AuthUser } from '@/stores/auth-store'
 
 export const DEMO_MODE_MASK = '*'
+export const DEMO_MODE_USERNAME_MASK = '***'
+
+export function getDemoModeUsername(
+  username: string,
+  demoMode: boolean
+): string {
+  return demoMode ? DEMO_MODE_USERNAME_MASK : username
+}
 
 export function isDemoModeEnabled(
   setting: AuthUser['setting'] | undefined

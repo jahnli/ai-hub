@@ -34,7 +34,9 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { getDemoModeUsername } from '@/lib/demo-mode'
 import { formatTimestampToDate } from '@/lib/format'
 import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
@@ -241,13 +243,31 @@ function MobileTokensField({ log }: { log: UsageLog }) {
 }
 
 /** Mobile-only User block: own layout so avatar/name always line up on the same baseline. */
-function MobileUserField({ log }: { log: UsageLog }) {
+function MobileUserField({
+  log,
+  demoMode,
+}: {
+  log: UsageLog
+  demoMode: boolean
+}) {
   const { sensitiveVisible, setSelectedUserId, setUserInfoDialogOpen } =
     useUsageLogsContext()
 
   if (!log.username) return null
 
-  const primaryName = log.display_name || log.username
+  const primaryName = getDemoModeUsername(
+    log.display_name || log.username,
+    demoMode
+  )
+
+  if (demoMode) {
+    return (
+      <div className='bg-muted/20 min-w-0 rounded-md px-2 py-1.5 text-left'>
+        <span className='text-foreground truncate text-sm'>{primaryName}</span>
+      </div>
+    )
+  }
+
   const feishuChatUrl = buildFeishuUserChatUrl(log.open_id)
   const avatar = (
     <Avatar className='ring-border/60 size-6 shrink-0 ring-1'>
@@ -331,8 +351,10 @@ function MobileStreamTimingField({ log }: { log: UsageLog }) {
 
 function CommonLogsCard<TData>({
   cells,
+  demoMode,
 }: {
   cells: Map<string, Cell<TData, unknown>>
+  demoMode: boolean
 }) {
   const { t } = useTranslation()
 
@@ -362,7 +384,7 @@ function CommonLogsCard<TData>({
           valueClassName='[&_.flex-col]:max-w-none'
         />
         {rowData && cells.has('user') ? (
-          <MobileUserField log={rowData} />
+          <MobileUserField log={rowData} demoMode={demoMode} />
         ) : (
           <SummaryField cell={cells.get('user')} />
         )}
@@ -481,6 +503,7 @@ export function UsageLogsMobileList<TData>({
   logCategory,
 }: UsageLogsMobileListProps<TData>) {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
 
   const resolvedEmptyTitle = emptyTitle ?? t('No Logs Found')
   const resolvedEmptyDescription =
@@ -529,7 +552,9 @@ export function UsageLogsMobileList<TData>({
               tintClass
             )}
           >
-            {logCategory === 'common' && <CommonLogsCard cells={cells} />}
+            {logCategory === 'common' && (
+              <CommonLogsCard cells={cells} demoMode={demoMode} />
+            )}
             {logCategory === 'task' && <TaskLogsCard cells={cells} />}
             {logCategory === 'drawing' && <DrawingLogsCard cells={cells} />}
           </div>

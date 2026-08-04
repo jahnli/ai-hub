@@ -37,9 +37,11 @@ import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
 import type { UserColumnRow } from '@/features/users/types'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
+import { getDemoModeUsername } from '@/lib/demo-mode'
 
 import type { AuditRow, OffHoursDetailTarget } from '../types'
 
@@ -76,14 +78,21 @@ function renderIpBadges(ipAddresses: string[]) {
   )
 }
 
-function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
+export function OffHoursIdentityCell(props: {
+  row: Row<AuditRow>
+  demoMode: boolean
+}) {
   const { t } = useTranslation()
   const audit = props.row.original
   const [userData, setUserData] = useState<UserColumnRow | null>(null)
   const fetchedUserId = useRef<number | null>(null)
 
   const handleFetchUser = useCallback(() => {
-    if (audit.kind !== 'user' || fetchedUserId.current === audit.user.user_id) {
+    if (
+      props.demoMode ||
+      audit.kind !== 'user' ||
+      fetchedUserId.current === audit.user.user_id
+    ) {
       return
     }
 
@@ -119,7 +128,7 @@ function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
         gender: userInfo.gender,
       })
     })
-  }, [audit])
+  }, [audit, props.demoMode])
 
   if (audit.kind !== 'user') {
     return (
@@ -131,7 +140,10 @@ function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
   }
 
   const hasMultipleDays = (audit.user.day_rows?.length ?? 0) > 1
-  const primaryName = audit.user.display_name || audit.user.username
+  const primaryName = getDemoModeUsername(
+    audit.user.display_name || audit.user.username,
+    props.demoMode
+  )
   const avatarFallback = getUserAvatarFallback(primaryName)
   const avatarFallbackStyle = getUserAvatarStyle(primaryName)
   const hasDistinctUsername =
@@ -168,7 +180,7 @@ function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
   return (
     <div
       className='flex min-w-0 items-center gap-2'
-      onMouseEnter={handleFetchUser}
+      onMouseEnter={props.demoMode ? undefined : handleFetchUser}
     >
       <div className='flex size-6 shrink-0 items-center justify-center'>
         {hasMultipleDays ? (
@@ -188,17 +200,25 @@ function OffHoursIdentityCell(props: { row: Row<AuditRow> }) {
           </Button>
         ) : null}
       </div>
-      <UserProfileHoverCard user={userData ?? fallbackUser}>
-        {avatar}
-      </UserProfileHoverCard>
-      <div className='flex w-[150px] min-w-0 flex-col gap-1'>
-        <LongText className='max-w-full font-medium'>{primaryName}</LongText>
-        {hasDistinctUsername ? (
-          <LongText className='text-muted-foreground max-w-full text-xs'>
-            {audit.user.username}
-          </LongText>
-        ) : null}
-      </div>
+      {props.demoMode ? (
+        <LongText className='w-[182px] font-medium'>{primaryName}</LongText>
+      ) : (
+        <>
+          <UserProfileHoverCard user={userData ?? fallbackUser}>
+            {avatar}
+          </UserProfileHoverCard>
+          <div className='flex w-[150px] min-w-0 flex-col gap-1'>
+            <LongText className='max-w-full font-medium'>
+              {primaryName}
+            </LongText>
+            {hasDistinctUsername ? (
+              <LongText className='text-muted-foreground max-w-full text-xs'>
+                {audit.user.username}
+              </LongText>
+            ) : null}
+          </div>
+        </>
+      )}
       <StatusBadge
         label={`${audit.user.days} ${t('days')}`}
         variant='red'
@@ -214,6 +234,7 @@ export function useOffHoursColumns(
   onViewDetail: (target: OffHoursDetailTarget) => void
 ): ColumnDef<AuditRow>[] {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
 
   return useMemo<ColumnDef<AuditRow>[]>(
     () => [
@@ -222,7 +243,9 @@ export function useOffHoursColumns(
         header: t('User'),
         meta: { mobileTitle: true },
         size: 220,
-        cell: ({ row }) => <OffHoursIdentityCell row={row} />,
+        cell: ({ row }) => (
+          <OffHoursIdentityCell row={row} demoMode={demoMode} />
+        ),
       },
       {
         id: 'time_range',
@@ -343,6 +366,6 @@ export function useOffHoursColumns(
         },
       },
     ],
-    [t, onViewDetail]
+    [demoMode, onViewDetail, t]
   )
 }

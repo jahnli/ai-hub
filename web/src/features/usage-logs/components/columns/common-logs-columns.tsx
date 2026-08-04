@@ -41,6 +41,7 @@ import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { stringToColor } from '@/lib/colors'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+import { getDemoModeUsername } from '@/lib/demo-mode'
 import {
   formatLogQuota,
   formatTimestampToDate,
@@ -375,7 +376,12 @@ export function useCommonLogsColumns(
         const fetchedRef = useRef(false)
 
         const handleFetchUser = useCallback(() => {
-          if (!canFetchUserDetails || fetchedRef.current || !sensitiveVisible) {
+          if (
+            demoMode ||
+            !canFetchUserDetails ||
+            fetchedRef.current ||
+            !sensitiveVisible
+          ) {
             return
           }
           fetchedRef.current = true
@@ -414,6 +420,17 @@ export function useCommonLogsColumns(
 
         if (!log.username) return null
 
+        const primaryName = getDemoModeUsername(
+          log.display_name || log.username,
+          demoMode
+        )
+
+        if (demoMode) {
+          return (
+            <LongText className='w-[120px] font-medium'>{primaryName}</LongText>
+          )
+        }
+
         if (!sensitiveVisible) {
           return (
             <div className='flex min-w-0 items-center gap-2'>
@@ -429,7 +446,6 @@ export function useCommonLogsColumns(
           )
         }
 
-        const primaryName = log.display_name || log.username
         const avatarFallback = getUserAvatarFallback(primaryName)
         const avatarFallbackStyle = getUserAvatarStyle(primaryName)
         const feishuChatUrl = buildFeishuUserChatUrl(
