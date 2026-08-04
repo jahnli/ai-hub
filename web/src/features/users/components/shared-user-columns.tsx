@@ -33,8 +33,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ModelBadge } from "@/features/usage-logs/components/model-badge";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 import { getUserAvatarFallback, getUserAvatarStyle } from "@/lib/avatar";
 import { formatQuotaWithCurrency } from "@/lib/currency";
+import { getDemoModeUsername } from "@/lib/demo-mode";
 import { formatQuota, formatTimestamp } from "@/lib/format";
 import { buildFeishuUserChatUrl, cn } from "@/lib/utils";
 
@@ -110,6 +112,7 @@ export function userIdColumn<T extends UserColumnRow>(
 
 export function userNameColumn<T extends UserColumnRow>(
   t: (key: string) => string,
+  demoMode: boolean,
 ): ColumnDef<T> {
   return {
     accessorKey: "username",
@@ -120,7 +123,17 @@ export function userNameColumn<T extends UserColumnRow>(
       const displayName = user.display_name;
       const remark = user.remark;
       const avatarUrl = user.avatar_url;
-      const primaryName = displayName || username;
+      const primaryName = getDemoModeUsername(
+        displayName || username,
+        demoMode,
+      );
+
+      if (demoMode) {
+        return (
+          <LongText className="w-[130px] font-medium">{primaryName}</LongText>
+        );
+      }
+
       const avatarFallback = getUserAvatarFallback(primaryName);
       const avatarFallbackStyle = getUserAvatarStyle(primaryName);
       const feishuChatUrl = buildFeishuUserChatUrl(user.open_id);
@@ -666,11 +679,12 @@ export function useSharedUserColumns<T extends UserColumnRow>(
   opts: SharedUserColumnsOptions,
 ): ColumnDef<T>[] {
   const { t } = useTranslation();
+  const demoMode = useDemoMode();
 
   return useMemo(
     () => [
       userIdColumn<T>(t),
-      userNameColumn<T>(t),
+      userNameColumn<T>(t, demoMode),
       userQuotaColumn<T>(t, {
         headerDescription: opts.quotaHeaderDescription,
       }),
@@ -729,6 +743,7 @@ export function useSharedUserColumns<T extends UserColumnRow>(
     ],
     [
       t,
+      demoMode,
       opts.costAccessor,
       opts.tokensAccessor,
       opts.requestsAccessor,

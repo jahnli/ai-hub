@@ -1,6 +1,6 @@
-# 新增用户演示模式并隐藏渠道与定价敏感信息
+# 新增用户演示模式并隐藏渠道、定价与用户身份敏感信息
 
-**日期**: 2026-07-23
+**日期**: 2026-07-23 ~ 08-04
 
 ## 涉及文件
 
@@ -35,3 +35,13 @@
 - `web/src/i18n/locales/vi.json` — 补充越南文演示模式文案
 - `web/src/i18n/locales/zh-TW.json` — 补充繁体中文演示模式文案
 - `web/src/i18n/locales/zh.json` — 补充简体中文演示模式文案
+
+## 2026-08-04 用户身份脱敏扩展
+
+- `web/src/lib/demo-mode.ts` — 新增统一的演示模式用户名遮罩，将用户名固定显示为 `***`
+- `web/src/features/users/components/shared-user-columns.tsx` — 用户管理与数据总览部门用户列表共用的用户名列接入演示模式，隐藏显示名、用户名、备注、头像、资料悬停和飞书跳转
+- `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 普通使用日志用户列在演示模式下仅显示 `***`，并停止加载用户详情及隐藏头像和跳转入口
+- `web/src/features/usage-logs/components/columns/task-logs-columns.tsx`、`web/src/features/usage-logs/components/usage-logs-mobile-card.tsx` — 任务日志与移动端使用日志同步遮罩用户名和身份入口
+- `web/src/features/security-audit/components/off-hours-columns.tsx`、`web/src/features/security-audit/components/off-hours-detail-dialog.tsx` — 非工作时段审计用户列及日志详情标题遮罩用户名，同时保留原始用户名用于后台查询
+- `web/src/features/security-audit/components/image-audit-columns.tsx` — 图片审计用户列遮罩用户名，并禁用真实头像和资料悬停请求
+- `web/src/lib/__tests__/demo-mode.test.ts`、`web/src/features/users/components/__tests__/username-visibility.test.tsx`、`web/src/features/security-audit/components/__tests__/user-visibility.test.tsx` — 覆盖 `***` 遮罩、普通模式原值保留，以及用户管理和安全审计不泄露姓名、头像与链接的回归测试

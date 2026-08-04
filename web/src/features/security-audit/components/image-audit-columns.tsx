@@ -29,9 +29,11 @@ import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
 import type { UserColumnRow } from '@/features/users/types'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
+import { getDemoModeUsername } from '@/lib/demo-mode'
 
 import type { ImageAuditItem } from '../types'
 
@@ -40,12 +42,15 @@ export function imageAuditModeLabelKey(mode: string): string {
   return mode === 'edit' ? 'Image to image' : 'Text to image'
 }
 
-function ImageAuditUserCell(props: { item: ImageAuditItem }) {
+export function ImageAuditUserCell(props: {
+  item: ImageAuditItem
+  demoMode: boolean
+}) {
   const [userData, setUserData] = useState<UserColumnRow | null>(null)
   const fetchedUserId = useRef<number | null>(null)
 
   const handleFetchUser = useCallback(() => {
-    if (fetchedUserId.current === props.item.user_id) return
+    if (props.demoMode || fetchedUserId.current === props.item.user_id) return
 
     fetchedUserId.current = props.item.user_id
     void getUserInfo(props.item.user_id).then((response) => {
@@ -79,10 +84,12 @@ function ImageAuditUserCell(props: { item: ImageAuditItem }) {
         gender: userInfo.gender,
       })
     })
-  }, [props.item.user_id])
+  }, [props.demoMode, props.item.user_id])
 
-  const primaryName =
-    props.item.display_name || props.item.username || `#${props.item.user_id}`
+  const primaryName = getDemoModeUsername(
+    props.item.display_name || props.item.username || `#${props.item.user_id}`,
+    props.demoMode
+  )
   const avatarFallback = getUserAvatarFallback(primaryName)
   const avatarFallbackStyle = getUserAvatarStyle(primaryName)
   const hasDistinctUsername =
@@ -105,29 +112,37 @@ function ImageAuditUserCell(props: { item: ImageAuditItem }) {
   return (
     <div
       className='flex min-w-0 items-center gap-2 pl-2'
-      onMouseEnter={handleFetchUser}
+      onMouseEnter={props.demoMode ? undefined : handleFetchUser}
     >
-      <UserProfileHoverCard user={userData ?? fallbackUser}>
-        <Avatar size='sm' className='shrink-0'>
-          {props.item.avatar_url ? (
-            <AvatarImage src={props.item.avatar_url} alt={primaryName} />
-          ) : null}
-          <AvatarFallback
-            className='text-xs font-medium text-white'
-            style={avatarFallbackStyle}
-          >
-            {avatarFallback}
-          </AvatarFallback>
-        </Avatar>
-      </UserProfileHoverCard>
-      <div className='flex w-[130px] min-w-0 flex-col gap-1'>
-        <LongText className='max-w-full font-medium'>{primaryName}</LongText>
-        {hasDistinctUsername ? (
-          <LongText className='text-muted-foreground max-w-full text-xs'>
-            {props.item.username}
-          </LongText>
-        ) : null}
-      </div>
+      {props.demoMode ? (
+        <LongText className='w-[162px] font-medium'>{primaryName}</LongText>
+      ) : (
+        <>
+          <UserProfileHoverCard user={userData ?? fallbackUser}>
+            <Avatar size='sm' className='shrink-0'>
+              {props.item.avatar_url ? (
+                <AvatarImage src={props.item.avatar_url} alt={primaryName} />
+              ) : null}
+              <AvatarFallback
+                className='text-xs font-medium text-white'
+                style={avatarFallbackStyle}
+              >
+                {avatarFallback}
+              </AvatarFallback>
+            </Avatar>
+          </UserProfileHoverCard>
+          <div className='flex w-[130px] min-w-0 flex-col gap-1'>
+            <LongText className='max-w-full font-medium'>
+              {primaryName}
+            </LongText>
+            {hasDistinctUsername ? (
+              <LongText className='text-muted-foreground max-w-full text-xs'>
+                {props.item.username}
+              </LongText>
+            ) : null}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -186,6 +201,7 @@ export function useImageAuditColumns(
   onViewRequestContent: (item: ImageAuditItem) => void
 ): ColumnDef<ImageAuditItem>[] {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
 
   return useMemo<ColumnDef<ImageAuditItem>[]>(
     () => [
@@ -194,7 +210,9 @@ export function useImageAuditColumns(
         header: t('User'),
         meta: { mobileTitle: true },
         size: 180,
-        cell: ({ row }) => <ImageAuditUserCell item={row.original} />,
+        cell: ({ row }) => (
+          <ImageAuditUserCell item={row.original} demoMode={demoMode} />
+        ),
       },
       {
         id: 'created_at',
@@ -303,6 +321,6 @@ export function useImageAuditColumns(
         ),
       },
     ],
-    [t, onPreview, onViewRequestContent]
+    [demoMode, onPreview, onViewRequestContent, t]
   )
 }
