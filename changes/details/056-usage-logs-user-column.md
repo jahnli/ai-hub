@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-07-30
+**日期**: 2026-08-04
 
 ## 涉及文件
 
@@ -71,3 +71,5 @@
 - `web/default/src/routes/_authenticated/usage-logs/$section.tsx` — 使用日志路由搜索参数 schema 移除 token
 - `web/default/src/components/ui/combobox-input.tsx` — ComboboxInput 支持关闭自定义值提示与按 value 过滤，便于筛选输入数值时不弹出无关候选
 - `web/default/src/components/ui/combobox.tsx` — 透传 ComboboxInput 的自定义值提示和 value 过滤开关
+- `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 令牌列和详情列摘要仅在管理员日志视图中展示分组倍率或用户专属倍率，避免普通用户及「仅自己」视图泄露倍率
+- `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框的计费明细仅向管理员日志视图展示分组倍率或用户专属倍率

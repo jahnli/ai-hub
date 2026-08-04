@@ -94,7 +94,12 @@ function formatRatioCompact(ratio: number | undefined): string {
     : ratio.toFixed(4).replace(/\.?0+$/, '')
 }
 
-function getGroupRatioText(other: LogOtherData | null): string | null {
+function getGroupRatioText(
+  other: LogOtherData | null,
+  isAdmin: boolean
+): string | null {
+  if (!isAdmin) return null
+
   const userGroupRatio = other?.user_group_ratio
   if (
     userGroupRatio != null &&
@@ -127,7 +132,7 @@ function buildDetailSegments(
   t: (key: string, opts?: Record<string, unknown>) => string,
   isAdmin = false
 ): DetailSegment[] {
-  const segments = buildTypeDetailSegments(log, other, t)
+  const segments = buildTypeDetailSegments(log, other, t, isAdmin)
   if (isAdmin && other?.admin_info?.quota_saturation) {
     return [{ text: t('Quota clamped'), danger: true }, ...segments]
   }
@@ -137,7 +142,8 @@ function buildDetailSegments(
 function buildTypeDetailSegments(
   log: UsageLog,
   other: LogOtherData | null,
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  isAdmin: boolean
 ): DetailSegment[] {
   // Audit (type=3) and login (type=7) logs: render localized content from the
   // structured op descriptor instead of the raw (English-fallback) content.
@@ -288,7 +294,11 @@ function buildTypeDetailSegments(
         ? t('User Exclusive Ratio')
         : t('Group Ratio')
 
-      if (effectiveRatio != null && Number.isFinite(effectiveRatio)) {
+      if (
+        isAdmin &&
+        effectiveRatio != null &&
+        Number.isFinite(effectiveRatio)
+      ) {
         segments.push({
           text: `${ratioLabel} ${formatRatioCompact(effectiveRatio)}x`,
         })
@@ -1012,7 +1022,7 @@ export function useCommonLogsColumns(
         let group = log.group
         if (!group) group = other?.group || ''
         const metaParts: string[] = []
-        const groupRatioText = getGroupRatioText(other)
+        const groupRatioText = getGroupRatioText(other, isAdmin)
         if (group) {
           metaParts.push(sensitiveVisible ? group : '••••')
         }
@@ -1057,7 +1067,7 @@ export function useCommonLogsColumns(
         const log = row.original
         const other = parseLogOther(log.other)
 
-        const segments = buildDetailSegments(log, other, t)
+        const segments = buildDetailSegments(log, other, t, isAdmin)
         const primary = segments[0]
         const hasMore = segments.length > 1
         const isErrorLog = log.type === LOG_TYPE_ENUM.ERROR
