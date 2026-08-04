@@ -34,6 +34,10 @@ import {
 } from '@/features/auth/constants'
 import { sanitizeAuthRedirect } from '@/features/auth/lib/auth-redirect'
 import { startOAuthBindResponseDeadline } from '@/features/auth/lib/oauth-bind-window'
+import {
+  getOAuthSessionStorage,
+  resolveOAuthCallbackMode,
+} from '@/features/auth/lib/oauth-callback-mode'
 import { api, applyAuthBundle, isAuthBundle } from '@/lib/api'
 import { getServerErrorMessageKey } from '@/lib/server-error-message'
 
@@ -61,14 +65,20 @@ function OAuthCallback() {
     error_description?: string
     redirect?: string
   }
+  const callbackState = search.state ?? ''
   const mode: 'login' | 'bind' =
-    typeof window !== 'undefined' && window.opener ? 'bind' : 'login'
+    typeof window === 'undefined'
+      ? 'login'
+      : resolveOAuthCallbackMode(provider, callbackState, {
+          opener: window.opener,
+          storage: getOAuthSessionStorage(window),
+        })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const code = search.code ?? ''
-    const state = search.state ?? ''
+    const state = callbackState
 
     if (mode === 'bind') {
       const opener = window.opener
@@ -181,6 +191,7 @@ function OAuthCallback() {
       safeNavigate('/sign-in', '/sign-in')
     })()
   }, [
+    callbackState,
     mode,
     navigate,
     provider,
@@ -188,7 +199,6 @@ function OAuthCallback() {
     search.error,
     search.error_description,
     search.redirect,
-    search.state,
   ])
 
   return <OAuthCallbackScreen provider={provider} mode={mode} />

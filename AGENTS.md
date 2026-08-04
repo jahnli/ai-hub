@@ -64,6 +64,11 @@ web/           — 前端（React 19、Rsbuild、Base UI、Tailwind）
 
 ### 后端规则
 
+**RelayKit 模块独立性：** `relaykit/` Go 模块必须始终能够独立构建。
+
+- `relaykit/` 下的代码不得导入或依赖根 `new-api` 模块中的包，也不得依赖仅存在于根模块的配置、生成文件或 workspace 连接。
+- 任何影响 `relaykit/` 或其公共 API 的变更，都必须执行 `cd relaykit && GOWORK=off go build ./...` 验证；仅根模块构建成功并不足够。
+
 **JSON 包：** 所有 JSON 序列化/反序列化操作必须使用 `common/json.go` 中的封装函数：
 
 - `common.Marshal(v any) ([]byte, error)`

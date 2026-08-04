@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
+	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -51,7 +51,7 @@ func TestGetAndValidOpenAIImageRequestMultipartStream(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, req.Stream)
 		require.True(t, *req.Stream)
-		require.True(t, req.IsStream(c))
+		require.True(t, req.IsStream(c.Request))
 
 		bodyAfterValidation, err := io.ReadAll(c.Request.Body)
 		require.NoError(t, err)
@@ -104,9 +104,9 @@ func TestGetAndValidOpenAIImageRequestNBounds(t *testing.T) {
 			wantErr: boundErr,
 		},
 		{
-			name:    "n at max is rejected by OpenAI limit",
-			body:    fmt.Sprintf(`{"model":"gpt-image-1","prompt":"a cat","n":%d}`, dto.MaxImageN),
-			wantErr: "n must be less than or equal to 4",
+			name:  "n at max is accepted",
+			body:  fmt.Sprintf(`{"model":"gpt-image-1","prompt":"a cat","n":%d}`, dto.MaxImageN),
+			wantN: dto.MaxImageN,
 		},
 		{
 			name:  "explicit n is accepted",

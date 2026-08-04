@@ -50,6 +50,7 @@ const AUTH_SECTIONS = [
         serverAddress={settings.ServerAddress}
         defaultValues={{
           'oidc.enabled': settings['oidc.enabled'],
+          'oidc.display_name': settings['oidc.display_name'],
           'oidc.client_id': settings['oidc.client_id'],
           'oidc.client_secret': settings['oidc.client_secret'],
           'oidc.well_known': settings['oidc.well_known'],
