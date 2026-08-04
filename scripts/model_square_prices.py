@@ -35,11 +35,15 @@ DEFAULT_OUTPUT = SCRIPT_DIR / "model_square_prices.xlsx"
 PRICE_FIELDS = ("input", "output", "cache_read", "cache_write")
 TABLE_HEADERS = (
     "模型",
-    "输入(元/M)",
-    "输出(元/M)",
-    "缓存读取(元/M)",
-    "缓存写入(元/M)",
+    "输入(元/百万 Token)",
+    "输出(元/百万 Token)",
+    "缓存读取(元/百万 Token)",
+    "缓存写入(元/百万 Token)",
     "相对于官网折扣",
+)
+TABLE_NOTES = (
+    "1. 按量收费，使用多少扣多少",
+    "2. GPT 模型，北京专线优化，首字延迟低",
 )
 NUMBER_PATTERN = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
 TIER_PATTERN = re.compile(r'tier\("[^"]*",\s*([^)]+)\)')
@@ -365,7 +369,6 @@ def write_excel(
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-        from openpyxl.worksheet.table import Table, TableStyleInfo
     except ImportError as exc:
         raise RuntimeError("缺少 openpyxl，请先执行：pip install openpyxl") from exc
 
@@ -415,26 +418,40 @@ def write_excel(
     worksheet.freeze_panes = "A2"
     worksheet.sheet_view.showGridLines = False
     worksheet.row_dimensions[1].height = 24
-    for column, width in {
-        "A": 42,
-        "B": 16,
-        "C": 16,
-        "D": 20,
-        "E": 20,
-        "F": 36,
-    }.items():
-        worksheet.column_dimensions[column].width = width
-
-    if rows:
-        table = Table(displayName="ModelPrices", ref=f"A1:F{len(rows) + 1}")
-        table.tableStyleInfo = TableStyleInfo(
-            name="TableStyleMedium2",
-            showFirstColumn=False,
-            showLastColumn=False,
-            showRowStripes=False,
-            showColumnStripes=False,
+    width_limits = {
+        "A": (28, 48),
+        "B": (24, 30),
+        "C": (24, 30),
+        "D": (28, 34),
+        "E": (28, 34),
+        "F": (22, 32),
+    }
+    for column_index, column in enumerate(width_limits, start=1):
+        values = [TABLE_HEADERS[column_index - 1]]
+        values.extend(row[column_index - 1] for row in rows)
+        display_width = max(
+            sum(2 if ord(character) > 255 else 1 for character in str(value))
+            for value in values
         )
-        worksheet.add_table(table)
+        minimum_width, maximum_width = width_limits[column]
+        worksheet.column_dimensions[column].width = max(
+            minimum_width,
+            min(display_width + 3, maximum_width),
+        )
+
+    first_note_row = len(rows) + 3
+    for offset, note in enumerate(TABLE_NOTES):
+        note_row = first_note_row + offset
+        worksheet.merge_cells(
+            start_row=note_row,
+            start_column=1,
+            end_row=note_row,
+            end_column=6,
+        )
+        note_cell = worksheet.cell(row=note_row, column=1, value=note)
+        note_cell.fill = data_fill
+        note_cell.font = Font(color="000000")
+        note_cell.alignment = Alignment(horizontal="left", vertical="center")
 
     try:
         workbook.save(output)
