@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -346,6 +347,56 @@ func BuildViolationNoticeCard(requestTime string, requestID string, modelName st
 			{
 				"tag":     "markdown",
 				"content": "如误告警，忽略即可",
+			},
+		},
+	}
+
+	data, err := common.Marshal(card)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func BuildOffHoursViolationNoticeCard(requestTime string, requestCount int64) (string, error) {
+	card := map[string]any{
+		"config": map[string]any{
+			"wide_screen_mode": true,
+		},
+		"header": map[string]any{
+			"template": "red",
+			"title": map[string]string{
+				"tag":     "plain_text",
+				"content": "安全审计提醒",
+			},
+		},
+		"elements": []map[string]any{
+			{
+				"tag":     "markdown",
+				"content": "系统监测到您在非工作时间内较频繁地使用了中转站服务，请确认相关请求，并合理调整使用时间",
+			},
+			{
+				"tag": "div",
+				"fields": []map[string]any{
+					{
+						"is_short": true,
+						"text": map[string]string{
+							"tag":     "lark_md",
+							"content": "**请求时间**\n" + requestTime,
+						},
+					},
+					{
+						"is_short": true,
+						"text": map[string]string{
+							"tag":     "lark_md",
+							"content": "**请求次数**\n" + strconv.FormatInt(requestCount, 10),
+						},
+					},
+				},
+			},
+			{
+				"tag":     "markdown",
+				"content": "如上述请求属于正常业务使用，忽略即可；如非本人或非预期操作，请及时检查相关账号、密钥及调用配置",
 			},
 		},
 	}

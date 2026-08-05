@@ -24,6 +24,8 @@ import type {
   GetOffHoursUsageParams,
   GetOffHoursUsageResponse,
   GetSecurityAuditSettingResponse,
+  NotifyOffHoursViolationRequest,
+  NotifyOffHoursViolationResponse,
 } from './types'
 
 export async function getSecurityAuditSetting(): Promise<GetSecurityAuditSettingResponse> {
@@ -41,6 +43,16 @@ export async function getOffHoursUsage(
     }
   })
   const res = await api.get(`/api/security_audit/off_hours?${queryParams}`)
+  return res.data
+}
+
+export async function notifyOffHoursViolation(
+  payload: NotifyOffHoursViolationRequest
+): Promise<NotifyOffHoursViolationResponse> {
+  const res = await api.post(
+    '/api/security_audit/off_hours/notify-violation',
+    payload
+  )
   return res.data
 }
 

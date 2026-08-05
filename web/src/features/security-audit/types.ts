@@ -65,6 +65,18 @@ export interface GetOffHoursUsageResponse {
   }
 }
 
+export interface NotifyOffHoursViolationRequest {
+  user_id: number
+  start_time: number
+  end_time: number
+  request_count: number
+}
+
+export interface NotifyOffHoursViolationResponse {
+  success: boolean
+  message?: string
+}
+
 export interface SecurityAuditSetting {
   off_hours: {
     enabled: boolean
@@ -91,11 +103,15 @@ export interface AuditRow {
 
 /** Target of the day-level detail dialog. */
 export interface OffHoursDetailTarget {
+  userId: number
   username: string
   displayName: string
   date: string
   windowStart: number
   windowEnd: number
+  requestStart: number
+  requestEnd: number
+  requestCount: number
 }
 
 /** Mirrors backend model.ImageStudioAsset */

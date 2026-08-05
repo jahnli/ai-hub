@@ -351,11 +351,15 @@ export function useOffHoursColumns(
               className='h-7 gap-1.5 px-2 text-xs'
               onClick={() =>
                 onViewDetail({
+                  userId: audit.user.user_id,
                   username: audit.user.username,
                   displayName: audit.user.display_name || audit.user.username,
                   date: displayedDay.date,
                   windowStart: displayedDay.window_start,
                   windowEnd: displayedDay.window_end,
+                  requestStart: displayedDay.start_time,
+                  requestEnd: displayedDay.end_time,
+                  requestCount: displayedDay.count,
                 })
               }
             >

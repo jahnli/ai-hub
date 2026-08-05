@@ -33,9 +33,10 @@
 - `controller/request_message.go` — 管理员和普通用户批量查询 request_message 接口；新增 POST body 批量查询解析，避免分页 100 时 request_ids 拼入 URL 导致线上网关 502；新增违规通知接口，校验用户 open_id 后发送飞书安全审计提醒
 - `service/request_message.go` — 中继请求后异步记录用户输入：提取多模态内容为占位符、截断超长对话、序列化参数；支持从生图与图片编辑请求中提取 Prompt，使使用日志可展示图片请求内容
 - `service/request_message_test.go` — 补充生图 Prompt 记录、首尾空白清理和空提示词跳过的回归测试
-- `service/feishu_department.go` — 新增飞书交互卡片发送与违规通知卡片构造，卡片展示请求时间、模型、Request ID，并提示误告警可忽略
+- `service/feishu_department.go` — 新增飞书交互卡片发送与违规通知卡片构造；单请求卡片展示请求时间、模型与 Request ID，非工作时间卡片展示当天实际请求时间范围与请求次数，并提示正常业务可忽略、异常操作需检查账号及密钥
+- `service/violation_notice_test.go` — 覆盖单请求与非工作时间两类违规通知卡片的红色模板、正文和关键字段
 - `controller/relay.go` — 中继入口调用 RecordRequestMessage 记录请求内容
-- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由；管理端批量查询接口改为 RootAuth，仅超级管理员可读取任意用户请求内容；补充 /batch 与 /self/batch POST 路由承载批量 request_ids；新增 /notify-violation 违规通知路由
+- `router/api-router.go` — 新增 /api/request_message 和 /api/request_message/self 路由；管理端批量查询接口改为 RootAuth，仅超级管理员可读取任意用户请求内容；补充 /batch 与 /self/batch POST 路由承载批量 request_ids；新增 /notify-violation 违规通知路由及仅超级管理员可调用的 /api/security_audit/off_hours/notify-violation 非工作时间通知路由
 - `common/constants.go` — 新增 RecordRequestMessageEnabled 全局开关
 - `model/option.go` — 系统选项注册和运行时更新 RecordRequestMessageEnabled
 - `model/main.go` — AutoMigrate 注册 RequestMessage 模型
@@ -43,6 +44,12 @@
 - `web/default/src/features/usage-logs/components/request-messages-provider.tsx` — RequestMessagesProvider 上下文，按当前页 request_id 批量加载请求内容；新增 canViewRequestContent 控制，非超级管理员不发起请求内容批量查询
 - `web/default/src/features/usage-logs/api.ts` — 新增 getRequestMessages API 调用；请求内容批量查询改为 POST /batch 并通过 body 传递 request_ids，避免分页 100 时 query 过长；新增 notifyRequestMessageViolation API 调用
 - `web/default/src/features/usage-logs/types.ts` — 新增 RequestMessage 接口定义；LogOtherData 复用 user_agent 字段承载中继请求的原始 User-Agent；新增 NotifyViolationRequest 类型
+- `controller/security_audit.go` — 新增非工作时间违规通知接口，校验用户、实际请求时间范围和请求次数，确认用户已绑定飞书后发送安全审计卡片
+- `controller/security_audit_test.go` — 覆盖缺少用户、时间范围倒置和请求次数非正数的接口校验
+- `web/src/features/security-audit/api.ts`、`web/src/features/security-audit/types.ts` — 增加非工作时间违规通知请求 API、载荷类型，并在日志弹窗目标中携带用户、实际请求时间范围与请求次数
+- `web/src/features/security-audit/components/off-hours-columns.tsx`、`web/src/features/security-audit/components/off-hours-detail-dialog.tsx` — 从非工作时间记录打开日志弹窗时传递通知上下文，并在弹窗标题栏右上角、关闭按钮左侧展示违规通知操作
+- `web/src/features/security-audit/components/off-hours-violation-notice.tsx` — 新增违规通知按钮、二次确认、发送中禁用以及成功和失败提示
+- `web/src/features/security-audit/components/__tests__/off-hours-violation-notice.test.tsx` — 回归覆盖表格不新增违规通知列、日志弹窗右上角展示按钮及选中记录通知入口
 - `web/default/src/features/usage-logs/components/usage-logs-table.tsx` — 包裹 RequestMessagesProvider，按当前页日志批量加载请求内容；基于当前用户角色传入请求内容可见性，仅超级管理员允许加载
 - `web/default/src/features/system-settings/maintenance/log-settings-section.tsx` — 从运维日志维护中移除「记录请求内容」开关
 - `web/default/src/features/system-settings/operations/section-registry.tsx` — 运维设置不再传入 RecordRequestMessageEnabled 默认值

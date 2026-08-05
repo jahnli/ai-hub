@@ -39,6 +39,7 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type { OffHoursDetailTarget } from '../types'
+import { OffHoursViolationNoticeButton } from './off-hours-violation-notice'
 
 interface OffHoursDetailDialogProps {
   open: boolean
@@ -46,8 +47,27 @@ interface OffHoursDetailDialogProps {
   target: OffHoursDetailTarget | null
 }
 
-export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
+export function OffHoursDetailDialogHeader(props: {
+  target: OffHoursDetailTarget
+  displayedUsername: string
+  windowLabel: string
+}) {
   const { t } = useTranslation()
+
+  return (
+    <DialogHeader className='shrink-0 flex-row items-center justify-between gap-3 pr-10'>
+      <DialogTitle className='min-w-0 truncate'>
+        {t('Usage Logs')} - {props.displayedUsername} · {props.target.date} ·{' '}
+        {props.windowLabel}
+      </DialogTitle>
+      <div className='shrink-0'>
+        <OffHoursViolationNoticeButton target={props.target} />
+      </div>
+    </DialogHeader>
+  )
+}
+
+export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
   const demoMode = useDemoMode()
 
   if (!props.target) return null
@@ -63,12 +83,11 @@ export function OffHoursDetailDialog(props: OffHoursDetailDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className='flex h-[85vh] max-h-[85vh] w-[min(1360px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-[calc(100vw-2rem)]'>
-        <DialogHeader className='shrink-0'>
-          <DialogTitle>
-            {t('Usage Logs')} - {displayedUsername} · {props.target.date} ·{' '}
-            {windowLabel}
-          </DialogTitle>
-        </DialogHeader>
+        <OffHoursDetailDialogHeader
+          target={props.target}
+          displayedUsername={displayedUsername}
+          windowLabel={windowLabel}
+        />
 
         <div className='min-h-0 flex-1 overflow-y-auto pt-2 pr-1'>
           <OffHoursLogsSection target={props.target} />
