@@ -1,6 +1,6 @@
 # API 密钥界面优化
 
-**日期**: 2026-07-10
+**日期**: 2026-08-05
 
 ## 涉及文件
 
@@ -14,3 +14,6 @@
 - `web/default/src/i18n/locales/ru.json` — 新增 Быстрый импорт 翻译
 - `web/default/src/i18n/locales/ja.json` — 新增クイックインポート翻译
 - `web/default/src/i18n/locales/vi.json` — 新增 Nhập nhanh 翻译
+- `web/src/features/keys/components/dialogs/cc-switch-dialog.tsx` — CC Switch 快捷导入改为调用独立链接构建逻辑，不再读取系统配置中的服务地址
+- `web/src/features/keys/lib/cc-switch-import.ts` — 使用当前页面 `window.location.origin` 生成官网和 API 端点，Codex 端点保留 `/v1`
+- `web/src/features/keys/components/dialogs/__tests__/cc-switch-import-url.test.ts` — 增加回归测试，确保缓存的 `server_address` 不会覆盖当前页面 Origin，并验证 Codex 端点规则
