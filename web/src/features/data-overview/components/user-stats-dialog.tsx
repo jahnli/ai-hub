@@ -116,14 +116,16 @@ export function UserStatsDialog(props: UserStatsDialogProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className='min-h-0 space-y-6 overflow-y-auto pt-2 pr-1'>
+        <div className='shrink-0 pt-2 pr-1'>
           <CompactDateTimeRangePicker
             start={dateRange.start}
             end={dateRange.end}
             onChange={setDateRange}
             className='max-w-none'
           />
+        </div>
 
+        <div className='min-h-0 space-y-6 overflow-y-auto pr-1'>
           <UserLogsSection
             companyId={companyId}
             departmentId={departmentId}
