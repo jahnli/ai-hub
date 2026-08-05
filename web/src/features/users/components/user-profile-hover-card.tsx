@@ -46,6 +46,11 @@ interface UserProfileHoverCardProps {
   children: React.ReactNode
 }
 
+interface ProfileFieldEntry {
+  label: string
+  value?: string | null
+}
+
 function ProfileField(props: { label: string; value?: string | null }) {
   if (!props.value) return null
   return (
@@ -78,7 +83,7 @@ function ProfileIconWithTooltip(props: {
 }
 
 const DEFAULT_BANNER =
-  'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%)'
+  'linear-gradient(135deg, rgb(0, 90, 210) 0%, rgb(160, 210, 255) 100%)'
 
 const ROLE_TOOLTIP_LABELS: Partial<Record<number, string>> = {
   [USER_ROLE.USER]: '普通用户',
@@ -113,6 +118,41 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
         backgroundPosition: 'center',
       }
     : { background: DEFAULT_BANNER }
+
+  const rootOnlyFields: ProfileFieldEntry[] = isRoot
+    ? [
+        { label: t('Mobile'), value: user.mobile },
+        {
+          label: t('Birthday'),
+          value: customFields?.[CUSTOM_FIELD_KEYS.BIRTHDAY],
+        },
+        {
+          label: t('Ethnicity'),
+          value: customFields?.[CUSTOM_FIELD_KEYS.ETHNICITY],
+        },
+        {
+          label: t('Hometown'),
+          value: customFields?.[CUSTOM_FIELD_KEYS.HOMETOWN],
+        },
+      ]
+    : []
+
+  const visibleProfileFields: ProfileFieldEntry[] = [
+    {
+      label: t('Job Level'),
+      value: customFields?.[CUSTOM_FIELD_KEYS.JOB_LEVEL],
+    },
+    { label: t('Department'), value: user.department_name },
+    { label: t('Join Date'), value: user.join_date },
+    { label: t('Email'), value: user.email },
+    { label: t('Job Number'), value: user.job_number },
+    { label: t('Job Title'), value: user.job_title },
+    {
+      label: t('Job Description'),
+      value: customFields?.[CUSTOM_FIELD_KEYS.JOB_DESCRIPTION],
+    },
+    ...rootOnlyFields,
+  ].filter((field) => Boolean(field.value))
 
   return (
     <HoverCard>
@@ -181,42 +221,21 @@ export function UserProfileHoverCard(props: UserProfileHoverCardProps) {
           </div>
         </div>
 
-        {/* Divider */}
-        <div className='bg-border mx-5 h-px' />
-
-        {/* Fields */}
-        <div className='px-5 py-2.5'>
-          <ProfileField
-            label={t('Job Level')}
-            value={customFields?.[CUSTOM_FIELD_KEYS.JOB_LEVEL]}
-          />
-          <ProfileField label={t('Department')} value={user.department_name} />
-          <ProfileField label={t('Join Date')} value={user.join_date} />
-          <ProfileField label={t('Email')} value={user.email} />
-          <ProfileField label={t('Job Number')} value={user.job_number} />
-          <ProfileField label={t('Job Title')} value={user.job_title} />
-          <ProfileField
-            label={t('Job Description')}
-            value={customFields?.[CUSTOM_FIELD_KEYS.JOB_DESCRIPTION]}
-          />
-          {isRoot && (
-            <>
-              <ProfileField label={t('Mobile')} value={user.mobile} />
-              <ProfileField
-                label={t('Birthday')}
-                value={customFields?.[CUSTOM_FIELD_KEYS.BIRTHDAY]}
-              />
-              <ProfileField
-                label={t('Ethnicity')}
-                value={customFields?.[CUSTOM_FIELD_KEYS.ETHNICITY]}
-              />
-              <ProfileField
-                label={t('Hometown')}
-                value={customFields?.[CUSTOM_FIELD_KEYS.HOMETOWN]}
-              />
-            </>
-          )}
-        </div>
+        {/* Divider and Fields */}
+        {visibleProfileFields.length > 0 && (
+          <>
+            <div className='bg-border mx-5 h-px' />
+            <div className='px-5 py-2.5'>
+              {visibleProfileFields.map((field) => (
+                <ProfileField
+                  key={field.label}
+                  label={field.label}
+                  value={field.value}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </HoverCardContent>
     </HoverCard>
   )
