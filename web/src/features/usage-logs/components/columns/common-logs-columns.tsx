@@ -319,6 +319,7 @@ function buildTypeDetailSegments(
 
 interface UseCommonLogsColumnsOptions {
   canFetchUserDetails?: boolean
+  showUserColumn?: boolean
 }
 
 export function useCommonLogsColumns(
@@ -330,6 +331,7 @@ export function useCommonLogsColumns(
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const canFetchUserDetails = options.canFetchUserDetails ?? isAdmin
+  const showUserColumn = options.showUserColumn ?? isAdmin
   const columns: ColumnDef<UsageLog>[] = [
     {
       accessorKey: 'created_at',
@@ -364,7 +366,7 @@ export function useCommonLogsColumns(
     },
   ]
 
-  if (isAdmin) {
+  if (showUserColumn) {
     columns.push({
       id: 'user',
       header: t('User'),
@@ -420,8 +422,9 @@ export function useCommonLogsColumns(
 
         if (!log.username) return null
 
+        const resolvedUsername = userData?.username || log.username
         const primaryName = getDemoModeUsername(
-          log.display_name || log.username,
+          userData?.display_name || log.display_name || resolvedUsername,
           demoMode
         )
 
@@ -451,11 +454,12 @@ export function useCommonLogsColumns(
         const feishuChatUrl = buildFeishuUserChatUrl(
           userData?.open_id ?? log.open_id
         )
+        const avatarUrl = userData?.avatar_url || log.avatar_url
 
         const baseUser: UserColumnRow = userData ?? {
           id: log.user_id,
-          username: log.username,
-          display_name: log.display_name || log.username,
+          username: resolvedUsername,
+          display_name: log.display_name || resolvedUsername,
           avatar_url: log.avatar_url || undefined,
           quota: 0,
           used_quota: 0,
@@ -478,9 +482,7 @@ export function useCommonLogsColumns(
             onClick={(event) => event.stopPropagation()}
           >
             <Avatar size='sm' className='shrink-0'>
-              {log.avatar_url && (
-                <AvatarImage src={log.avatar_url} alt={primaryName} />
-              )}
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={primaryName} />}
               <AvatarFallback
                 className='text-xs font-medium text-white'
                 style={avatarFallbackStyle}
@@ -491,9 +493,7 @@ export function useCommonLogsColumns(
           </a>
         ) : (
           <Avatar size='sm' className='shrink-0'>
-            {log.avatar_url && (
-              <AvatarImage src={log.avatar_url} alt={primaryName} />
-            )}
+            {avatarUrl && <AvatarImage src={avatarUrl} alt={primaryName} />}
             <AvatarFallback
               className='text-xs font-medium text-white'
               style={avatarFallbackStyle}
@@ -521,9 +521,11 @@ export function useCommonLogsColumns(
               <LongText className='max-w-full font-medium'>
                 {primaryName}
               </LongText>
-              {log.display_name && log.display_name !== log.username ? (
+              {primaryName !== resolvedUsername ? (
                 <div className='text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs'>
-                  <LongText className='min-w-0 flex-1'>{log.username}</LongText>
+                  <LongText className='min-w-0 flex-1'>
+                    {resolvedUsername}
+                  </LongText>
                 </div>
               ) : null}
             </div>

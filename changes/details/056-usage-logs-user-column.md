@@ -1,6 +1,6 @@
 # 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
 
-**日期**: 2026-08-04
+**日期**: 2026-08-05
 
 ## 涉及文件
 
@@ -73,3 +73,12 @@
 - `web/default/src/components/ui/combobox.tsx` — 透传 ComboboxInput 的自定义值提示和 value 过滤开关
 - `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 令牌列和详情列摘要仅在管理员日志视图中展示分组倍率或用户专属倍率，避免普通用户及「仅自己」视图泄露倍率
 - `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框的计费明细仅向管理员日志视图展示分组倍率或用户专属倍率
+
+## 「仅自己」用户信息展示修复
+
+- `model/log.go` — 抽取日志用户资料批量补充逻辑，并让个人日志接口同步返回 display_name、avatar_url、open_id 和 gender，确保「仅自己」模式与全部日志保持一致的头像及身份数据
+- `model/log_user_filter_test.go` — 新增个人日志返回展示名、头像、飞书 open_id 和性别字段的回归测试
+- `web/src/features/usage-logs/components/usage-logs-table.tsx` — 将日志数据范围与用户列/资料卡权限拆分，管理员切换「仅自己」后仍显示用户列并允许加载完整资料
+- `web/src/features/usage-logs/lib/columns.ts` — 用户列工厂改为接收独立的列可见性和资料加载权限选项
+- `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列支持独立显示控制，并在完整资料异步加载后同步刷新头像、展示名和用户名
+- `web/src/features/usage-logs/components/columns/__tests__/self-scope-user-details.test.tsx` — 新增「仅自己」模式下头像、用户身份文本和悬停资料卡入口保持可见的组件回归测试

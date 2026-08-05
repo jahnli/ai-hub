@@ -26,16 +26,22 @@ import { useDrawingLogsColumns } from '../components/columns/drawing-logs-column
 import { useTaskLogsColumns } from '../components/columns/task-logs-columns'
 import type { LogCategory } from '../types'
 
+interface UseColumnsByCategoryOptions {
+  canFetchUserDetails?: boolean
+  showUserColumn?: boolean
+}
+
 /**
  * Get column definitions based on log category
  * Returns any[] due to different log types (UsageLog, MjProxy log, TaskLog)
  */
 export function useColumnsByCategory(
   logCategory: LogCategory,
-  isAdmin: boolean
+  isAdmin: boolean,
+  options: UseColumnsByCategoryOptions = {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): ColumnDef<any>[] {
-  const commonColumns = useCommonLogsColumns(isAdmin)
+  const commonColumns = useCommonLogsColumns(isAdmin, options)
   const drawingColumns = useDrawingLogsColumns(isAdmin)
   const taskColumns = useTaskLogsColumns(isAdmin)
 

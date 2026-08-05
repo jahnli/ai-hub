@@ -43,3 +43,46 @@ func TestGetLogsByUserIdsFiltersExactUserAndInclusiveTimeRange(t *testing.T) {
 	assert.Equal(t, "range start", got[1].Content)
 	assert.Equal(t, []int{101, 101}, []int{got[0].UserId, got[1].UserId})
 }
+
+func TestGetUserLogsIncludesUserIdentityDetails(t *testing.T) {
+	truncateTables(t)
+
+	user := User{
+		Username:    "self-log-user",
+		Password:    "unused-password-hash",
+		DisplayName: "Self Log User",
+		AvatarUrl:   "https://example.com/self-log-user.png",
+		OpenId:      "ou_self_log_user",
+		Gender:      2,
+	}
+	require.NoError(t, DB.Create(&user).Error)
+	require.NoError(t, LOG_DB.Create(&Log{
+		UserId:    user.Id,
+		Username:  user.Username,
+		CreatedAt: 100,
+		Content:   "self log",
+	}).Error)
+
+	logs, total, err := GetUserLogs(
+		user.Id,
+		LogTypeUnknown,
+		0,
+		0,
+		"",
+		"",
+		0,
+		10,
+		"",
+		"",
+		"",
+		"",
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	require.Len(t, logs, 1)
+	assert.Equal(t, user.DisplayName, logs[0].DisplayName)
+	assert.Equal(t, user.AvatarUrl, logs[0].AvatarUrl)
+	assert.Equal(t, user.OpenId, logs[0].OpenId)
+	assert.Equal(t, user.Gender, logs[0].Gender)
+}

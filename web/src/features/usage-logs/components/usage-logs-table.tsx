@@ -83,7 +83,7 @@ interface UsageLogsTableProps {
 
 export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { t } = useTranslation()
-  const { isAdminView: isAdmin } = useLogsViewScope()
+  const { canManageScope, isAdminView: isAdmin } = useLogsViewScope()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const searchParams = route.useSearch()
@@ -162,7 +162,10 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   })
 
   const logs = data?.items || []
-  const columns = useColumnsByCategory(logCategory, isAdmin)
+  const columns = useColumnsByCategory(logCategory, isAdmin, {
+    canFetchUserDetails: canManageScope,
+    showUserColumn: canManageScope,
+  })
   const isLoadingData = isLoading || (isFetching && !data)
 
   const { table } = useDataTable({
