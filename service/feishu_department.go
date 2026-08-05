@@ -1273,15 +1273,16 @@ const (
 // DepartmentUserItem holds user info with stats for a specific time range.
 type DepartmentUserItem struct {
 	*model.User
-	TotalAmountCNY     float64 `json:"total_amount_cny"`
-	AvgPricePerMT      float64 `json:"avg_price_per_mt"`
-	TotalTokens        int64   `json:"total_tokens"`
-	TotalRequests      int64   `json:"total_requests"`
-	CommonModel        string  `json:"common_model"`
-	IsRegistered       bool    `json:"is_registered"`
-	RegistrationStatus string  `json:"registration_status"`
-	SubQuotaUsed       int64   `json:"sub_quota_used"`
-	SubQuotaTotal      int64   `json:"sub_quota_total"`
+	HasActiveSubscription bool    `json:"has_active_subscription"`
+	TotalAmountCNY        float64 `json:"total_amount_cny"`
+	AvgPricePerMT         float64 `json:"avg_price_per_mt"`
+	TotalTokens           int64   `json:"total_tokens"`
+	TotalRequests         int64   `json:"total_requests"`
+	CommonModel           string  `json:"common_model"`
+	IsRegistered          bool    `json:"is_registered"`
+	RegistrationStatus    string  `json:"registration_status"`
+	SubQuotaUsed          int64   `json:"sub_quota_used"`
+	SubQuotaTotal         int64   `json:"sub_quota_total"`
 }
 
 func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *model.User {

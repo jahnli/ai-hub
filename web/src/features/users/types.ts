@@ -42,6 +42,7 @@ export const userSchema = z.object({
   email: z.string().optional(),
   quota: z.number(),
   used_quota: z.number(),
+  has_active_subscription: z.boolean().optional().default(false),
   sub_quota_used: z.number().optional().default(0),
   sub_quota_total: z.number().optional().default(0),
   monthly_total_amount_cny: z.number().optional().default(0),
@@ -182,6 +183,7 @@ export interface UserColumnRow {
   remark?: string
   quota: number
   used_quota: number
+  has_active_subscription?: boolean
   sub_quota_used: number
   sub_quota_total: number
   request_count: number

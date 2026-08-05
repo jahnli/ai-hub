@@ -331,6 +331,49 @@ func TestBuildCompanyDepartmentUsersEnrichesOnlyCurrentPageDetails(t *testing.T)
 	assert.NotContains(t, detailDepartments, "0")
 }
 
+func TestPopulateDepartmentUserStatsUsesFilteredSpendAndWalletQuotaWithoutSubscription(t *testing.T) {
+	previousDB := model.DB
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.QuotaData{}, &model.UserSubscription{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		_ = sqlDB.Close()
+	})
+
+	subscribedUser := &model.User{Id: 1, Quota: 9_000}
+	walletUser := &model.User{Id: 2, Quota: 3_500}
+	require.NoError(t, db.Create(&model.UserSubscription{
+		UserId:      subscribedUser.Id,
+		AmountTotal: 5_000,
+		AmountUsed:  2_000,
+		Status:      "active",
+	}).Error)
+	require.NoError(t, db.Create([]model.QuotaData{
+		{UserID: subscribedUser.Id, ModelName: "model-a", CreatedAt: 150, Quota: 4_000},
+		{UserID: walletUser.Id, ModelName: "model-a", CreatedAt: 100, Quota: 1_000},
+		{UserID: walletUser.Id, ModelName: "model-b", CreatedAt: 200, Quota: 500},
+		{UserID: walletUser.Id, ModelName: "model-c", CreatedAt: 99, Quota: 8_000},
+		{UserID: walletUser.Id, ModelName: "model-c", CreatedAt: 201, Quota: 9_000},
+	}).Error)
+	items := []DepartmentUserItem{
+		{User: subscribedUser},
+		{User: walletUser},
+	}
+
+	populateDepartmentUserStats(items, []int{subscribedUser.Id, walletUser.Id}, 100, 200, nil)
+
+	assert.True(t, items[0].HasActiveSubscription)
+	assert.Equal(t, int64(2_000), items[0].SubQuotaUsed)
+	assert.Equal(t, int64(5_000), items[0].SubQuotaTotal)
+	assert.False(t, items[1].HasActiveSubscription)
+	assert.Equal(t, int64(1_500), items[1].SubQuotaUsed)
+	assert.Equal(t, int64(5_000), items[1].SubQuotaTotal)
+}
+
 func TestMatchOverviewDepartmentMembersUsesFirstDepartmentID(t *testing.T) {
 	previousDB := model.DB
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

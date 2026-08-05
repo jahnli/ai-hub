@@ -475,6 +475,7 @@ func sortUserWithSubQuota(items []userWithSubQuota, sortBy string, sortOrder str
 
 type userWithSubQuota struct {
 	*model.User
+	HasActiveSubscription bool    `json:"has_active_subscription"`
 	SubQuotaUsed          int64   `json:"sub_quota_used"`
 	SubQuotaTotal         int64   `json:"sub_quota_total"`
 	MonthlyTotalAmountCNY float64 `json:"monthly_total_amount_cny"`
@@ -489,9 +490,9 @@ func attachSubscriptionQuota(users []*model.User) []userWithSubQuota {
 	for i, u := range users {
 		ids[i] = u.Id
 	}
-	subMap, err := model.GetActiveSubscriptionQuotaByUserIds(ids)
-	if err != nil {
-		common.SysLog("failed to fetch subscription quota: " + err.Error())
+	subMap, subscriptionErr := model.GetActiveSubscriptionQuotaByUserIds(ids)
+	if subscriptionErr != nil {
+		common.SysLog("failed to fetch subscription quota: " + subscriptionErr.Error())
 		subMap = make(map[int]*model.UserSubscriptionQuotaSummary)
 	}
 
@@ -532,11 +533,16 @@ func attachSubscriptionQuota(users []*model.User) []userWithSubQuota {
 	result := make([]userWithSubQuota, len(users))
 	for i, u := range users {
 		item := userWithSubQuota{User: u}
+		stat, hasStat := userStats[u.Id]
 		if s, ok := subMap[u.Id]; ok {
+			item.HasActiveSubscription = true
 			item.SubQuotaUsed = s.AmountUsed
 			item.SubQuotaTotal = s.AmountTotal
+		} else if subscriptionErr == nil {
+			item.SubQuotaUsed = stat.TotalQuota
+			item.SubQuotaTotal = stat.TotalQuota + int64(u.Quota)
 		}
-		if stat, ok := userStats[u.Id]; ok {
+		if hasStat {
 			item.MonthlyTotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * usdExchangeRate
 			item.MonthlyTotalTokens = stat.TotalTokens
 			item.MonthlyTotalRequests = stat.TotalReqs

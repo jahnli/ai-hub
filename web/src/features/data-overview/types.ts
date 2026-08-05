@@ -118,6 +118,7 @@ export interface DepartmentUser {
   email?: string
   quota: number
   used_quota: number
+  has_active_subscription?: boolean
   sub_quota_used: number
   sub_quota_total: number
   total_amount_cny: number
