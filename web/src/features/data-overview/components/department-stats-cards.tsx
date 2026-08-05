@@ -13,6 +13,7 @@ import {
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
 import {
   Tooltip,
   TooltipContent,
@@ -112,6 +113,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     value: string
     desc?: string
     icon: LucideIcon
+    iconTone: IconBadgeTone
     valueClassName?: string
     tooltip?: ReactNode
   }[] = [
@@ -120,6 +122,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: formatTokens(stat.total_tokens),
       desc: t('Statistical tokens'),
       icon: Layers,
+      iconTone: 'chart-4',
       tooltip: buildTokenBreakdownTooltip(),
     },
     {
@@ -127,6 +130,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: formatCNY(stat.total_amount_cny),
       desc: t('Statistical quota'),
       icon: Coins,
+      iconTone: 'success',
     },
     {
       title: t('Avg Price'),
@@ -135,24 +139,28 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       }/MT`,
       desc: t('Average price per million tokens'),
       icon: DollarSign,
+      iconTone: 'warning',
     },
     {
       title: t('Total Requests'),
       value: formatRequests(stat.total_requests),
       desc: t('Statistical count'),
       icon: Hash,
+      iconTone: 'info',
     },
     {
       title: t('Avg Response Time'),
       value: `${(stat.avg_use_time ?? 0).toFixed(1)}s`,
       desc: t('Average response time'),
       icon: Timer,
+      iconTone: 'chart-2',
     },
     {
       title: t('Registered Count'),
       value: (stat.registered_users ?? 0).toLocaleString(),
       desc: t('Registered people count'),
       icon: UserCheck,
+      iconTone: 'success',
       valueClassName: 'text-success',
     },
     {
@@ -160,6 +168,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: (stat.unregistered_users ?? 0).toLocaleString(),
       desc: t('Unregistered people count'),
       icon: UserX,
+      iconTone: 'warning',
       valueClassName: 'text-warning',
     },
     {
@@ -170,6 +179,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: `${(stat.active_users ?? 0).toLocaleString()} / ${activeUserRate.toFixed(1)}%`,
       desc: t('Users and their share during the selected period'),
       icon: Users,
+      iconTone: 'primary',
       valueClassName: activeUserRateClassName,
     },
     {
@@ -177,6 +187,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: formatTokens(tokensPerActiveUser),
       desc: t('Based on active users only'),
       icon: Layers,
+      iconTone: 'chart-4',
       tooltip: formatTokensDetail(tokensPerActiveUser),
     },
     {
@@ -184,6 +195,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       value: `${(stat.error_rate ?? 0).toFixed(1)}%`,
       desc: t('Request error rate'),
       icon: AlertTriangle,
+      iconTone: 'destructive',
     },
   ]
 
@@ -197,9 +209,15 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
               key={item.title}
               className='min-w-0 px-3 py-2.5 sm:px-5 sm:py-4'
             >
-              <div className='flex min-w-0 items-center gap-2'>
-                <Icon className='text-muted-foreground/60 size-3.5 shrink-0' />
-                <div className='text-muted-foreground min-w-0 truncate text-xs font-medium tracking-wider uppercase'>
+              <div className='flex min-w-0 items-center gap-1.5 sm:gap-2'>
+                <IconBadge
+                  tone={item.iconTone}
+                  size='stat'
+                  className='size-4 rounded-sm sm:size-7 sm:rounded-md [&>svg]:size-2.5 sm:[&>svg]:size-3.5'
+                >
+                  <Icon />
+                </IconBadge>
+                <div className='text-muted-foreground min-w-0 truncate text-[11px] leading-4 font-medium tracking-wide uppercase sm:text-xs sm:tracking-wider'>
                   {item.title}
                 </div>
                 {item.titleSuffix}
