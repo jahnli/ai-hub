@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30 ~ 07-22（最后更新 07-22）
+**日期**: 2026-06-30 ~ 08-05（最后更新 08-05）
 
 ## 涉及文件
 
@@ -48,3 +48,10 @@
 - `web/src/components/data-table/core/column-header.tsx` — 通用列头支持将说明图标放在列名后、排序图标前，同时保留原有默认布局。
 - `web/src/lib/currency.ts` — 货币与额度格式化支持配置最少保留的小数位数。
 - `web/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 同步更新精简后的额度列名翻译。
+
+## 2026-08-05 无订阅用户额度展示
+
+- `controller/user.go` — 用户管理列表显式返回有效订阅状态；有有效订阅时沿用订阅已用/总额，无有效订阅时改为显示当前自然月消耗，以及自然月消耗加钱包剩余额度，并在订阅查询失败时避免误判为无订阅。
+- `controller/user_manage_test.go` — 覆盖有订阅用户沿用订阅额度、无订阅用户按自然月消耗加钱包余额计算总额，并排除月外消耗的回归路径。
+- `web/src/features/users/types.ts` — 用户列表响应类型补充有效订阅状态。
+- `web/src/features/users/components/shared-user-columns.tsx` — 共享额度列根据显式订阅状态展示无订阅用户的有效 `0 / 0`，并避免总额为零时产生无效进度百分比；额度说明沿用原有文案。

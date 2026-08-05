@@ -221,11 +221,12 @@ export function userQuotaColumn<T extends UserColumnRow>(
       const total = user.sub_quota_total ?? 0;
       const remaining = total - used;
 
-      if (total === 0) {
+      if (total === 0 && user.has_active_subscription !== false) {
         return <span className="text-muted-foreground text-sm">-</span>;
       }
 
-      const usedPercentage = Math.min((used / total) * 100, 100);
+      const usedPercentage =
+        total > 0 ? Math.min((used / total) * 100, 100) : 0;
       const formattedUsedQuota = formatQuotaWithCurrency(used, {
         digitsLarge: 2,
         digitsSmall: 2,

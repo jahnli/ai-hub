@@ -33,6 +33,7 @@ func setupManageUserTestDB(t *testing.T) *gorm.DB {
 	model.DB, model.LOG_DB = db, db
 	require.NoError(t, db.AutoMigrate(
 		&model.User{}, &model.UserSession{}, &model.Log{}, &model.CasbinRule{}, &model.AuthzRole{},
+		&model.QuotaData{}, &model.UserSubscription{},
 	))
 
 	t.Cleanup(func() {
@@ -45,6 +46,38 @@ func setupManageUserTestDB(t *testing.T) *gorm.DB {
 		}
 	})
 	return db
+}
+
+func TestAttachSubscriptionQuotaUsesMonthlySpendAndWalletQuotaWithoutSubscription(t *testing.T) {
+	db := setupManageUserTestDB(t)
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Unix()
+
+	subscribedUser := &model.User{Username: "subscribed-list-user", Password: "password", Quota: 9_000}
+	walletUser := &model.User{Username: "wallet-list-user", Password: "password", Quota: 3_500}
+	require.NoError(t, db.Create(subscribedUser).Error)
+	require.NoError(t, db.Create(walletUser).Error)
+	require.NoError(t, db.Create(&model.UserSubscription{
+		UserId:      subscribedUser.Id,
+		AmountTotal: 5_000,
+		AmountUsed:  2_000,
+		Status:      "active",
+	}).Error)
+	require.NoError(t, db.Create([]model.QuotaData{
+		{UserID: subscribedUser.Id, ModelName: "model-a", CreatedAt: now.Unix(), Quota: 4_000},
+		{UserID: walletUser.Id, ModelName: "model-a", CreatedAt: now.Unix(), Quota: 1_500},
+		{UserID: walletUser.Id, ModelName: "model-b", CreatedAt: monthStart - 1, Quota: 8_000},
+	}).Error)
+
+	items := attachSubscriptionQuota([]*model.User{subscribedUser, walletUser})
+
+	require.Len(t, items, 2)
+	assert.True(t, items[0].HasActiveSubscription)
+	assert.Equal(t, int64(2_000), items[0].SubQuotaUsed)
+	assert.Equal(t, int64(5_000), items[0].SubQuotaTotal)
+	assert.False(t, items[1].HasActiveSubscription)
+	assert.Equal(t, int64(1_500), items[1].SubQuotaUsed)
+	assert.Equal(t, int64(5_000), items[1].SubQuotaTotal)
 }
 
 func performManageUserRequest(t *testing.T, body string) *httptest.ResponseRecorder {

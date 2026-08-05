@@ -1234,7 +1234,7 @@ func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTim
 	if len(ids) == 0 {
 		return
 	}
-	subscriptions, _ := model.GetActiveSubscriptionQuotaByUserIds(ids)
+	subscriptions, subscriptionErr := model.GetActiveSubscriptionQuotaByUserIds(ids)
 	if userStats == nil {
 		loadedStats, err := loadOverviewUserStats(ids, startTimestamp, endTimestamp)
 		if err == nil {
@@ -1260,18 +1260,25 @@ func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTim
 	}
 	for index := range items {
 		userID := items[index].User.Id
+		var stat model.UserStatRow
+		hasStat := false
+		if userStats != nil {
+			stat, hasStat = userStats.byUserID[userID]
+		}
 		if subscription := subscriptions[userID]; subscription != nil {
+			items[index].HasActiveSubscription = true
 			items[index].SubQuotaUsed = subscription.AmountUsed
 			items[index].SubQuotaTotal = subscription.AmountTotal
+		} else if subscriptionErr == nil {
+			items[index].SubQuotaUsed = stat.TotalQuota
+			items[index].SubQuotaTotal = stat.TotalQuota + int64(items[index].User.Quota)
 		}
-		if userStats != nil {
-			if stat, ok := userStats.byUserID[userID]; ok {
-				items[index].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * exchangeRate
-				items[index].TotalTokens = stat.TotalTokens
-				items[index].TotalRequests = stat.TotalReqs
-				if stat.TotalTokens > 0 {
-					items[index].AvgPricePerMT = items[index].TotalAmountCNY / (float64(stat.TotalTokens) / 1000000)
-				}
+		if hasStat {
+			items[index].TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * exchangeRate
+			items[index].TotalTokens = stat.TotalTokens
+			items[index].TotalRequests = stat.TotalReqs
+			if stat.TotalTokens > 0 {
+				items[index].AvgPricePerMT = items[index].TotalAmountCNY / (float64(stat.TotalTokens) / 1000000)
 			}
 		}
 		items[index].CommonModel = models[userID]
