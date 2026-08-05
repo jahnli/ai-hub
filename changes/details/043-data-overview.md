@@ -2,6 +2,13 @@
 
 **日期**: 2026-06-25 ~ 08-05（最后更新 08-05）
 
+### 2026-08-05 部门切换后的未搜索提示
+
+- `web/src/features/data-overview/index.tsx` — 选择新部门并清空查询参数后展示引导空状态，避免用户点击“搜索”前统计区域呈现空白
+- `web/src/features/data-overview/components/department-search-prompt.tsx` — 新增带搜索图标和状态语义的空状态提示，分两行引导用户点击“搜索”查看所选部门统计数据
+- `web/src/features/data-overview/components/__tests__/search-prompt.test.tsx` — 覆盖未搜索提示的图标、可访问状态语义和两行文案
+- `web/src/i18n/locales/en.json`、`web/src/i18n/locales/zh.json`、`web/src/i18n/locales/zh-TW.json`、`web/src/i18n/locales/fr.json`、`web/src/i18n/locales/ja.json`、`web/src/i18n/locales/ru.json`、`web/src/i18n/locales/vi.json` — 补齐未搜索提示的七语言翻译
+
 ### 2026-08-05 无订阅人员额度展示
 
 - `service/data_overview_company.go` — 部门用户有有效订阅时沿用订阅已用/总额，无有效订阅时改为以筛选区间总消耗作为已用额度、筛选区间总消耗加钱包剩余额度作为总额，并在订阅查询失败时避免误判为无订阅

@@ -27,6 +27,7 @@ import {
   getDepartmentUsers,
   getDepartmentUserRankings,
 } from './api'
+import { DepartmentSearchPrompt } from './components/department-search-prompt'
 import { DepartmentStatsCards } from './components/department-stats-cards'
 import { DepartmentTreeSelect } from './components/department-tree-select'
 import { DepartmentUsersTable } from './components/department-users-table'
@@ -322,6 +323,11 @@ export function DataOverview() {
               </p>
             </div>
           )}
+
+          {treeData &&
+            displayTreeData.length > 0 &&
+            selectedNode &&
+            !queryParams && <DepartmentSearchPrompt />}
 
           {statsQuery.isError && (
             <Alert variant='destructive'>
