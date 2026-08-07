@@ -352,7 +352,7 @@ export function DepartmentUsersTable(props: DepartmentUsersTableProps) {
               <Users className='text-primary size-5' />
               {t('Department User List')}
             </span>
-            <span className='flex flex-wrap items-center gap-1.5 text-xs font-medium'>
+            <span className='flex flex-wrap items-center gap-1.5 text-[13px] font-medium'>
               <span className='rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300'>
                 {t('Total Users')}: {totalUsers}
               </span>
