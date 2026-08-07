@@ -26,7 +26,7 @@ import { I18nextProvider, initReactI18next } from 'react-i18next'
 import { UserStatusSummary } from '../user-status-summary'
 
 describe('user status pagination summary', () => {
-  test('shows localized employed and disabled totals', async () => {
+  test('shows localized enabled and disabled totals', async () => {
     const i18n = createInstance()
     await i18n.use(initReactI18next).init({
       lng: 'zh',
@@ -35,7 +35,8 @@ describe('user status pagination summary', () => {
         zh: {
           translation: {
             'Disabled:': '禁用：',
-            'Employed:': '在职：',
+            'Enabled:': '启用：',
+            'Total:': '总计：',
           },
         },
       },
@@ -43,12 +44,17 @@ describe('user status pagination summary', () => {
 
     const html = renderToStaticMarkup(
       <I18nextProvider i18n={i18n}>
-        <UserStatusSummary enabledCount={1234} disabledCount={56} />
+        <UserStatusSummary
+          totalCount={1234}
+          enabledCount={1234}
+          disabledCount={56}
+        />
       </I18nextProvider>
     )
 
-    assert.match(html, /在职：/)
+    assert.match(html, /总计：/)
     assert.match(html, /1,234/)
+    assert.match(html, /启用：/)
     assert.match(html, /禁用：/)
     assert.match(html, /56/)
   })

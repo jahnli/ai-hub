@@ -280,6 +280,7 @@ export function UsersTable() {
       bulkActions={<DataTableBulkActions table={table} />}
       paginationSummary={
         <UserStatusSummary
+          totalCount={data?.total || 0}
           enabledCount={data?.enabledCount || 0}
           disabledCount={data?.disabledCount || 0}
         />
