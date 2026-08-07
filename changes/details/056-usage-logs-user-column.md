@@ -1,20 +1,23 @@
-# 使用日志表格用户列增强：头像、悬停资料卡片、飞书跳转、列标题与列顺序优化、请求内容记录
+# 使用日志增强：用户信息、请求内容与审计
 
 **日期**: 2026-08-05
 
 ## 涉及文件
 
-- `model/log.go` — Log 结构体新增 DisplayName/AvatarUrl/OpenId 只读字段；GetAllLogs 批量查询用户头像、显示名和 open_id 填充日志列表，支持前端通过头像跳转飞书聊天；模型名称筛选改为忽略首尾空格的包含匹配，并复用跨 SQLite、MySQL、PostgreSQL、ClickHouse 的 LIKE 转义逻辑
-- `model/clickhouse_log_test.go` — 补充普通日志数据库模型名称包含匹配与通配符转义回归测试
-- `model/task.go` — Task 临时展示字段补充 open_id，供任务日志用户列跳转飞书使用
-- `model/user.go` — UserBase 缓存结构生成时同步写入 open_id，保证任务列表填充用户信息时可复用缓存
-- `model/user_cache.go` — 用户基础缓存结构和 DB 回源填充补充 open_id
-- `controller/task.go` — 管理端任务列表批量填充用户 open_id
-- `dto/task.go` — TaskDto 增加 open_id 响应字段
-- `relay/relay_task.go` — 任务模型转 DTO 时透传 open_id
-- `web/default/src/lib/utils.ts` — 新增 buildFeishuUserChatUrl 工具，统一构造飞书 openId 聊天链接
-- `web/default/src/features/home/components/sections/cta.tsx` — 首页底部飞书联系卡复用统一的飞书聊天链接构造函数
-- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列重写：显示头像+显示名+悬停资料卡片（UserProfileHoverCard），头像点击改为按 open_id 跳转飞书；列顺序调整（用户→模型→耗时→渠道→Token）；时间、渠道、令牌和详情列宽度微调；费用列订阅抵扣记录改为直接显示抵扣金额，悬停提示订阅来源；新增 IP 地址列，支持敏感信息隐藏、复制和完整内容悬浮提示；详情列固定在表格右侧；错误日志详情文字显示错误色；渠道标签自动配色排除红色并将 slate 映射为 neutral，避免不受支持的 Badge variant 类型错误；请求内容列收紧为仅超级管理员可见；新增 User-Agent 列展示原始请求头且仅超级管理员可见；Token 与请求内容列超出时省略显示；请求内容和详情字段的下划线改为仅悬停对应文本时显示，避免悬停同一行时多个字段同时出现下划线
+- `model/log.go` — 日志只读字段增加 DisplayName/AvatarUrl/OpenId；批量补充用户资料；模型名称筛选支持去除首尾空格的包含匹配，并复用跨 SQLite、MySQL、PostgreSQL、ClickHouse 的 LIKE 转义。
+- `model/clickhouse_log_test.go` — 覆盖 ClickHouse 模型名称匹配和通配符转义。
+- `model/task.go`、`model/user.go`、`model/user_cache.go`、`controller/task.go`、`dto/task.go`、`relay/relay_task.go` — 任务日志透传 open_id，并复用用户基础缓存填充资料。
+- `web/default/src/lib/utils.ts`、`web/default/src/features/home/components/sections/cta.tsx` — 统一构造飞书 openId 聊天链接。
+- `web/default/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列展示头像、显示名、资料卡和飞书跳转；调整列顺序/宽度、IP、User-Agent、详情固定列和错误色；费用提示保留订阅来源；请求内容与倍率按权限显示。
+- `web/src/features/usage-logs/` — 工具调用费用显示与测试、固定详情列、每页 10 条、请求内容批量查询及违规通知。
+- `model/request_message.go`、`controller/request_message.go`、`service/request_message.go` — 新增请求内容模型、批量查询和违规通知；异步记录文本、多模态、生图/编辑 Prompt 及模型参数，支持长度截断和序列化。
+- `controller/relay.go`、`router/api-router.go`、`model/option.go`、`model/main.go`、`common/constants.go` — 中继接入请求记录，注册模型、开关及仅超级管理员可访问的批量/通知路由。
+- `web/default/src/features/usage-logs/components/dialogs/request-content-dialog.tsx`、`request-messages-provider.tsx`、`api.ts`、`types.ts` — 请求内容弹框和按页批量加载；内容/参数左右独立滚动，展示用户资料、User-Agent，支持复制和违规通知；非超级管理员不发起请求内容查询。
+- `controller/security_audit.go`、`service/feishu_department.go`、`service/violation_notice_test.go` — 非工作时间违规通知按用户、实际时间范围和请求次数校验，并发送飞书安全审计卡片。
+- `web/src/features/security-audit/` — 从审计日志打开通知入口，补充请求上下文、发送中禁用和成功/失败提示。
+- `web/default/src/features/system-settings/security/`、`web/src/features/system-settings/security/` — 将请求内容开关迁移至安全审计，并优化审计设置响应式布局及七语言文案。
+- `relay/common/relay_info.go`、`relay/common/client_app.go`、`service/log_info_generate.go` — 保存并写入原始 User-Agent，不做客户端名称映射。
+- `web/default/src/features/usage-logs/` — 普通日志筛选改为紧凑两排布局，移除令牌名称条件，角色支持名称输入；修复管理员“仅自己”范围的用户资料显示。
 - `web/src/features/usage-logs/components/log-cost-display.tsx` — 工具调用附加费组件接入后恢复订阅抵扣费用金额直接展示，悬停或键盘聚焦金额时提示订阅扣款来源，同时保留工具附加费标记
 - `web/src/features/usage-logs/components/__tests__/cost-display.test.tsx` — 补充订阅抵扣金额可见、订阅来源 Tooltip 和工具附加费标记共存的回归测试
 - `web/default/src/features/usage-logs/components/columns/task-logs-columns.tsx` — 任务日志用户列头像点击改为通过 open_id 跳转飞书，不再打开用户信息弹框

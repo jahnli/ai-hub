@@ -4,16 +4,11 @@
 
 ## 涉及文件
 
-- `web/default/src/features/keys/components/api-keys-columns.tsx` — API 密钥名称列改用 TruncatedCell，避免长名称撑开表格并保持移动端标题展示稳定；分组倍率仅超级管理员可见；IP 限制列右侧新增「快速导入」下拉列（含 CC Switch 选项）
-- `web/default/src/features/keys/components/api-keys-mutate-drawer.tsx` — 创建 API 密钥侧边抽屉默认选择用户所属分组，所属分组为空时回退 default；创建和编辑界面的分组倍率仅超级管理员可见
-- `web/default/src/features/keys/components/api-keys-cells.tsx` — 新增 QuickImportCell 组件，下拉列展示「快速导入」按钮，点击后弹出选项菜单（当前含 CC Switch）；修复 ApiKeyCell 中嵌套三元表达式的 lint 错误
-- `web/default/src/features/keys/components/data-table-row-actions.tsx` — 将 CC Switch 从三点菜单中移除
-- `web/default/src/i18n/locales/en.json` — 新增 Quick Import 翻译
-- `web/default/src/i18n/locales/zh.json` — 新增「快速导入」翻译
-- `web/default/src/i18n/locales/fr.json` — 新增 Importation rapide 翻译
-- `web/default/src/i18n/locales/ru.json` — 新增 Быстрый импорт 翻译
-- `web/default/src/i18n/locales/ja.json` — 新增クイックインポート翻译
-- `web/default/src/i18n/locales/vi.json` — 新增 Nhập nhanh 翻译
-- `web/src/features/keys/components/dialogs/cc-switch-dialog.tsx` — CC Switch 快捷导入改为调用独立链接构建逻辑，不再读取系统配置中的服务地址
-- `web/src/features/keys/lib/cc-switch-import.ts` — 使用当前页面 `window.location.origin` 生成官网和 API 端点，Codex 端点保留 `/v1`
-- `web/src/features/keys/components/dialogs/__tests__/cc-switch-import-url.test.ts` — 增加回归测试，确保缓存的 `server_address` 不会覆盖当前页面 Origin，并验证 Codex 端点规则
+- `web/default/src/features/keys/components/api-keys-columns.tsx` — 名称列使用 TruncatedCell；分组倍率仅超级管理员可见；IP 限制列新增「快速导入」下拉（含 CC Switch）。
+- `web/default/src/features/keys/components/api-keys-mutate-drawer.tsx` — 创建密钥默认选择用户所属分组，空值回退 default；创建/编辑时倍率仅超级管理员可见。
+- `web/default/src/features/keys/components/api-keys-cells.tsx` — 新增 QuickImportCell；修复 ApiKeyCell 嵌套三元表达式 lint 错误。
+- `web/default/src/features/keys/components/data-table-row-actions.tsx` — 将 CC Switch 移出三点菜单。
+- `web/default/src/i18n/locales/{en,zh,fr,ru,ja,vi}.json` — 新增「快速导入」翻译。
+- `web/src/features/keys/components/dialogs/cc-switch-dialog.tsx` — CC Switch 导入改用独立链接构造，不读取系统服务地址。
+- `web/src/features/keys/lib/cc-switch-import.ts` — 官网和 API 端点使用当前页面 Origin，Codex 保留 `/v1`。
+- `web/src/features/keys/components/dialogs/__tests__/cc-switch-import-url.test.ts` — 验证缓存 `server_address` 不覆盖当前 Origin 及 Codex 端点规则。
