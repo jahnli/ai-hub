@@ -35,6 +35,11 @@ type UserSortOptions struct {
 	SortOrder string
 }
 
+type UserStatusCounts struct {
+	Enabled  int64 `json:"enabled_count"`
+	Disabled int64 `json:"disabled_count"`
+}
+
 func NewUserSortOptions(sortBy string, sortOrder string) UserSortOptions {
 	normalizedSortBy := strings.ToLower(strings.TrimSpace(sortBy))
 	normalizedSortOrder := strings.ToLower(strings.TrimSpace(sortOrder))
@@ -419,11 +424,11 @@ func GetMaxUserId() int {
 	return user.Id
 }
 
-func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (users []*User, total int64, err error) {
+func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (users []*User, total int64, statusCounts UserStatusCounts, err error) {
 	// Start transaction
 	tx := DB.Begin()
 	if tx.Error != nil {
-		return nil, 0, tx.Error
+		return nil, 0, UserStatusCounts{}, tx.Error
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -435,7 +440,13 @@ func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (use
 	err = tx.Unscoped().Model(&User{}).Count(&total).Error
 	if err != nil {
 		tx.Rollback()
-		return nil, 0, err
+		return nil, 0, UserStatusCounts{}, err
+	}
+
+	statusCounts, err = countUserStatuses(tx.Unscoped().Model(&User{}))
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, UserStatusCounts{}, err
 	}
 
 	// Get paginated users within same transaction
@@ -443,15 +454,15 @@ func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (use
 	err = order.Apply(tx.Unscoped()).Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password", "access_token").Find(&users).Error
 	if err != nil {
 		tx.Rollback()
-		return nil, 0, err
+		return nil, 0, UserStatusCounts{}, err
 	}
 
 	// Commit transaction
 	if err = tx.Commit().Error; err != nil {
-		return nil, 0, err
+		return nil, 0, UserStatusCounts{}, err
 	}
 
-	return users, total, nil
+	return users, total, statusCounts, nil
 }
 
 func GetUserCompanies() ([]string, error) {
@@ -464,15 +475,15 @@ func GetUserCompanies() ([]string, error) {
 	return companies, err
 }
 
-func SearchUsers(keyword string, group string, company string, role *int, status *int, startIdx int, num int, sortOptions ...UserSortOptions) ([]*User, int64, error) {
+func SearchUsers(keyword string, group string, company string, role *int, status *int, startIdx int, num int, sortOptions ...UserSortOptions) ([]*User, int64, UserStatusCounts, error) {
 	var users []*User
 	var total int64
-	var err error
+	var statusCounts UserStatusCounts
 
 	// 开始事务
 	tx := DB.Begin()
 	if tx.Error != nil {
-		return nil, 0, tx.Error
+		return nil, 0, UserStatusCounts{}, tx.Error
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -480,17 +491,43 @@ func SearchUsers(keyword string, group string, company string, role *int, status
 		}
 	}()
 
-	// 构建基础查询
-	query := tx.Unscoped().Model(&User{})
+	query := buildUserSearchQuery(tx, keyword, group, company, role, status)
 
-	// 构建搜索条件
+	// 获取总数
+	err := query.Count(&total).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, UserStatusCounts{}, err
+	}
+
+	statusCounts, err = countUserStatuses(buildUserSearchQuery(tx, keyword, group, company, role, status))
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, UserStatusCounts{}, err
+	}
+
+	// 获取分页数据
+	order := resolveUserSortOptions(sortOptions)
+	err = order.Apply(buildUserSearchQuery(tx, keyword, group, company, role, status).Omit("password", "access_token")).Limit(num).Offset(startIdx).Find(&users).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, UserStatusCounts{}, err
+	}
+
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, 0, UserStatusCounts{}, err
+	}
+
+	return users, total, statusCounts, nil
+}
+
+func buildUserSearchQuery(tx *gorm.DB, keyword string, group string, company string, role *int, status *int) *gorm.DB {
+	query := tx.Unscoped().Model(&User{})
 	likeCondition := "username LIKE ? OR email LIKE ? OR display_name LIKE ?"
 	likeArgs := []interface{}{"%" + keyword + "%", "%" + keyword + "%", "%" + keyword + "%"}
 
-	// 尝试将关键字转换为整数ID
-	keywordInt, err := strconv.Atoi(keyword)
-	if err == nil {
-		// 如果是数字，同时搜索ID和其他字段
+	if keywordInt, err := strconv.Atoi(keyword); err == nil {
 		likeCondition = "id = ? OR " + likeCondition
 		likeArgs = append([]interface{}{keywordInt}, likeArgs...)
 	}
@@ -512,28 +549,28 @@ func SearchUsers(keyword string, group string, company string, role *int, status
 			query = query.Where("deleted_at IS NULL").Where("status = ?", *status)
 		}
 	}
+	return query
+}
 
-	// 获取总数
-	err = query.Count(&total).Error
-	if err != nil {
-		tx.Rollback()
-		return nil, 0, err
+func countUserStatuses(query *gorm.DB) (UserStatusCounts, error) {
+	var rows []struct {
+		Status int
+		Count  int64
+	}
+	if err := query.Where("deleted_at IS NULL").Select("status, COUNT(*) AS count").Group("status").Scan(&rows).Error; err != nil {
+		return UserStatusCounts{}, err
 	}
 
-	// 获取分页数据
-	order := resolveUserSortOptions(sortOptions)
-	err = order.Apply(query.Omit("password", "access_token")).Limit(num).Offset(startIdx).Find(&users).Error
-	if err != nil {
-		tx.Rollback()
-		return nil, 0, err
+	var counts UserStatusCounts
+	for _, row := range rows {
+		switch row.Status {
+		case common.UserStatusEnabled:
+			counts.Enabled = row.Count
+		case common.UserStatusDisabled:
+			counts.Disabled = row.Count
+		}
 	}
-
-	// 提交事务
-	if err = tx.Commit().Error; err != nil {
-		return nil, 0, err
-	}
-
-	return users, total, nil
+	return counts, nil
 }
 
 func GetUserById(id int, selectAll bool) (*User, error) {

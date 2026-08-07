@@ -122,6 +122,8 @@ export interface GetUsersResponse {
     total: number
     page: number
     page_size: number
+    enabled_count: number
+    disabled_count: number
   }
 }
 

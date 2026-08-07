@@ -42,6 +42,7 @@ import {
 } from '../constants'
 import type { User, UserSortBy, UserSortOrder } from '../types'
 import { DataTableBulkActions } from './data-table-bulk-actions'
+import { UserStatusSummary } from './user-status-summary'
 import { useUsersColumns } from './users-columns'
 import { useUsers } from './users-provider'
 
@@ -181,12 +182,19 @@ export function UsersTable() {
         toast.error(
           result.message || `Failed to ${hasFilter ? 'search' : 'load'} users`
         )
-        return { items: [], total: 0 }
+        return {
+          items: [],
+          total: 0,
+          enabledCount: 0,
+          disabledCount: 0,
+        }
       }
 
       return {
         items: result.data?.items || [],
         total: result.data?.total || 0,
+        enabledCount: result.data?.enabled_count || 0,
+        disabledCount: result.data?.disabled_count || 0,
       }
     },
     placeholderData: (previousData) => previousData,
@@ -270,6 +278,12 @@ export function UsersTable() {
         return context.isMobile ? DISABLED_ROW_MOBILE : DISABLED_ROW_DESKTOP
       }}
       bulkActions={<DataTableBulkActions table={table} />}
+      paginationSummary={
+        <UserStatusSummary
+          enabledCount={data?.enabledCount || 0}
+          disabledCount={data?.disabledCount || 0}
+        />
+      }
     />
   )
 }

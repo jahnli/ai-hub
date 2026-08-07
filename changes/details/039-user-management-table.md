@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30 ~ 08-05（最后更新 08-05）
+**日期**: 2026-06-30 ~ 08-07（最后更新 08-07）
 
 ## 涉及文件
 
@@ -55,3 +55,15 @@
 - `controller/user_manage_test.go` — 覆盖有订阅用户沿用订阅额度、无订阅用户按自然月消耗加钱包余额计算总额，并排除月外消耗的回归路径。
 - `web/src/features/users/types.ts` — 用户列表响应类型补充有效订阅状态。
 - `web/src/features/users/components/shared-user-columns.tsx` — 共享额度列根据显式订阅状态展示无订阅用户的有效 `0 / 0`，并避免总额为零时产生无效进度百分比；额度说明沿用原有文案。
+
+## 2026-08-07 用户状态人数统计
+
+- `model/user.go` — 用户列表与搜索查询新增启用、禁用状态汇总；统计遵循当前搜索和筛选条件，并排除已删除用户及其他状态。
+- `model/user_pagination_test.go` — 覆盖全量与搜索分页统计，并验证已删除用户及其他状态不会计入在职或禁用人数。
+- `controller/user.go` — 用户列表和搜索接口在原分页数据中附加 `enabled_count`、`disabled_count` 字段。
+- `web/src/features/users/types.ts` — 用户分页响应类型补充启用、禁用人数。
+- `web/src/features/users/components/users-table.tsx` — 读取接口状态汇总并传入分页区域，搜索或筛选变化时同步刷新。
+- `web/src/features/users/components/user-status-summary.tsx` — 新增用户页专属状态汇总组件，以“在职”和“禁用”展示人数。
+- `web/src/components/data-table/core/pagination.tsx`、`web/src/components/data-table/layout/data-table-page.tsx` — 通用分页支持在总计和页数选择之间插入页面专属汇总内容。
+- `web/src/features/users/components/__tests__/status-summary.test.tsx`、`web/src/components/data-table/core/__tests__/pagination-summary.test.tsx` — 覆盖中文人数展示及汇总内容所在位置。
+- `web/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 补充“在职”和“禁用”人数标签翻译。

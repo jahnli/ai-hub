@@ -38,17 +38,18 @@ func TestGetAllUsersSortsBeforePagination(t *testing.T) {
 	truncateTables(t)
 	insertUsersForPaginationTest(t, 42)
 
-	pageOne, total, err := GetAllUsers(&common.PageInfo{Page: 1, PageSize: 20}, NewUserSortOptions("id", "asc"))
+	pageOne, total, statusCounts, err := GetAllUsers(&common.PageInfo{Page: 1, PageSize: 20}, NewUserSortOptions("id", "asc"))
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), total)
+	assert.Equal(t, UserStatusCounts{Enabled: 42}, statusCounts)
 	assert.Equal(t, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}, collectUserIDs(pageOne))
 
-	pageTwo, total, err := GetAllUsers(&common.PageInfo{Page: 2, PageSize: 20}, NewUserSortOptions("id", "asc"))
+	pageTwo, total, _, err := GetAllUsers(&common.PageInfo{Page: 2, PageSize: 20}, NewUserSortOptions("id", "asc"))
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), total)
 	assert.Equal(t, []int{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40}, collectUserIDs(pageTwo))
 
-	pageThree, total, err := GetAllUsers(&common.PageInfo{Page: 3, PageSize: 20}, NewUserSortOptions("id", "asc"))
+	pageThree, total, _, err := GetAllUsers(&common.PageInfo{Page: 3, PageSize: 20}, NewUserSortOptions("id", "asc"))
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), total)
 	assert.Equal(t, []int{41, 42}, collectUserIDs(pageThree))
@@ -58,8 +59,29 @@ func TestSearchUsersSortsBeforePagination(t *testing.T) {
 	truncateTables(t)
 	insertUsersForPaginationTest(t, 42)
 
-	users, total, err := SearchUsers("user", "", "", nil, nil, 20, 20, NewUserSortOptions("id", "asc"))
+	users, total, statusCounts, err := SearchUsers("user", "", "", nil, nil, 20, 20, NewUserSortOptions("id", "asc"))
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), total)
+	assert.Equal(t, UserStatusCounts{Enabled: 42}, statusCounts)
 	assert.Equal(t, []int{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40}, collectUserIDs(users))
+}
+
+func TestGetAllUsersCountsOnlyActiveEnabledAndDisabledStatuses(t *testing.T) {
+	truncateTables(t)
+	users := []*User{
+		{Username: "enabled", Password: "password123", Status: common.UserStatusEnabled, Group: "default"},
+		{Username: "disabled", Password: "password123", Status: common.UserStatusDisabled, Group: "default"},
+		{Username: "deleted-disabled", Password: "password123", Status: common.UserStatusDisabled, Group: "default"},
+		{Username: "other-status", Password: "password123", Status: 3, Group: "default"},
+	}
+	for _, user := range users {
+		require.NoError(t, DB.Create(user).Error)
+	}
+	require.NoError(t, DB.Delete(users[2]).Error)
+
+	_, total, statusCounts, err := GetAllUsers(&common.PageInfo{Page: 1, PageSize: 20})
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total)
+	assert.Equal(t, UserStatusCounts{Enabled: 1, Disabled: 1}, statusCounts)
 }

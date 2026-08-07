@@ -346,7 +346,7 @@ func GetAllUsers(c *gin.Context) {
 		sortBy := pageInfo.SortBy
 		sortOrder := pageInfo.SortOrder
 		allPageInfo := &common.PageInfo{Page: 1, PageSize: 10000}
-		users, total, err := model.GetAllUsers(allPageInfo)
+		users, total, statusCounts, err := model.GetAllUsers(allPageInfo)
 		if err != nil {
 			common.ApiError(c, err)
 			return
@@ -363,12 +363,12 @@ func GetAllUsers(c *gin.Context) {
 		}
 		pageInfo.SetTotal(int(total))
 		pageInfo.SetItems(enriched[start:end])
-		common.ApiSuccess(c, pageInfo)
+		common.ApiSuccess(c, newUserPageData(pageInfo, statusCounts))
 		return
 	}
 
 	sortOptions := model.NewUserSortOptions(c.Query("sort_by"), c.Query("sort_order"))
-	users, total, err := model.GetAllUsers(pageInfo, sortOptions)
+	users, total, statusCounts, err := model.GetAllUsers(pageInfo, sortOptions)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -377,7 +377,7 @@ func GetAllUsers(c *gin.Context) {
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(attachSubscriptionQuota(users))
 
-	common.ApiSuccess(c, pageInfo)
+	common.ApiSuccess(c, newUserPageData(pageInfo, statusCounts))
 	return
 }
 
@@ -410,7 +410,7 @@ func SearchUsers(c *gin.Context) {
 	if common.IsComputedSortColumn(pageInfo.SortBy) {
 		sortBy := pageInfo.SortBy
 		sortOrder := pageInfo.SortOrder
-		users, total, err := model.SearchUsers(keyword, group, company, role, status, 0, 10000)
+		users, total, statusCounts, err := model.SearchUsers(keyword, group, company, role, status, 0, 10000)
 		if err != nil {
 			common.ApiError(c, err)
 			return
@@ -427,12 +427,12 @@ func SearchUsers(c *gin.Context) {
 		}
 		pageInfo.SetTotal(int(total))
 		pageInfo.SetItems(enriched[start:end])
-		common.ApiSuccess(c, pageInfo)
+		common.ApiSuccess(c, newUserPageData(pageInfo, statusCounts))
 		return
 	}
 
 	sortOptions := model.NewUserSortOptions(c.Query("sort_by"), c.Query("sort_order"))
-	users, total, err := model.SearchUsers(keyword, group, company, role, status, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), sortOptions)
+	users, total, statusCounts, err := model.SearchUsers(keyword, group, company, role, status, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), sortOptions)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -440,8 +440,17 @@ func SearchUsers(c *gin.Context) {
 
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(attachSubscriptionQuota(users))
-	common.ApiSuccess(c, pageInfo)
+	common.ApiSuccess(c, newUserPageData(pageInfo, statusCounts))
 	return
+}
+
+type userPageData struct {
+	*common.PageInfo
+	model.UserStatusCounts
+}
+
+func newUserPageData(pageInfo *common.PageInfo, statusCounts model.UserStatusCounts) userPageData {
+	return userPageData{PageInfo: pageInfo, UserStatusCounts: statusCounts}
 }
 
 func canManageTargetRole(myRole int, targetRole int) bool {

@@ -209,6 +209,11 @@ export type DataTablePageProps<TData> = {
   paginationInFooter?: boolean
 
   /**
+   * Extra summary content rendered after the total and before page-size controls.
+   */
+  paginationSummary?: React.ReactNode
+
+  /**
    * Extra content rendered between the table/mobile list and the pagination.
    * E.g. summary stats, helper text.
    */
@@ -388,7 +393,12 @@ function renderPagination<TData>(
     return null
   }
 
-  const pagination = <DataTablePagination table={props.table} />
+  const pagination = (
+    <DataTablePagination
+      table={props.table}
+      summary={props.paginationSummary}
+    />
+  )
 
   return props.paginationInFooter !== false ? (
     <PageFooterPortal>{pagination}</PageFooterPortal>
