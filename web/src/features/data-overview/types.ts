@@ -71,6 +71,7 @@ export interface ModelDailyStat {
 
 export interface UsageAnalysis {
   model_stats: ModelStat[]
+  model_series_stats?: ModelStat[]
   daily_stats: DailyStat[]
   model_daily_stats: ModelDailyStat[]
   quota_to_cny: number

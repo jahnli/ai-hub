@@ -27,7 +27,7 @@ interface SubDepartmentStatsDialogProps {
 }
 
 const USAGE_ANALYSIS_SKELETON_KEYS = Array.from(
-  { length: 6 },
+  { length: 8 },
   (_, index) => `sub-department-usage-analysis-skeleton-${index}`
 )
 

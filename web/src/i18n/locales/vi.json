@@ -3013,6 +3013,8 @@
     "Model regex cannot be empty": "Regex model không được để trống",
     "Model scope": "Phạm vi mô hình",
     "Model selected": "Đã chọn mô hình",
+    "Model Series Call Distribution": "Phân bổ lượt gọi theo dòng mô hình",
+    "Model Series Consumption Ranking": "Xếp hạng mức tiêu thụ theo dòng mô hình",
     "Model Square": "Quảng trường mô hình",
     "Model Tags": "Thẻ mô hình",
     "Model to use for testing": "Mô hình dùng để kiểm thử",

@@ -54,7 +54,7 @@ const STATS_SKELETON_KEYS = Array.from(
   (_, index) => `stats-skeleton-${index}`
 )
 const USAGE_ANALYSIS_SKELETON_KEYS = Array.from(
-  { length: 6 },
+  { length: 8 },
   (_, index) => `usage-analysis-skeleton-${index}`
 )
 const EMPTY_DEPARTMENT_TREE: DeptTreeNode[] = []

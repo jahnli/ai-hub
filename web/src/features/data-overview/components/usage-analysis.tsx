@@ -14,6 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
 
+import {
+  buildModelCallDistributionData,
+  buildModelCostRankData,
+} from '../lib/usage-analysis-chart-data'
 import type {
   DailyStat,
   ModelDailyStat,
@@ -30,10 +34,12 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
   const { resolvedTheme, themeReady } = useChartTheme()
   const hasModelData =
     props.data.model_stats && props.data.model_stats.length > 0
+  const modelSeriesStats = props.data.model_series_stats ?? []
+  const hasModelSeriesData = modelSeriesStats.length > 0
   const hasDailyData =
     props.data.daily_stats && props.data.daily_stats.length > 0
 
-  if (!hasModelData && !hasDailyData) {
+  if (!hasModelData && !hasModelSeriesData && !hasDailyData) {
     return null
   }
 
@@ -50,6 +56,39 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
       </CardHeader>
       <CardContent className='p-0'>
         <div className='grid grid-cols-1 lg:grid-cols-2'>
+          {hasModelSeriesData && (
+            <ModelCallDistributionChart
+              data={modelSeriesStats}
+              title={t('Model Series Call Distribution')}
+              chartKeyPrefix='model-series-call-distribution'
+              {...chartProps}
+            />
+          )}
+          {hasModelSeriesData && (
+            <ModelCostRankChart
+              data={modelSeriesStats}
+              title={t('Model Series Consumption Ranking')}
+              chartKeyPrefix='model-series-cost-rank'
+              {...chartProps}
+            />
+          )}
+          {hasModelData && (
+            <ModelCallDistributionChart
+              data={props.data.model_stats}
+              title={t('Model Call Distribution')}
+              chartKeyPrefix='model-call-distribution'
+              {...chartProps}
+            />
+          )}
+          {hasModelData && (
+            <ModelCostRankChart
+              data={props.data.model_stats}
+              title={t('Model Consumption Ranking')}
+              chartKeyPrefix='model-cost-rank'
+              limit={15}
+              {...chartProps}
+            />
+          )}
           {hasDailyData && (
             <CostTrendChart data={props.data.daily_stats} {...chartProps} />
           )}
@@ -64,15 +103,6 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
               data={props.data.model_daily_stats ?? []}
               {...chartProps}
             />
-          )}
-          {hasModelData && (
-            <ModelCallDistributionChart
-              data={props.data.model_stats}
-              {...chartProps}
-            />
-          )}
-          {hasModelData && (
-            <ModelCostRankChart data={props.data.model_stats} {...chartProps} />
           )}
         </div>
       </CardContent>
@@ -104,7 +134,9 @@ function ChartCard(props: {
       <div className='flex w-full items-center justify-between px-5 py-3'>
         <div className='flex items-center gap-2'>
           <Icon className='text-muted-foreground/60 size-4' />
-          <span className='text-sm font-semibold'>{props.title}</span>
+          <h3 data-chart-title={props.title} className='text-sm font-semibold'>
+            {props.title}
+          </h3>
         </div>
         {props.actions}
       </div>
@@ -466,29 +498,26 @@ function ModelUsageTrendChart(
 // ── 4. 模型调用分布 ──
 
 function ModelCallDistributionChart(
-  props: ChartBaseProps & { data: ModelStat[] }
+  props: ChartBaseProps & {
+    data: ModelStat[]
+    title: string
+    chartKeyPrefix: string
+  }
 ) {
   const { t } = useTranslation()
 
   const spec = useMemo(() => {
-    const filtered = props.data.filter((item) => item.total_requests > 0)
-    if (filtered.length === 0) return null
-
-    const totalRequests = filtered.reduce(
-      (sum, item) => sum + item.total_requests,
-      0
+    const chartData = buildModelCallDistributionData(
+      props.data,
+      props.quotaToCnyRate
     )
+    if (!chartData) return null
 
     return {
       type: 'pie' as const,
       data: [
         {
-          values: filtered.map((item) => ({
-            name: item.model_name,
-            value: item.total_requests,
-            cost: item.total_quota * props.quotaToCnyRate,
-            tokens: item.total_tokens,
-          })),
+          values: chartData.values,
         },
       ],
       valueField: 'value',
@@ -518,8 +547,10 @@ function ModelCallDistributionChart(
         ) => {
           const name = datum.name ?? ''
           const pct =
-            totalRequests > 0
-              ? (((datum.value ?? 0) / totalRequests) * 100).toFixed(2) + '%'
+            chartData.totalRequests > 0
+              ? (((datum.value ?? 0) / chartData.totalRequests) * 100).toFixed(
+                  2
+                ) + '%'
               : ''
           return pct ? `${name} ${pct}` : name
         },
@@ -567,10 +598,10 @@ function ModelCallDistributionChart(
   return (
     <ChartCard
       icon={PieChart}
-      title={t('Model Call Distribution')}
+      title={props.title}
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`model-call-distribution-${props.resolvedTheme}`}
+      chartKey={`${props.chartKeyPrefix}-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />
@@ -579,24 +610,28 @@ function ModelCallDistributionChart(
 
 // ── 5. 模型消耗排行 ──
 
-function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
+function ModelCostRankChart(
+  props: ChartBaseProps & {
+    data: ModelStat[]
+    title: string
+    chartKeyPrefix: string
+    limit?: number
+  }
+) {
   const { t } = useTranslation()
 
   const spec = useMemo(() => {
-    const sorted = [...props.data]
-      .sort((a, b) => b.total_quota - a.total_quota)
-      .slice(0, 15)
+    const sorted = buildModelCostRankData(
+      props.data,
+      props.quotaToCnyRate,
+      props.limit
+    )
 
     return {
       type: 'bar' as const,
       data: [
         {
-          values: sorted.map((item) => ({
-            name: item.model_name,
-            value: item.total_quota * props.quotaToCnyRate,
-            tokens: item.total_tokens,
-            requests: item.total_requests,
-          })),
+          values: sorted,
         },
       ],
       direction: 'horizontal' as const,
@@ -677,15 +712,15 @@ function ModelCostRankChart(props: ChartBaseProps & { data: ModelStat[] }) {
         },
       },
     }
-  }, [props.data, props.quotaToCnyRate, t])
+  }, [props.data, props.limit, props.quotaToCnyRate, t])
 
   return (
     <ChartCard
       icon={DollarSign}
-      title={t('Model Consumption Ranking')}
+      title={props.title}
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`model-cost-rank-${props.resolvedTheme}`}
+      chartKey={`${props.chartKeyPrefix}-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />

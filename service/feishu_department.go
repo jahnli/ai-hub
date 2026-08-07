@@ -1078,10 +1078,11 @@ func findRegisteredUserIdsByOpenIDs(openIDs []string, registeredBefore int64) ([
 
 // UsageAnalysisResponse holds all usage analysis data returned in one response.
 type UsageAnalysisResponse struct {
-	ModelStats      []model.ModelStatRow      `json:"model_stats"`
-	DailyStats      []model.DailyStatRow      `json:"daily_stats"`
-	ModelDailyStats []model.ModelDailyStatRow `json:"model_daily_stats"`
-	QuotaToCNY      float64                   `json:"quota_to_cny"`
+	ModelStats       []model.ModelStatRow      `json:"model_stats"`
+	ModelSeriesStats []model.ModelStatRow      `json:"model_series_stats"`
+	DailyStats       []model.DailyStatRow      `json:"daily_stats"`
+	ModelDailyStats  []model.ModelDailyStatRow `json:"model_daily_stats"`
+	QuotaToCNY       float64                   `json:"quota_to_cny"`
 }
 
 const usageAnalysisModelLimit = 10
@@ -1095,6 +1096,80 @@ var dataOverviewModelMapping = sync.OnceValue(func() map[string]string {
 	}
 	return mapping
 })
+
+type dataOverviewModelSeriesKeyword struct {
+	displayName string
+	keyword     string
+}
+
+var dataOverviewModelSeriesKeywords = sync.OnceValue(func() []dataOverviewModelSeriesKeyword {
+	raw := common.GetEnvOrDefaultString("DATA_OVERVIEW_MODEL_SERIES_KEYWORDS", "")
+	keywords, err := parseDataOverviewModelSeriesKeywords(raw)
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to parse DATA_OVERVIEW_MODEL_SERIES_KEYWORDS: %s, model series statistics will be empty", err.Error()))
+		return nil
+	}
+	return keywords
+})
+
+func parseDataOverviewModelSeriesKeywords(raw string) ([]dataOverviewModelSeriesKeyword, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+
+	var configured map[string][]string
+	if err := common.UnmarshalJsonStr(raw, &configured); err != nil {
+		return nil, err
+	}
+
+	canonicalNames := make(map[string]string, len(configured))
+	for displayName := range configured {
+		displayName = strings.TrimSpace(displayName)
+		if displayName == "" {
+			return nil, fmt.Errorf("model series display name cannot be empty")
+		}
+		normalizedDisplayName := strings.ToLower(displayName)
+		if existing, ok := canonicalNames[normalizedDisplayName]; ok && existing != displayName {
+			return nil, fmt.Errorf("model series display names %q and %q differ only by case", existing, displayName)
+		}
+		canonicalNames[normalizedDisplayName] = displayName
+	}
+
+	keywordOwners := make(map[string]string)
+	keywords := make([]dataOverviewModelSeriesKeyword, 0)
+	for displayName, configuredKeywords := range configured {
+		canonicalName := canonicalNames[strings.ToLower(strings.TrimSpace(displayName))]
+		if len(configuredKeywords) == 0 {
+			return nil, fmt.Errorf("model series %q must contain at least one keyword", canonicalName)
+		}
+		for _, keyword := range configuredKeywords {
+			keyword = strings.ToLower(strings.TrimSpace(keyword))
+			if keyword == "" {
+				return nil, fmt.Errorf("model series keyword for %q cannot be empty", canonicalName)
+			}
+			if existing, ok := keywordOwners[keyword]; ok {
+				return nil, fmt.Errorf("model series keyword %q is assigned more than once to %q and %q", keyword, existing, canonicalName)
+			}
+			keywordOwners[keyword] = canonicalName
+			keywords = append(keywords, dataOverviewModelSeriesKeyword{
+				displayName: canonicalName,
+				keyword:     keyword,
+			})
+		}
+	}
+
+	sort.Slice(keywords, func(i, j int) bool {
+		if len(keywords[i].keyword) != len(keywords[j].keyword) {
+			return len(keywords[i].keyword) > len(keywords[j].keyword)
+		}
+		if keywords[i].displayName != keywords[j].displayName {
+			return keywords[i].displayName < keywords[j].displayName
+		}
+		return keywords[i].keyword < keywords[j].keyword
+	})
+	return keywords, nil
+}
 
 func parseDataOverviewModelMapping(raw string) (map[string]string, error) {
 	raw = strings.TrimSpace(raw)
@@ -1149,6 +1224,49 @@ func usageAnalysisModelName(modelName string, mapping map[string]string) string 
 		return mapped
 	}
 	return modelName
+}
+
+func usageAnalysisModelSeriesName(modelName string, keywords []dataOverviewModelSeriesKeyword) (string, bool) {
+	normalizedModelName := strings.ToLower(strings.TrimSpace(modelName))
+	if normalizedModelName == "" {
+		return "", false
+	}
+	for _, candidate := range keywords {
+		if strings.Contains(normalizedModelName, candidate.keyword) {
+			return candidate.displayName, true
+		}
+	}
+	return "", false
+}
+
+func mergeUsageAnalysisModelSeriesStats(rows []model.ModelStatRow, keywords []dataOverviewModelSeriesKeyword) []model.ModelStatRow {
+	aggregated := make(map[string]*model.ModelStatRow)
+	for _, row := range rows {
+		seriesName, ok := usageAnalysisModelSeriesName(row.ModelName, keywords)
+		if !ok {
+			continue
+		}
+		current, ok := aggregated[seriesName]
+		if !ok {
+			current = &model.ModelStatRow{ModelName: seriesName}
+			aggregated[seriesName] = current
+		}
+		current.TotalTokens += row.TotalTokens
+		current.TotalQuota += row.TotalQuota
+		current.TotalReqs += row.TotalReqs
+	}
+
+	merged := make([]model.ModelStatRow, 0, len(aggregated))
+	for _, row := range aggregated {
+		merged = append(merged, *row)
+	}
+	sort.Slice(merged, func(i, j int) bool {
+		if merged[i].TotalQuota != merged[j].TotalQuota {
+			return merged[i].TotalQuota > merged[j].TotalQuota
+		}
+		return merged[i].ModelName < merged[j].ModelName
+	})
+	return merged
 }
 
 func mergeUsageAnalysisModelStats(rows []model.ModelStatRow, mapping map[string]string, limit int) []model.ModelStatRow {
@@ -1241,6 +1359,7 @@ func buildUsageAnalysisForUsers(userIds []int, startTimestamp, endTimestamp int6
 
 	mapping := dataOverviewModelMapping()
 	modelStats := mergeUsageAnalysisModelStats(rawModelStats, mapping, usageAnalysisModelLimit)
+	modelSeriesStats := mergeUsageAnalysisModelSeriesStats(rawModelStats, dataOverviewModelSeriesKeywords())
 	topModels := make(map[string]struct{}, len(modelStats))
 	for _, row := range modelStats {
 		topModels[row.ModelName] = struct{}{}
@@ -1268,10 +1387,11 @@ func buildUsageAnalysisForUsers(userIds []int, startTimestamp, endTimestamp int6
 	}
 
 	return &UsageAnalysisResponse{
-		ModelStats:      modelStats,
-		DailyStats:      dailyStats,
-		ModelDailyStats: modelDailyStats,
-		QuotaToCNY:      usdExchangeRate / quotaPerUnit,
+		ModelStats:       modelStats,
+		ModelSeriesStats: modelSeriesStats,
+		DailyStats:       dailyStats,
+		ModelDailyStats:  modelDailyStats,
+		QuotaToCNY:       usdExchangeRate / quotaPerUnit,
 	}, nil
 }
 

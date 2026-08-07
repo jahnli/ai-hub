@@ -1,6 +1,19 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 08-05（最后更新 08-05）
+**日期**: 2026-06-25 ~ 08-07（最后更新 08-07）
+
+### 2026-08-07 模型系列统计与模型图表置顶
+
+- `.env.example` — 新增 `DATA_OVERVIEW_MODEL_SERIES_KEYWORDS` 配置示例，以“系列展示名 → 关键字数组”维护模型系列归类规则
+- `docker-compose.yml` — 将模型系列关键字配置注入后端服务环境变量
+- `service/feishu_department.go` — 使用分析响应新增 `model_series_stats`；基于全量原始模型统计进行不区分大小写的关键字包含匹配，重叠时按最长关键字优先且同长度按系列名稳定归类，未命中模型不进入系列统计；按系列合并 Token、额度和请求次数并在 Top 10 截断前完成聚合
+- `web/src/features/data-overview/types.ts` — 使用分析类型补充可选的模型系列统计字段，兼容旧接口响应
+- `web/src/features/data-overview/lib/usage-analysis-chart-data.ts` — 抽取模型调用分布与消耗排行的数据转换、费用换算、排序和可选截断逻辑，供普通模型与模型系列图表复用
+- `web/src/features/data-overview/components/usage-analysis.tsx` — 新增模型系列调用分布饼图和模型系列消耗排行柱状图；将模型系列调用分布、模型系列消耗排行、模型调用分布、模型消耗排行四图调整到使用分析区域顶部，并为图表标题补充语义化标题元素
+- `web/src/features/data-overview/index.tsx`、`web/src/features/data-overview/components/sub-department-stats-dialog.tsx` — 使用分析加载骨架数量由 6 调整为 8，覆盖新增的两张模型系列图表
+- `web/src/features/data-overview/__tests__/usage-analysis-chart-data.test.ts` — 覆盖请求分布过滤和汇总、消耗排序、人民币费用单次换算，以及系列图表不受普通模型图表数量限制的行为
+- `web/src/features/data-overview/components/__tests__/usage-analysis.test.tsx` — 覆盖四张模型分布/排行图位于趋势图之前的用户可见排列顺序
+- `web/src/i18n/locales/{en,zh,zh-TW,fr,ja,ru,vi}.json` — 补齐模型系列调用分布与模型系列消耗排行的七语言文案
 
 ### 2026-08-05 部门切换后的未搜索提示
 

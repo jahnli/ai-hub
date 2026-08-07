@@ -3013,6 +3013,8 @@
     "Model regex cannot be empty": "Регулярное выражение модели не может быть пустым",
     "Model scope": "Область моделей",
     "Model selected": "Модель выбрана",
+    "Model Series Call Distribution": "Распределение вызовов по сериям моделей",
+    "Model Series Consumption Ranking": "Рейтинг потребления по сериям моделей",
     "Model Square": "Витрина моделей",
     "Model Tags": "Теги моделей",
     "Model to use for testing": "Модель для использования при тестировании",

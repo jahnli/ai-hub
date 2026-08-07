@@ -3013,6 +3013,8 @@
     "Model regex cannot be empty": "La regex du modèle ne peut pas être vide",
     "Model scope": "Portée des modèles",
     "Model selected": "Modèle sélectionné",
+    "Model Series Call Distribution": "Répartition des appels par série de modèles",
+    "Model Series Consumption Ranking": "Classement de la consommation par série de modèles",
     "Model Square": "Place des modèles",
     "Model Tags": "Tags de modèle",
     "Model to use for testing": "Modèle à utiliser pour les tests",

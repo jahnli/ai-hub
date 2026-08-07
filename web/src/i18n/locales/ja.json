@@ -3013,6 +3013,8 @@
     "Model regex cannot be empty": "モデル正規表現は空にできません",
     "Model scope": "モデル範囲",
     "Model selected": "選択済みモデル",
+    "Model Series Call Distribution": "モデルシリーズの呼び出し分布",
+    "Model Series Consumption Ranking": "モデルシリーズの消費ランキング",
     "Model Square": "モデル広場",
     "Model Tags": "モデルタグ",
     "Model to use for testing": "テストに使用するモデル",
