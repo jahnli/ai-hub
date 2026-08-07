@@ -231,7 +231,7 @@ export function ParamsPanel({
       )}
 
       <FieldRow label={t('Image count')}>
-        <div className='flex items-center gap-2'>
+        <div className='flex w-full items-center justify-between gap-2'>
           <Button
             type='button'
             variant='outline'

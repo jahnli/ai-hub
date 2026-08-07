@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -79,9 +80,9 @@ export function HistoryPanel({
         <div className='flex items-center gap-1.5 text-sm font-medium'>
           <History className='size-4' />
           {t('History')}
-          <span className='text-muted-foreground text-xs'>
-            ({history.length})
-          </span>
+          <Badge variant='secondary' className='h-6 px-2 text-xs'>
+            {history.length}
+          </Badge>
         </div>
         <div className='flex items-center gap-1'>
           <Button
