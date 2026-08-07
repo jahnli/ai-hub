@@ -40,6 +40,27 @@ export function getAvailableGroups(
 }
 
 /**
+ * Resolve the group label shown on a model card.
+ *
+ * The card represents the current viewer's pricing context, so an authenticated
+ * user's group takes precedence over the model's first enabled group.
+ */
+export function getModelDisplayGroup(
+  model: PricingModel,
+  currentUserGroup?: string
+): string | undefined {
+  if (currentUserGroup?.trim()) {
+    return currentUserGroup
+  }
+
+  const modelEnableGroups = Array.isArray(model.enable_groups)
+    ? model.enable_groups
+    : []
+
+  return modelEnableGroups[0]
+}
+
+/**
  * Read a configured group ratio while preserving valid zero ratios.
  */
 export function getConfiguredGroupRatio(
