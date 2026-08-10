@@ -69,6 +69,7 @@ export function DeploymentsTable() {
     pagination: {
       pageKey: 'dPage',
       pageSizeKey: 'dPageSize',
+      pageSizeStorageKey: 'page-size:deployments',
       defaultPage: 1,
       defaultPageSize: isMobile ? 8 : 10,
     },

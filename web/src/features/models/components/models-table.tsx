@@ -56,6 +56,7 @@ export function ModelsTable() {
     search: route.useSearch(),
     navigate: route.useNavigate(),
     pagination: {
+      pageSizeStorageKey: 'page-size:models',
       defaultPage: 1,
       defaultPageSize: isMobile ? 10 : DEFAULT_PAGE_SIZE,
     },

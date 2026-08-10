@@ -62,8 +62,8 @@ export function OffHoursTable(props: OffHoursTableProps) {
   const search = route.useSearch()
 
   const pagination: PaginationState = {
-    pageIndex: (search.page ?? 1) - 1,
-    pageSize: search.pageSize ?? 20,
+    pageIndex: (search.offHoursPage ?? 1) - 1,
+    pageSize: search.offHoursPageSize ?? 20,
   }
 
   const onPaginationChange: OnChangeFn<PaginationState> = useCallback(
@@ -74,8 +74,8 @@ export function OffHoursTable(props: OffHoursTableProps) {
         params,
         search: (prev: Record<string, unknown>) => ({
           ...prev,
-          page: next.pageIndex + 1,
-          pageSize: next.pageSize,
+          offHoursPage: next.pageIndex + 1,
+          offHoursPageSize: next.pageSize,
         }),
       })
     },

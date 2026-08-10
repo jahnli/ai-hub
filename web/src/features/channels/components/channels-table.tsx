@@ -48,7 +48,6 @@ import { getLobeIcon } from '@/lib/lobe-icon'
 
 import { getChannels, searchChannels, getGroups } from '../api'
 import {
-  DEFAULT_PAGE_SIZE,
   CHANNEL_STATUS,
   CHANNEL_STATUS_OPTIONS,
 } from '../constants'
@@ -115,8 +114,9 @@ export function ChannelsTable() {
     search: route.useSearch(),
     navigate: route.useNavigate(),
     pagination: {
+      pageSizeStorageKey: 'page-size:channels',
       defaultPage: 1,
-      defaultPageSize: isMobile ? 10 : DEFAULT_PAGE_SIZE,
+      defaultPageSize: isMobile ? 10 : 50,
     },
     globalFilter: { enabled: true, key: 'filter' },
     columnFilters: [

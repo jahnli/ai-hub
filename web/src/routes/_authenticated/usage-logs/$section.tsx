@@ -34,8 +34,12 @@ const logTypeSearchSchema = z
   .catch([])
 
 const usageLogsSearchSchema = z.object({
-  page: z.number().optional().catch(1),
-  pageSize: z.number().optional().catch(undefined),
+  commonPage: z.number().optional().catch(1),
+  commonPageSize: z.number().optional().catch(undefined),
+  drawingPage: z.number().optional().catch(1),
+  drawingPageSize: z.number().optional().catch(undefined),
+  taskPage: z.number().optional().catch(1),
+  taskPageSize: z.number().optional().catch(undefined),
   type: logTypeSearchSchema.optional(),
   filter: z.string().optional().catch(''),
   model: z.string().optional().catch(''),

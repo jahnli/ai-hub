@@ -86,6 +86,8 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { canManageScope, isAdminView: isAdmin } = useLogsViewScope()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const pageKey = `${logCategory}Page`
+  const pageSizeKey = `${logCategory}PageSize`
   const searchParams = route.useSearch()
 
   const {
@@ -97,7 +99,13 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   } = useTableUrlState({
     search: route.useSearch(),
     navigate: route.useNavigate(),
-    pagination: { defaultPage: 1, defaultPageSize: 10 },
+    pagination: {
+      pageKey,
+      pageSizeKey,
+      pageSizeStorageKey: `page-size:usage-logs:${logCategory}`,
+      defaultPage: 1,
+      defaultPageSize: 10,
+    },
     globalFilter: { enabled: false },
     columnFilters: [
       {

@@ -28,8 +28,10 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 const securityAuditSearchSchema = z.object({
-  page: z.number().optional().catch(1),
-  pageSize: z.number().optional().catch(undefined),
+  offHoursPage: z.number().optional().catch(1),
+  offHoursPageSize: z.number().optional().catch(undefined),
+  imageAuditPage: z.number().optional().catch(1),
+  imageAuditPageSize: z.number().optional().catch(undefined),
   username: z.string().optional().catch(''),
   startTime: z.number().optional(),
   endTime: z.number().optional(),

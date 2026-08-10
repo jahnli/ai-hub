@@ -45,8 +45,8 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
   const search = route.useSearch()
 
   const pagination: PaginationState = {
-    pageIndex: (search.page ?? 1) - 1,
-    pageSize: search.pageSize ?? 10,
+    pageIndex: (search.imageAuditPage ?? 1) - 1,
+    pageSize: search.imageAuditPageSize ?? 10,
   }
 
   const onPaginationChange: OnChangeFn<PaginationState> = useCallback(
@@ -57,8 +57,8 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
         params,
         search: (prev: Record<string, unknown>) => ({
           ...prev,
-          page: next.pageIndex + 1,
-          pageSize: next.pageSize,
+          imageAuditPage: next.pageIndex + 1,
+          imageAuditPageSize: next.pageSize,
         }),
       })
     },

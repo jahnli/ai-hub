@@ -242,7 +242,8 @@ export function CommonLogsFilterBar<TData>(
       search: {
         ...filterParams,
         type: [logType],
-        page: 1,
+        commonPage: undefined,
+        commonPageSize: undefined,
       },
     })
     queryClient.invalidateQueries({ queryKey: ['logs'] })
@@ -274,7 +275,8 @@ export function CommonLogsFilterBar<TData>(
       to: '/usage-logs/$section',
       params: { section: 'common' },
       search: {
-        page: 1,
+        commonPage: undefined,
+        commonPageSize: undefined,
         ...resetSearch,
       },
     })

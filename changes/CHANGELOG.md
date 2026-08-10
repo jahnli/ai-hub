@@ -25,7 +25,7 @@
 | 019 | 2026-06-20 | 移除邀请人/邀请码功能（后端模型/控制器/路由、前端组件/类型/i18n、数据库迁移、计费设置默认值残留字段修复） | [详情](details/020-remove-invitation.md) |
 | 020 | 2026-06-20 | 移除概览页「开始使用」和「推荐操作」区域 | `web/default/src/features/dashboard/components/overview/overview-dashboard.tsx` |
 | 021 | 2026-07-01 | 个人资料页订阅列表重构：从 ProfileHeader 内嵌改为独立卡片组件，横向网格布局（sm:2列 lg:3列），每个订阅独立圆角卡片展示状态、剩余天数、配额进度；进度条按用量分阶段变色（绿→橙→红） | `web/default/src/features/profile/components/subscription-card.tsx`、`web/default/src/features/profile/components/profile-header.tsx`、`web/default/src/features/profile/index.tsx` |
-| 022 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx` |
+| 022 | 2026-06-21 | 渠道页默认视图改为列表，视图切换按钮顺序调整为列表→卡片；桌面端默认分页调整为每页 50 条 | `web/default/src/features/channels/components/channels-table.tsx`、`web/default/src/components/data-table/toolbar/view-mode-toggle.tsx`、`web/src/features/channels/components/channels-table.tsx` |
 | 023 | 2026-07-20 | 新增 LDAP 登录与飞书/钉钉同步：支持认证、绑定/解绑、按公司 OU 选择同步平台、配置凭据/邮箱后缀/自动订阅套餐及 7 语言界面；钉钉从 extensionAttribute12 读取 userid 并回填资料与部门层级。公司配置支持显示名称映射，登录、注册、绑定时写入并可按原名或显示名匹配，留空则使用 LDAP 公司名；LDAP 建号采用目录标准用户名，修复配置按钮遮挡、多公司套餐误匹配，并在保存配置时迁移已有用户公司字段 | [详情](details/024-ldap-login.md) |
 | 024 | 2026-07-15 | 登录页默认使用 LDAP 登录：LDAP 表单内联展示替代弹窗，视图切换（LDAP/密码/OAuth）布局；用户名输入框下添加示例提示；删除未使用的 LDAPLoginDialog 组件；移除注册入口提示并简化标题布局 | [详情](details/025-ldap-default-login.md) |
 | 025 | 2026-07-21 | 移除 User 表 name 字段，飞书同步的姓名改写入 display_name；LDAP 注册邮箱在配置飞书邮箱后缀时优先使用 username + 后缀拼接，未配置后缀时回退 LDAP 邮箱属性 | `model/user.go`、`service/feishu_sync.go`、`controller/ldap.go` |
@@ -71,3 +71,4 @@
 | 064 | 2026-07-25 | 新增 AI 中转站周报统计脚本：按使用日志历史计费快照拆分输入、输出与缓存 Token/费用，汇总均价、缓存命中率及费用 Top 5 模型；支持上周/本周周期选择、内置模型归一化映射，并补充 Claude Sonnet 5；修正 Anthropic 缓存写入统计，优先采用显式 cache_write_tokens 并增强 Claude 语义识别，避免缓存 Token 重复计算 | `scripts/weekly_stats.py` |
 | 065 | 2026-08-04 | 用户演示模式：个人设置开启后即时生效；渠道页隐藏分组/模型，模型广场遮罩价格、动态计费表达式/分组倍率，使用日志遮罩渠道；用户管理、数据总览、使用日志和安全审计统一以 `***` 脱敏用户名，并隐藏真实头像、资料卡和飞书跳转；更新通知配置不覆盖其他用户设置 | [详情](details/065-user-demo-mode.md) |
 | 066 | 2026-07-26 | 合并 upstream/main 的 13 个提交：引入腾讯 TokenHub、Gemini 图片模型、统一 JSON 编辑器、渠道字段更新稳定性及模型定价保存修复；逐文件解决 6 个冲突，并保留品牌、渠道余额移除、演示模式和本地货币定价等二开功能 | [详情](details/066-upstream-merge.md) |
+| 067 | 2026-08-10 | 全站分页参数隔离：各界面独立保存 pageSize，Usage Logs 与 Security Audit 的不同分区使用独立页码和每页数量；渠道桌面端默认每页 50 条 | [详情](details/067-pagination-isolation.md) |

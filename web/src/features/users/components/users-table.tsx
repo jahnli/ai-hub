@@ -96,7 +96,11 @@ export function UsersTable() {
   } = useTableUrlState({
     search: route.useSearch(),
     navigate: route.useNavigate(),
-    pagination: { defaultPage: 1, defaultPageSize: isMobile ? 10 : 20 },
+    pagination: {
+      pageSizeStorageKey: 'page-size:users',
+      defaultPage: 1,
+      defaultPageSize: isMobile ? 10 : 20,
+    },
     globalFilter: { enabled: true, key: 'filter' },
     columnFilters: [
       { columnId: 'status', searchKey: 'status', type: 'array' },

@@ -162,7 +162,10 @@ export function SecurityAudit() {
         startTime: dayjs(startTimeInput).unix(),
         endTime: dayjs(endTimeInput).unix(),
         username: usernameInput.trim() || undefined,
-        page: 1,
+        offHoursPage: undefined,
+        offHoursPageSize: undefined,
+        imageAuditPage: undefined,
+        imageAuditPageSize: undefined,
       }),
     })
   }, [navigate, activeSection, startTimeInput, endTimeInput, usernameInput])
@@ -180,7 +183,10 @@ export function SecurityAudit() {
         startTime: undefined,
         endTime: undefined,
         username: undefined,
-        page: 1,
+        offHoursPage: undefined,
+        offHoursPageSize: undefined,
+        imageAuditPage: undefined,
+        imageAuditPageSize: undefined,
       }),
     })
   }, [navigate, activeSection])
@@ -193,7 +199,10 @@ export function SecurityAudit() {
         // 跨 tab 保留时间与用户名筛选,仅重置页码
         search: (previousSearch: Record<string, unknown>) => ({
           ...previousSearch,
-          page: 1,
+          offHoursPage: undefined,
+          offHoursPageSize: undefined,
+          imageAuditPage: undefined,
+          imageAuditPageSize: undefined,
         }),
       })
     },
