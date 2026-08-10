@@ -271,6 +271,7 @@ export function useImageGeneration({
           failedImageCount,
           usage: { durationMs: storedRecord.duration_ms },
           favorite: storedRecord.favorite,
+          channelId: storedRecord.channel_id,
         }
         addRecord(record)
         setActiveRecordId(record.id)
@@ -298,13 +299,16 @@ export function useImageGeneration({
               }),
               { quota: 0, promptTokens: 0, completionTokens: 0 }
             )
+            const channelId = availableLogs.find((log) => log.channelId > 0)?.channelId ?? 0
             patchRecord(record.id, {
               usage: {
                 durationMs,
                 quota: usage.quota,
                 promptTokens: usage.promptTokens,
                 completionTokens: usage.completionTokens,
+                channelId,
               },
+              channelId,
             })
           })
         }, 1200)

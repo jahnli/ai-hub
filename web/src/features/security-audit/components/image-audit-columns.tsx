@@ -23,8 +23,15 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { LongText } from '@/components/long-text'
+import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { getUserInfo } from '@/features/usage-logs/api'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { UserProfileHoverCard } from '@/features/users/components/user-profile-hover-card'
@@ -206,6 +213,16 @@ export function useImageAuditColumns(
   return useMemo<ColumnDef<ImageAuditItem>[]>(
     () => [
       {
+        id: 'created_at',
+        header: t('Time'),
+        size: 150,
+        cell: ({ row }) => (
+          <span className='text-sm tabular-nums'>
+            {dayjs(row.original.created_at).format('YYYY-MM-DD HH:mm:ss')}
+          </span>
+        ),
+      },
+      {
         id: 'identity',
         header: t('User'),
         meta: { mobileTitle: true },
@@ -215,22 +232,15 @@ export function useImageAuditColumns(
         ),
       },
       {
-        id: 'created_at',
-        header: t('Time'),
-        size: 150,
+        id: 'duration_ms',
+        header: t('Duration'),
+        size: 90,
         cell: ({ row }) => (
-          <div className='flex flex-col gap-0.5 text-sm tabular-nums'>
-            <span>
-              {dayjs(row.original.created_at).format('YYYY-MM-DD HH:mm:ss')}
-            </span>
-            {row.original.duration_ms > 0 && (
-              <span className='text-muted-foreground text-xs'>
-                {t('Took {{seconds}}s', {
-                  seconds: (row.original.duration_ms / 1000).toFixed(1),
-                })}
-              </span>
-            )}
-          </div>
+          <span className='text-sm tabular-nums'>
+            {row.original.duration_ms > 0
+              ? `${(row.original.duration_ms / 1000).toFixed(1)}s`
+              : '-'}
+          </span>
         ),
       },
       {
@@ -265,6 +275,45 @@ export function useImageAuditColumns(
                 {requestContent}
               </button>
             </div>
+          )
+        },
+      },
+      {
+        id: 'channel_id',
+        header: t('Channel'),
+        size: 120,
+        cell: ({ row }) => {
+          const channelId = row.original.channel_id
+          const channelName = row.original.channel_name
+          if (!channelId) {
+            return <span className='text-muted-foreground/60 text-xs'>-</span>
+          }
+          const channelTooltip = channelName
+            ? `${channelName} #${channelId}`
+            : `#${channelId}`
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<div className='flex max-w-[105px] flex-col gap-0.5' />}
+                >
+                  <StatusBadge
+                    label={`#${channelId}`}
+                    autoColor={String(channelId)}
+                    copyText={String(channelId)}
+                    size='sm'
+                    showDot={false}
+                    className='font-mono'
+                  />
+                  {channelName ? (
+                    <span className='text-muted-foreground/70 truncate [font-family:var(--font-body)] !text-xs'>
+                      {channelName}
+                    </span>
+                  ) : null}
+                </TooltipTrigger>
+                <TooltipContent>{channelTooltip}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )
         },
       },

@@ -71,4 +71,5 @@
 | 064 | 2026-07-25 | 新增 AI 中转站周报统计脚本：按使用日志历史计费快照拆分输入、输出与缓存 Token/费用，汇总均价、缓存命中率及费用 Top 5 模型；支持上周/本周周期选择、内置模型归一化映射，并补充 Claude Sonnet 5；修正 Anthropic 缓存写入统计，优先采用显式 cache_write_tokens 并增强 Claude 语义识别，避免缓存 Token 重复计算 | `scripts/weekly_stats.py` |
 | 065 | 2026-08-04 | 用户演示模式：个人设置开启后即时生效；渠道页隐藏分组/模型，模型广场遮罩价格、动态计费表达式/分组倍率，使用日志遮罩渠道；用户管理、数据总览、使用日志和安全审计统一以 `***` 脱敏用户名，并隐藏真实头像、资料卡和飞书跳转；更新通知配置不覆盖其他用户设置 | [详情](details/065-user-demo-mode.md) |
 | 066 | 2026-07-26 | 合并 upstream/main 的 13 个提交：引入腾讯 TokenHub、Gemini 图片模型、统一 JSON 编辑器、渠道字段更新稳定性及模型定价保存修复；逐文件解决 6 个冲突，并保留品牌、渠道余额移除、演示模式和本地货币定价等二开功能 | [详情](details/066-upstream-merge.md) |
-| 067 | 2026-08-10 | 全站分页参数隔离：各界面独立保存 pageSize，Usage Logs 与 Security Audit 的不同分区使用独立页码和每页数量；渠道桌面端默认每页 50 条 | [详情](details/067-pagination-isolation.md) |
+| 067 | 2026-08-10 | 全站分页参数隔离：各界面独立保存 pageSize，Usage Logs 与 Security Audit 的不同分区使用独立页码和每页数量；渠道桌面端默认每页 50 条 |
+| 068 | 2026-08-10 | 图片审计新增实际使用渠道列：从请求日志回写真实渠道 ID，查询渠道名称并以使用日志样式展示彩色渠道标签；调整表格列顺序为时间、用户、耗时、图片、请求内容、渠道、模型、模式、参数、费用；耗时拆分为独立列 | `model/image_studio.go`、`controller/image_studio_storage.go`、`relay/image_studio_hook.go`、`web/src/features/security-audit/components/image-audit-columns.tsx`、`web/src/features/image-studio/api.ts`、`web/src/features/image-studio/hooks/use-image-studio.ts`、`web/src/features/image-studio/lib/storage.ts` | [详情](details/067-pagination-isolation.md) |

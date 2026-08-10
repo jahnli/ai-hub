@@ -75,7 +75,9 @@ function fromServerRecord(
       quota: record.quota,
       promptTokens: record.prompt_tokens,
       completionTokens: record.completion_tokens,
+      channelId: record.channel_id,
     },
+    channelId: record.channel_id,
     favorite: record.favorite,
   }
 }
@@ -115,6 +117,7 @@ export async function updateGeneration(
       quota: record.usage?.quota,
       promptTokens: record.usage?.promptTokens,
       completionTokens: record.usage?.completionTokens,
+      channelId: record.channelId ?? record.usage?.channelId,
     }),
   ])
 }

@@ -21,6 +21,7 @@ import (
 // shape.
 type ImageAutoRecordInput struct {
 	UserID       int
+	ChannelId    int
 	Group        string
 	ModelName    string
 	Prompt       string
@@ -101,6 +102,7 @@ func scheduleImageAutoRecord(c *gin.Context, info *relaycommon.RelayInfo, reques
 
 	input := ImageAutoRecordInput{
 		UserID:       info.UserId,
+		ChannelId:    info.ChannelId,
 		Group:        group,
 		ModelName:    modelName,
 		Prompt:       request.Prompt,

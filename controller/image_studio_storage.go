@@ -23,6 +23,7 @@ import (
 	"unicode"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
@@ -69,6 +70,7 @@ type imageStudioUsageRequest struct {
 	Quota            int `json:"quota"`
 	PromptTokens     int `json:"prompt_tokens"`
 	CompletionTokens int `json:"completion_tokens"`
+	ChannelId        int `json:"channel_id"`
 }
 
 func StoreImageStudioImages(c *gin.Context) {
@@ -107,6 +109,7 @@ func StoreImageStudioImages(c *gin.Context) {
 		OutputFormat: req.OutputFormat,
 		N:            req.N,
 		DurationMs:   req.DurationMs,
+		ChannelId:    common.GetContextKeyInt(c, constant.ContextKeyChannelId),
 		UserAgent:    c.Request.UserAgent(),
 		Images:       make([]model.ImageStudioAsset, 0, len(req.Images)),
 	}
@@ -219,7 +222,7 @@ func UpdateImageStudioGenerationUsage(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	if err := model.UpdateImageStudioGenerationUsage(c.Param("id"), c.GetInt("id"), req.Quota, req.PromptTokens, req.CompletionTokens); err != nil {
+	if err := model.UpdateImageStudioGenerationUsage(c.Param("id"), c.GetInt("id"), req.Quota, req.PromptTokens, req.CompletionTokens, req.ChannelId); err != nil {
 		common.ApiError(c, err)
 		return
 	}

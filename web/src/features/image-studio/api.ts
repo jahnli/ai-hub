@@ -136,12 +136,14 @@ export async function updateImageStudioGenerationUsage(
     quota?: number
     promptTokens?: number
     completionTokens?: number
+    channelId?: number
   }
 ): Promise<void> {
   await api.patch(`${API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS}/${id}/usage`, {
     quota: usage.quota ?? 0,
     prompt_tokens: usage.promptTokens ?? 0,
     completion_tokens: usage.completionTokens ?? 0,
+    channel_id: usage.channelId ?? 0,
   })
 }
 
@@ -184,6 +186,7 @@ export interface GenerationLogInfo {
   promptTokens: number
   completionTokens: number
   useTimeSeconds: number
+  channelId: number
 }
 
 /**
@@ -217,6 +220,7 @@ export async function fetchGenerationLog(
       promptTokens: Number(log.prompt_tokens ?? 0),
       completionTokens: Number(log.completion_tokens ?? 0),
       useTimeSeconds: Number(log.use_time ?? 0),
+      channelId: Number(log.channel ?? 0),
     }
   } catch {
     return null

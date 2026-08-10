@@ -31,6 +31,7 @@ type ImageStudioGeneration struct {
 	PromptTokens     int                `json:"prompt_tokens,omitempty"`
 	CompletionTokens int                `json:"completion_tokens,omitempty"`
 	UserAgent        string             `json:"user_agent,omitempty" gorm:"type:varchar(512)"`
+	ChannelId        int                `json:"channel_id,omitempty" gorm:"index"`
 	Favorite         bool               `json:"favorite" gorm:"index"`
 	HiddenFromStudio bool               `json:"-" gorm:"index"`
 	ImagesText       string             `json:"-" gorm:"type:text;column:images"`
@@ -165,13 +166,17 @@ func UpdateImageStudioGenerationFavorite(id string, userID int, favorite bool) e
 	return nil
 }
 
-func UpdateImageStudioGenerationUsage(id string, userID int, quota int, promptTokens int, completionTokens int) error {
-	return DB.Model(&ImageStudioGeneration{}).Where("id = ? AND user_id = ?", id, userID).Updates(map[string]any{
+func UpdateImageStudioGenerationUsage(id string, userID int, quota int, promptTokens int, completionTokens int, channelID int) error {
+	updates := map[string]any{
 		"quota":             quota,
 		"prompt_tokens":     promptTokens,
 		"completion_tokens": completionTokens,
 		"updated_at":        time.Now().UnixMilli(),
-	}).Error
+	}
+	if channelID > 0 {
+		updates["channel_id"] = channelID
+	}
+	return DB.Model(&ImageStudioGeneration{}).Where("id = ? AND user_id = ?", id, userID).Updates(updates).Error
 }
 
 func saveImageStudioGenerationImages(record *ImageStudioGeneration) error {
@@ -221,6 +226,7 @@ type ImageStudioAuditItem struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"display_name"`
 	AvatarUrl   string `json:"avatar_url"`
+	ChannelName string `json:"channel_name,omitempty"`
 }
 
 // GetImageStudioAuditGenerations 分页查询 [startTs, endTs](Unix 秒,含端)内全部用户的
@@ -258,9 +264,33 @@ func GetImageStudioAuditGenerations(startTs, endTs int64, keyword string, startI
 
 	items := make([]ImageStudioAuditItem, len(records))
 	userIdSet := make(map[int]struct{}, len(records))
+	channelIdSet := make(map[int]struct{}, len(records))
 	for i := range records {
 		items[i] = ImageStudioAuditItem{ImageStudioGeneration: records[i]}
 		userIdSet[records[i].UserId] = struct{}{}
+		if records[i].ChannelId > 0 {
+			channelIdSet[records[i].ChannelId] = struct{}{}
+		}
+	}
+	if len(channelIdSet) > 0 {
+		channelIds := make([]int, 0, len(channelIdSet))
+		for channelId := range channelIdSet {
+			channelIds = append(channelIds, channelId)
+		}
+		var channels []struct {
+			Id   int    `gorm:"column:id"`
+			Name string `gorm:"column:name"`
+		}
+		if err := DB.Table("channels").Select("id, name").Where("id IN ?", channelIds).Find(&channels).Error; err != nil {
+			return nil, 0, err
+		}
+		channelNameMap := make(map[int]string, len(channels))
+		for _, channel := range channels {
+			channelNameMap[channel.Id] = channel.Name
+		}
+		for i := range items {
+			items[i].ChannelName = channelNameMap[items[i].ChannelId]
+		}
 	}
 	if len(userIdSet) == 0 {
 		return items, total, nil

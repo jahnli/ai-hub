@@ -72,6 +72,7 @@ export interface GenerationUsage {
   quota?: number
   promptTokens?: number
   completionTokens?: number
+  channelId?: number
 }
 
 export interface GenerationRecord {
@@ -89,8 +90,8 @@ export interface GenerationRecord {
   images: GeneratedImage[]
   /** Failed image requests represented as placeholders in the result grid. */
   failedImageCount?: number
-  referenceImages?: ReferenceImage[]
   usage?: GenerationUsage
+  channelId?: number
   favorite?: boolean
 }
 
@@ -146,6 +147,7 @@ export interface ImageStudioGenerationRecord {
   quota?: number
   prompt_tokens?: number
   completion_tokens?: number
+  channel_id?: number
   favorite?: boolean
   images: StoredImageAsset[]
 }

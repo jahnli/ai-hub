@@ -149,6 +149,8 @@ export interface ImageAuditItem {
   prompt_tokens?: number
   completion_tokens?: number
   user_agent?: string
+  channel_id?: number
+  channel_name?: string
   favorite: boolean
   images: ImageAuditAsset[]
 }
