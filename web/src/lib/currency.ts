@@ -90,8 +90,6 @@ export interface CurrencyFormatOptions {
   digitsLarge?: number
   /** Fraction digits to use when |value| < 1 */
   digitsSmall?: number
-  /** Minimum fraction digits to preserve in the formatted value */
-  minimumFractionDigits?: number
   /** Whether to abbreviate thousands with k suffix */
   abbreviate?: boolean
   /** Minimal absolute value to display when rounding would produce zero */
@@ -135,7 +133,6 @@ type DisplayMeta =
 const DEFAULT_FORMAT_OPTIONS: ResolvedCurrencyFormatOptions = {
   digitsLarge: 2,
   digitsSmall: 4,
-  minimumFractionDigits: 0,
   abbreviate: true,
   minimumNonZero: 0,
   compact: false,
@@ -238,9 +235,6 @@ function mergeOptions(
   return {
     digitsLarge: options.digitsLarge ?? DEFAULT_FORMAT_OPTIONS.digitsLarge,
     digitsSmall: options.digitsSmall ?? DEFAULT_FORMAT_OPTIONS.digitsSmall,
-    minimumFractionDigits:
-      options.minimumFractionDigits ??
-      DEFAULT_FORMAT_OPTIONS.minimumFractionDigits,
     abbreviate: options.abbreviate ?? DEFAULT_FORMAT_OPTIONS.abbreviate,
     minimumNonZero:
       options.minimumNonZero ?? DEFAULT_FORMAT_OPTIONS.minimumNonZero,
@@ -248,6 +242,23 @@ function mergeOptions(
     showSymbol: options.showSymbol ?? DEFAULT_FORMAT_OPTIONS.showSymbol,
     locale: options.locale ?? DEFAULT_FORMAT_OPTIONS.locale,
   }
+}
+
+function getFractionDigits(
+  value: number,
+  digitsLarge: number,
+  digitsSmall: number
+): number {
+  return Math.abs(value) >= 1 ? digitsLarge : digitsSmall
+}
+
+/** Return the configured fraction digits for a plain currency value. */
+export function getCurrencyFractionDigits(
+  value: number,
+  options?: CurrencyFormatOptions
+): number {
+  const merged = mergeOptions(options)
+  return getFractionDigits(value, merged.digitsLarge, merged.digitsSmall)
 }
 
 function removeTrailingZeros(str: string): string {
@@ -259,7 +270,6 @@ function formatNumberWithSuffix(
   value: number,
   digitsLarge: number,
   digitsSmall: number,
-  minimumFractionDigits: number,
   abbreviate: boolean
 ): string {
   const abs = Math.abs(value)
@@ -268,15 +278,8 @@ function formatNumberWithSuffix(
     return `${removeTrailingZeros(result.toFixed(1))}k`
   }
 
-  const digits = abs >= 1 ? digitsLarge : digitsSmall
-  const formattedValue = value.toFixed(digits)
-  if (minimumFractionDigits >= digits) return formattedValue
-
-  const trimmedValue = removeTrailingZeros(formattedValue)
-  if (minimumFractionDigits <= 0) return trimmedValue
-
-  const [integerPart, fractionPart = ''] = trimmedValue.split('.')
-  return `${integerPart}.${fractionPart.padEnd(minimumFractionDigits, '0')}`
+  const digits = getFractionDigits(value, digitsLarge, digitsSmall)
+  return removeTrailingZeros(value.toFixed(digits))
 }
 
 function adjustForMinimum(
@@ -310,23 +313,22 @@ function formatCurrencyValue(
       value,
       options.digitsLarge,
       options.digitsSmall,
-      options.minimumFractionDigits,
       options.abbreviate
     )
   }
 
-  const digits =
-    Math.abs(value) >= 1 ? options.digitsLarge : options.digitsSmall
+  const digits = getFractionDigits(
+    value,
+    options.digitsLarge,
+    options.digitsSmall
+  )
   const adjustedValue = adjustForMinimum(value, digits, options.minimumNonZero)
 
   if (meta.kind === 'currency') {
     if (!options.showSymbol) {
       return new Intl.NumberFormat(options.locale, {
         notation: options.compact ? 'compact' : 'standard',
-        minimumFractionDigits: Math.min(
-          options.minimumFractionDigits,
-          options.compact ? 1 : digits
-        ),
+        minimumFractionDigits: 0,
         maximumFractionDigits: options.compact ? 1 : digits,
       }).format(adjustedValue)
     }
@@ -336,10 +338,7 @@ function formatCurrencyValue(
       currency: meta.currencyCode,
       currencyDisplay: 'narrowSymbol',
       notation: options.compact ? 'compact' : 'standard',
-      minimumFractionDigits: Math.min(
-        options.minimumFractionDigits,
-        options.compact ? 1 : digits
-      ),
+      minimumFractionDigits: 0,
       maximumFractionDigits: options.compact ? 1 : digits,
     }).format(adjustedValue)
     return formatted
@@ -347,10 +346,7 @@ function formatCurrencyValue(
 
   const decimal = new Intl.NumberFormat(options.locale, {
     notation: options.compact ? 'compact' : 'standard',
-    minimumFractionDigits: Math.min(
-      options.minimumFractionDigits,
-      options.compact ? 1 : digits
-    ),
+    minimumFractionDigits: 0,
     maximumFractionDigits: options.compact ? 1 : digits,
   }).format(adjustedValue)
 
@@ -430,7 +426,6 @@ export function formatCurrencyFromUSD(
       tokens,
       0,
       merged.digitsSmall,
-      merged.minimumFractionDigits,
       merged.abbreviate
     )
   }

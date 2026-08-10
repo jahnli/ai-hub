@@ -230,7 +230,6 @@ export function userQuotaColumn<T extends UserColumnRow>(
       const formattedUsedQuota = formatQuotaWithCurrency(used, {
         digitsLarge: 2,
         digitsSmall: 2,
-        minimumFractionDigits: 2,
         abbreviate: true,
       });
 
