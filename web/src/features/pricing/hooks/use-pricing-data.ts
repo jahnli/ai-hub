@@ -46,6 +46,25 @@ export function usePricingData() {
     if (!data?.data || !data?.vendors) return []
 
     const vendorMap = new Map(data.vendors.map((v) => [v.id, v]))
+    const groupVendorRatio = data.group_vendor_ratio || {}
+    // 命中用户特殊倍率的分组优先于供应商倍率，保持后端 group_ratio 中的覆盖值
+    const specialGroups = new Set(data.group_special_ratios || [])
+
+    // 供应商倍率命中时直接替换该分组的基础倍率（非叠乘）
+    const effectiveGroupRatio = (vendorId?: number): Record<string, number> => {
+      if (!vendorId) return data.group_ratio
+      const vendorKey = String(vendorId)
+      let overridden: Record<string, number> | null = null
+      for (const [group, vendorRatios] of Object.entries(groupVendorRatio)) {
+        if (specialGroups.has(group)) continue
+        const ratio = vendorRatios?.[vendorKey]
+        if (typeof ratio === 'number' && Number.isFinite(ratio)) {
+          overridden ??= { ...data.group_ratio }
+          overridden[group] = ratio
+        }
+      }
+      return overridden ?? data.group_ratio
+    }
 
     return data.data.map((model) => {
       const vendor = model.vendor_id
@@ -57,7 +76,7 @@ export function usePricingData() {
         vendor_name: vendor?.name,
         vendor_icon: vendor?.icon,
         vendor_description: vendor?.description,
-        group_ratio: data.group_ratio,
+        group_ratio: effectiveGroupRatio(model.vendor_id),
       }
     })
   }, [data])

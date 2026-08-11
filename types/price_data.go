@@ -11,6 +11,10 @@ type GroupRatioInfo struct {
 	GroupRatio        float64
 	GroupSpecialRatio float64
 	HasSpecialRatio   bool
+	// VendorID 为命中的供应商倍率所属供应商 ID（未命中为 0）
+	VendorID int
+	// HasVendorRatio 表示 GroupRatio 来自分组×供应商倍率（直接替换分组基础倍率）
+	HasVendorRatio bool
 }
 
 type PriceData struct {

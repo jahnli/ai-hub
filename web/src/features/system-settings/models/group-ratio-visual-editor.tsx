@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
   ChevronDown,
@@ -75,6 +76,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 
+import { getVendors } from '@/features/models/api'
+import { vendorsQueryKeys } from '@/features/models/lib/query-keys'
+
 import { safeJsonParse } from '../utils/json-parser'
 
 type GroupRatioVisualEditorProps = {
@@ -82,6 +86,7 @@ type GroupRatioVisualEditorProps = {
   topupGroupRatio: string
   userUsableGroups: string
   groupGroupRatio: string
+  groupVendorRatio: string
   autoGroups: string
   maxTokenAutoGroupsField: ReactNode
   groupSpecialUsableGroup: string
@@ -264,6 +269,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   topupGroupRatio,
   userUsableGroups,
   groupGroupRatio,
+  groupVendorRatio,
   autoGroups,
   maxTokenAutoGroupsField,
   groupSpecialUsableGroup,
@@ -345,6 +351,12 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
       <GroupOverrideRules
         registry={registry}
         groupGroupRatio={groupGroupRatio}
+        onChange={onChange}
+      />
+
+      <VendorRatioRules
+        registry={registry}
+        groupVendorRatio={groupVendorRatio}
         onChange={onChange}
       />
 
@@ -1117,6 +1129,464 @@ function GroupOverrideDialog({
                     targetGroup: targetGroup || t('this token group'),
                   }
                 )}
+          </p>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+type VendorRatioRule = {
+  vendorKey: string
+  ratio: number
+}
+
+type VendorRatioRulesProps = {
+  registry: RegistryEntry[]
+  groupVendorRatio: string
+  onChange: (field: string, value: string) => void
+}
+
+function VendorRatioRules({
+  registry,
+  groupVendorRatio,
+  onChange,
+}: VendorRatioRulesProps) {
+  const { t } = useTranslation()
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false)
+  const [groupInput, setGroupInput] = useState<string | null>(null)
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false)
+  const [ruleGroup, setRuleGroup] = useState<string | null>(null)
+  const [ruleEditData, setRuleEditData] = useState<VendorRatioRule | null>(null)
+
+  const { data: vendorsData } = useQuery({
+    queryKey: vendorsQueryKeys.list(),
+    queryFn: () => getVendors({ page_size: 1000 }),
+  })
+  const vendors = useMemo(
+    () => vendorsData?.data?.items || [],
+    [vendorsData?.data?.items]
+  )
+  const vendorNameByKey = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const vendor of vendors) map.set(String(vendor.id), vendor.name)
+    return map
+  }, [vendors])
+
+  const registryNames = useMemo(
+    () => registry.map((entry) => entry.name),
+    [registry]
+  )
+
+  const baseRatioByName = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const entry of registry) map.set(entry.name, entry.ratio)
+    return map
+  }, [registry])
+
+  const vendorRatioList = useMemo(() => {
+    const map = parseNestedRatioMap(groupVendorRatio)
+    return Object.entries(map).map(([group, rules]) => ({
+      group,
+      rules: Object.entries(rules).map(([vendorKey, ratio]) => ({
+        vendorKey,
+        ratio,
+      })),
+    }))
+  }, [groupVendorRatio])
+
+  const emitMap = useCallback(
+    (map: Record<string, Record<string, number>>) => {
+      onChange('GroupVendorRatio', JSON.stringify(map, null, 2))
+    },
+    [onChange]
+  )
+
+  const vendorLabel = useCallback(
+    (vendorKey: string) =>
+      vendorNameByKey.get(vendorKey) ??
+      t('Unknown vendor (#{{id}})', { id: vendorKey }),
+    [vendorNameByKey, t]
+  )
+
+  const handleGroupSave = useCallback(() => {
+    if (!groupInput) return
+    const map = parseNestedRatioMap(groupVendorRatio)
+    if (!map[groupInput]) {
+      map[groupInput] = {}
+    }
+    emitMap(map)
+    setGroupDialogOpen(false)
+    setGroupInput(null)
+  }, [groupInput, groupVendorRatio, emitMap])
+
+  const handleGroupDelete = useCallback(
+    (group: string) => {
+      const map = parseNestedRatioMap(groupVendorRatio)
+      delete map[group]
+      emitMap(map)
+    },
+    [groupVendorRatio, emitMap]
+  )
+
+  const handleRuleAdd = useCallback((group: string) => {
+    setRuleGroup(group)
+    setRuleEditData(null)
+    setRuleDialogOpen(true)
+  }, [])
+
+  const handleRuleEdit = useCallback((group: string, rule: VendorRatioRule) => {
+    setRuleGroup(group)
+    setRuleEditData(rule)
+    setRuleDialogOpen(true)
+  }, [])
+
+  const handleRuleSave = useCallback(
+    (vendorKey: string, ratio: number, oldVendorKey?: string) => {
+      if (!ruleGroup) return
+      const map = parseNestedRatioMap(groupVendorRatio)
+      if (!map[ruleGroup]) {
+        map[ruleGroup] = {}
+      }
+      if (oldVendorKey && oldVendorKey !== vendorKey) {
+        delete map[ruleGroup][oldVendorKey]
+      }
+      map[ruleGroup][vendorKey] = ratio
+      emitMap(map)
+      setRuleDialogOpen(false)
+    },
+    [ruleGroup, groupVendorRatio, emitMap]
+  )
+
+  const handleRuleDelete = useCallback(
+    (group: string, vendorKey: string) => {
+      const map = parseNestedRatioMap(groupVendorRatio)
+      if (map[group]) {
+        delete map[group][vendorKey]
+        if (Object.keys(map[group]).length === 0) {
+          delete map[group]
+        }
+      }
+      emitMap(map)
+    },
+    [groupVendorRatio, emitMap]
+  )
+
+  return (
+    <Card className={sectionCardClassName}>
+      <CardHeader className={sectionHeaderClassName}>
+        <CardTitle>{t('Vendor ratio overrides')}</CardTitle>
+        <CardDescription>
+          {t(
+            'Give a billing group a dedicated ratio per model vendor. When a call matches, the vendor ratio replaces the group base ratio; special ratio rules still take precedence.'
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className='space-y-4'>
+          <Button
+            onClick={() => {
+              setGroupInput(null)
+              setGroupDialogOpen(true)
+            }}
+            size='sm'
+          >
+            <Plus className='mr-2 h-4 w-4' />
+            {t('Add billing group')}
+          </Button>
+          {vendorRatioList.length > 0 && (
+            <div className='space-y-3'>
+              {vendorRatioList.map((groupData) => (
+                <Collapsible key={groupData.group}>
+                  <div className='rounded-lg border'>
+                    <div className='flex items-center justify-between p-4'>
+                      <div className='flex items-center gap-2'>
+                        <CollapsibleTrigger
+                          render={<Button variant='ghost' size='sm' />}
+                        >
+                          <ChevronDown className='h-4 w-4' />
+                        </CollapsibleTrigger>
+                        <span className='font-semibold'>{groupData.group}</span>
+                        {!registryNames.includes(groupData.group) && (
+                          <AlertTriangle
+                            className='text-destructive h-4 w-4'
+                            aria-label={t('Not in pricing table')}
+                          />
+                        )}
+                        <span className='text-muted-foreground text-sm'>
+                          {t('{{count}} vendor ratio', {
+                            count: groupData.rules.length,
+                          })}
+                        </span>
+                      </div>
+                      <div className='flex gap-2'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleRuleAdd(groupData.group)}
+                        >
+                          <Plus className='h-4 w-4' />
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleGroupDelete(groupData.group)}
+                        >
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      </div>
+                    </div>
+                    <CollapsibleContent>
+                      {groupData.rules.length > 0 && (
+                        <div className='border-t'>
+                          <StaticDataTable
+                            className='rounded-none border-0'
+                            data={groupData.rules}
+                            getRowKey={(rule) => rule.vendorKey}
+                            columns={[
+                              {
+                                id: 'vendor',
+                                header: t('Vendor'),
+                                cellClassName: 'font-medium',
+                                cell: (rule) => (
+                                  <span className='inline-flex items-center gap-1.5'>
+                                    {vendorLabel(rule.vendorKey)}
+                                    {!vendorNameByKey.has(rule.vendorKey) && (
+                                      <AlertTriangle
+                                        className='text-destructive h-3.5 w-3.5'
+                                        aria-label={t('Unknown vendor')}
+                                      />
+                                    )}
+                                  </span>
+                                ),
+                              },
+                              {
+                                id: 'ratio',
+                                header: t('Ratio'),
+                                cell: (rule) => {
+                                  const baseRatio = baseRatioByName.get(
+                                    groupData.group
+                                  )
+                                  return (
+                                    <span className='inline-flex items-center gap-1.5'>
+                                      {rule.ratio}
+                                      {baseRatio !== undefined &&
+                                        baseRatio !== rule.ratio && (
+                                          <span className='text-muted-foreground text-xs'>
+                                            {t('(instead of {{ratio}})', {
+                                              ratio: baseRatio,
+                                            })}
+                                          </span>
+                                        )}
+                                    </span>
+                                  )
+                                },
+                              },
+                              {
+                                id: 'actions',
+                                header: t('Actions'),
+                                className: 'text-right',
+                                cellClassName: 'text-right',
+                                cell: (rule) => (
+                                  <StaticRowActions
+                                    editLabel={t('Edit')}
+                                    deleteLabel={t('Delete')}
+                                    menuLabel={t('Open menu')}
+                                    onEdit={() =>
+                                      handleRuleEdit(groupData.group, rule)
+                                    }
+                                    onDelete={() =>
+                                      handleRuleDelete(
+                                        groupData.group,
+                                        rule.vendorKey
+                                      )
+                                    }
+                                  />
+                                ),
+                              },
+                            ]}
+                          />
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+
+      {/* Add billing group dialog */}
+      <Dialog
+        open={groupDialogOpen}
+        onOpenChange={setGroupDialogOpen}
+        title={t('Add billing group')}
+        description={t(
+          'Pick the billing group to configure vendor ratios for.'
+        )}
+        contentHeight='auto'
+        bodyClassName='space-y-4'
+        footer={
+          <>
+            <Button variant='outline' onClick={() => setGroupDialogOpen(false)}>
+              {t('Cancel')}
+            </Button>
+            <Button onClick={handleGroupSave} disabled={!groupInput}>
+              {t('Add')}
+            </Button>
+          </>
+        }
+      >
+        <div className='space-y-4 py-4'>
+          <div className='space-y-2'>
+            <Label>{t('Billing group')}</Label>
+            <GroupNameSelect
+              className='w-full'
+              options={registryNames}
+              value={groupInput}
+              placeholder={t('Select a group')}
+              onValueChange={setGroupInput}
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      <VendorRatioDialog
+        open={ruleDialogOpen}
+        onOpenChange={setRuleDialogOpen}
+        onSave={handleRuleSave}
+        editData={ruleEditData}
+        group={ruleGroup}
+        vendors={vendors.map((vendor) => ({
+          key: String(vendor.id),
+          name: vendor.name,
+        }))}
+        baseRatio={ruleGroup ? baseRatioByName.get(ruleGroup) : undefined}
+      />
+    </Card>
+  )
+}
+
+type VendorRatioDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (vendorKey: string, ratio: number, oldVendorKey?: string) => void
+  editData: VendorRatioRule | null
+  group: string | null
+  vendors: { key: string; name: string }[]
+  baseRatio?: number
+}
+
+function VendorRatioDialog({
+  open,
+  onOpenChange,
+  onSave,
+  editData,
+  group,
+  vendors,
+  baseRatio,
+}: VendorRatioDialogProps) {
+  const { t } = useTranslation()
+  const [vendorKey, setVendorKey] = useState<string | null>(null)
+  const [ratio, setRatio] = useState('')
+
+  useEffect(() => {
+    if (!open) {
+      setVendorKey(null)
+      setRatio('')
+      return
+    }
+
+    setVendorKey(editData?.vendorKey ?? null)
+    setRatio(editData ? String(editData.ratio) : '')
+  }, [editData, open])
+
+  const vendorOptions = useMemo(() => {
+    if (vendorKey && !vendors.some((vendor) => vendor.key === vendorKey)) {
+      return [{ key: vendorKey, name: `#${vendorKey}` }, ...vendors]
+    }
+    return vendors
+  }, [vendors, vendorKey])
+
+  const handleSave = () => {
+    if (!vendorKey || !ratio.trim()) return
+    const parsedRatio = Number.parseFloat(ratio)
+    if (Number.isNaN(parsedRatio) || parsedRatio < 0) return
+
+    onSave(vendorKey, parsedRatio, editData?.vendorKey)
+    setVendorKey(null)
+    setRatio('')
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={editData ? t('Edit vendor ratio') : t('Add vendor ratio')}
+      description={
+        group
+          ? t(
+              'Set the ratio "{{group}}" uses for models of a specific vendor.',
+              { group }
+            )
+          : t('Set the ratio used for models of a specific vendor.')
+      }
+      contentHeight='auto'
+      bodyClassName='space-y-4'
+      footer={
+        <>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>
+            {t('Cancel')}
+          </Button>
+          <Button onClick={handleSave}>
+            {editData ? t('Update') : t('Add')}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4 py-4'>
+        <div className='space-y-2'>
+          <Label>{t('Vendor')}</Label>
+          <Select
+            value={vendorKey}
+            onValueChange={(v) => {
+              if (typeof v === 'string' && v !== '') setVendorKey(v)
+            }}
+          >
+            <SelectTrigger className='w-full'>
+              <SelectValue placeholder={t('Select a vendor')} />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                {vendorOptions.map((vendor) => (
+                  <SelectItem key={vendor.key} value={vendor.key}>
+                    {vendor.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <p className='text-muted-foreground text-xs'>
+            {t('Vendors come from the model square vendor table')}
+          </p>
+        </div>
+        <div className='space-y-2'>
+          <Label>{t('Ratio')}</Label>
+          <Input
+            value={ratio}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '' || !Number.isNaN(Number.parseFloat(val))) {
+                setRatio(val)
+              }
+            }}
+            placeholder={baseRatio === undefined ? '0.9' : String(baseRatio)}
+          />
+          <p className='text-muted-foreground text-xs'>
+            {baseRatio !== undefined
+              ? t('(instead of {{ratio}})', { ratio: baseRatio })
+              : t('Replaces the group base ratio for this vendor')}
           </p>
         </div>
       </div>

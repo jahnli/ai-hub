@@ -69,6 +69,7 @@ type GroupFormValues = {
   TopupGroupRatio: string
   UserUsableGroups: string
   GroupGroupRatio: string
+  GroupVendorRatio: string
   AutoGroups: string
   MaxTokenAutoGroups: number
   DefaultUseAutoGroup: boolean
@@ -171,6 +172,7 @@ export const GroupRatioForm = memo(function GroupRatioForm({
               topupGroupRatio={form.watch('TopupGroupRatio')}
               userUsableGroups={form.watch('UserUsableGroups')}
               groupGroupRatio={form.watch('GroupGroupRatio')}
+              groupVendorRatio={form.watch('GroupVendorRatio')}
               autoGroups={form.watch('AutoGroups')}
               maxTokenAutoGroupsField={
                 <FormField
@@ -337,6 +339,33 @@ export const GroupRatioForm = memo(function GroupRatioForm({
                     {`{ targetGroup: ratio }`}{' '}
                     {t(
                       'to override billing when a user in one group uses a token of another group.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='GroupVendorRatio'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Vendor ratio overrides')}</FormLabel>
+                  <FormControl>
+                    <JsonCodeEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      textareaRef={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t('Nested JSON: billing group →')}{' '}
+                    {`{ vendorId: ratio }`}{' '}
+                    {t(
+                      'to replace the group base ratio for models of that vendor. Vendor IDs come from the model vendor table.'
                     )}
                   </FormDescription>
                   <FormMessage />
@@ -547,7 +576,7 @@ function GroupPricingGuide({ open, onOpenChange }: GroupPricingGuideProps) {
                   {t('Find the ratio.')}
                 </span>{' '}
                 {t(
-                  'Look for a special ratio rule matching this user group and this billing group. If one exists, use its ratio. Otherwise use the billing group base ratio from the pricing table.'
+                  'Look for a special ratio rule matching this user group and this billing group. If one exists, use its ratio. Otherwise, if the billing group has a vendor ratio for the model vendor, use it instead of the base ratio. Otherwise use the billing group base ratio from the pricing table.'
                 )}
               </li>
               <li>
@@ -756,6 +785,26 @@ vip          0.5     ${t('No')}                ${t('Assigned by administrator on
                 <p className='text-muted-foreground text-sm leading-6'>
                   {t(
                     'Only configured combinations are overridden. All other calls keep the billing group base ratio.'
+                  )}
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value='vendor-ratio'>
+              <AccordionTrigger>{t('Vendor ratio overrides')}</AccordionTrigger>
+              <AccordionContent className='space-y-3'>
+                <p className='text-muted-foreground text-sm leading-6'>
+                  {t(
+                    'A billing group can set a dedicated ratio per model vendor (as categorized in the model square). When a call hits that group with a model of that vendor, the vendor ratio replaces the group base ratio; it is not multiplied on top. Special ratio rules still take precedence.'
+                  )}
+                </p>
+                <GuideCodeBlock>{`{
+  "default": { "1": 1.2, "2": 1.5 },
+  "vip": { "1": 0.8 }
+}`}</GuideCodeBlock>
+                <p className='text-muted-foreground text-sm leading-6'>
+                  {t(
+                    'The outer key is the billing group; the inner key is the vendor ID from the model vendor table. Models without a vendor keep the group base ratio.'
                   )}
                 </p>
               </AccordionContent>

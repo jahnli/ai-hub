@@ -94,6 +94,10 @@ export type PricingData = {
   data: PricingModel[]
   vendors: PricingVendor[]
   group_ratio: Record<string, number>
+  /** group -> { vendorId(string) -> ratio }; replaces the group base ratio for that vendor's models */
+  group_vendor_ratio?: Record<string, Record<string, number>>
+  /** groups where the viewer has a user-specific override ratio (takes precedence over vendor ratios) */
+  group_special_ratios?: string[]
   usable_group: Record<string, { desc: string; ratio: number }>
   supported_endpoint: Record<string, string>
   auto_groups: string[]

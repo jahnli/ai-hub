@@ -1,6 +1,6 @@
 # 模型广场优化
 
-**日期**: 2026-08-07
+**日期**: 2026-08-11
 
 ## 涉及文件
 
@@ -18,3 +18,41 @@
 - `web/src/features/pricing/components/model-card.tsx` — 模型卡片计费标签旁优先显示当前用户所在分组。
 - `web/src/features/pricing/lib/model-helpers.ts` — 新增模型卡片分组显示解析逻辑，兼容未登录或用户分组为空时的回退展示。
 - `web/src/features/pricing/lib/__tests__/model-display-group.test.ts` — 覆盖当前用户分组优先、空分组回退及模型无分组场景。
+
+## 分组 × 供应商定价
+
+- `plan.md` — 记录分组 × 供应商定价的需求、优先级、计费链路、前后端改造方案与验证计划。
+- `controller/option.go` — 为 `GroupVendorRatio` option 增加配置合法性校验。
+- `controller/pricing.go` — 模型广场接口下发按可用分组过滤的供应商倍率及当前用户特殊倍率分组标记。
+- `model/option.go` — 注册并持久化 `GroupVendorRatio` option。
+- `model/pricing.go` — 在模型定价缓存中维护模型到启用供应商 ID 的映射，供计费路径快速解析。
+- `relay/helper/price.go` — 主计费链路统一按“用户特殊倍率 > 分组供应商倍率 > 分组基础倍率”解析最终分组倍率。
+- `service/quota.go` — Realtime WebSocket 预扣费同步使用统一的供应商倍率解析逻辑。
+- `service/task_billing.go` — 任务按 Token 重算同步使用统一的供应商倍率解析逻辑。
+- `service/log_info_generate.go` — 命中供应商倍率时在消费日志中记录供应商 ID 与最终供应商分组倍率。
+- `setting/ratio_setting/group_ratio.go` — 新增分组供应商倍率配置、校验、复制、JSON 转换及统一优先级解析器。
+- `setting/ratio_setting/group_vendor_ratio_test.go` — 覆盖倍率优先级、免费倍率、无供应商回退、配置校验及 JSON 往返行为。
+- `types/price_data.go` — 扩展分组倍率信息，携带供应商倍率命中状态与供应商 ID。
+- `web/src/features/models/components/drawers/model-mutate-drawer.tsx` — 模型编辑表单初始化时补充供应商倍率 option 字段。
+- `web/src/features/pricing/hooks/use-pricing-data.ts` — 按模型供应商生成有效分组倍率，并保持用户特殊倍率最高优先级。
+- `web/src/features/pricing/index.tsx` — 模型详情使用所选模型计算后的有效分组倍率。
+- `web/src/features/pricing/types.ts` — 补充供应商倍率和特殊倍率分组的接口类型。
+- `web/src/features/system-settings/billing/index.tsx` — 计费设置表单默认值补充 `GroupVendorRatio`。
+- `web/src/features/system-settings/billing/section-registry.tsx` — 计费设置字段注册表补充 `GroupVendorRatio`。
+- `web/src/features/system-settings/models/group-ratio-form.tsx` — JSON 编辑模式与计费指南增加供应商倍率配置及优先级说明。
+- `web/src/features/system-settings/models/group-ratio-visual-editor.tsx` — 可视化编辑器支持按分组添加、选择、修改和删除供应商倍率，并以供应商名称展示、ID 存储。
+- `web/src/features/system-settings/models/index.tsx` — 分组设置默认值补充 `GroupVendorRatio`。
+- `web/src/features/system-settings/models/ratio-settings-card.tsx` — 分组倍率卡片注册并保存供应商倍率配置。
+- `web/src/features/system-settings/types.ts` — 系统设置类型补充 `GroupVendorRatio`。
+- `web/src/i18n/locales/en.json` — 增加供应商倍率编辑器及计费优先级英文文案。
+- `web/src/i18n/locales/zh.json` — 增加供应商倍率编辑器及计费优先级简体中文文案。
+- `web/src/i18n/locales/zh-TW.json` — 增加供应商倍率编辑器及计费优先级繁体中文文案。
+- `web/src/i18n/locales/fr.json` — 增加供应商倍率编辑器及计费优先级法语文案。
+- `web/src/i18n/locales/ja.json` — 增加供应商倍率编辑器及计费优先级日语文案。
+- `web/src/i18n/locales/ru.json` — 增加供应商倍率编辑器及计费优先级俄语文案。
+- `web/src/i18n/locales/vi.json` — 增加供应商倍率编辑器及计费优先级越南语文案。
+- `web/src/i18n/locales/_reports/_sync-report.json` — 更新国际化同步统计报告。
+- `web/src/i18n/locales/_reports/fr.untranslated.json` — 更新法语未翻译项报告。
+- `web/src/i18n/locales/_reports/ja.untranslated.json` — 更新日语未翻译项报告。
+- `web/src/i18n/locales/_reports/ru.untranslated.json` — 更新俄语未翻译项报告。
+- `web/src/i18n/locales/_reports/vi.untranslated.json` — 更新越南语未翻译项报告。

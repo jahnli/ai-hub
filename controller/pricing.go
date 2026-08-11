@@ -42,6 +42,9 @@ func GetPricing(c *gin.Context) {
 	for s, f := range ratio_setting.GetGroupRatioCopy() {
 		groupRatio[s] = f
 	}
+	groupVendorRatio := ratio_setting.GetGroupVendorRatioCopy()
+	// 命中用户特殊倍率的分组（特殊倍率优先于供应商倍率，前端据此判定）
+	groupSpecialRatios := make([]string, 0)
 	var group string
 	var role int
 	if exists {
@@ -53,6 +56,7 @@ func GetPricing(c *gin.Context) {
 				ratio, ok := ratio_setting.GetGroupGroupRatio(group, g)
 				if ok {
 					groupRatio[g] = ratio
+					groupSpecialRatios = append(groupSpecialRatios, g)
 				}
 			}
 		}
@@ -80,16 +84,23 @@ func GetPricing(c *gin.Context) {
 			delete(groupRatio, group)
 		}
 	}
+	for group := range groupVendorRatio {
+		if _, ok := usableGroup[group]; !ok {
+			delete(groupVendorRatio, group)
+		}
+	}
 
 	c.JSON(200, gin.H{
-		"success":            true,
-		"data":               pricing,
-		"vendors":            model.GetVendors(),
-		"group_ratio":        groupRatio,
-		"usable_group":       usableGroup,
-		"supported_endpoint": model.GetSupportedEndpointMap(),
-		"auto_groups":        autoGroups,
-		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
+		"success":              true,
+		"data":                 pricing,
+		"vendors":              model.GetVendors(),
+		"group_ratio":          groupRatio,
+		"group_vendor_ratio":   groupVendorRatio,
+		"group_special_ratios": groupSpecialRatios,
+		"usable_group":         usableGroup,
+		"supported_endpoint":   model.GetSupportedEndpointMap(),
+		"auto_groups":          autoGroups,
+		"pricing_version":      "a42d372ccf0b5dd13ecf71203521f9d2",
 	})
 }
 

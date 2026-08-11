@@ -52,9 +52,10 @@ var (
 	lastGetPricingTime   time.Time
 	updatePricingLock    sync.Mutex
 
-	// 缓存映射：模型名 -> 启用分组 / 计费类型
+	// 缓存映射：模型名 -> 启用分组 / 计费类型 / 供应商 ID
 	modelEnableGroups     = make(map[string][]string)
 	modelQuotaTypeMap     = make(map[string]int)
+	modelVendorIDs        = make(map[string]int)
 	modelEnableGroupsLock = sync.RWMutex{}
 )
 
@@ -422,6 +423,17 @@ func updatePricing() {
 		modelEnableGroups[p.ModelName] = p.EnableGroup
 		modelQuotaTypeMap[p.ModelName] = p.QuotaType
 	}
+	modelVendorIDs = make(map[string]int)
+	for modelName, meta := range metaMap {
+		if meta.VendorID <= 0 {
+			continue
+		}
+		vendor, ok := vendorMap[meta.VendorID]
+		if !ok || vendor.Status != 1 {
+			continue
+		}
+		modelVendorIDs[modelName] = meta.VendorID
+	}
 	modelEnableGroupsLock.Unlock()
 
 	lastGetPricingTime = time.Now()
@@ -430,4 +442,19 @@ func updatePricing() {
 // GetSupportedEndpointMap 返回全局端点到路径的映射
 func GetSupportedEndpointMap() map[string]common.EndpointInfo {
 	return supportedEndpointMap
+}
+
+// GetModelVendorID 返回模型所属供应商 ID（基于模型广场的供应商归属，
+// 含名称规则匹配与默认供应商映射）。无归属或供应商被禁用时返回 (0, false)。
+func GetModelVendorID(modelName string) (int, bool) {
+	// 测试或启动早期数据库未初始化时视为无供应商归属
+	if DB == nil {
+		return 0, false
+	}
+	GetPricing()
+
+	modelEnableGroupsLock.RLock()
+	defer modelEnableGroupsLock.RUnlock()
+	vendorID, ok := modelVendorIDs[modelName]
+	return vendorID, ok
 }
