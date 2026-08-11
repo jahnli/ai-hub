@@ -18,11 +18,9 @@ import {
   buildCostTrendSpec,
   buildRequestTrendSpec,
   buildTokenTrendSpec,
-  buildAvgPriceTrendSpec,
   buildModelUsageTrendSpec,
-  buildModelCallRankSpec,
+  buildModelCallDistributionSpec,
   buildModelCostRankSpec,
-  buildModelTokenDistSpec,
   buildUserRankBarSpec,
   buildUserRankPieSpec,
 } from './chart-to-image'
@@ -47,6 +45,11 @@ function fmtTokens(tokens: number): string {
 function fmtRequests(count: number): string {
   if (count >= 1_0000) return (count / 1_0000).toFixed(2) + ' 万'
   return count.toLocaleString()
+}
+
+function fmtUnitPrice(cost: number, tokens: number): string {
+  if (cost <= 0 || tokens <= 0) return '-'
+  return fmtCny((cost / tokens) * 1_000_000) + '/MT'
 }
 
 export function formatTimeRangeForFilename(
@@ -194,16 +197,28 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
 
   const rows: [string, string][] = [
     [t('Total Tokens'), fmtTokens(stat.total_tokens)],
+    [t('Uncached Input'), fmtTokens(stat.uncached_input_tokens ?? 0)],
+    [t('Uncached Output'), fmtTokens(stat.uncached_output_tokens ?? 0)],
+    [t('Cache Read'), fmtTokens(stat.cache_read_tokens ?? 0)],
+    [t('Cache Write'), fmtTokens(stat.cache_write_tokens ?? 0)],
     [t('Total Cost'), fmtCny(stat.total_amount_cny)],
     [
       t('Avg Price') + '/MT',
-      stat.avg_price_per_mt === 0 ? '¥0.00' : fmtCny(stat.avg_price_per_mt),
+      !stat.avg_price_per_mt ? '¥0.00' : fmtCny(stat.avg_price_per_mt),
     ],
     [t('Total Requests'), fmtRequests(stat.total_requests)],
-    [t('Registered Count'), stat.registered_users.toLocaleString()],
-    [t('Unregistered Count'), stat.unregistered_users.toLocaleString()],
-    [t('Avg Response Time'), stat.avg_use_time.toFixed(1) + 's'],
-    [t('Error Rate'), stat.error_rate.toFixed(1) + '%'],
+    [t('Avg Response Time'), (stat.avg_use_time ?? 0).toFixed(1) + 's'],
+    [t('Registered Count'), (stat.registered_users ?? 0).toLocaleString()],
+    [t('Unregistered Count'), (stat.unregistered_users ?? 0).toLocaleString()],
+    [
+      t('Active Users / Active Rate'),
+      `${(stat.active_users ?? 0).toLocaleString()} / ${(stat.active_user_rate ?? 0).toFixed(1)}%`,
+    ],
+    [
+      t('Tokens per Active User'),
+      fmtTokens((stat.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
+    ],
+    [t('Error Rate'), (stat.error_rate ?? 0).toFixed(1) + '%'],
   ]
   rows.forEach(([label, value], i) => {
     const r = ws.addRow([label, value])
@@ -221,7 +236,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   styleTitleRow(
     ws,
     `${t('Data Overview')} — ${p.departmentName}（${timeRange}）`,
-    6
+    9
   )
   ws.addRow([])
 
@@ -231,19 +246,25 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   ws.getColumn(4).width = 14
   ws.getColumn(5).width = 12
   ws.getColumn(6).width = 14
+  ws.getColumn(7).width = 16
+  ws.getColumn(8).width = 22
+  ws.getColumn(9).width = 18
 
-  addSectionTitle(ws, t('Overview'), 6)
+  addSectionTitle(ws, t('Overview'), 9)
   addStatsTable(ws, p.stats)
 
   if (p.subStats.length > 0) {
-    addSectionTitle(ws, t('Sub-department Statistics'), 6)
+    addSectionTitle(ws, t('Sub-department Statistics'), 9)
     const hdr = ws.addRow([
       t('Department'),
       t('Registered Count'),
       t('Total Users'),
       t('Total Tokens'),
       t('Total Cost'),
+      t('Avg Price') + '/MT',
       t('Request Count'),
+      t('Active Users / Active Rate'),
+      t('Tokens per Active User'),
     ])
     styleHeaderRow(hdr)
 
@@ -256,7 +277,10 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
           sub.total_users,
           fmtTokens(sub.total_tokens),
           fmtCny(sub.total_amount_cny),
+          fmtCny(sub.avg_price_per_mt) + '/MT',
           fmtRequests(sub.total_requests),
+          `${(sub.active_users ?? 0).toLocaleString()} / ${(sub.active_user_rate ?? 0).toFixed(1)}%`,
+          fmtTokens((sub.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
         ])
         styleDataRow(r, i % 2 === 1)
       })
@@ -274,7 +298,7 @@ function buildSubDeptSheet(
   styleTitleRow(
     ws,
     `${t('Data Overview')} — ${detail.departmentName}（${timeRange}）`,
-    6
+    9
   )
   ws.addRow([])
 
@@ -284,19 +308,25 @@ function buildSubDeptSheet(
   ws.getColumn(4).width = 14
   ws.getColumn(5).width = 12
   ws.getColumn(6).width = 14
+  ws.getColumn(7).width = 16
+  ws.getColumn(8).width = 22
+  ws.getColumn(9).width = 18
 
-  addSectionTitle(ws, t('Overview'), 6)
+  addSectionTitle(ws, t('Overview'), 9)
   addStatsTable(ws, detail.stats)
 
   if (detail.subStats.length > 0) {
-    addSectionTitle(ws, t('Sub-department Statistics'), 6)
+    addSectionTitle(ws, t('Sub-department Statistics'), 9)
     const hdr = ws.addRow([
       t('Department'),
       t('Registered Count'),
       t('Total Users'),
       t('Total Tokens'),
       t('Total Cost'),
+      t('Avg Price') + '/MT',
       t('Request Count'),
+      t('Active Users / Active Rate'),
+      t('Tokens per Active User'),
     ])
     styleHeaderRow(hdr)
 
@@ -309,7 +339,10 @@ function buildSubDeptSheet(
           sub.total_users,
           fmtTokens(sub.total_tokens),
           fmtCny(sub.total_amount_cny),
+          fmtCny(sub.avg_price_per_mt) + '/MT',
           fmtRequests(sub.total_requests),
+          `${(sub.active_users ?? 0).toLocaleString()} / ${(sub.active_user_rate ?? 0).toFixed(1)}%`,
+          fmtTokens((sub.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
         ])
         styleDataRow(r, i % 2 === 1)
       })
@@ -323,23 +356,25 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   styleTitleRow(
     ws,
     `${t('Department User List')} — ${p.departmentName}（${timeRange}）`,
-    8
+    9
   )
   ws.addRow([])
 
   ws.getColumn(1).width = 14
   ws.getColumn(2).width = 16
   ws.getColumn(3).width = 14
-  ws.getColumn(4).width = 12
-  ws.getColumn(5).width = 22
-  ws.getColumn(6).width = 18
+  ws.getColumn(4).width = 14
+  ws.getColumn(5).width = 12
+  ws.getColumn(6).width = 22
   ws.getColumn(7).width = 18
-  ws.getColumn(8).width = 10
+  ws.getColumn(8).width = 18
+  ws.getColumn(9).width = 12
 
-  addSectionTitle(ws, t('User List'), 8)
+  addSectionTitle(ws, t('User List'), 9)
   const hdr = ws.addRow([
     t('Display Name'),
     t('Total Cost'),
+    t('Avg Price') + '/MT',
     t('Total Tokens'),
     t('Requests'),
     t('Common Model'),
@@ -370,6 +405,9 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
     const row = ws.addRow([
       u.display_name || u.username || '-',
       isRegistered ? fmtCny(u.total_amount_cny ?? 0) : '-',
+      isRegistered
+        ? fmtUnitPrice(u.total_amount_cny ?? 0, u.total_tokens ?? 0)
+        : '-',
       isRegistered ? fmtTokens(u.total_tokens ?? 0) : '-',
       isRegistered ? fmtRequests(u.total_requests ?? 0) : '-',
       isRegistered ? u.common_model || '-' : '-',
@@ -383,7 +421,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
     ])
 
     if (!isRegistered) {
-      for (let col = 1; col <= 8; col++) {
+      for (let col = 1; col <= 9; col++) {
         row.getCell(col).font = UNREGISTERED_FONT
         row.getCell(col).fill = UNREGISTERED_FILL
         row.getCell(col).border = UNREGISTERED_BORDER
@@ -508,7 +546,7 @@ async function embedRightSideCharts(
   ws: ExcelJS.Worksheet,
   usage: UsageAnalysis
 ): Promise<void> {
-  const rightCol = 7
+  const rightCol = 10
   const rightChartColumnCount = 8
   const imgWidth = rightChartColumnCount * 72
   const imgHeight = 360
@@ -534,83 +572,85 @@ async function embedRightSideCharts(
   const rate = usage.quota_to_cny || 1 / 500000
   const dailyStats = usage.daily_stats ?? []
   const modelStats = usage.model_stats ?? []
+  const modelSeriesStats = usage.model_series_stats ?? []
   const modelDailyStats = usage.model_daily_stats ?? []
 
   const modelTrendSpec = buildModelUsageTrendSpec(modelDailyStats)
 
-  if (dailyStats.length > 0) {
-    const img1 = await renderChartToBase64(
-      buildTokenTrendSpec(dailyStats),
-      imgWidth,
-      imgHeight
+  if (modelSeriesStats.some((model) => model.total_requests > 0)) {
+    const spec = buildModelCallDistributionSpec(
+      modelSeriesStats,
+      '模型系列调用分布'
     )
-    addImageToSheet(wb, ws, img1, row, rightCol, imgWidth, imgHeight)
-    row += rowSpacing
+    if (spec) {
+      const image = await renderChartToBase64(spec, imgWidth, imgHeight)
+      addImageToSheet(wb, ws, image, row, rightCol, imgWidth, imgHeight)
+      row += rowSpacing
+    }
+  }
 
-    const img2 = await renderChartToBase64(
-      buildCostTrendSpec(dailyStats, rate),
+  if (modelSeriesStats.length > 0) {
+    const chartHeight = Math.max(280, modelSeriesStats.length * 30)
+    const image = await renderChartToBase64(
+      buildModelCostRankSpec(modelSeriesStats, rate, {
+        title: '模型系列消耗排行',
+      }),
       imgWidth,
-      imgHeight
+      chartHeight
     )
-    addImageToSheet(wb, ws, img2, row, rightCol, imgWidth, imgHeight)
-    row += rowSpacing
+    addImageToSheet(wb, ws, image, row, rightCol, imgWidth, chartHeight)
+    row += Math.ceil(chartHeight / 18) + 2
+  }
 
-    const img3 = await renderChartToBase64(
-      buildRequestTrendSpec(dailyStats),
-      imgWidth,
-      imgHeight
-    )
-    addImageToSheet(wb, ws, img3, row, rightCol, imgWidth, imgHeight)
-    row += rowSpacing
-
-    const avgPriceTrendSpec = buildAvgPriceTrendSpec(dailyStats, rate)
-    if (avgPriceTrendSpec) {
-      const img4 = await renderChartToBase64(
-        avgPriceTrendSpec,
-        imgWidth,
-        imgHeight
-      )
-      addImageToSheet(wb, ws, img4, row, rightCol, imgWidth, imgHeight)
+  if (modelStats.some((model) => model.total_requests > 0)) {
+    const spec = buildModelCallDistributionSpec(modelStats)
+    if (spec) {
+      const image = await renderChartToBase64(spec, imgWidth, imgHeight)
+      addImageToSheet(wb, ws, image, row, rightCol, imgWidth, imgHeight)
       row += rowSpacing
     }
   }
 
   if (modelStats.length > 0) {
-    const barHeight = Math.max(280, Math.min(modelStats.length, 15) * 30)
-    const barRowSpacing = Math.ceil(barHeight / 18) + 2
-
-    const img5 = await renderChartToBase64(
-      buildModelCallRankSpec(modelStats),
+    const chartHeight = Math.max(280, Math.min(modelStats.length, 15) * 30)
+    const image = await renderChartToBase64(
+      buildModelCostRankSpec(modelStats, rate, { limit: 15 }),
       imgWidth,
-      barHeight
+      chartHeight
     )
-    addImageToSheet(wb, ws, img5, row, rightCol, imgWidth, barHeight)
-    row += barRowSpacing
+    addImageToSheet(wb, ws, image, row, rightCol, imgWidth, chartHeight)
+    row += Math.ceil(chartHeight / 18) + 2
+  }
 
-    const img6 = await renderChartToBase64(
-      buildModelCostRankSpec(modelStats, rate),
+  if (dailyStats.length > 0) {
+    const costImage = await renderChartToBase64(
+      buildCostTrendSpec(dailyStats, rate),
       imgWidth,
-      barHeight
+      imgHeight
     )
-    addImageToSheet(wb, ws, img6, row, rightCol, imgWidth, barHeight)
-    row += barRowSpacing
+    addImageToSheet(wb, ws, costImage, row, rightCol, imgWidth, imgHeight)
+    row += rowSpacing
 
-    if (modelTrendSpec) {
-      const img7 = await renderChartToBase64(
-        modelTrendSpec,
-        imgWidth,
-        imgHeight
-      )
-      addImageToSheet(wb, ws, img7, row, rightCol, imgWidth, imgHeight)
-      row += rowSpacing
-    }
+    const requestImage = await renderChartToBase64(
+      buildRequestTrendSpec(dailyStats),
+      imgWidth,
+      imgHeight
+    )
+    addImageToSheet(wb, ws, requestImage, row, rightCol, imgWidth, imgHeight)
+    row += rowSpacing
 
-    const distSpec = buildModelTokenDistSpec(modelStats)
-    if (distSpec) {
-      const img8 = await renderChartToBase64(distSpec, imgWidth, imgHeight)
-      addImageToSheet(wb, ws, img8, row, rightCol, imgWidth, imgHeight)
-      row += rowSpacing
-    }
+    const tokenImage = await renderChartToBase64(
+      buildTokenTrendSpec(dailyStats),
+      imgWidth,
+      imgHeight
+    )
+    addImageToSheet(wb, ws, tokenImage, row, rightCol, imgWidth, imgHeight)
+    row += rowSpacing
+  }
+
+  if (modelStats.length > 0 && modelTrendSpec) {
+    const image = await renderChartToBase64(modelTrendSpec, imgWidth, imgHeight)
+    addImageToSheet(wb, ws, image, row, rightCol, imgWidth, imgHeight)
   }
 }
 
