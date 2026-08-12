@@ -125,16 +125,20 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		syncPlatform = companySyncCfg.SyncPlatform
 	}
 
-	if syncPlatform == system_setting.LDAPSyncPlatformDingTalk {
+	switch syncPlatform {
+	case system_setting.LDAPSyncPlatformDingTalk:
 		// 钉钉平台：email 由同步接口从钉钉获取，注册时留空。
 		user.Email = ""
-	} else {
-		// 飞书平台或无同步：已配置的邮箱后缀优先于 LDAP 邮箱属性。
-		emailSuffix := system_setting.FeishuEmailSuffix()
-		if hasSyncCfg && companySyncCfg.FeishuEmailSuffix != "" {
+	case system_setting.LDAPSyncPlatformFeishu:
+		// 飞书平台：已配置的邮箱后缀优先于 LDAP 邮箱属性。
+		emailSuffix := ""
+		if hasSyncCfg {
 			emailSuffix = companySyncCfg.FeishuEmailSuffix
 		}
 		user.Email = resolveLDAPRegistrationEmail(user.Username, ldapUser.Email, emailSuffix)
+	default:
+		// 无同步：直接使用 LDAP 邮箱属性。
+		user.Email = ldapUser.Email
 	}
 
 	user.Role = common.RoleCommonUser
@@ -169,7 +173,7 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		} else {
 			common.SysError(fmt.Sprintf("钉钉 userid 为空（extensionAttribute12 未设置）user=%s", user.Username))
 		}
-	default:
+	case system_setting.LDAPSyncPlatformFeishu:
 		// 飞书同步（avatar_url/open_id/display_name/departments/job_number 等）。
 		// 同步调用确保登录响应中包含飞书头像等信息，失败仅记日志不影响注册。
 		if err := service.SyncFeishuUser(user); err != nil {
@@ -248,10 +252,13 @@ func LDAPBind(c *gin.Context) {
 	}
 
 	// 绑定时也尝试异步同步一次平台字段（钉钉或飞书）。
-	if hasSyncCfg && companySyncCfg.SyncPlatform == system_setting.LDAPSyncPlatformDingTalk {
-		service.SyncDingTalkUserAsync(&user, ldapUser.DingTalkUserID)
-	} else {
-		service.SyncFeishuUserAsync(&user)
+	if hasSyncCfg {
+		switch companySyncCfg.SyncPlatform {
+		case system_setting.LDAPSyncPlatformDingTalk:
+			service.SyncDingTalkUserAsync(&user, ldapUser.DingTalkUserID)
+		case system_setting.LDAPSyncPlatformFeishu:
+			service.SyncFeishuUserAsync(&user)
+		}
 	}
 
 	common.ApiSuccess(c, nil)

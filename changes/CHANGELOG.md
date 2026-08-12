@@ -29,7 +29,7 @@
 | 023 | 2026-07-20 | 新增 LDAP 登录与飞书/钉钉同步：支持认证、绑定/解绑、按公司 OU 选择同步平台、配置凭据/邮箱后缀/自动订阅套餐及 7 语言界面；钉钉从 extensionAttribute12 读取 userid 并回填资料与部门层级。公司配置支持显示名称映射，登录、注册、绑定时写入并可按原名或显示名匹配，留空则使用 LDAP 公司名；LDAP 建号采用目录标准用户名，修复配置按钮遮挡、多公司套餐误匹配，并在保存配置时迁移已有用户公司字段 | [详情](details/024-ldap-login.md) |
 | 024 | 2026-07-15 | 登录页默认使用 LDAP 登录：LDAP 表单内联展示替代弹窗，视图切换（LDAP/密码/OAuth）布局；用户名输入框下添加示例提示；删除未使用的 LDAPLoginDialog 组件；移除注册入口提示并简化标题布局 | [详情](details/025-ldap-default-login.md) |
 | 025 | 2026-07-21 | 移除 User 表 name 字段，飞书同步的姓名改写入 display_name；LDAP 注册邮箱在配置飞书邮箱后缀时优先使用 username + 后缀拼接，未配置后缀时回退 LDAP 邮箱属性 | `model/user.go`、`service/feishu_sync.go`、`controller/ldap.go` |
-| 026 | 2026-06-23 | Feishu 凭据改为惰性读取（sync.OnceValue），避免包导入时 .env 未加载导致同步失败 | `setting/system_setting/feishu.go`、`service/feishu_sync.go`、`controller/ldap.go` |
+| 026 | 2026-08-12 | Feishu 凭据改为惰性读取（sync.OnceValue），避免包导入时 .env 未加载导致同步失败；移除全局 FEISHU_EMAIL_SUFFIX 环境变量及 FeishuEnabled 兜底，飞书凭据与邮箱后缀统一只从 LDAP 公司同步配置读取，后缀缺失即视为未配置不触发同步；LDAP 注册邮箱与登录/绑定后的同步改为按 syncPlatform 显式三分支，平台为 none 的公司不再误入飞书链路 | [详情](details/026-feishu-credentials.md) |
 | 027 | 2026-06-23 | 用户头像改用 avatar_url 字段：后端 API 下发 avatar_url，前端头像组件优先展示图片、无图时回退首字母 | [详情](details/028-avatar-url.md) |
 | 028 | 2026-06-23 | LDAP 注册时飞书同步改为同步调用，确保首次登录响应即包含头像；SyncFeishuUser 回写 user 指针字段 | `controller/ldap.go`、`service/feishu_sync.go` |
 | 029 | 2026-06-23 | 前端类型检查改为 git pre-commit hook 自动执行，移除 Cursor Hook 方案，适用于所有 git 客户端 | `.githooks/pre-commit`、`.cursor/hooks.json`、`web/default/AGENTS.md` |

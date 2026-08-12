@@ -230,32 +230,28 @@ func SyncFeishuUser(user *model.User) error {
 	return nil
 }
 
+// resolveFeishuSyncConfig 按用户所属公司解析飞书同步凭据。
+// 凭据与邮箱后缀只来自 LDAP 公司同步配置：飞书按邮箱反查 open_id，
+// 缺少后缀就无法拼出企业邮箱，因此后缀为空时视为未配置，不触发同步。
 func resolveFeishuSyncConfig(user *model.User) (feishuSyncConfig, bool) {
 	company := model.NormalizeCompany(user.Company)
-	if company != "" {
-		cfg, ok := system_setting.GetLDAPCompanySyncConfig(company)
-		if ok {
-			if cfg.SyncPlatform != system_setting.LDAPSyncPlatformFeishu {
-				return feishuSyncConfig{}, false
-			}
-			if cfg.FeishuAppID == "" || cfg.FeishuAppSecret == "" {
-				return feishuSyncConfig{}, false
-			}
-			return feishuSyncConfig{
-				AppID:       cfg.FeishuAppID,
-				AppSecret:   cfg.FeishuAppSecret,
-				EmailSuffix: cfg.FeishuEmailSuffix,
-			}, true
-		}
+	if company == "" {
+		return feishuSyncConfig{}, false
 	}
-
-	if !system_setting.FeishuEnabled() {
+	cfg, ok := system_setting.GetLDAPCompanySyncConfig(company)
+	if !ok {
+		return feishuSyncConfig{}, false
+	}
+	if cfg.SyncPlatform != system_setting.LDAPSyncPlatformFeishu {
+		return feishuSyncConfig{}, false
+	}
+	if cfg.FeishuAppID == "" || cfg.FeishuAppSecret == "" || cfg.FeishuEmailSuffix == "" {
 		return feishuSyncConfig{}, false
 	}
 	return feishuSyncConfig{
-		AppID:       system_setting.FeishuAppID(),
-		AppSecret:   system_setting.FeishuAppSecret(),
-		EmailSuffix: system_setting.FeishuEmailSuffix(),
+		AppID:       cfg.FeishuAppID,
+		AppSecret:   cfg.FeishuAppSecret,
+		EmailSuffix: cfg.FeishuEmailSuffix,
 	}, true
 }
 
