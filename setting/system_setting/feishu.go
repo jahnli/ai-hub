@@ -10,18 +10,11 @@ import (
 // 这些值属于部署级敏感配置，从 .env 读取，不进入后台 UI / options 表。
 // 使用惰性初始化，确保在 .env 加载完毕后才读取环境变量。
 var (
-	feishuAppID          = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_APP_ID", "") })
-	feishuAppSecret      = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_APP_SECRET", "") })
-	feishuEmailSuffix    = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_EMAIL_SUFFIX", "") })
-	feishuSupportOpenID  = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_SUPPORT_OPEN_ID", "") })
+	feishuAppID         = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_APP_ID", "") })
+	feishuAppSecret     = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_APP_SECRET", "") })
+	feishuSupportOpenID = sync.OnceValue(func() string { return common.GetEnvOrDefaultString("FEISHU_SUPPORT_OPEN_ID", "") })
 )
 
-func FeishuAppID() string          { return feishuAppID() }
-func FeishuAppSecret() string      { return feishuAppSecret() }
-func FeishuEmailSuffix() string    { return feishuEmailSuffix() }
-func FeishuSupportOpenID() string  { return feishuSupportOpenID() }
-
-// FeishuEnabled 表示是否配置了飞书凭据，可用以决定是否触发同步。
-func FeishuEnabled() bool {
-	return FeishuAppID() != "" && FeishuAppSecret() != ""
-}
+func FeishuAppID() string         { return feishuAppID() }
+func FeishuAppSecret() string     { return feishuAppSecret() }
+func FeishuSupportOpenID() string { return feishuSupportOpenID() }

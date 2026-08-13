@@ -7,6 +7,10 @@ import type {
   SubDepartmentStat,
   UserRankingItem,
 } from '../types'
+import {
+  buildModelCallDistributionData,
+  buildModelCostRankData,
+} from './usage-analysis-chart-data'
 
 const CHART_WIDTH = 680
 const CHART_HEIGHT = 400
@@ -145,19 +149,6 @@ export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
   } as unknown as ISpec
 }
 
-function getISOWeekLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  const utcDate = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-  )
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - (utcDate.getUTCDay() || 7))
-  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1))
-  const weekNo = Math.ceil(
-    ((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
-  )
-  return `${utcDate.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
-}
-
 export function buildCostTrendSpec(
   dailyStats: DailyStat[],
   quotaToCnyRate: number
@@ -175,60 +166,6 @@ export function buildCostTrendSpec(
     point: { visible: false },
     line: { style: { curveType: 'monotone' } },
     area: { style: { fillOpacity: 0.15, curveType: 'monotone' } },
-    axes: [
-      {
-        orient: 'bottom',
-        type: 'band',
-        label: { style: { fontSize: 10 }, autoHide: true },
-      },
-      {
-        orient: 'left',
-        type: 'linear',
-        label: { formatMethod: (v: number) => fmtCny(v) },
-      },
-    ],
-    theme: 'light',
-    background: 'white',
-  } as unknown as ISpec
-}
-
-export function buildAvgPriceTrendSpec(
-  dailyStats: DailyStat[],
-  quotaToCnyRate: number
-): ISpec | null {
-  const weeklyStats = new Map<
-    string,
-    { totalQuota: number; totalTokens: number }
-  >()
-  for (const dailyStat of dailyStats) {
-    const weekLabel = getISOWeekLabel(dailyStat.date)
-    const weeklyStat = weeklyStats.get(weekLabel) ?? {
-      totalQuota: 0,
-      totalTokens: 0,
-    }
-    weeklyStat.totalQuota += dailyStat.total_quota
-    weeklyStat.totalTokens += dailyStat.total_tokens
-    weeklyStats.set(weekLabel, weeklyStat)
-  }
-
-  const values = Array.from(weeklyStats.entries())
-    .map(([date, weeklyStat]) => {
-      if (weeklyStat.totalTokens <= 0) return null
-      const costYuan = weeklyStat.totalQuota * quotaToCnyRate
-      return { date, value: costYuan / (weeklyStat.totalTokens / 1_000_000) }
-    })
-    .filter((item): item is { date: string; value: number } => item !== null)
-
-  if (values.length === 0) return null
-
-  return {
-    type: 'line',
-    title: { visible: true, text: '均价趋势' },
-    data: [{ values }],
-    xField: 'date',
-    yField: 'value',
-    point: { visible: false },
-    line: { style: { curveType: 'monotone' } },
     axes: [
       {
         orient: 'bottom',
@@ -347,46 +284,46 @@ export function buildModelUsageTrendSpec(
   } as unknown as ISpec
 }
 
-export function buildModelCallRankSpec(modelStats: ModelStat[]): ISpec {
-  const sorted = [...modelStats]
-    .sort((a, b) => a.total_requests - b.total_requests)
-    .slice(-15)
+export function buildModelCallDistributionSpec(
+  modelStats: ModelStat[],
+  title = '模型调用分布'
+): ISpec | null {
+  const chartData = buildModelCallDistributionData(modelStats, 0)
+  if (!chartData) return null
+
   return {
-    type: 'bar',
-    title: { visible: true, text: '模型调用排行' },
-    data: [
-      {
-        values: sorted.map((m) => ({
-          name: m.model_name,
-          value: m.total_requests,
-        })),
-      },
-    ],
-    direction: 'horizontal',
-    xField: 'value',
-    yField: 'name',
+    type: 'pie',
+    title: { visible: true, text: title },
+    data: [{ values: chartData.values }],
+    valueField: 'value',
+    categoryField: 'name',
+    outerRadius: 0.75,
+    innerRadius: 0.45,
     label: {
       visible: true,
       position: 'outside',
-      formatMethod: (v: number) => fmtLargeNum(v),
+      formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
+        const pct =
+          chartData.totalRequests > 0
+            ? (((d.value ?? 0) / chartData.totalRequests) * 100).toFixed(2) +
+              '%'
+            : ''
+        return pct ? `${d.name} ${pct}` : (d.name ?? '')
+      },
     },
-    bar: { style: { cornerRadius: [0, 4, 4, 0] } },
-    axes: [
-      {
-        orient: 'left',
-        type: 'band',
+    legends: {
+      visible: true,
+      orient: 'right',
+      type: 'discrete',
+      item: {
         label: {
           style: { fontSize: 10 },
           formatMethod: (v: string) =>
-            v.length > 18 ? v.slice(0, 18) + '…' : v,
+            v.length > 14 ? v.slice(0, 14) + '…' : v,
         },
       },
-      {
-        orient: 'bottom',
-        type: 'linear',
-        label: { formatMethod: (v: number) => fmtLargeNum(v) },
-      },
-    ],
+      autoPage: true,
+    },
     theme: 'light',
     background: 'white',
   } as unknown as ISpec
@@ -394,20 +331,21 @@ export function buildModelCallRankSpec(modelStats: ModelStat[]): ISpec {
 
 export function buildModelCostRankSpec(
   modelStats: ModelStat[],
-  quotaToCnyRate: number
+  quotaToCnyRate: number,
+  options: { title?: string; limit?: number } = {}
 ): ISpec {
-  const sorted = [...modelStats]
-    .sort((a, b) => a.total_quota - b.total_quota)
-    .slice(-15)
+  const values = buildModelCostRankData(
+    modelStats,
+    quotaToCnyRate,
+    options.limit
+  )
+
   return {
     type: 'bar',
-    title: { visible: true, text: '模型费用排行' },
+    title: { visible: true, text: options.title ?? '模型消耗排行' },
     data: [
       {
-        values: sorted.map((m) => ({
-          name: m.model_name,
-          value: m.total_quota * quotaToCnyRate,
-        })),
+        values,
       },
     ],
     direction: 'horizontal',
@@ -435,40 +373,6 @@ export function buildModelCostRankSpec(
         label: { formatMethod: (v: number) => fmtCny(v) },
       },
     ],
-    theme: 'light',
-    background: 'white',
-  } as unknown as ISpec
-}
-
-export function buildModelTokenDistSpec(modelStats: ModelStat[]): ISpec | null {
-  const filtered = modelStats.filter((i) => i.total_tokens > 0)
-  if (filtered.length === 0) return null
-  const total = filtered.reduce((s, i) => s + i.total_tokens, 0)
-  return {
-    type: 'pie',
-    title: { visible: true, text: '模型 Token 分布' },
-    data: [
-      {
-        values: filtered.map((i) => ({
-          name: i.model_name,
-          value: i.total_tokens,
-        })),
-      },
-    ],
-    valueField: 'value',
-    categoryField: 'name',
-    outerRadius: 0.75,
-    innerRadius: 0.45,
-    label: {
-      visible: true,
-      position: 'outside',
-      formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
-        const pct =
-          total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''
-        return pct ? `${d.name} ${pct}` : (d.name ?? '')
-      },
-    },
-    legends: { visible: true, orient: 'bottom', type: 'discrete' },
     theme: 'light',
     background: 'white',
   } as unknown as ISpec
