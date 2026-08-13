@@ -16,15 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ChevronDown, Minus, Plus } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -82,6 +77,45 @@ export function GptImageParams(props: GptImageParamsProps) {
 
   return (
     <div className='flex flex-col gap-4'>
+      <div className='flex flex-col gap-1.5'>
+        <Label className='text-muted-foreground text-xs font-medium'>
+          {t('Image count')}
+        </Label>
+        <div className='flex w-full items-center justify-between gap-2'>
+          <Button
+            type='button'
+            variant='outline'
+            size='icon'
+            className='size-8'
+            onClick={() =>
+              props.updateConfig('n', clampImageCount(props.config.n - 1))
+            }
+            disabled={props.disabled || props.config.n <= 1}
+            aria-label={t('Decrease count')}
+          >
+            <Minus className='size-3.5' />
+          </Button>
+          <span className='w-8 text-center text-sm font-medium tabular-nums'>
+            {props.config.n}
+          </span>
+          <Button
+            type='button'
+            variant='outline'
+            size='icon'
+            className='size-8'
+            onClick={() =>
+              props.updateConfig('n', clampImageCount(props.config.n + 1))
+            }
+            disabled={
+              props.disabled || props.config.n >= GPT_IMAGE_PARAMETERS.maxImages
+            }
+            aria-label={t('Increase count')}
+          >
+            <Plus className='size-3.5' />
+          </Button>
+        </div>
+      </div>
+
       <div className='flex flex-col gap-1.5'>
         <Label className='text-muted-foreground text-xs font-medium'>
           {t('Image size')}
@@ -180,91 +214,46 @@ export function GptImageParams(props: GptImageParamsProps) {
 
       <div className='flex flex-col gap-1.5'>
         <Label className='text-muted-foreground text-xs font-medium'>
-          {t('Image count')}
+          {t('Background')}
         </Label>
-        <div className='flex w-full items-center justify-between gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='size-8'
-            onClick={() =>
-              props.updateConfig('n', clampImageCount(props.config.n - 1))
-            }
-            disabled={props.disabled || props.config.n <= 1}
-            aria-label={t('Decrease count')}
-          >
-            <Minus className='size-3.5' />
-          </Button>
-          <span className='w-8 text-center text-sm font-medium tabular-nums'>
-            {props.config.n}
-          </span>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='size-8'
-            onClick={() =>
-              props.updateConfig('n', clampImageCount(props.config.n + 1))
-            }
-            disabled={
-              props.disabled || props.config.n >= GPT_IMAGE_PARAMETERS.maxImages
-            }
-            aria-label={t('Increase count')}
-          >
-            <Plus className='size-3.5' />
-          </Button>
-        </div>
+        {renderSelect(
+          props.config.background,
+          GPT_IMAGE_PARAMETERS.backgroundOptions,
+          (value) => props.updateConfig('background', value),
+          true
+        )}
       </div>
 
-      <Collapsible defaultOpen>
-        <CollapsibleTrigger className='text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-medium transition-colors'>
-          {t('Advanced parameters')}
-          <ChevronDown className='size-3.5' />
-        </CollapsibleTrigger>
-        <CollapsibleContent className='mt-3 flex flex-col gap-4'>
-          <div className='flex flex-col gap-1.5'>
-            <Label className='text-muted-foreground text-xs font-medium'>
-              {t('Background')}
-            </Label>
-            {renderSelect(
-              props.config.background,
-              GPT_IMAGE_PARAMETERS.backgroundOptions,
-              (value) => props.updateConfig('background', value),
-              true
-            )}
-          </div>
-          <div className='flex flex-col gap-1.5'>
-            <Label className='text-muted-foreground text-xs font-medium'>
-              {t('Output format')}
-            </Label>
-            {renderSelect(
-              props.config.outputFormat,
-              GPT_IMAGE_PARAMETERS.outputFormatOptions,
-              (value) => props.updateConfig('outputFormat', value)
-            )}
-          </div>
-          <div className='flex flex-col gap-1.5'>
-            <Label className='text-muted-foreground text-xs font-medium'>
-              {t('Output compression')}
-            </Label>
-            <Input
-              type='number'
-              min={0}
-              max={100}
-              value={props.config.outputCompression ?? ''}
-              placeholder='0-100'
-              onChange={(event) =>
-                props.updateConfig(
-                  'outputCompression',
-                  event.target.value === '' ? null : Number(event.target.value)
-                )
-              }
-              disabled={props.disabled}
-            />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <div className='flex flex-col gap-1.5'>
+        <Label className='text-muted-foreground text-xs font-medium'>
+          {t('Output format')}
+        </Label>
+        {renderSelect(
+          props.config.outputFormat,
+          GPT_IMAGE_PARAMETERS.outputFormatOptions,
+          (value) => props.updateConfig('outputFormat', value)
+        )}
+      </div>
+
+      <div className='flex flex-col gap-1.5'>
+        <Label className='text-muted-foreground text-xs font-medium'>
+          {t('Output compression')}
+        </Label>
+        <Input
+          type='number'
+          min={0}
+          max={100}
+          value={props.config.outputCompression ?? ''}
+          placeholder='0-100'
+          onChange={(event) =>
+            props.updateConfig(
+              'outputCompression',
+              event.target.value === '' ? null : Number(event.target.value)
+            )
+          }
+          disabled={props.disabled}
+        />
+      </div>
     </div>
   )
 }

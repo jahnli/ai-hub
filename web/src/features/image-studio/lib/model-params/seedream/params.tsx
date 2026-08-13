@@ -16,15 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ChevronDown, CircleHelp, Minus, Plus } from 'lucide-react'
+import { CircleHelp, Minus, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -89,6 +84,45 @@ export function SeedreamParams(props: SeedreamParamsProps) {
 
   return (
     <div className='flex flex-col gap-4'>
+      <div className='flex flex-col gap-1.5'>
+        <Label className='text-muted-foreground text-xs font-medium'>
+          {t('Image count')}
+        </Label>
+        <div className='flex w-full items-center justify-between gap-2'>
+          <Button
+            type='button'
+            variant='outline'
+            size='icon'
+            className='size-8'
+            onClick={() =>
+              props.updateConfig('n', clampImageCount(props.config.n - 1))
+            }
+            disabled={props.disabled || props.config.n <= 1}
+            aria-label={t('Decrease count')}
+          >
+            <Minus className='size-3.5' />
+          </Button>
+          <span className='w-8 text-center text-sm font-medium tabular-nums'>
+            {props.config.n}
+          </span>
+          <Button
+            type='button'
+            variant='outline'
+            size='icon'
+            className='size-8'
+            onClick={() =>
+              props.updateConfig('n', clampImageCount(props.config.n + 1))
+            }
+            disabled={
+              props.disabled || props.config.n >= SEEDREAM_PARAMETERS.maxImages
+            }
+            aria-label={t('Increase count')}
+          >
+            <Plus className='size-3.5' />
+          </Button>
+        </div>
+      </div>
+
       <div className='flex flex-col gap-1.5'>
         <Label className='text-muted-foreground text-xs font-medium'>
           {t('Image size')}
@@ -161,114 +195,69 @@ export function SeedreamParams(props: SeedreamParamsProps) {
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label className='text-muted-foreground text-xs font-medium'>
-          {t('Image count')}
+        <Label className='text-muted-foreground inline-flex items-center gap-1 text-xs font-medium'>
+          {t('Prompt optimization')}
+          <TooltipProvider delay={0}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type='button'
+                    aria-label={t('Prompt optimization mode help')}
+                    className='hover:text-foreground focus-visible:ring-ring/50 inline-flex rounded-sm outline-none focus-visible:ring-2'
+                  />
+                }
+              >
+                <CircleHelp className='size-3.5' />
+              </TooltipTrigger>
+              <TooltipContent
+                side='right'
+                align='start'
+                className='max-w-72 whitespace-normal'
+              >
+                {t(
+                  'Standard mode generates higher-quality content but takes longer.'
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Label>
-        <div className='flex w-full items-center justify-between gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='size-8'
-            onClick={() =>
-              props.updateConfig('n', clampImageCount(props.config.n - 1))
-            }
-            disabled={props.disabled || props.config.n <= 1}
-            aria-label={t('Decrease count')}
-          >
-            <Minus className='size-3.5' />
-          </Button>
-          <span className='w-8 text-center text-sm font-medium tabular-nums'>
-            {props.config.n}
-          </span>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='size-8'
-            onClick={() =>
-              props.updateConfig('n', clampImageCount(props.config.n + 1))
-            }
-            disabled={
-              props.disabled || props.config.n >= SEEDREAM_PARAMETERS.maxImages
-            }
-            aria-label={t('Increase count')}
-          >
-            <Plus className='size-3.5' />
-          </Button>
-        </div>
+        {renderSelect(
+          props.config.optimizePromptMode,
+          SEEDREAM_PARAMETERS.promptOptimizationOptions,
+          (value) => props.updateConfig('optimizePromptMode', value),
+          true
+        )}
       </div>
 
-      <Collapsible defaultOpen>
-        <CollapsibleTrigger className='text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-medium transition-colors'>
-          {t('Advanced parameters')}
-          <ChevronDown className='size-3.5' />
-        </CollapsibleTrigger>
-        <CollapsibleContent className='mt-3 flex flex-col gap-4'>
-          <div className='flex flex-col gap-1.5'>
-            <Label className='text-muted-foreground inline-flex items-center gap-1 text-xs font-medium'>
-              {t('Prompt optimization')}
-              <TooltipProvider delay={0}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <button
-                        type='button'
-                        aria-label={t('Prompt optimization mode help')}
-                        className='hover:text-foreground focus-visible:ring-ring/50 inline-flex rounded-sm outline-none focus-visible:ring-2'
-                      />
-                    }
-                  >
-                    <CircleHelp className='size-3.5' />
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side='right'
-                    align='start'
-                    className='max-w-72 whitespace-normal'
-                  >
-                    {t(
-                      'Standard mode generates higher-quality content but takes longer.'
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
-            {renderSelect(
-              props.config.optimizePromptMode,
-              SEEDREAM_PARAMETERS.promptOptimizationOptions,
-              (value) => props.updateConfig('optimizePromptMode', value),
-              true
-            )}
-          </div>
-          <div className='flex items-center justify-between gap-3'>
-            <Label
-              htmlFor='image-studio-seedream-watermark'
-              className='text-muted-foreground text-xs font-medium'
-            >
-              {t('Watermark')}
-            </Label>
-            <Switch
-              id='image-studio-seedream-watermark'
-              checked={props.config.watermark}
-              onCheckedChange={(checked) =>
-                props.updateConfig('watermark', checked)
-              }
-              disabled={props.disabled}
-              aria-label={t('Watermark')}
-            />
-          </div>
-          <div className='flex flex-col gap-1.5'>
-            <Label className='text-muted-foreground text-xs font-medium'>
-              {t('Output format')}
-            </Label>
-            {renderSelect(
-              props.config.outputFormat,
-              SEEDREAM_PARAMETERS.outputFormatOptions,
-              (value) => props.updateConfig('outputFormat', value)
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <div className='flex flex-col gap-1.5'>
+        <Label className='text-muted-foreground text-xs font-medium'>
+          {t('Output format')}
+        </Label>
+        {renderSelect(
+          props.config.outputFormat,
+          SEEDREAM_PARAMETERS.outputFormatOptions,
+          (value) => props.updateConfig('outputFormat', value)
+        )}
+      </div>
+
+      <div className='flex items-center justify-between gap-3'>
+        <Label
+          htmlFor='image-studio-seedream-watermark'
+          className='text-muted-foreground text-xs font-medium'
+        >
+          {t('Watermark')}
+        </Label>
+        <Switch
+          id='image-studio-seedream-watermark'
+          checked={props.config.watermark}
+          onCheckedChange={(checked) =>
+            props.updateConfig('watermark', checked)
+          }
+          disabled={props.disabled}
+          aria-label={t('Watermark')}
+        />
+      </div>
     </div>
   )
 }
