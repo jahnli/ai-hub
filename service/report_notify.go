@@ -40,8 +40,8 @@ type reportNotifyScope struct {
 }
 
 // GetReportNotifyUserReports derives notification scopes from the target
-// user's BP role and explicit leader relationships, then builds each scope's
-// statistics with the same builders used by data overview.
+// user's bp_level configuration and explicit leader relationships, then builds
+// each scope's statistics with the same builders used by data overview.
 func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNotifyUserReportsResponse, error) {
 	if req == nil || req.UserID <= 0 || req.StartTimestamp <= 0 || req.EndTimestamp <= 0 || req.StartTimestamp > req.EndTimestamp {
 		return nil, ErrReportNotifyTimeRange
@@ -67,7 +67,7 @@ func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNot
 			EndTimestamp:   req.EndTimestamp,
 			RequestUserID:  user.Id,
 			// The trusted internal endpoint has already derived this exact scope
-			// from the user's BP role or explicit leader relationship. Use root
+			// from the user's bp_level or explicit leader relationship. Use root
 			// authorization only to avoid data-overview role precedence hiding a
 			// leader scope when the same person is also a BP.
 			RequestUserRole: common.RoleRootUser,
@@ -102,9 +102,8 @@ func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNot
 }
 
 func getReportNotifyScopes(user *model.User) ([]reportNotifyScope, error) {
-	isBP := user.Role == common.RoleCenterBP || user.Role == common.RoleBUBP
 	leaderDepartmentIDs := user.GetLeaderDepartmentIDs()
-	if !isBP && len(leaderDepartmentIDs) == 0 {
+	if user.BpLevel <= 0 && len(leaderDepartmentIDs) == 0 {
 		return []reportNotifyScope{}, nil
 	}
 
@@ -133,15 +132,9 @@ func getReportNotifyScopes(user *model.User) ([]reportNotifyScope, error) {
 
 		segments := splitDepartmentName(user.DepartmentName)
 		var bpPath []string
-		switch user.Role {
-		case common.RoleCenterBP:
-			if len(segments) >= 1 {
-				bpPath = segments[:1]
-			}
-		case common.RoleBUBP:
-			if len(segments) >= 2 {
-				bpPath = segments[:2]
-			}
+		if user.BpLevel > 0 && len(segments) > 0 {
+			level := NormalizeBpLevelForDepartment(user.DepartmentName, user.BpLevel)
+			bpPath = segments[:level]
 		}
 		if len(bpPath) > 0 {
 			if node := findReportNotifyNodeByPath(fullTree, bpPath); node != nil {

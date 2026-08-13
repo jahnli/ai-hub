@@ -223,7 +223,7 @@ func getCompanyDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse
 			}
 			fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
 			leaderIDs := prefixLeaderDepartmentIDs(company.Id, leaderDepartmentIDs)
-			trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs)
+			trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs, user.BpLevel)
 			companyNode.Disabled = userRole < common.RoleRootUser
 			companyNode.Children = trimmed
 			results[index].leaderDeptIDs = visibleLeaderIDs
@@ -292,7 +292,7 @@ func GetCompanySubtreeNode(companyID int, userID int, userRole int) (*CompanySub
 	}
 	fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
 	leaderIDs := prefixLeaderDepartmentIDs(company.Id, user.GetLeaderDepartmentIDs())
-	trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs)
+	trimmed, visibleLeaderIDs := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaderIDs, user.BpLevel)
 	companyNode.Disabled = userRole < common.RoleRootUser
 	companyNode.Children = trimmed
 	response.LeaderDeptIDs = visibleLeaderIDs
@@ -321,7 +321,7 @@ func ensureDepartmentAccessible(company *model.Company, directory *overviewDirec
 	}
 	fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
 	leaders := prefixLeaderDepartmentIDs(company.Id, user.GetLeaderDepartmentIDs())
-	trimmed, _ := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaders)
+	trimmed, _ := trimTreeForUser(fullTree, userRole, user.OpenId, user.DepartmentName, leaders, user.BpLevel)
 	node := findNodeByValue(trimmed, departmentNodeValue(company.Id, departmentID))
 	if node == nil || node.Disabled {
 		return ErrDepartmentAccessDenied

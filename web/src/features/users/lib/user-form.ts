@@ -27,7 +27,7 @@ import { quotaUnitsToDollars } from '@/lib/format'
 import { ROLE } from '@/lib/roles'
 
 import { DEFAULT_GROUP } from '../constants'
-import { type UserFormData, type User } from '../types'
+import type { UserFormData, User } from '../types'
 
 // ============================================================================
 // Form Schema
@@ -38,6 +38,7 @@ export const userFormSchema = z.object({
   display_name: z.string().optional(),
   password: z.string().optional(),
   role: z.number().optional(),
+  bp_level: z.number().int().min(0).optional(),
   quota_dollars: z.number().min(0).optional(),
   group: z.string().optional(),
   remark: z.string().optional(),
@@ -57,6 +58,7 @@ export const USER_FORM_DEFAULT_VALUES: UserFormValues = {
   display_name: '',
   password: '',
   role: 1, // Default to common user
+  bp_level: 0, // Unset: BP members have no visible departments until configured
   quota_dollars: 0,
   group: DEFAULT_GROUP,
   remark: '',
@@ -83,6 +85,7 @@ export function transformFormDataToPayload(
   }
 
   const role = userId === undefined ? data.role || 1 : (data.role ?? 0)
+  payload.bp_level = data.bp_level ?? 0
 
   // Only send the permission matrix when the target is an admin and the catalog
   // is available; without the catalog we cannot build a full matrix, so we omit
@@ -108,6 +111,22 @@ export function transformFormDataToPayload(
 }
 
 /**
+ * Clamps bp_level to the depth of the member's department_name hierarchy.
+ * An empty departmentName leaves the level unchanged because the hierarchy
+ * is not known yet (directory sync fills it in later).
+ */
+export function clampBpLevelToDepartment(
+  bpLevel: number,
+  departmentName?: string
+): number {
+  const depth = (departmentName ?? '')
+    .split(' / ')
+    .filter((segment) => segment.trim() !== '').length
+  if (depth === 0 || bpLevel <= 0) return bpLevel
+  return Math.min(bpLevel, depth)
+}
+
+/**
  * Transform user data to form defaults. The admin permission matrix is passed
  * through as-is (the backend already returns a full matrix); it is filled against
  * the catalog at render time in UsersMutateDrawer.
@@ -118,6 +137,7 @@ export function transformUserToFormDefaults(user: User): UserFormValues {
     display_name: user.display_name,
     password: '',
     role: user.role,
+    bp_level: user.bp_level ?? 0,
     quota_dollars: quotaUnitsToDollars(user.quota),
     group: user.group || DEFAULT_GROUP,
     remark: user.remark || '',

@@ -40,7 +40,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import type { SidebarData } from '@/components/layout/types'
-import { ROLE } from '@/lib/roles'
+import { ROLE, canAccessDataOverview } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
@@ -52,8 +52,7 @@ import { useAuthStore } from '@/stores/auth-store'
 export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.auth.user)
-  const canAccessDataOverview =
-    (user?.role ?? 0) >= ROLE.BU_BP || user?.is_dept_leader === true
+  const canShowDataOverview = canAccessDataOverview(user)
 
   return {
     navGroups: [
@@ -92,7 +91,7 @@ export function useSidebarData(): SidebarData {
             url: '/dashboard/models',
             icon: LayoutDashboard,
           },
-          ...(canAccessDataOverview
+          ...(canShowDataOverview
             ? [
                 {
                   title: t('Data Overview'),

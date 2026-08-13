@@ -90,6 +90,7 @@ type User struct {
 	OriginalPassword  string                     `json:"original_password" gorm:"-:all"`
 	DisplayName       string                     `json:"display_name" gorm:"index" validate:"max=20"`
 	Role              int                        `json:"role" gorm:"type:int;default:1"`
+	BpLevel           int                        `json:"bp_level" gorm:"type:int;default:0;column:bp_level"`
 	Status            int                        `json:"status" gorm:"type:int;default:1"`
 	Email             string                     `json:"email" gorm:"index" validate:"max=50"`
 	OidcId            string                     `json:"oidc_id" gorm:"column:oidc_id;index"`
@@ -841,6 +842,7 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 		"group":        newUser.Group,
 		"remark":       newUser.Remark,
 		"role":         newUser.Role,
+		"bp_level":     newUser.BpLevel,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

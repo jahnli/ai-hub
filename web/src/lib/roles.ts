@@ -60,3 +60,24 @@ export function getRoleLabel(role?: number): string {
 export function getRoleIcon(role?: number): string {
   return ROLE_ICONS[role as RoleValue] ?? ROLE_ICONS[DEFAULT_ROLE]
 }
+
+export interface DataOverviewAccessUser {
+  role: number
+  bp_level?: number
+  is_dept_leader?: boolean
+}
+
+/**
+ * Decides whether a user may enter the data overview. Admins and root always
+ * can; BP roles additionally need a configured bp_level; other users can enter
+ * only when they lead at least one department.
+ */
+export function canAccessDataOverview(
+  user: DataOverviewAccessUser | null | undefined
+): boolean {
+  if (!user) return false
+  if (user.role >= ROLE.ADMIN) return true
+  const isBP = user.role === ROLE.BU_BP || user.role === ROLE.CENTER_BP
+  if (isBP) return (user.bp_level ?? 0) > 0
+  return user.is_dept_leader === true
+}

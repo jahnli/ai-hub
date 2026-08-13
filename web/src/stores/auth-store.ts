@@ -33,6 +33,7 @@ export interface AuthUser {
   avatar_url?: string
   email?: string
   role: number
+  bp_level?: number
   status?: number
   group?: string
   quota?: number
