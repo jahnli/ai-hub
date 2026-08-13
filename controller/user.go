@@ -654,6 +654,7 @@ func buildSelfUserData(user *model.User) map[string]interface{} {
 		"username":        user.Username,
 		"display_name":    user.DisplayName,
 		"role":            user.Role,
+		"bp_level":        user.BpLevel,
 		"status":          user.Status,
 		"email":           user.Email,
 		"avatar_url":      user.AvatarUrl,
@@ -834,6 +835,12 @@ func UpdateUser(c *gin.Context) {
 			return
 		}
 	}
+	if !common.IsValidBpLevel(updatedUser.BpLevel) {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	// bp_level 超出本人部门层级时收敛到最深一级，与数据总览裁剪口径一致。
+	updatedUser.BpLevel = service.NormalizeBpLevelForDepartment(originUser.DepartmentName, updatedUser.BpLevel)
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
 	}
@@ -1158,12 +1165,19 @@ func CreateUser(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserCannotCreateHigherLevel)
 		return
 	}
+	if !common.IsValidBpLevel(user.BpLevel) {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	// bp_level 超出本人部门层级时收敛到最深一级，与数据总览裁剪口径一致。
+	user.BpLevel = service.NormalizeBpLevelForDepartment(user.DepartmentName, user.BpLevel)
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
 		Role:        user.Role, // 保持管理员设置的角色
+		BpLevel:     user.BpLevel,
 	}
 	authzTouched := false
 	if err := model.DB.Transaction(func(tx *gorm.DB) error {

@@ -86,10 +86,11 @@ import {
   userFormSchema,
   type UserFormValues,
   USER_FORM_DEFAULT_VALUES,
+  clampBpLevelToDepartment,
   transformFormDataToPayload,
   transformUserToFormDefaults,
 } from '../lib'
-import { type User } from '../types'
+import type { User } from '../types'
 import { UserQuotaDialog } from './user-quota-dialog'
 import { useUsers } from './users-provider'
 
@@ -136,11 +137,13 @@ export function UsersMutateDrawer({
   useEffect(() => {
     if (open && isUpdate && currentRow) {
       // For update, fetch fresh data
-      getUser(currentRow.id).then((result) => {
-        if (result.success && result.data) {
-          form.reset(transformUserToFormDefaults(result.data))
-        }
-      })
+      getUser(currentRow.id)
+        .then((result) => {
+          if (result.success && result.data) {
+            form.reset(transformUserToFormDefaults(result.data))
+          }
+        })
+        .catch(() => undefined)
     } else if (open && !isUpdate) {
       // For create, reset to defaults
       form.reset(USER_FORM_DEFAULT_VALUES)
@@ -155,6 +158,8 @@ export function UsersMutateDrawer({
   const selectedRole = form.watch('role')
   const canEditAdminPermissions = currentUser?.role === ROLE.SUPER_ADMIN
   const targetIsAdmin = (selectedRole ?? currentRow?.role ?? 0) >= ROLE.ADMIN
+  const targetRole = selectedRole ?? currentRow?.role ?? 0
+  const targetIsBP = targetRole === ROLE.BU_BP || targetRole === ROLE.CENTER_BP
 
   const onSubmit = async (data: UserFormValues) => {
     if (!isUpdate) {
@@ -195,7 +200,7 @@ export function UsersMutateDrawer({
               : t(ERROR_MESSAGES.CREATE_FAILED))
         )
       }
-    } catch (_error) {
+    } catch {
       toast.error(t(ERROR_MESSAGES.UNEXPECTED))
     } finally {
       setIsSubmitting(false)
@@ -279,7 +284,7 @@ export function UsersMutateDrawer({
                           { value: '10', label: t('Admin') },
                         ]}
                         onValueChange={(value) =>
-                          value !== null && field.onChange(parseInt(value))
+                          value !== null && field.onChange(Number.parseInt(value))
                         }
                         value={String(field.value)}
                       >
@@ -306,6 +311,49 @@ export function UsersMutateDrawer({
                     </FormItem>
                   )}
                 />
+
+                {targetIsBP && (
+                  <FormField
+                    control={form.control}
+                    name='bp_level'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('Overview Department Level')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            min={0}
+                            step={1}
+                            value={field.value ?? 0}
+                            onChange={(event) => {
+                              const raw = event.target.value
+                              if (raw === '') {
+                                field.onChange(0)
+                                return
+                              }
+                              const parsed = Number.parseInt(raw, 10)
+                              const value = Number.isNaN(parsed) ? 0 : parsed
+                              field.onChange(
+                                clampBpLevelToDepartment(
+                                  value,
+                                  currentRow?.department_name
+                                )
+                              )
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Controls which department level this BP member can see in Data Overview. 0 means no visible departments. Levels deeper than the member\'s own department hierarchy fall back to their deepest department.'
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
@@ -362,12 +410,10 @@ export function UsersMutateDrawer({
                       <FormItem>
                         <FormLabel>{t('Group')}</FormLabel>
                         <Select
-                          items={[
-                            ...groups.map((group) => ({
-                              value: group,
-                              label: group,
-                            })),
-                          ]}
+                          items={groups.map((group) => ({
+                            value: group,
+                            label: group,
+                          }))}
                           onValueChange={field.onChange}
                           value={field.value}
                         >

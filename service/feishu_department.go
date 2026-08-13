@@ -463,7 +463,7 @@ func buildDeptTree(items []feishuDeptItem) []*DeptTreeNode {
 // ── Permission trimming ───────────────────────────────────────────
 
 // trimTreeForUser returns the permission-trimmed tree and the list of department IDs the user leads.
-func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, departmentName string, leaderDeptIDs []string) ([]*DeptTreeNode, []string) {
+func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, departmentName string, leaderDeptIDs []string, bpLevel int) ([]*DeptTreeNode, []string) {
 	// Super admin: full tree, no disabled
 	if userRole >= common.RoleRootUser {
 		if len(leaderDeptIDs) == 0 {
@@ -488,9 +488,9 @@ func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, 
 		return trimmed, leaderDeptIDs
 	}
 
-	// BP roles: scope based on user's department_name hierarchy
+	// BP roles: scope driven by the member's bp_level configuration.
 	if userRole == common.RoleCenterBP || userRole == common.RoleBUBP {
-		return trimTreeForBP(fullTree, userRole, departmentName)
+		return trimTreeForBP(fullTree, bpLevel, departmentName)
 	}
 
 	// Dept leader (role=1): sees departments where their OpenId is the leader_id.
@@ -509,29 +509,32 @@ func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, 
 	return markAllDisabled(fullTree), nil
 }
 
-// trimTreeForBP trims the tree for BP users based on their department_name hierarchy.
-// CenterBP sees the center (1st segment) and all sub-departments.
-// BUBP sees the business unit (2nd segment) and all sub-departments.
-func trimTreeForBP(fullTree []*DeptTreeNode, userRole int, departmentName string) ([]*DeptTreeNode, []string) {
+// NormalizeBpLevelForDepartment clamps bpLevel to the depth of departmentName so
+// the stored level never exceeds the member's own department hierarchy. An empty
+// departmentName leaves the level unchanged because the hierarchy is unknown yet.
+func NormalizeBpLevelForDepartment(departmentName string, bpLevel int) int {
 	segments := splitDepartmentName(departmentName)
+	if len(segments) == 0 || bpLevel <= 0 {
+		return bpLevel
+	}
+	if bpLevel > len(segments) {
+		return len(segments)
+	}
+	return bpLevel
+}
 
-	var targetName string
-	switch userRole {
-	case common.RoleCenterBP:
-		if len(segments) < 1 {
-			return markAllDisabled(fullTree), nil
-		}
-		targetName = segments[0]
-	case common.RoleBUBP:
-		if len(segments) < 2 {
-			return markAllDisabled(fullTree), nil
-		}
-		targetName = segments[1]
-	default:
+// trimTreeForBP trims the tree for BP users based on bp_level:
+// the N-th segment of their department_name and all sub-departments.
+// bp_level <= 0 means unset: the member has no visible departments.
+// Levels deeper than the member's own hierarchy collapse to their deepest segment.
+func trimTreeForBP(fullTree []*DeptTreeNode, bpLevel int, departmentName string) ([]*DeptTreeNode, []string) {
+	segments := splitDepartmentName(departmentName)
+	if bpLevel <= 0 || len(segments) == 0 {
 		return markAllDisabled(fullTree), nil
 	}
+	bpLevel = NormalizeBpLevelForDepartment(departmentName, bpLevel)
 
-	targetNode := findNodeByLabel(fullTree, targetName)
+	targetNode := findNodeByLabel(fullTree, segments[bpLevel-1])
 	if targetNode == nil {
 		return markAllDisabled(fullTree), nil
 	}

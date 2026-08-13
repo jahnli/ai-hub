@@ -101,6 +101,20 @@ func BPAuth() func(c *gin.Context) {
 	}
 }
 
+// canAccessDataOverview decides whether a user may enter the data overview.
+// Admins and root always can; BP roles additionally need a configured bp_level;
+// other users can enter only when they lead at least one department.
+func canAccessDataOverview(user *model.User) bool {
+	if user.Role >= common.RoleAdminUser {
+		return true
+	}
+	isBP := user.Role == common.RoleCenterBP || user.Role == common.RoleBUBP
+	if isBP {
+		return user.BpLevel > 0
+	}
+	return user.ComputeIsDeptLeader()
+}
+
 func DataOverviewAccessCheck() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		userID := c.GetInt("id")
@@ -115,8 +129,7 @@ func DataOverviewAccessCheck() func(c *gin.Context) {
 			return
 		}
 
-		hasDataOverviewAccess := user.Role >= common.RoleBUBP || user.ComputeIsDeptLeader()
-		if !hasDataOverviewAccess {
+		if !canAccessDataOverview(user) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"success": false, "message": "insufficient permission"})
 			return
 		}
