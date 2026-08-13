@@ -130,6 +130,17 @@ export async function increaseUserSubscriptionQuota(
   return res.data
 }
 
+export async function decreaseUserSubscriptionQuota(
+  subId: number,
+  amount: number
+): Promise<ApiResponse<{ quota_delta?: number }>> {
+  const res = await api.post(
+    `/api/subscription/admin/user_subscriptions/${subId}/decrease-quota`,
+    { amount }
+  )
+  return res.data
+}
+
 export async function deleteUserSubscription(
   subId: number
 ): Promise<ApiResponse> {

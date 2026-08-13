@@ -458,7 +458,7 @@ type AdminCreateUserSubscriptionRequest struct {
 	PlanId int `json:"plan_id"`
 }
 
-type AdminIncreaseUserSubscriptionQuotaRequest struct {
+type AdminAdjustUserSubscriptionQuotaRequest struct {
 	Amount float64 `json:"amount"`
 }
 
@@ -523,12 +523,36 @@ func AdminIncreaseUserSubscriptionQuota(c *gin.Context) {
 		common.ApiErrorMsg(c, "无效的订阅ID")
 		return
 	}
-	var req AdminIncreaseUserSubscriptionQuotaRequest
+	var req AdminAdjustUserSubscriptionQuotaRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.Amount <= 0 {
 		common.ApiErrorMsg(c, "金额必须大于0")
 		return
 	}
 	quotaDelta, err := model.AdminIncreaseUserSubscriptionQuota(subId, req.Amount)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, gin.H{"quota_delta": quotaDelta})
+}
+
+// AdminDecreaseUserSubscriptionQuota decreases an active subscription's quota by a CNY amount.
+func AdminDecreaseUserSubscriptionQuota(c *gin.Context) {
+	if !requirePaymentCompliance(c) {
+		return
+	}
+
+	subscriptionId, _ := strconv.Atoi(c.Param("id"))
+	if subscriptionId <= 0 {
+		common.ApiErrorMsg(c, "无效的订阅ID")
+		return
+	}
+	var request AdminAdjustUserSubscriptionQuotaRequest
+	if err := c.ShouldBindJSON(&request); err != nil || request.Amount <= 0 {
+		common.ApiErrorMsg(c, "金额必须大于0")
+		return
+	}
+	quotaDelta, err := model.AdminDecreaseUserSubscriptionQuota(subscriptionId, request.Amount)
 	if err != nil {
 		common.ApiError(c, err)
 		return

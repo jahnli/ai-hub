@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -1095,31 +1096,43 @@ func buildSubscriptionSummaries(subs []UserSubscription) []SubscriptionSummary {
 	return result
 }
 
-func AdminIncreaseUserSubscriptionQuota(userSubscriptionId int, amountCNY float64) (int64, error) {
-	if userSubscriptionId <= 0 {
-		return 0, errors.New("invalid userSubscriptionId")
-	}
-	if amountCNY <= 0 {
-		return 0, errors.New("amount must be greater than 0")
+func convertSubscriptionCNYAmountToQuota(amountCNY float64) (int64, error) {
+	if amountCNY <= 0 || math.IsNaN(amountCNY) || math.IsInf(amountCNY, 0) {
+		return 0, errors.New("amount must be a finite number greater than 0")
 	}
 	if common.QuotaPerUnit <= 0 {
 		return 0, errors.New("额度单位配置错误")
 	}
+
 	usdExchangeRate := operation_setting.USDExchangeRate
-	if usdExchangeRate <= 0 {
+	if usdExchangeRate <= 0 || math.IsNaN(usdExchangeRate) || math.IsInf(usdExchangeRate, 0) {
 		usdExchangeRate = 1
 	}
-	quotaDelta := decimal.NewFromFloat(amountCNY).
+	quotaDecimal := decimal.NewFromFloat(amountCNY).
 		Div(decimal.NewFromFloat(usdExchangeRate)).
 		Mul(decimal.NewFromFloat(common.QuotaPerUnit)).
-		Ceil().
-		IntPart()
+		Ceil()
+	quotaDelta, err := common.QuotaFromDecimalStrict(quotaDecimal)
+	if err != nil {
+		return 0, fmt.Errorf("金额换算后的额度超出支持范围: %w", err)
+	}
 	if quotaDelta <= 0 {
 		return 0, errors.New("quota must be greater than 0")
 	}
+	return int64(quotaDelta), nil
+}
+
+func AdminIncreaseUserSubscriptionQuota(userSubscriptionId int, amountCNY float64) (int64, error) {
+	if userSubscriptionId <= 0 {
+		return 0, errors.New("invalid userSubscriptionId")
+	}
+	quotaDelta, err := convertSubscriptionCNYAmountToQuota(amountCNY)
+	if err != nil {
+		return 0, err
+	}
 	now := common.GetTimestamp()
 	var updatedTotal int64
-	err := DB.Transaction(func(tx *gorm.DB) error {
+	err = DB.Transaction(func(tx *gorm.DB) error {
 		var sub UserSubscription
 		if err := lockForUpdate(tx).
 			Where("id = ?", userSubscriptionId).First(&sub).Error; err != nil {
@@ -1128,8 +1141,54 @@ func AdminIncreaseUserSubscriptionQuota(userSubscriptionId int, amountCNY float6
 		if sub.Status != "active" || (sub.EndTime > 0 && sub.EndTime <= now) {
 			return errors.New("只能给有效订阅增加额度")
 		}
+		if sub.AmountTotal > math.MaxInt64-quotaDelta {
+			return errors.New("增加后的订阅总额度超出支持范围")
+		}
 		updatedTotal = sub.AmountTotal + quotaDelta
 		return tx.Model(&sub).Updates(map[string]interface{}{
+			"amount_total": updatedTotal,
+			"updated_at":   now,
+		}).Error
+	})
+	if err != nil {
+		return 0, err
+	}
+	return quotaDelta, nil
+}
+
+func AdminDecreaseUserSubscriptionQuota(userSubscriptionId int, amountCNY float64) (int64, error) {
+	if userSubscriptionId <= 0 {
+		return 0, errors.New("invalid userSubscriptionId")
+	}
+	quotaDelta, err := convertSubscriptionCNYAmountToQuota(amountCNY)
+	if err != nil {
+		return 0, err
+	}
+
+	now := common.GetTimestamp()
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		var subscription UserSubscription
+		if err := lockForUpdate(tx).
+			Where("id = ?", userSubscriptionId).
+			First(&subscription).Error; err != nil {
+			return err
+		}
+		if subscription.Status != "active" ||
+			(subscription.EndTime > 0 && subscription.EndTime <= now) {
+			return errors.New("只能减少有效订阅的额度")
+		}
+		if subscription.AmountTotal <= 0 {
+			return errors.New("无限额度订阅不能减少总额度")
+		}
+		if quotaDelta >= subscription.AmountTotal {
+			return errors.New("减少额度必须小于当前总额度")
+		}
+
+		updatedTotal := subscription.AmountTotal - quotaDelta
+		if updatedTotal < subscription.AmountUsed {
+			return errors.New("减少后的总额度不能低于已使用额度")
+		}
+		return tx.Model(&subscription).Updates(map[string]interface{}{
 			"amount_total": updatedTotal,
 			"updated_at":   now,
 		}).Error

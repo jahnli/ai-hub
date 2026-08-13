@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Ban, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Ban, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -63,6 +63,7 @@ import {
   getAdminPlans,
   getUserSubscriptions,
   createUserSubscription,
+  decreaseUserSubscriptionQuota,
   increaseUserSubscriptionQuota,
   invalidateUserSubscription,
   deleteUserSubscription,
@@ -120,7 +121,7 @@ export function UserSubscriptionsDialog(props: Props) {
   const [plans, setPlans] = useState<PlanRecord[]>([])
   const [subs, setSubs] = useState<UserSubscriptionRecord[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string>('')
-  const [increaseAmount, setIncreaseAmount] = useState('500')
+  const [quotaAdjustmentAmount, setQuotaAdjustmentAmount] = useState('500')
   const [resetting, setResetting] = useState(false)
   const [advanceResetTime, setAdvanceResetTime] = useState(true)
   const [resetAction, setResetAction] = useState<{
@@ -128,7 +129,7 @@ export function UserSubscriptionsDialog(props: Props) {
     planTitle: string
   } | null>(null)
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'increase' | 'invalidate' | 'delete'
+    type: 'increase' | 'decrease' | 'invalidate' | 'delete'
     subId: number
   } | null>(null)
 
@@ -198,19 +199,37 @@ export function UserSubscriptionsDialog(props: Props) {
 
   const handleConfirmAction = async () => {
     if (!confirmAction) return
+    const isQuotaAdjustment =
+      confirmAction.type === 'increase' || confirmAction.type === 'decrease'
+    const adjustmentAmount = Number(quotaAdjustmentAmount)
+    if (
+      isQuotaAdjustment &&
+      (!Number.isFinite(adjustmentAmount) || adjustmentAmount <= 0)
+    ) {
+      toast.error(t('Please enter a valid amount'))
+      return
+    }
+
     try {
-      if (confirmAction.type === 'increase') {
-        const amount = Number(increaseAmount)
-        if (!Number.isFinite(amount) || amount <= 0) {
-          toast.error(t('Please enter a valid amount'))
-          return
+      if (isQuotaAdjustment) {
+        let res
+        if (confirmAction.type === 'increase') {
+          res = await increaseUserSubscriptionQuota(
+            confirmAction.subId,
+            adjustmentAmount
+          )
+        } else {
+          res = await decreaseUserSubscriptionQuota(
+            confirmAction.subId,
+            adjustmentAmount
+          )
         }
-        const res = await increaseUserSubscriptionQuota(
-          confirmAction.subId,
-          amount
-        )
         if (res.success) {
-          toast.success(t('Quota increased successfully'))
+          let successMessage = t('Quota increased successfully')
+          if (confirmAction.type === 'decrease') {
+            successMessage = t('Quota decreased successfully')
+          }
+          toast.success(successMessage)
           await loadData()
           props.onSuccess?.()
         }
@@ -243,6 +262,12 @@ export function UserSubscriptionsDialog(props: Props) {
     confirmTitle = t('Increase quota')
     confirmDesc = t('Enter the CNY amount to add to this subscription.')
     confirmText = t('Increase')
+  } else if (confirmAction?.type === 'decrease') {
+    confirmTitle = t('Decrease quota')
+    confirmDesc = t(
+      'Enter the CNY amount to deduct. The total quota cannot be lower than the used quota.'
+    )
+    confirmText = t('Decrease')
   } else if (confirmAction?.type === 'invalidate') {
     confirmTitle = t('Confirm invalidate')
     confirmDesc = t(
@@ -425,7 +450,7 @@ export function UserSubscriptionsDialog(props: Props) {
                         <DropdownMenuItem
                           disabled={!isActive}
                           onClick={() => {
-                            setIncreaseAmount('500')
+                            setQuotaAdjustmentAmount('500')
                             setConfirmAction({
                               type: 'increase',
                               subId: sub.id,
@@ -435,6 +460,21 @@ export function UserSubscriptionsDialog(props: Props) {
                           {t('Increase')}
                           <DropdownMenuShortcut>
                             <Plus size={16} />
+                          </DropdownMenuShortcut>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!isActive || sub.amount_total <= 0}
+                          onClick={() => {
+                            setQuotaAdjustmentAmount('500')
+                            setConfirmAction({
+                              type: 'decrease',
+                              subId: sub.id,
+                            })
+                          }}
+                        >
+                          {t('Decrease')}
+                          <DropdownMenuShortcut>
+                            <Minus size={16} />
                           </DropdownMenuShortcut>
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -479,25 +519,32 @@ export function UserSubscriptionsDialog(props: Props) {
       {confirmAction && (
         <ConfirmDialog
           open
-          onOpenChange={(v) => !v && setConfirmAction(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmAction(null)
+            }
+          }}
           title={confirmTitle}
           desc={confirmDesc}
           handleConfirm={handleConfirmAction}
           destructive={confirmAction.type === 'delete'}
           confirmText={confirmText}
         >
-          {confirmAction.type === 'increase' ? (
+          {confirmAction.type === 'increase' ||
+          confirmAction.type === 'decrease' ? (
             <div className='grid gap-2'>
-              <Label htmlFor='subscription-increase-amount'>
+              <Label htmlFor='subscription-quota-adjustment-amount'>
                 {t('Amount (CNY)')}
               </Label>
               <Input
-                id='subscription-increase-amount'
+                id='subscription-quota-adjustment-amount'
                 type='number'
                 min='0'
                 step='1'
-                value={increaseAmount}
-                onChange={(event) => setIncreaseAmount(event.target.value)}
+                value={quotaAdjustmentAmount}
+                onChange={(event) =>
+                  setQuotaAdjustmentAmount(event.target.value)
+                }
               />
             </div>
           ) : null}
