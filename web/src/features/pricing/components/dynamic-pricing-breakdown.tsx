@@ -497,8 +497,7 @@ export function DynamicPricingBreakdown({
                       DEMO_MODE_MASK
                     ) : (
                       <>
-                        {group.multiplier}x
-                        {isMatched && ` · ${t('Matched')}`}
+                        {group.multiplier}x{isMatched && ` · ${t('Matched')}`}
                       </>
                     )}
                   </Badge>

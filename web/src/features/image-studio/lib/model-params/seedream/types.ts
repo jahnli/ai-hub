@@ -16,26 +16,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Collapsible as CollapsiblePrimitive } from '@base-ui/react/collapsible'
+import type { ImageGenerationPayload, ImageStudioConfig } from '../../../types'
 
-function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {
-  return <CollapsiblePrimitive.Root data-slot='collapsible' {...props} />
+export type SeedreamConfig = ImageStudioConfig
+
+export interface SeedreamParameterConfig {
+  sizePresets: readonly string[]
+  promptOptimizationOptions: readonly string[]
+  outputFormatOptions: readonly string[]
+  maxImages: number
+  maxReferenceImages: number
+  maxTotalImages: number
+  normalizeConfig: (config: SeedreamConfig) => SeedreamConfig
+  isCustomSizeValid: (config: SeedreamConfig) => boolean
+  buildPayload: (config: SeedreamConfig) => Partial<ImageGenerationPayload>
 }
-
-function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {
-  return (
-    <CollapsiblePrimitive.Trigger
-      data-slot='collapsible-trigger'
-      render={<div />}
-      {...props}
-    />
-  )
-}
-
-function CollapsibleContent({ ...props }: CollapsiblePrimitive.Panel.Props) {
-  return (
-    <CollapsiblePrimitive.Panel data-slot='collapsible-content' {...props} />
-  )
-}
-
-export { Collapsible, CollapsibleTrigger, CollapsibleContent }

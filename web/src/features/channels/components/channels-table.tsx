@@ -47,10 +47,7 @@ import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { getLobeIcon } from '@/lib/lobe-icon'
 
 import { getChannels, searchChannels, getGroups } from '../api'
-import {
-  CHANNEL_STATUS,
-  CHANNEL_STATUS_OPTIONS,
-} from '../constants'
+import { CHANNEL_STATUS, CHANNEL_STATUS_OPTIONS } from '../constants'
 import {
   channelsQueryKeys,
   aggregateChannelsByTag,

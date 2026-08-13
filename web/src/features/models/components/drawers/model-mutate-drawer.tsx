@@ -331,14 +331,7 @@ export function ModelMutateDrawer({
         sync_official: true,
       })
     }
-  }, [
-    open,
-    isEditing,
-    modelData,
-    currentRow,
-    form,
-    hasModelSettings,
-  ])
+  }, [open, isEditing, modelData, currentRow, form, hasModelSettings])
 
   const onSubmit = useCallback(
     async (values: ExtendedModelFormValues): Promise<void> => {

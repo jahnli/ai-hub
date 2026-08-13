@@ -35,6 +35,8 @@ export interface ImageStudioConfig {
   background: string
   outputFormat: string
   outputCompression: number | null
+  watermark: boolean
+  optimizePromptMode: string
 }
 
 export interface ModelOption {
@@ -93,6 +95,7 @@ export interface GenerationRecord {
   usage?: GenerationUsage
   channelId?: number
   favorite?: boolean
+  referenceImages?: ReferenceImage[]
 }
 
 export interface ImageGenerationPayload {
@@ -106,6 +109,10 @@ export interface ImageGenerationPayload {
   output_format?: string
   output_compression?: number
   response_format?: string
+  watermark?: boolean
+  sequential_image_generation?: 'disabled' | 'auto'
+  sequential_image_generation_options?: { max_images: number }
+  optimize_prompt_options?: { mode: 'standard' | 'fast' }
   /** edit mode: reference images as data URLs */
   image?: string[]
 }

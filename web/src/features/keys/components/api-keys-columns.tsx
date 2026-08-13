@@ -20,8 +20,8 @@ import { useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 
-import { StatusBadge } from '@/components/status-badge'
 import { TruncatedCell } from '@/components/data-table'
+import { StatusBadge } from '@/components/status-badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -57,9 +57,7 @@ function getQuotaProgressColor(percentage: number): string {
   return '[&_[data-slot=progress-indicator]]:bg-emerald-500'
 }
 
-function useGroupRatios(
-  enabled: boolean
-): Record<string, number | string> {
+function useGroupRatios(enabled: boolean): Record<string, number | string> {
   const { data } = useQuery({
     queryKey: ['user-groups'],
     queryFn: getUserGroups,

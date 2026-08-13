@@ -24,10 +24,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 mock.module('@/components/ui/alert-dialog', () => ({
   AlertDialog: (props: { children: ReactNode }) => <div>{props.children}</div>,
-  AlertDialogCancel: (props: {
-    children: ReactNode
-    disabled?: boolean
-  }) => (
+  AlertDialogCancel: (props: { children: ReactNode; disabled?: boolean }) => (
     <button type='button' disabled={props.disabled}>
       {props.children}
     </button>

@@ -69,7 +69,9 @@ mock.module('@/components/ui/label', () => ({
 
 mock.module('@/components/ui/select', () => ({
   Select: (props: { children: ReactNode }) => <div>{props.children}</div>,
-  SelectContent: (props: { children: ReactNode }) => <div>{props.children}</div>,
+  SelectContent: (props: { children: ReactNode }) => (
+    <div>{props.children}</div>
+  ),
   SelectGroup: (props: { children: ReactNode }) => <div>{props.children}</div>,
   SelectItem: (props: { children: ReactNode; value: string }) => (
     <div data-value={props.value}>{props.children}</div>

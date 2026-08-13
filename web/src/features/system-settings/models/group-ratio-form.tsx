@@ -362,8 +362,7 @@ export const GroupRatioForm = memo(function GroupRatioForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    {t('Nested JSON: billing group →')}{' '}
-                    {`{ vendorId: ratio }`}{' '}
+                    {t('Nested JSON: billing group →')} {`{ vendorId: ratio }`}{' '}
                     {t(
                       'to replace the group base ratio for models of that vendor. Vendor IDs come from the model vendor table.'
                     )}

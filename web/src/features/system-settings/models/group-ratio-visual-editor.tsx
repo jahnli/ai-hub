@@ -75,7 +75,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-
 import { getVendors } from '@/features/models/api'
 import { vendorsQueryKeys } from '@/features/models/lib/query-keys'
 

@@ -2,9 +2,9 @@
 Copyright (C) 2023-2026 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,7 +37,7 @@ export function UserStatusSummary(props: UserStatusSummaryProps) {
           {props.totalCount.toLocaleString()}
         </span>
       </Badge>
-      <Badge className='h-6 px-2.5 py-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'>
+      <Badge className='h-6 border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-emerald-600 dark:text-emerald-400'>
         <span className='text-muted-foreground'>{t('Enabled:')}</span>
         <span className='text-foreground tabular-nums'>
           {props.enabledCount.toLocaleString()}

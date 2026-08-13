@@ -295,7 +295,9 @@ export function useImageAuditColumns(
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger
-                  render={<div className='flex max-w-[105px] flex-col gap-0.5' />}
+                  render={
+                    <div className='flex max-w-[105px] flex-col gap-0.5' />
+                  }
                 >
                   <StatusBadge
                     label={`#${channelId}`}

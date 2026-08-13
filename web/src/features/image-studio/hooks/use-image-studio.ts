@@ -29,11 +29,13 @@ import {
   DEFAULT_ESTIMATE_MS,
   ESTIMATE_SAMPLE_SIZE,
 } from '../constants'
-import { imageModelParamSupport } from '../lib/model-params'
+import {
+  buildImageGenerationPayload,
+  getImageModelRuntimeLimits,
+} from '../lib/model-params'
 import type {
   GeneratedImage,
   GenerationRecord,
-  ImageGenerationPayload,
   ImageStudioConfig,
   ReferenceImage,
   StudioMode,
@@ -48,63 +50,6 @@ function imageMimeTypeForOutputFormat(outputFormat: string): string {
 function resolveSize(config: ImageStudioConfig): string {
   if (config.size !== CUSTOM_SIZE) return config.size
   return `${config.customWidth}x${config.customHeight}`
-}
-
-/**
- * Build the request body from the model's parameter support table
- * (gpt-image-2 spec today): 'auto' values are omitted so the provider
- * default applies, and unsupported fields are never sent.
- */
-function buildPayload(
-  config: ImageStudioConfig,
-  prompt: string,
-  mode: StudioMode,
-  referenceImages: ReferenceImage[]
-): ImageGenerationPayload {
-  const support = imageModelParamSupport(config.model)
-  const payload: ImageGenerationPayload = {
-    model: config.model,
-    group: config.group,
-    prompt,
-  }
-  const size = resolveSize(config)
-  // omitted size/quality/etc. means "provider default", same as 'auto'
-  if (size && size !== 'auto') payload.size = size
-  if (
-    support.qualityOptions !== null &&
-    config.quality &&
-    config.quality !== 'auto'
-  ) {
-    payload.quality = config.quality
-  }
-  if (
-    support.supportsModeration &&
-    mode === 'generate' &&
-    config.moderation &&
-    config.moderation !== 'auto'
-  ) {
-    payload.moderation = config.moderation
-  }
-  if (
-    support.backgroundOptions !== null &&
-    config.background &&
-    config.background !== 'auto'
-  ) {
-    payload.background = config.background
-  }
-  if (support.supportsOutputFormat && config.outputFormat) {
-    payload.output_format = config.outputFormat
-    if (config.outputCompression !== null) {
-      payload.output_compression = config.outputCompression
-    }
-  }
-  if (support.responseFormat) {
-    payload.response_format = support.responseFormat
-  }
-  if (mode === 'edit') {
-    payload.image = referenceImages.map((image) => image.dataUrl)
-  }
-  return payload
 }
 
 function extractApiErrorMessage(error: unknown): string {
@@ -163,9 +108,18 @@ export function useImageGeneration({
 
   const generate = useCallback(
     async ({ config, prompt, mode, referenceImages }: GenerateArgs) => {
-      const payload = buildPayload(config, prompt, mode, referenceImages)
-      const support = imageModelParamSupport(config.model)
-      const requestCount = Math.min(support.maxImages, Math.max(1, config.n))
+      const payload = buildImageGenerationPayload(
+        config,
+        prompt,
+        mode,
+        referenceImages
+      )
+      const runtimeLimits = getImageModelRuntimeLimits(config.model)
+      const requestedImageCount = Math.min(
+        runtimeLimits.maxImages,
+        Math.max(1, config.n)
+      )
+      const requestCount = requestedImageCount
       const controller = new AbortController()
       abortRef.current = controller
       setIsGenerating(true)
@@ -173,7 +127,10 @@ export function useImageGeneration({
 
       const startedAt = Date.now()
       try {
-        const send = mode === 'edit' ? editImages : generateImages
+        const send =
+          mode === 'edit' && !runtimeLimits.usesGenerationEndpointForEdits
+            ? editImages
+            : generateImages
         const requestResults = await Promise.allSettled(
           Array.from({ length: requestCount }, () =>
             send(payload, controller.signal)
@@ -221,7 +178,10 @@ export function useImageGeneration({
           }
           throw new Error('empty image response')
         }
-        const failedImageCount = requestCount - successfulRequests.length
+        const failedImageCount = Math.max(
+          0,
+          requestedImageCount - imageOutputs.length
+        )
 
         const recordId = `${startedAt}-${Math.random().toString(36).slice(2, 8)}`
         const storedRecord = await storeImageStudioGeneration(
@@ -236,7 +196,7 @@ export function useImageGeneration({
             quality: payload.quality,
             moderation: payload.moderation,
             output_format: payload.output_format,
-            n: requestCount,
+            n: requestedImageCount,
             duration_ms: durationMs,
             images: imageOutputs.map((item) => ({
               src: item.src,
@@ -272,6 +232,7 @@ export function useImageGeneration({
           usage: { durationMs: storedRecord.duration_ms },
           favorite: storedRecord.favorite,
           channelId: storedRecord.channel_id,
+          referenceImages,
         }
         addRecord(record)
         setActiveRecordId(record.id)
@@ -299,7 +260,8 @@ export function useImageGeneration({
               }),
               { quota: 0, promptTokens: 0, completionTokens: 0 }
             )
-            const channelId = availableLogs.find((log) => log.channelId > 0)?.channelId ?? 0
+            const channelId =
+              availableLogs.find((log) => log.channelId > 0)?.channelId ?? 0
             patchRecord(record.id, {
               usage: {
                 durationMs,

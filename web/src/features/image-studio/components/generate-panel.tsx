@@ -34,12 +34,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
-import { MAX_REFERENCE_IMAGES } from '../constants'
 import { fileToDataUrl } from '../lib/image-utils'
+import { getImageModelRuntimeLimits } from '../lib/model-params'
 import type { ReferenceImage, StudioMode } from '../types'
 import { PromptPresets } from './prompt-presets'
 
 type GeneratePanelProps = {
+  model: string
   mode: StudioMode
   onModeChange: (mode: StudioMode) => void
   prompt: string
@@ -56,6 +57,7 @@ type GeneratePanelProps = {
 }
 
 export function GeneratePanel({
+  model,
   mode,
   onModeChange,
   prompt,
@@ -87,15 +89,18 @@ export function GeneratePanel({
     return () => window.clearInterval(timer)
   }, [isGenerating])
 
+  const runtimeLimits = getImageModelRuntimeLimits(model)
+  const maxReferenceImages = runtimeLimits.maxReferenceImages
+
   const addFiles = useCallback(
     async (files: File[]) => {
       const imageFiles = files.filter((file) => file.type.startsWith('image/'))
       if (imageFiles.length === 0) return
-      const remaining = MAX_REFERENCE_IMAGES - referenceImages.length
+      const remaining = maxReferenceImages - referenceImages.length
       if (remaining <= 0) {
         toast.error(
           t('At most {{count}} reference images', {
-            count: MAX_REFERENCE_IMAGES,
+            count: maxReferenceImages,
           })
         )
         return
@@ -110,7 +115,7 @@ export function GeneratePanel({
       )
       onReferenceImagesChange([...referenceImages, ...loaded])
     },
-    [referenceImages, onReferenceImagesChange, t]
+    [referenceImages, onReferenceImagesChange, maxReferenceImages, t]
   )
 
   const handleDrop = (event: DragEvent) => {
@@ -190,7 +195,7 @@ export function GeneratePanel({
               </button>
             </div>
           ))}
-          {referenceImages.length < MAX_REFERENCE_IMAGES && (
+          {referenceImages.length < maxReferenceImages && (
             <button
               type='button'
               onClick={() => fileInputRef.current?.click()}

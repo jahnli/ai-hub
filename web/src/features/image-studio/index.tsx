@@ -27,13 +27,16 @@ import { GeneratePanel } from './components/generate-panel'
 import { HistoryPanel } from './components/history-panel'
 import { ParamsPanel } from './components/params-panel'
 import { ResultGrid } from './components/result-grid'
-import { CUSTOM_SIZE, MAX_IMAGE_COUNT } from './constants'
 import {
   useGenerationHistory,
   useImageGeneration,
   useImageStudioState,
 } from './hooks'
 import { imageSrcToDataUrl } from './lib/image-utils'
+import {
+  getImageModelRuntimeLimits,
+  isCustomSizeValid,
+} from './lib/model-params'
 import type {
   GeneratedImage,
   GenerationRecord,
@@ -73,25 +76,16 @@ export function ImageStudio() {
     [history, activeRecordId]
   )
 
-  const customSizeWidth = config.customWidth
-  const customSizeHeight = config.customHeight
-  const customSizeAspectRatio = customSizeWidth / customSizeHeight
-  const customSizePixelCount = customSizeWidth * customSizeHeight
-  const isGptImageModel = config.model.toLowerCase().startsWith('gpt-image')
-  const customSizeValid =
-    config.size !== CUSTOM_SIZE ||
-    (customSizeWidth > 0 &&
-      customSizeHeight > 0 &&
-      (!isGptImageModel ||
-        (customSizeWidth % 16 === 0 &&
-          customSizeHeight % 16 === 0 &&
-          customSizeAspectRatio >= 1 / 3 &&
-          customSizeAspectRatio <= 3 &&
-          customSizeWidth <= 3840 &&
-          customSizeHeight <= 3840 &&
-          customSizePixelCount <= 3840 * 2160)))
+  const runtimeLimits = getImageModelRuntimeLimits(config.model)
+  const customSizeValid = isCustomSizeValid(config)
+  const imageCountValid = config.n >= 1 && config.n <= runtimeLimits.maxImages
 
-  const imageCountValid = config.n >= 1 && config.n <= MAX_IMAGE_COUNT
+  const referenceCountValid =
+    referenceImages.length <= runtimeLimits.maxReferenceImages
+  const totalImageCountValid =
+    runtimeLimits.maxTotalImages === null ||
+    mode !== 'edit' ||
+    referenceImages.length + config.n <= runtimeLimits.maxTotalImages
 
   const canGenerate =
     !isGenerating &&
@@ -99,6 +93,8 @@ export function ImageStudio() {
     prompt.trim().length > 0 &&
     customSizeValid &&
     imageCountValid &&
+    referenceCountValid &&
+    totalImageCountValid &&
     (mode === 'generate' || referenceImages.length > 0)
 
   const canReset =
@@ -214,6 +210,7 @@ export function ImageStudio() {
       {/* Workspace */}
       <div className='flex min-h-0 flex-col gap-4 lg:overflow-hidden lg:p-4'>
         <GeneratePanel
+          model={config.model}
           mode={mode}
           onModeChange={handleModeChange}
           prompt={prompt}

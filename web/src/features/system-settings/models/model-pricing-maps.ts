@@ -84,9 +84,7 @@ export function applyModelPricingDraft(
   const completionMap = parseNumberMap(currentValues.CompletionRatio)
   const imageMap = parseNumberMap(currentValues.ImageRatio)
   const audioMap = parseNumberMap(currentValues.AudioRatio)
-  const audioCompletionMap = parseNumberMap(
-    currentValues.AudioCompletionRatio
-  )
+  const audioCompletionMap = parseNumberMap(currentValues.AudioCompletionRatio)
   const billingModeMap = parseStringMap(
     currentValues['billing_setting.billing_mode']
   )
@@ -149,11 +147,7 @@ export function applyModelPricingDraft(
       setFiniteNumber(completionMap, modelName, draft.completionRatio)
       setFiniteNumber(imageMap, modelName, draft.imageRatio)
       setFiniteNumber(audioMap, modelName, draft.audioRatio)
-      setFiniteNumber(
-        audioCompletionMap,
-        modelName,
-        draft.audioCompletionRatio
-      )
+      setFiniteNumber(audioCompletionMap, modelName, draft.audioCompletionRatio)
     })
   }
 

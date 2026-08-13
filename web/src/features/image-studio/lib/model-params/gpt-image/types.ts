@@ -16,26 +16,26 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Collapsible as CollapsiblePrimitive } from '@base-ui/react/collapsible'
+import type {
+  ImageGenerationPayload,
+  ImageStudioConfig,
+  StudioMode,
+} from '../../../types'
 
-function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {
-  return <CollapsiblePrimitive.Root data-slot='collapsible' {...props} />
+export type GptImageConfig = ImageStudioConfig
+
+export interface GptImageParameterConfig {
+  sizePresets: readonly string[]
+  qualityOptions: readonly string[]
+  moderationOptions: readonly string[]
+  backgroundOptions: readonly string[]
+  outputFormatOptions: readonly string[]
+  maxImages: number
+  maxReferenceImages: number
+  normalizeConfig: (config: GptImageConfig) => GptImageConfig
+  isCustomSizeValid: (config: GptImageConfig) => boolean
+  buildPayload: (
+    config: GptImageConfig,
+    mode: StudioMode
+  ) => Partial<ImageGenerationPayload>
 }
-
-function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {
-  return (
-    <CollapsiblePrimitive.Trigger
-      data-slot='collapsible-trigger'
-      render={<div />}
-      {...props}
-    />
-  )
-}
-
-function CollapsibleContent({ ...props }: CollapsiblePrimitive.Panel.Props) {
-  return (
-    <CollapsiblePrimitive.Panel data-slot='collapsible-content' {...props} />
-  )
-}
-
-export { Collapsible, CollapsibleTrigger, CollapsibleContent }
