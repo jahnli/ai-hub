@@ -644,6 +644,12 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if !plan.Enabled {
 			// still allow completion for already purchased orders
 		}
+		// 锁定用户行：并发完成同一用户的不同订单（包括多实例部署下）时，
+		// 使 CreateUserSubscriptionFromPlanTx 的 MaxPurchasePerUser 检查按用户串行。
+		var userRow User
+		if err := lockForUpdate(tx).Select("id").Where("id = ?", order.UserId).First(&userRow).Error; err != nil {
+			return err
+		}
 		subscription, err := CreateUserSubscriptionFromPlanTx(tx, order.UserId, plan, "order")
 		if err != nil {
 			return err
@@ -764,25 +770,20 @@ func adminBindSubscription(userId int, planId int, sourceNote string, includeDel
 	}
 	groupChanged := false
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		company := ""
-		deletedUser := false
+		var user User
+		userQuery := lockForUpdate(tx).Select("id", "company", "deleted_at")
 		if includeDeletedUser {
-			var user User
-			if err := tx.Unscoped().Select("company", "deleted_at").First(&user, userId).Error; err != nil {
-				return err
-			}
-			company = NormalizeCompany(user.Company)
-			deletedUser = user.DeletedAt.Valid
-		} else {
-			var err error
-			company, err = getUserCompanyByIdTx(tx, userId)
-			if err != nil {
-				return err
-			}
+			userQuery = userQuery.Unscoped()
 		}
+		if err := userQuery.First(&user, userId).Error; err != nil {
+			return err
+		}
+
+		company := NormalizeCompany(user.Company)
 		if !IsSubscriptionPlanVisibleToCompany(plan, company) {
 			return errors.New("套餐不适用于该用户所属公司")
 		}
+
 		replacementPreviousGroup := ""
 		replacementAmountUsed := int64(0)
 		if replaceActivePlanSubscription {
@@ -827,8 +828,9 @@ func adminBindSubscription(userId int, planId int, sourceNote string, includeDel
 				}
 			}
 		}
+
 		userPlan := plan
-		if deletedUser && strings.TrimSpace(plan.UpgradeGroup) != "" {
+		if user.DeletedAt.Valid && strings.TrimSpace(plan.UpgradeGroup) != "" {
 			planWithoutGroupUpgrade := *plan
 			planWithoutGroupUpgrade.UpgradeGroup = ""
 			userPlan = &planWithoutGroupUpgrade
@@ -917,9 +919,8 @@ func calcSubscriptionBalanceQuota(priceAmount float64) (int, error) {
 	}
 	quota := decimal.NewFromFloat(priceAmount).
 		Mul(decimal.NewFromFloat(common.QuotaPerUnit)).
-		Ceil().
-		IntPart()
-	return int(quota), nil
+		Ceil()
+	return common.QuotaFromDecimalStrict(quota)
 }
 
 // PurchaseSubscriptionWithBalance creates a subscription by deducting the user's wallet quota.

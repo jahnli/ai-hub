@@ -264,6 +264,21 @@ func UpdateUserSetting(userId int, setting dto.UserSetting) error {
 	return updateUserSettingCache(userId, settingValue)
 }
 
+var userBindColumns = map[string]bool{
+	"oidc_id":   true,
+	"wechat_id": true,
+}
+
+func UpdateUserBindColumn(userId int, column string, value string) error {
+	if userId <= 0 {
+		return errors.New("id 为空！")
+	}
+	if !userBindColumns[column] {
+		return fmt.Errorf("invalid user bind column: %s", column)
+	}
+	return DB.Model(&User{}).Where("id = ?", userId).Update(column, value).Error
+}
+
 // 根据用户角色生成默认的边栏配置
 func generateDefaultSidebarConfigForRole(userRole int) string {
 	defaultConfig := map[string]interface{}{}
@@ -800,7 +815,7 @@ func (user *User) UpdateWithTx(tx *gorm.DB, updatePassword bool) error {
 			return err
 		}
 	}
-	if err = tx.Model(&current).Omit("quota", "used_quota", "request_count", "auth_version").Updates(newUser).Error; err != nil {
+	if err = tx.Model(&current).Omit("quota", "used_quota", "request_count", "auth_version", "access_token").Updates(newUser).Error; err != nil {
 		return err
 	}
 	return tx.First(user, user.Id).Error
@@ -1119,31 +1134,14 @@ func ValidateAccessToken(token string) (*User, error) {
 	return user, nil
 }
 
-// GetUserQuota gets quota from Redis first, falls back to DB if needed
+// GetUserQuota gets quota from Redis when enabled, or directly from the database.
 func GetUserQuota(id int, fromDB bool) (quota int, err error) {
-	defer func() {
-		// Update Redis cache asynchronously on successful DB read
-		if shouldUpdateRedis(fromDB, err) {
-			gopool.Go(func() {
-				if err := updateUserQuotaCache(id, quota); err != nil {
-					common.SysLog("failed to update user quota cache: " + err.Error())
-				}
-			})
-		}
-	}()
 	if !fromDB && common.RedisEnabled {
-		quota, err := getUserQuotaCache(id)
-		if err == nil {
-			return quota, nil
-		}
-		// Don't return error - fall through to DB
+		return getUserQuotaCache(id)
 	}
-	fromDB = true
-	err = DB.Model(&User{}).Where("id = ?", id).Select("quota").Find(&quota).Error
-	if err != nil {
+	if err := DB.Model(&User{}).Where("id = ?", id).Select("quota").Find(&quota).Error; err != nil {
 		return 0, err
 	}
-
 	return quota, nil
 }
 
@@ -1309,6 +1307,16 @@ func UpdateUserUsedQuotaAndRequestCount(id int, quota int) {
 	updateUserUsedQuotaAndRequestCount(id, quota, 1)
 }
 
+func UpdateUserUsedQuota(id int, quota int) {
+	if common.BatchUpdateEnabled {
+		addNewRecord(BatchUpdateTypeUsedQuota, id, quota)
+		return
+	}
+	if err := DB.Model(&User{}).Where("id = ?", id).Update("used_quota", gorm.Expr("used_quota + ?", quota)).Error; err != nil {
+		common.SysLog("failed to update user used quota: " + err.Error())
+	}
+}
+
 func updateUserUsedQuotaAndRequestCount(id int, quota int, count int) {
 	err := DB.Model(&User{}).Where("id = ?", id).Updates(
 		map[string]interface{}{
@@ -1341,24 +1349,6 @@ func updateUserQuotaUsedQuotaAndRequestCount(id int, quota int, usedQuota int, r
 	).Error
 	if err != nil {
 		common.SysLog("failed to batch update user quota, used quota and request count: " + err.Error())
-	}
-}
-
-func updateUserUsedQuota(id int, quota int) {
-	err := DB.Model(&User{}).Where("id = ?", id).Updates(
-		map[string]interface{}{
-			"used_quota": gorm.Expr("used_quota + ?", quota),
-		},
-	).Error
-	if err != nil {
-		common.SysLog("failed to update user used quota: " + err.Error())
-	}
-}
-
-func updateUserRequestCount(id int, count int) {
-	err := DB.Model(&User{}).Where("id = ?", id).Update("request_count", gorm.Expr("request_count + ?", count)).Error
-	if err != nil {
-		common.SysLog("failed to update user request count: " + err.Error())
 	}
 }
 

@@ -60,6 +60,7 @@ export function UserAuthForm({
   const [ldapPassword, setLdapPassword] = useState('')
   const [isLdapSubmitting, setIsLdapSubmitting] = useState(false)
   const [activeView, setActiveView] = useState<LoginView | null>(null)
+  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0)
   const legalConsentErrorMessage = t('Please agree to the legal terms first')
   const loginFailedMessage = t('Login failed')
 
@@ -161,12 +162,18 @@ export function UserAuthForm({
 
     if (!validateTurnstile()) return
 
+    const submittedTurnstileToken = turnstileToken
+    if (isTurnstileEnabled) {
+      setTurnstileToken('')
+      setTurnstileWidgetKey((current) => current + 1)
+    }
+
     setIsLoading(true)
     try {
       const res = await login({
         username: data.username,
         password: data.password,
-        turnstile: turnstileToken,
+        turnstile: submittedTurnstileToken,
       })
 
       if (res.success) {
@@ -204,12 +211,18 @@ export function UserAuthForm({
     }
     if (!validateTurnstile()) return
 
+    const submittedTurnstileToken = turnstileToken
+    if (isTurnstileEnabled) {
+      setTurnstileToken('')
+      setTurnstileWidgetKey((current) => current + 1)
+    }
+
     setIsLdapSubmitting(true)
     try {
       const res = await ldapLogin({
         username: ldapUsername.trim(),
         password: ldapPassword,
-        turnstile: turnstileToken,
+        turnstile: submittedTurnstileToken,
       })
       if (!res.success || !isAuthBundle(res.data)) {
         throw new Error(res.message || loginFailedMessage)
@@ -452,7 +465,12 @@ export function UserAuthForm({
 
       {isTurnstileEnabled && (
         <div className='mt-2'>
-          <Turnstile siteKey={turnstileSiteKey} onVerify={setTurnstileToken} />
+          <Turnstile
+            key={turnstileWidgetKey}
+            siteKey={turnstileSiteKey}
+            onVerify={setTurnstileToken}
+            onExpire={() => setTurnstileToken('')}
+          />
         </div>
       )}
     </div>
@@ -508,7 +526,12 @@ export function UserAuthForm({
 
       {isTurnstileEnabled && (
         <div className='mt-2'>
-          <Turnstile siteKey={turnstileSiteKey} onVerify={setTurnstileToken} />
+          <Turnstile
+            key={turnstileWidgetKey}
+            siteKey={turnstileSiteKey}
+            onVerify={setTurnstileToken}
+            onExpire={() => setTurnstileToken('')}
+          />
         </div>
       )}
     </>
