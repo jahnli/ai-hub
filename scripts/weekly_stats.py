@@ -25,7 +25,6 @@ if hasattr(sys.stdout, "reconfigure"):
 DEFAULT_DSN = "postgresql://admin:semitech@10.16.7.77:5432/ai-gateway"
 DEFAULT_USD_TO_CNY_RATE = 6.8
 DEFAULT_QUOTA_PER_UNIT = 500_000.0
-TOKENS_PER_MILLION = 1_000_000.0
 TOKENS_PER_HUNDRED_MILLION = 100_000_000.0
 CONSUME_LOG_TYPE = 2
 TARGET_COMPANY = "赛美特集团"
@@ -764,8 +763,12 @@ def displayed_cost(cost: float) -> Decimal:
     return Decimal(f"{cost:.0f}")
 
 
-def unit_price(cost: float, tokens: int) -> float:
-    return cost / tokens * TOKENS_PER_MILLION if tokens > 0 else 0.0
+def unit_price(cost: float, tokens: int) -> str:
+    """计算每亿 Token 的单价，返回格式化字符串"""
+    if tokens > 0:
+        price = cost / tokens * TOKENS_PER_HUNDRED_MILLION
+        return f"￥{price:.2f}/亿 Token"
+    return "￥0.00/亿 Token"
 
 
 def print_report(
@@ -804,7 +807,7 @@ def print_report(
         Decimal(0),
     )
     displayed_average_price = (
-        displayed_total_cost / (displayed_total_tokens * Decimal(100))
+        displayed_total_cost / displayed_total_tokens
         if displayed_total_tokens > 0
         else Decimal(0)
     )
@@ -817,14 +820,14 @@ def print_report(
 AI 中转站{label}统计
 统计周期：{start.strftime('%Y-%m-%d %H:%M:%S')} － {end.strftime('%Y-%m-%d %H:%M')}
 总注册人数：{total_users:,} 人
-其中0元消费{consumption_distribution.zero:,}人，0~10元消费{consumption_distribution.under_10:,}人，10~50元消费{consumption_distribution.from_10_to_50:,}人，50~100元消费{consumption_distribution.from_50_to_100:,}人，100~200元消费{consumption_distribution.from_100_to_200:,}人，200~400元消费{consumption_distribution.from_200_to_400:,}人，400~800元消费{consumption_distribution.from_400_to_800:,}人，800元以上消费{consumption_distribution.at_least_800:,}人
+其中 0 元消费 {consumption_distribution.zero:,} 人，0~10 元消费 {consumption_distribution.under_10:,} 人，10~50 元消费 {consumption_distribution.from_10_to_50:,} 人，50~100 元消费 {consumption_distribution.from_50_to_100:,} 人，100~200 元消费 {consumption_distribution.from_100_to_200:,} 人，200~400 元消费 {consumption_distribution.from_200_to_400:,} 人，400~800 元消费 {consumption_distribution.from_400_to_800:,} 人，800 元以上消费 {consumption_distribution.at_least_800:,} 人
 
-非缓存输入，Token 量 {format_token_amount(input_tokens)}，费用 {format_cost(input_cost)} 元，单价 {unit_price(input_cost, input_tokens):.2f} 元
-非缓存输出，Token 量 {format_token_amount(output_tokens)}，费用 {format_cost(output_cost)} 元，单价 {unit_price(output_cost, output_tokens):.2f} 元
-缓存输入，Token 量 {format_token_amount(cache_input_tokens)}，费用 {format_cost(cache_input_cost)} 元，单价 {unit_price(cache_input_cost, cache_input_tokens):.2f} 元
-缓存输出，Token 量 {format_token_amount(cache_output_tokens)}，费用 {format_cost(cache_output_cost)} 元，单价 {unit_price(cache_output_cost, cache_output_tokens):.2f} 元
+非缓存输入，Token 量 {format_token_amount(input_tokens)}，费用 {format_cost(input_cost)} 元，单价：{unit_price(input_cost, input_tokens)}
+非缓存输出，Token 量 {format_token_amount(output_tokens)}，费用 {format_cost(output_cost)} 元，单价：{unit_price(output_cost, output_tokens)}
+缓存输入，Token 量 {format_token_amount(cache_input_tokens)}，费用 {format_cost(cache_input_cost)} 元，单价：{unit_price(cache_input_cost, cache_input_tokens)}
+缓存输出，Token 量 {format_token_amount(cache_output_tokens)}，费用 {format_cost(cache_output_cost)} 元，单价：{unit_price(cache_output_cost, cache_output_tokens)}
 
-Token 总量 {format_displayed_token_amount(displayed_total_tokens)}，总费用 {displayed_total_cost:,.0f} 元，均价 {displayed_average_price:.2f} 元
+Token 总量 {format_displayed_token_amount(displayed_total_tokens)}，总费用 {displayed_total_cost:,.0f} 元，单价：￥{displayed_average_price:.2f}/亿 Token
 输入输出倍数：{input_output_ratio:.1f} 倍，综合缓存命中率：{cache_hit_rate:.0f}%
 
 Top 5 费用的模型：""")
@@ -832,7 +835,7 @@ Top 5 费用的模型：""")
         print(
             f"{index}. {item.name}，费用 {format_cost(item.quota_cost_cny)} 元，"
             f"Token 量 {format_token_amount(item.total_tokens)}，"
-            f"单价 {unit_price(item.quota_cost_cny, item.total_tokens):.2f} 元"
+            f"单价：{unit_price(item.quota_cost_cny, item.total_tokens)}"
         )
 
 
