@@ -17,7 +17,7 @@ export const GPT_IMAGE_PARAMETERS: GptImageParameterConfig = {
   moderationOptions: ['auto', 'low'],
   backgroundOptions: ['auto', 'opaque'],
   outputFormatOptions: ['png', 'webp', 'jpeg'],
-  maxImages: 4,
+  maxImages: 8,
   maxReferenceImages: 4,
   normalizeConfig(config: GptImageConfig): GptImageConfig {
     const nextConfig = { ...config }

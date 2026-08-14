@@ -41,7 +41,15 @@ describe('image studio model parameters', () => {
       '2K',
       '4K',
     ])
-    assert.equal(runtimeLimits.maxImages, 4)
+    assert.equal(runtimeLimits.maxImages, 8)
+    assert.equal(
+      normalizeConfigForModel({
+        ...DEFAULT_CONFIG,
+        model: 'seedream-4-0-250828',
+        n: 9,
+      }).n,
+      8
+    )
     assert.deepEqual(SEEDREAM_PARAMETERS.outputFormatOptions, ['jpeg', 'png'])
     assert.deepEqual(SEEDREAM_PARAMETERS.promptOptimizationOptions, [
       'standard',

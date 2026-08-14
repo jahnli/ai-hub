@@ -17,7 +17,7 @@ export const SEEDREAM_PARAMETERS: SeedreamParameterConfig = {
   ],
   promptOptimizationOptions: ['standard', 'fast'],
   outputFormatOptions: ['jpeg', 'png'],
-  maxImages: 4,
+  maxImages: 8,
   maxReferenceImages: 10,
   maxTotalImages: 15,
   normalizeConfig(config: SeedreamConfig): SeedreamConfig {
