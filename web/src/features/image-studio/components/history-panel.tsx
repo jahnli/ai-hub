@@ -1,21 +1,3 @@
-/*
-Copyright (C) 2023-2026 QuantumNous
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-For commercial licensing, please contact support@quantumnous.com
-*/
 import { History, Search, Star, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -187,21 +169,27 @@ export function HistoryPanel({
                   />
                 )}
                 <div className='min-w-0 flex-1'>
-                  <p className='line-clamp-2 text-xs leading-snug'>
+                  <p className='line-clamp-2 text-[13px] leading-snug'>
                     {record.prompt}
                   </p>
-                  <p className='text-muted-foreground mt-1 truncate text-[10px]'>
-                    {record.model} · {record.size}
-                    {record.quality && <> · {t(record.quality)}</>}
-                    {record.images[0]?.width && record.images[0]?.height && (
-                      <>
-                        {' '}
-                        · {record.images[0].width}×{record.images[0].height}
-                      </>
-                    )}{' '}
-                    · {record.images.length} ·{' '}
-                    {new Date(record.createdAt).toLocaleString()}
-                  </p>
+                  <div className='text-muted-foreground mt-1 flex flex-col gap-0.5 text-xs leading-snug'>
+                    <p className='truncate'>
+                      {record.model} · {record.size}
+                      {record.quality && <> · {t(record.quality)}</>}
+                      {record.images[0]?.width && record.images[0]?.height && (
+                        <>
+                          {' '}
+                          · {record.images[0].width}×{record.images[0].height}
+                        </>
+                      )}
+                    </p>
+                    <p className='truncate'>
+                      {t('{{count}} generated images', {
+                        count: record.images.length,
+                      })}{' '}
+                      · {new Date(record.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className='absolute top-1 right-1 hidden items-center gap-0.5 group-hover:flex'>

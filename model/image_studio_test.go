@@ -84,6 +84,37 @@ func TestImageStudioStoragePruningIncludesHiddenHistory(t *testing.T) {
 	assert.True(t, stored[1].HiddenFromStudio)
 }
 
+func TestAppendImageStudioGenerationImageAddsOnlyOneMissingImage(t *testing.T) {
+	setupImageStudioHistoryTest(t)
+	record := &ImageStudioGeneration{
+		ID:        "partial",
+		UserId:    42,
+		CreatedAt: 1,
+		N:         2,
+		Images: []ImageStudioAsset{
+			{ID: "existing-image", URL: "/existing-image"},
+		},
+	}
+	require.NoError(t, CreateImageStudioGeneration(record))
+
+	updatedRecord, err := AppendImageStudioGenerationImage(
+		"partial",
+		42,
+		ImageStudioAsset{ID: "retried-image", URL: "/retried-image"},
+	)
+
+	require.NoError(t, err)
+	require.Len(t, updatedRecord.Images, 2)
+	assert.Equal(t, "existing-image", updatedRecord.Images[0].ID)
+	assert.Equal(t, "retried-image", updatedRecord.Images[1].ID)
+	_, err = AppendImageStudioGenerationImage(
+		"partial",
+		42,
+		ImageStudioAsset{ID: "extra-image", URL: "/extra-image"},
+	)
+	assert.EqualError(t, err, "generation already contains all requested images")
+}
+
 func TestClearingImageStudioHistoryOnlyHidesRecords(t *testing.T) {
 	setupImageStudioHistoryTest(t)
 	createImageStudioHistoryRecord(t, "first", 1)

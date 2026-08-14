@@ -1,21 +1,3 @@
-/*
-Copyright (C) 2023-2026 QuantumNous
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-For commercial licensing, please contact support@quantumnous.com
-*/
 import { api } from '@/lib/api'
 
 import { API_ENDPOINTS, DEFAULT_HISTORY_DISPLAY_LIMIT } from './constants'
@@ -27,6 +9,11 @@ import type {
   ModelOption,
   StoreImageStudioGenerationPayload,
 } from './types'
+
+export interface AppendImageStudioGenerationImagePayload {
+  src: string
+  revised_prompt?: string
+}
 
 export interface ImageRequestResult {
   response: ImageApiResponse
@@ -85,6 +72,22 @@ export async function storeImageStudioGeneration(
   return unwrapApiData(
     res.data as ApiEnvelope<ImageStudioGenerationRecord>,
     'failed to store generated images'
+  )
+}
+
+export async function appendImageStudioGenerationImage(
+  generationId: string,
+  payload: AppendImageStudioGenerationImagePayload,
+  signal?: AbortSignal
+): Promise<ImageStudioGenerationRecord> {
+  const res = await api.post(
+    `${API_ENDPOINTS.IMAGE_STUDIO_GENERATIONS}/${generationId}/images`,
+    payload,
+    { signal }
+  )
+  return unwrapApiData(
+    res.data as ApiEnvelope<ImageStudioGenerationRecord>,
+    'failed to store generated image'
   )
 }
 

@@ -1,21 +1,3 @@
-/*
-Copyright (C) 2023-2026 QuantumNous
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-For commercial licensing, please contact support@quantumnous.com
-*/
 import { Minus, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -235,25 +217,28 @@ export function GptImageParams(props: GptImageParamsProps) {
         )}
       </div>
 
-      <div className='flex flex-col gap-1.5'>
-        <Label className='text-muted-foreground text-xs font-medium'>
-          {t('Output compression')}
-        </Label>
-        <Input
-          type='number'
-          min={0}
-          max={100}
-          value={props.config.outputCompression ?? ''}
-          placeholder='0-100'
-          onChange={(event) =>
-            props.updateConfig(
-              'outputCompression',
-              event.target.value === '' ? null : Number(event.target.value)
-            )
-          }
-          disabled={props.disabled}
-        />
-      </div>
+      {(props.config.outputFormat === 'jpeg' ||
+        props.config.outputFormat === 'webp') && (
+        <div className='flex flex-col gap-1.5'>
+          <Label className='text-muted-foreground text-xs font-medium'>
+            {t('Output compression')}
+          </Label>
+          <Input
+            type='number'
+            min={0}
+            max={100}
+            value={props.config.outputCompression ?? ''}
+            placeholder='0-100'
+            onChange={(event) =>
+              props.updateConfig(
+                'outputCompression',
+                event.target.value === '' ? null : Number(event.target.value)
+              )
+            }
+            disabled={props.disabled}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,21 +1,3 @@
-/*
-Copyright (C) 2023-2026 QuantumNous
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-For commercial licensing, please contact support@quantumnous.com
-*/
 import {
   Copy,
   Download,
@@ -37,6 +19,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Empty } from '@/components/ui/empty'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import {
   copyImageToClipboard,
@@ -50,8 +37,12 @@ type ResultGridProps = {
   record: GenerationRecord | null
   error: string | null
   onRetry: () => void
+  onRetryImage: (errorIndex: number) => void
+  retryingImageErrorIndexes: number[]
   onEditImage: (image: GeneratedImage) => void
   isGenerating: boolean
+  pendingImageCount: number
+  imageErrors: string[]
 }
 
 function UsageBar({ record }: { record: GenerationRecord }) {
@@ -88,12 +79,81 @@ function formatImageFileSize(sizeBytes?: number): string | null {
   return `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
+function LoadingImageSlot({ slotIndex }: { slotIndex: number }) {
+  const { t } = useTranslation()
+  return (
+    <div
+      className='bg-muted/30 text-muted-foreground flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border'
+      role='status'
+      aria-label={`${t('Loading')} ${slotIndex + 1}`}
+    >
+      <span className='animate-pulse'>{t('Generating...')}</span>
+      <span className='flex h-5 items-end gap-1' aria-hidden='true'>
+        <span className='bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-duration:450ms]' />
+        <span className='bg-primary/60 h-4 w-1 animate-pulse rounded-full [animation-delay:50ms] [animation-duration:450ms]' />
+        <span className='bg-primary/80 h-5 w-1 animate-pulse rounded-full [animation-delay:100ms] [animation-duration:450ms]' />
+        <span className='bg-primary/60 h-3 w-1 animate-pulse rounded-full [animation-delay:150ms] [animation-duration:450ms]' />
+        <span className='bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-delay:200ms] [animation-duration:450ms]' />
+      </span>
+    </div>
+  )
+}
+
+type ImageErrorSlotProps = {
+  message: string
+  onRetry: () => void
+  retryDisabled: boolean
+}
+
+function ImageErrorSlot(props: ImageErrorSlotProps) {
+  const { t } = useTranslation()
+  return (
+    <div
+      className='border-destructive/30 bg-destructive/5 text-destructive flex aspect-square min-w-0 flex-col items-center justify-center gap-2 rounded-lg border p-3 text-center'
+      role='alert'
+      aria-label={t('Image generation failed')}
+    >
+      <ImageOff className='size-8 shrink-0 opacity-70' aria-hidden='true' />
+      <span className='text-sm font-medium'>
+        {t('Image generation failed')}
+      </span>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <p className='line-clamp-4 max-w-full cursor-help text-xs break-all' />
+          }
+        >
+          {props.message}
+        </TooltipTrigger>
+        <TooltipContent className='max-h-72 max-w-[min(32rem,calc(100vw-2rem))] overflow-y-auto text-left break-all whitespace-normal'>
+          {props.message}
+        </TooltipContent>
+      </Tooltip>
+      <Button
+        type='button'
+        variant='outline'
+        size='sm'
+        className='mt-2 gap-1.5'
+        onClick={props.onRetry}
+        disabled={props.retryDisabled}
+      >
+        <RefreshCw className='size-3.5' aria-hidden='true' />
+        {t('Retry')}
+      </Button>
+    </div>
+  )
+}
+
 export function ResultGrid({
   record,
   error,
   onRetry,
+  onRetryImage,
+  retryingImageErrorIndexes,
   onEditImage,
   isGenerating,
+  pendingImageCount,
+  imageErrors,
 }: ResultGridProps) {
   const { t } = useTranslation()
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null)
@@ -122,32 +182,38 @@ export function ResultGrid({
   }
 
   if (!record) {
+    if (isGenerating || imageErrors.length > 0) {
+      return (
+        <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
+          {imageErrors.map((message) => (
+            <ImageErrorSlot
+              key={message}
+              message={message}
+              onRetry={onRetry}
+              retryDisabled={isGenerating}
+            />
+          ))}
+          {Array.from({ length: pendingImageCount }, (_, index) => (
+            <LoadingImageSlot
+              key={`pending-image-${index}`}
+              slotIndex={index}
+            />
+          ))}
+        </div>
+      )
+    }
+
     return (
       <Empty className='h-full min-h-[360px] border-none py-0'>
-        {!isGenerating && (
-          <div className='from-primary/10 via-primary/5 to-background relative flex size-16 items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br shadow-sm'>
-            <div className='bg-primary/20 absolute -top-6 -right-6 size-12 rounded-full blur-xl' />
-            <ImageIcon className='text-primary/70 relative size-8' />
-            <Sparkles className='text-primary/60 absolute top-3 right-3 size-3.5' />
-          </div>
-        )}
+        <div className='from-primary/10 via-primary/5 to-background relative flex size-16 items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br shadow-sm'>
+          <div className='bg-primary/20 absolute -top-6 -right-6 size-12 rounded-full blur-xl' />
+          <ImageIcon className='text-primary/70 relative size-8' />
+          <Sparkles className='text-primary/60 absolute top-3 right-3 size-3.5' />
+        </div>
         <div className='text-muted-foreground flex flex-col items-center gap-2 text-sm'>
-          {isGenerating ? (
-            <>
-              <span className='animate-pulse'>{t('Thinking')}</span>
-              <span className='flex h-5 items-end gap-1' aria-hidden='true'>
-                <span className='bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-duration:700ms]' />
-                <span className='bg-primary/60 h-4 w-1 animate-pulse rounded-full [animation-delay:80ms] [animation-duration:700ms]' />
-                <span className='bg-primary/80 h-5 w-1 animate-pulse rounded-full [animation-delay:160ms] [animation-duration:700ms]' />
-                <span className='bg-primary/60 h-3 w-1 animate-pulse rounded-full [animation-delay:240ms] [animation-duration:700ms]' />
-                <span className='bg-primary/40 h-2 w-1 animate-pulse rounded-full [animation-delay:320ms] [animation-duration:700ms]' />
-              </span>
-            </>
-          ) : (
-            <p className='text-foreground text-base font-medium'>
-              {t('Enter a prompt to start generating images')}
-            </p>
-          )}
+          <p className='text-foreground text-base font-medium'>
+            {t('Enter a prompt to start generating images')}
+          </p>
         </div>
       </Empty>
     )
@@ -287,19 +353,46 @@ export function ResultGrid({
             </div>
           </div>
         ))}
-        {Array.from({ length: record.failedImageCount ?? 0 }, (_, index) => (
-          <div
-            key={`failed-image-${index}`}
-            className='bg-muted text-muted-foreground flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border'
-            role='img'
-            aria-label={t('Image generation failed')}
-          >
-            <ImageOff className='size-8 opacity-50' aria-hidden='true' />
-            <span className='text-sm font-medium'>
-              {t('Image generation failed')}
-            </span>
-          </div>
-        ))}
+        {isGenerating &&
+          Array.from({ length: pendingImageCount }, (_, index) => (
+            <LoadingImageSlot
+              key={`pending-image-${index}`}
+              slotIndex={index}
+            />
+          ))}
+        {(isGenerating ? imageErrors : (record.imageErrors ?? imageErrors)).map(
+          (message, errorIndex) =>
+            retryingImageErrorIndexes.includes(errorIndex) ? (
+              <LoadingImageSlot
+                key={`retrying-image-error-${message}`}
+                slotIndex={record.images.length + errorIndex}
+              />
+            ) : (
+              <ImageErrorSlot
+                key={message}
+                message={message}
+                onRetry={() => onRetryImage(errorIndex)}
+                retryDisabled={isGenerating}
+              />
+            )
+        )}
+        {!isGenerating &&
+          !record.imageErrors &&
+          Array.from({ length: record.failedImageCount ?? 0 }, (_, index) =>
+            retryingImageErrorIndexes.includes(index) ? (
+              <LoadingImageSlot
+                key={`retrying-failed-image-${index}`}
+                slotIndex={record.images.length + index}
+              />
+            ) : (
+              <ImageErrorSlot
+                key={`failed-image-${index}`}
+                message={t('Image generation failed')}
+                onRetry={() => onRetryImage(index)}
+                retryDisabled={false}
+              />
+            )
+          )}
       </div>
 
       <Dialog

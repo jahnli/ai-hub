@@ -44,6 +44,7 @@
     "{{count}} disabled channel(s) deleted": "已删除 {{count}} 个已禁用的渠道",
     "{{count}} FAQ entries will be removed from the list.": "将从列表中移除 {{count}} 个 FAQ 条目。",
     "{{count}} hours ago": "{{count}} 小时前",
+    "{{count}} generated images": "{{count}} 张",
     "{{count}} images": "{{count}} 张图片",
     "{{count}} images could not be packed": "{{count}} 张图片打包失败",
     "{{count}} incidents": "{{count}} 起事件",

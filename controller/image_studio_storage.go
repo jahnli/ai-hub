@@ -62,6 +62,11 @@ type imageStudioStoredImage struct {
 	Height   int    `json:"height,omitempty"`
 }
 
+type imageStudioAppendImageRequest struct {
+	Src           string `json:"src"`
+	RevisedPrompt string `json:"revised_prompt"`
+}
+
 type imageStudioFavoriteRequest struct {
 	Favorite bool `json:"favorite"`
 }
@@ -153,6 +158,46 @@ func StoreImageStudioImages(c *gin.Context) {
 		deleteImageStudioGenerationFiles(pruned)
 	}
 
+	common.ApiSuccess(c, record)
+}
+
+func AppendImageStudioGenerationImage(c *gin.Context) {
+	var req imageStudioAppendImageRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	data, mimeType, err := loadImageStudioSource(c.Request.Context(), strings.TrimSpace(req.Src))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	folderName, err := imageStudioUserFolderName(c.GetInt("id"))
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	storedImage, err := writeImageStudioImage(c.Request.Context(), folderName, data, mimeType)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	asset := model.ImageStudioAsset{
+		ID:            storedImage.ID,
+		Path:          storedImage.ID,
+		URL:           storedImage.URL,
+		MimeType:      storedImage.MimeType,
+		SizeBytes:     storedImage.Size,
+		Width:         storedImage.Width,
+		Height:        storedImage.Height,
+		RevisedPrompt: req.RevisedPrompt,
+	}
+	record, err := model.AppendImageStudioGenerationImage(c.Param("id"), c.GetInt("id"), asset)
+	if err != nil {
+		deleteImageStudioStoredImages([]imageStudioStoredImage{storedImage})
+		common.ApiError(c, err)
+		return
+	}
 	common.ApiSuccess(c, record)
 }
 

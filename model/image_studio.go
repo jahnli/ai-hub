@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting/system_setting"
+	"gorm.io/gorm"
 )
 
 // ImageStudioHistoryLimit 是在线生图历史每用户默认展示条数的兼容常量。
@@ -78,6 +79,36 @@ func CreateImageStudioGeneration(record *ImageStudioGeneration) error {
 		return err
 	}
 	return DB.Create(record).Error
+}
+
+func AppendImageStudioGenerationImage(id string, userID int, asset ImageStudioAsset) (*ImageStudioGeneration, error) {
+	var updatedRecord ImageStudioGeneration
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := lockForUpdate(tx).Where("id = ? AND user_id = ?", id, userID).First(&updatedRecord).Error; err != nil {
+			return err
+		}
+		if err := loadImageStudioGenerationImages(&updatedRecord); err != nil {
+			return err
+		}
+		if len(updatedRecord.Images) >= updatedRecord.N {
+			return errors.New("generation already contains all requested images")
+		}
+		updatedRecord.Images = append(updatedRecord.Images, asset)
+		if err := saveImageStudioGenerationImages(&updatedRecord); err != nil {
+			return err
+		}
+		updatedRecord.UpdatedAt = time.Now().UnixMilli()
+		return tx.Model(&ImageStudioGeneration{}).
+			Where("id = ? AND user_id = ?", id, userID).
+			Updates(map[string]any{
+				"images":     updatedRecord.ImagesText,
+				"updated_at": updatedRecord.UpdatedAt,
+			}).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &updatedRecord, nil
 }
 
 func GetUserImageStudioGenerations(userID int, limit int) ([]ImageStudioGeneration, error) {

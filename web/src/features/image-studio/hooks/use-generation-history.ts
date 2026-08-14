@@ -1,21 +1,3 @@
-/*
-Copyright (C) 2023-2026 QuantumNous
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-For commercial licensing, please contact support@quantumnous.com
-*/
 import { useCallback, useEffect, useState } from 'react'
 
 import { DEFAULT_HISTORY_DISPLAY_LIMIT } from '../constants'
@@ -63,15 +45,26 @@ export function useGenerationHistory() {
     [displayLimit]
   )
 
-  const patchRecord = useCallback(
+  const patchRecordLocally = useCallback(
     (id: string, patch: Partial<GenerationRecord>) => {
-      setHistory((prev) => {
-        const next = prev.map((record) =>
+      setHistory((previousHistory) =>
+        previousHistory.map((record) =>
           record.id === id ? { ...record, ...patch } : record
         )
-        const updated = next.find((record) => record.id === id)
-        if (updated) void updateGeneration(updated)
-        return next
+      )
+    },
+    []
+  )
+
+  const patchRecord = useCallback(
+    (id: string, patch: Partial<GenerationRecord>) => {
+      setHistory((previousHistory) => {
+        const nextHistory = previousHistory.map((record) =>
+          record.id === id ? { ...record, ...patch } : record
+        )
+        const updatedRecord = nextHistory.find((record) => record.id === id)
+        if (updatedRecord) void updateGeneration(updatedRecord)
+        return nextHistory
       })
     },
     []
@@ -99,6 +92,7 @@ export function useGenerationHistory() {
     history,
     isLoadingHistory,
     addRecord,
+    patchRecordLocally,
     patchRecord,
     removeRecord,
     clearHistory,

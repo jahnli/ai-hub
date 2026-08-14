@@ -50,6 +50,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			imageStudioRoute.GET("/generations", controller.ListImageStudioGenerations)
 			imageStudioRoute.POST("/generations", controller.StoreImageStudioImages)
+			imageStudioRoute.POST("/generations/:id/images", controller.AppendImageStudioGenerationImage)
 			imageStudioRoute.PATCH("/generations/:id/favorite", controller.UpdateImageStudioGenerationFavorite)
 			imageStudioRoute.PATCH("/generations/:id/usage", controller.UpdateImageStudioGenerationUsage)
 			imageStudioRoute.DELETE("/generations/:id", controller.DeleteImageStudioGeneration)
