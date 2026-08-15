@@ -286,7 +286,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
                 >
                   <Icon />
                 </IconBadge>
-                <div className='text-muted-foreground min-w-0 truncate text-[11px] leading-4 font-medium tracking-wide uppercase sm:text-xs sm:tracking-wider'>
+                <div className='text-muted-foreground min-w-0 truncate text-[11px] leading-4 font-medium tracking-wide sm:text-xs sm:tracking-wider'>
                   {item.title}
                 </div>
                 {item.titleSuffix}
