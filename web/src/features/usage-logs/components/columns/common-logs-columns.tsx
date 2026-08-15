@@ -949,7 +949,7 @@ export function useCommonLogsColumns(
       }
 
       return (
-        <TooltipProvider delay={300}>
+        <TooltipProvider delay={100}>
           <Tooltip>
             <TooltipTrigger render={<div className='max-w-[180px]' />}>
               <span className='text-muted-foreground block truncate font-mono text-xs'>
@@ -984,7 +984,7 @@ export function useCommonLogsColumns(
 
         return (
           <div className='flex max-w-[140px] flex-col gap-0.5'>
-            <TooltipProvider delay={300}>
+            <TooltipProvider delay={100}>
               <Tooltip>
                 <TooltipTrigger render={<div className='max-w-full' />}>
                   <StatusBadge
@@ -1029,7 +1029,7 @@ export function useCommonLogsColumns(
         if (groupRatioText) metaParts.push(groupRatioText)
         return (
           <div className='flex max-w-[105px] min-w-0 flex-col gap-0.5'>
-            <TooltipProvider delay={300}>
+            <TooltipProvider delay={100}>
               <Tooltip>
                 <TooltipTrigger render={<div className='max-w-full' />}>
                   <StatusBadge

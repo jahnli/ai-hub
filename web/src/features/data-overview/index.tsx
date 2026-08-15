@@ -263,7 +263,7 @@ export function DataOverview() {
   }
 
   return (
-    <TooltipProvider delay={0}>
+    <TooltipProvider delay={100}>
       <SectionPageLayout>
         <SectionPageLayout.Title>
           <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>

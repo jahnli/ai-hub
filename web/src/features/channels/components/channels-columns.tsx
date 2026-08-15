@@ -450,7 +450,7 @@ export function useChannelsColumns(
                   <UpstreamUpdateTags channel={channel} />
                 </div>
                 {channel.remark && (
-                  <TooltipProvider delay={200}>
+                  <TooltipProvider delay={100}>
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -531,7 +531,7 @@ export function useChannelsColumns(
                   </Tooltip>
                 </TooltipProvider>
               )}
-              <TooltipProvider delay={300}>
+              <TooltipProvider delay={100}>
                 <Tooltip>
                   <TooltipTrigger
                     render={

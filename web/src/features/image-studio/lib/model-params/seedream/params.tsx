@@ -179,7 +179,7 @@ export function SeedreamParams(props: SeedreamParamsProps) {
       <div className='flex flex-col gap-1.5'>
         <Label className='text-muted-foreground inline-flex items-center gap-1 text-xs font-medium'>
           {t('Prompt optimization')}
-          <TooltipProvider delay={0}>
+          <TooltipProvider delay={100}>
             <Tooltip>
               <TooltipTrigger
                 render={

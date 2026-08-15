@@ -559,7 +559,7 @@ function SidebarMenuButton({
   }
 
   return (
-    <TooltipProvider delay={0}>
+    <TooltipProvider delay={100}>
       <Tooltip>
         {comp}
         <TooltipContent side='right' align='center' {...tooltip} />

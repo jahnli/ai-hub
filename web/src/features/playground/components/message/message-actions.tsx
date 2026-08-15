@@ -143,7 +143,7 @@ export function MessageActions({
 
   return (
     <>
-      <TooltipProvider delay={300}>
+      <TooltipProvider delay={100}>
         <div
           className={`hidden items-center gap-0.5 transition-opacity md:flex ${visibilityClass} ${className}`}
         >
