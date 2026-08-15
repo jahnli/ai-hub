@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  CircleAlert,
   Coins,
   DollarSign,
   Hash,
@@ -116,6 +117,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     iconTone: IconBadgeTone
     valueClassName?: string
     tooltip?: ReactNode
+    showTooltipIcon?: boolean
   }[] = [
     {
       title: t('Total Tokens'),
@@ -124,6 +126,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       icon: Layers,
       iconTone: 'chart-4',
       tooltip: buildTokenBreakdownTooltip(),
+      showTooltipIcon: true,
     },
     {
       title: t('Total Cost'),
@@ -206,6 +209,70 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
         {items.map((item) => {
           const Icon = item.icon
+          let renderedValue: ReactNode
+
+          if (item.tooltip && item.showTooltipIcon) {
+            renderedValue = (
+              <Tooltip>
+                <div className='mt-1.5 flex min-w-0 items-center gap-1.5 sm:mt-2'>
+                  <div
+                    className={cn(
+                      'min-w-0 truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:text-2xl',
+                      item.valueClassName || 'text-foreground'
+                    )}
+                  >
+                    {item.value}
+                  </div>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type='button'
+                        className='text-muted-foreground/70 hover:text-foreground -translate-y-3 shrink-0 transition-colors'
+                        aria-label={t('View details')}
+                      />
+                    }
+                  >
+                    <CircleAlert className='size-3 sm:size-3.5' />
+                  </TooltipTrigger>
+                </div>
+                <TooltipContent>
+                  <div className='font-mono text-xs'>{item.tooltip}</div>
+                </TooltipContent>
+              </Tooltip>
+            )
+          } else if (item.tooltip) {
+            renderedValue = (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <div
+                      className={cn(
+                        'mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl',
+                        item.valueClassName || 'text-foreground'
+                      )}
+                    />
+                  }
+                >
+                  {item.value}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className='font-mono text-xs'>{item.tooltip}</div>
+                </TooltipContent>
+              </Tooltip>
+            )
+          } else {
+            renderedValue = (
+              <div
+                className={cn(
+                  'mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl',
+                  item.valueClassName || 'text-foreground'
+                )}
+              >
+                {item.value}
+              </div>
+            )
+          }
+
           return (
             <div
               key={item.title}
@@ -224,36 +291,9 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
                 </div>
                 {item.titleSuffix}
               </div>
-              {item.tooltip ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <div
-                        className={cn(
-                          'mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl',
-                          item.valueClassName || 'text-foreground'
-                        )}
-                      />
-                    }
-                  >
-                    {item.value}
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className='font-mono text-xs'>{item.tooltip}</div>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <div
-                  className={cn(
-                    'mt-1.5 max-w-full truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl',
-                    item.valueClassName || 'text-foreground'
-                  )}
-                >
-                  {item.value}
-                </div>
-              )}
+              {renderedValue}
               {item.desc && (
-                <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
+                <div className='text-muted-foreground/60 mt-1 hidden text-[13px] md:block'>
                   {item.desc}
                 </div>
               )}
