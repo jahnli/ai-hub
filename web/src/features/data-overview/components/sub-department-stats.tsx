@@ -51,9 +51,9 @@ function formatCNY(amount: number): string {
   return '¥' + amount.toFixed(2)
 }
 
-function formatAvgPricePerMT(amount: number): string {
-  if (!amount) return '¥0/MT'
-  return `¥${amount.toFixed(2)}/MT`
+function formatUnitPrice(amount: number, unitLabel: string): string {
+  if (!amount) return `¥0/${unitLabel}`
+  return `¥${amount.toFixed(2)}/${unitLabel}`
 }
 
 function formatTokens(tokens: number): string {
@@ -144,9 +144,9 @@ function useSubDepartmentColumns(
         size: 120,
       },
       {
-        accessorKey: 'avg_price_per_mt',
+        accessorKey: 'unit_price_per_100m_tokens',
         header: ({ column }) => {
-          const description = t('Average price per million tokens')
+          const description = t('Unit price per 100M tokens')
           const sorted = column.getIsSorted()
           let SortIcon = ChevronsUpDown
           if (sorted === 'desc') {
@@ -168,7 +168,7 @@ function useSubDepartmentColumns(
                 }
               >
                 <span className='inline-flex items-center gap-1'>
-                  <span>{t('Avg Price')}</span>
+                  <span>{t('Unit Price')}</span>
                   <Info className='text-muted-foreground size-3.5 shrink-0 translate-y-px' />
                 </span>
                 <SortIcon className='ms-1 size-4' />
@@ -181,7 +181,10 @@ function useSubDepartmentColumns(
         },
         cell: ({ row }) => (
           <span className='text-muted-foreground font-mono'>
-            {formatAvgPricePerMT(row.original.avg_price_per_mt)}
+            {formatUnitPrice(
+              row.original.unit_price_per_100m_tokens,
+              t('100M Tokens')
+            )}
           </span>
         ),
         size: 120,

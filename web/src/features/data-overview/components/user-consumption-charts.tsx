@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useChartTheme } from '@/lib/use-chart-theme'
+import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 import { VCHART_OPTION } from '@/lib/vchart'
 
 import type { UserRankingItem } from '../types'
@@ -22,10 +23,14 @@ function formatTokensDetail(tokens: number): string {
   return tokens.toLocaleString()
 }
 
-function formatUnitPrice(cost: number, tokens: number): string {
+function formatUnitPrice(
+  cost: number,
+  tokens: number,
+  unitLabel: string
+): string {
   if (tokens <= 0) return '-'
-  const pricePerMT = (cost / tokens) * 1_000_000
-  return `¥${pricePerMT.toFixed(2)}/MT`
+  const pricePer100MTokens = calculateUnitPricePer100MTokens(cost, tokens)
+  return `¥${pricePer100MTokens.toFixed(2)}/${unitLabel}`
 }
 
 export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
@@ -105,7 +110,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             {
               key: () => t('Unit Price'),
               value: (d: { cost?: number; tokens?: number }) =>
-                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0),
+                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0, t('100M Tokens')),
             },
           ],
         },

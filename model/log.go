@@ -988,7 +988,7 @@ func GetUserStatsBatch(userIds []int, startTimestamp, endTimestamp int64) ([]Use
 	var rows []UserStatRow
 	tx := DB.Table("quota_data").
 		Select(`user_id,
-			` + quotaDataTotalTokensExpr + ` as total_tokens,
+			`+quotaDataTotalTokensExpr+` as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds)
@@ -1033,7 +1033,7 @@ func GetUserModelStatsBatch(userIds []int, startTimestamp, endTimestamp int64) (
 		Select(`user_id,
 			model_name,
 			COALESCE(SUM(quota), 0) as total_quota,
-			` + quotaDataTotalTokensExpr + ` as total_tokens,
+			`+quotaDataTotalTokensExpr+` as total_tokens,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds).
 		Where("model_name != ''")
@@ -1060,7 +1060,7 @@ func GetModelStats(userIds []int, startTimestamp, endTimestamp int64, limit int)
 	var rows []ModelStatRow
 	tx := DB.Table("quota_data").
 		Select(`model_name,
-			` + quotaDataTotalTokensExpr + ` as total_tokens,
+			`+quotaDataTotalTokensExpr+` as total_tokens,
 			COALESCE(SUM(quota), 0) as total_quota,
 			COALESCE(SUM(count), 0) as total_reqs`).
 		Where("user_id IN ?", userIds).
@@ -1199,7 +1199,7 @@ type DepartmentStat struct {
 	TotalUseTime               int64      `json:"total_use_time"`
 	AvgUseTime                 float64    `json:"avg_use_time"`
 	ErrorRate                  float64    `json:"error_rate"`
-	AvgPricePerMT              float64    `json:"avg_price_per_mt"`
+	UnitPricePer100MTokens     float64    `json:"unit_price_per_100m_tokens"`
 	RegisteredUsers            int64      `json:"registered_users"`
 	UnregisteredUsers          int64      `json:"unregistered_users"`
 	ActiveUsers                int64      `json:"active_users"`
@@ -1233,7 +1233,7 @@ func GetDepartmentStats(userIds []int, startTimestamp, endTimestamp int64, activ
 
 	var qr quotaResult
 	tx := DB.Table("quota_data").
-		Select(quotaDataTotalTokensExpr + ` as total_tokens,
+		Select(quotaDataTotalTokensExpr+` as total_tokens,
 			COALESCE(SUM(uncached_input_tokens), 0) as uncached_input_tokens,
 			COALESCE(SUM(uncached_output_tokens), 0) as uncached_output_tokens,
 			COALESCE(SUM(cache_read_tokens), 0) as cache_read_tokens,

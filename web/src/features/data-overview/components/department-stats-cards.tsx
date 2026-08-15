@@ -133,11 +133,13 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       iconTone: 'success',
     },
     {
-      title: t('Avg Price'),
+      title: t('Unit Price'),
       value: `${
-        !stat.avg_price_per_mt ? '¥0' : `¥${stat.avg_price_per_mt.toFixed(2)}`
-      }/MT`,
-      desc: t('Average price per million tokens'),
+        !stat.unit_price_per_100m_tokens
+          ? '¥0'
+          : `¥${stat.unit_price_per_100m_tokens.toFixed(2)}`
+      }/${t('100M Tokens')}`,
+      desc: t('Unit price per 100M tokens'),
       icon: DollarSign,
       iconTone: 'warning',
     },

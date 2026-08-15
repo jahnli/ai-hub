@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service/authz"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -50,6 +51,14 @@ func setupManageUserTestDB(t *testing.T) *gorm.DB {
 
 func TestAttachSubscriptionQuotaUsesMonthlySpendAndWalletQuotaWithoutSubscription(t *testing.T) {
 	db := setupManageUserTestDB(t)
+	previousQuotaPerUnit := common.QuotaPerUnit
+	previousExchangeRate := operation_setting.USDExchangeRate
+	common.QuotaPerUnit = 500_000
+	operation_setting.USDExchangeRate = 1
+	t.Cleanup(func() {
+		common.QuotaPerUnit = previousQuotaPerUnit
+		operation_setting.USDExchangeRate = previousExchangeRate
+	})
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Unix()
 
@@ -64,7 +73,7 @@ func TestAttachSubscriptionQuotaUsesMonthlySpendAndWalletQuotaWithoutSubscriptio
 		Status:      "active",
 	}).Error)
 	require.NoError(t, db.Create([]model.QuotaData{
-		{UserID: subscribedUser.Id, ModelName: "model-a", CreatedAt: now.Unix(), Quota: 4_000},
+		{UserID: subscribedUser.Id, ModelName: "model-a", CreatedAt: now.Unix(), Quota: 145_000, UncachedInputTokens: 100_000_000},
 		{UserID: walletUser.Id, ModelName: "model-a", CreatedAt: now.Unix(), Quota: 1_500},
 		{UserID: walletUser.Id, ModelName: "model-b", CreatedAt: monthStart - 1, Quota: 8_000},
 	}).Error)
@@ -75,6 +84,8 @@ func TestAttachSubscriptionQuotaUsesMonthlySpendAndWalletQuotaWithoutSubscriptio
 	assert.True(t, items[0].HasActiveSubscription)
 	assert.Equal(t, int64(2_000), items[0].SubQuotaUsed)
 	assert.Equal(t, int64(5_000), items[0].SubQuotaTotal)
+	assert.Equal(t, int64(100_000_000), items[0].MonthlyTotalTokens)
+	assert.InDelta(t, 0.29, items[0].MonthlyUnitPricePer100MTokens, 0.000001)
 	assert.False(t, items[1].HasActiveSubscription)
 	assert.Equal(t, int64(1_500), items[1].SubQuotaUsed)
 	assert.Equal(t, int64(5_000), items[1].SubQuotaTotal)

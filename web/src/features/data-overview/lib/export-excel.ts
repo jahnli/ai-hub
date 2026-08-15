@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs'
 import { t } from 'i18next'
 
 import dayjs from '@/lib/dayjs'
+import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 
 import type {
   DepartmentStat,
@@ -49,7 +50,7 @@ function fmtRequests(count: number): string {
 
 function fmtUnitPrice(cost: number, tokens: number): string {
   if (cost <= 0 || tokens <= 0) return '-'
-  return fmtCny((cost / tokens) * 1_000_000) + '/MT'
+  return `${fmtCny(calculateUnitPricePer100MTokens(cost, tokens))}/${t('100M Tokens')}`
 }
 
 export function formatTimeRangeForFilename(
@@ -203,8 +204,10 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
     [t('Cache Write'), fmtTokens(stat.cache_write_tokens ?? 0)],
     [t('Total Cost'), fmtCny(stat.total_amount_cny)],
     [
-      t('Avg Price') + '/MT',
-      !stat.avg_price_per_mt ? '¥0.00' : fmtCny(stat.avg_price_per_mt),
+      t('Unit Price') + '/' + t('100M Tokens'),
+      !stat.unit_price_per_100m_tokens
+        ? '¥0.00'
+        : fmtCny(stat.unit_price_per_100m_tokens),
     ],
     [t('Total Requests'), fmtRequests(stat.total_requests)],
     [t('Avg Response Time'), (stat.avg_use_time ?? 0).toFixed(1) + 's'],
@@ -261,7 +264,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
       t('Total Users'),
       t('Total Tokens'),
       t('Total Cost'),
-      t('Avg Price') + '/MT',
+      t('Unit Price') + '/' + t('100M Tokens'),
       t('Request Count'),
       t('Active Users / Active Rate'),
       t('Tokens per Active User'),
@@ -277,7 +280,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
           sub.total_users,
           fmtTokens(sub.total_tokens),
           fmtCny(sub.total_amount_cny),
-          fmtCny(sub.avg_price_per_mt) + '/MT',
+          fmtCny(sub.unit_price_per_100m_tokens) + '/' + t('100M Tokens'),
           fmtRequests(sub.total_requests),
           `${(sub.active_users ?? 0).toLocaleString()} / ${(sub.active_user_rate ?? 0).toFixed(1)}%`,
           fmtTokens((sub.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
@@ -323,7 +326,7 @@ function buildSubDeptSheet(
       t('Total Users'),
       t('Total Tokens'),
       t('Total Cost'),
-      t('Avg Price') + '/MT',
+      t('Unit Price') + '/' + t('100M Tokens'),
       t('Request Count'),
       t('Active Users / Active Rate'),
       t('Tokens per Active User'),
@@ -339,7 +342,7 @@ function buildSubDeptSheet(
           sub.total_users,
           fmtTokens(sub.total_tokens),
           fmtCny(sub.total_amount_cny),
-          fmtCny(sub.avg_price_per_mt) + '/MT',
+          fmtCny(sub.unit_price_per_100m_tokens) + '/' + t('100M Tokens'),
           fmtRequests(sub.total_requests),
           `${(sub.active_users ?? 0).toLocaleString()} / ${(sub.active_user_rate ?? 0).toFixed(1)}%`,
           fmtTokens((sub.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
@@ -374,7 +377,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   const hdr = ws.addRow([
     t('Display Name'),
     t('Total Cost'),
-    t('Avg Price') + '/MT',
+    t('Unit Price') + '/' + t('100M Tokens'),
     t('Total Tokens'),
     t('Requests'),
     t('Common Model'),

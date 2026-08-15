@@ -20,7 +20,10 @@ var ErrCompanyIDRequired = errors.New("company_id is required")
 var ErrCompanyAccessDenied = errors.New("company is disabled, missing, or not accessible")
 var ErrDepartmentAccessDenied = errors.New("department is not accessible")
 
-const companyDirectoryFetchConcurrency = 5
+const (
+	companyDirectoryFetchConcurrency = 5
+	tokensPerHundredMillion          = 100_000_000
+)
 
 // overviewAudienceCacheTTL lets the five parallel overview endpoints share one
 // lightweight member resolve. Keep short so role/department changes still refresh.
@@ -869,7 +872,7 @@ func finalizeDepartmentStat(stat *model.DepartmentStat) {
 	}
 	stat.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * exchangeRate
 	if stat.TotalTokens > 0 {
-		stat.AvgPricePerMT = stat.TotalAmountCNY / (float64(stat.TotalTokens) / 1000000)
+		stat.UnitPricePer100MTokens = stat.TotalAmountCNY / (float64(stat.TotalTokens) / tokensPerHundredMillion)
 	}
 	totalUsers := stat.RegisteredUsers + stat.UnregisteredUsers
 	if totalUsers > 0 {
@@ -1058,7 +1061,7 @@ func buildCompanySubDepartmentStats(req *DepartmentStatsRequest, audience *overv
 			TotalUsers:               stat.RegisteredUsers + stat.UnregisteredUsers,
 			TotalQuota:               stat.TotalQuota,
 			TotalAmountCNY:           stat.TotalAmountCNY,
-			AvgPricePerMT:            stat.AvgPricePerMT,
+			UnitPricePer100MTokens:   stat.UnitPricePer100MTokens,
 			TotalTokens:              stat.TotalTokens,
 			TotalRequests:            stat.TotalRequests,
 			ActiveUsers:              stat.ActiveUsers,
@@ -1278,7 +1281,7 @@ func populateDepartmentUserStats(items []DepartmentUserItem, ids []int, startTim
 			items[index].TotalTokens = stat.TotalTokens
 			items[index].TotalRequests = stat.TotalReqs
 			if stat.TotalTokens > 0 {
-				items[index].AvgPricePerMT = items[index].TotalAmountCNY / (float64(stat.TotalTokens) / 1000000)
+				items[index].UnitPricePer100MTokens = items[index].TotalAmountCNY / (float64(stat.TotalTokens) / tokensPerHundredMillion)
 			}
 		}
 		items[index].CommonModel = models[userID]

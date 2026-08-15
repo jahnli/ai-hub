@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChartTheme } from '@/lib/use-chart-theme'
+import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 import { VCHART_OPTION } from '@/lib/vchart'
 
 import {
@@ -275,10 +276,14 @@ function formatCompactCost(value: number): string {
   return `¥${value.toFixed(0)}`
 }
 
-function formatUnitPrice(cost: number, tokens: number): string {
+function formatUnitPrice(
+  cost: number,
+  tokens: number,
+  unitLabel: string
+): string {
   if (tokens <= 0) return '-'
-  const pricePerMT = (cost / tokens) * 1_000_000
-  return `¥${pricePerMT.toFixed(2)}/MT`
+  const pricePer100MTokens = calculateUnitPricePer100MTokens(cost, tokens)
+  return `¥${pricePer100MTokens.toFixed(2)}/${unitLabel}`
 }
 
 // ── 1. 请求次数趋势 ──
@@ -336,7 +341,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
       {
         key: () => t('Unit Price'),
         value: (d: { cost?: number; value?: number }) =>
-          formatUnitPrice(d.cost ?? 0, d.value ?? 0),
+          formatUnitPrice(d.cost ?? 0, d.value ?? 0, t('100M Tokens')),
       },
     ]
 
@@ -683,7 +688,7 @@ function ModelCostRankChart(
             {
               key: () => t('Unit Price'),
               value: (d: { value?: number; tokens?: number }) =>
-                formatUnitPrice(d.value ?? 0, d.tokens ?? 0),
+                formatUnitPrice(d.value ?? 0, d.tokens ?? 0, t('100M Tokens')),
             },
           ],
         },
@@ -706,7 +711,7 @@ function ModelCostRankChart(
             {
               key: () => t('Unit Price'),
               value: (d: { value?: number; tokens?: number }) =>
-                formatUnitPrice(d.value ?? 0, d.tokens ?? 0),
+                formatUnitPrice(d.value ?? 0, d.tokens ?? 0, t('100M Tokens')),
             },
           ],
         },
@@ -792,7 +797,11 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             {
               key: () => t('Unit Price'),
               value: (datum: { value?: number; tokens?: number }) =>
-                formatUnitPrice(datum.value ?? 0, datum.tokens ?? 0),
+                formatUnitPrice(
+                  datum.value ?? 0,
+                  datum.tokens ?? 0,
+                  t('100M Tokens')
+                ),
             },
           ],
         },
@@ -817,7 +826,11 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             {
               key: () => t('Unit Price'),
               value: (datum: { value?: number; tokens?: number }) =>
-                formatUnitPrice(datum.value ?? 0, datum.tokens ?? 0),
+                formatUnitPrice(
+                  datum.value ?? 0,
+                  datum.tokens ?? 0,
+                  t('100M Tokens')
+                ),
             },
           ],
         },

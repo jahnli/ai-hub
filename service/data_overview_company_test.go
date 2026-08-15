@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,27 @@ func TestGetDepartmentTreeReturnsEmptyWhenNoCompaniesExist(t *testing.T) {
 	require.NotNil(t, response)
 	assert.Empty(t, response.TreeData)
 	assert.Empty(t, response.LeaderDeptIDs)
+}
+
+func TestFinalizeDepartmentStatCalculatesUnitPricePerHundredMillionTokens(t *testing.T) {
+	previousQuotaPerUnit := common.QuotaPerUnit
+	previousExchangeRate := operation_setting.USDExchangeRate
+	common.QuotaPerUnit = 500_000
+	operation_setting.USDExchangeRate = 1
+	t.Cleanup(func() {
+		common.QuotaPerUnit = previousQuotaPerUnit
+		operation_setting.USDExchangeRate = previousExchangeRate
+	})
+
+	stat := &model.DepartmentStat{
+		TotalTokens: 100_000_000,
+		TotalQuota:  145_000,
+	}
+
+	finalizeDepartmentStat(stat)
+
+	assert.InDelta(t, 0.29, stat.TotalAmountCNY, 0.000001)
+	assert.InDelta(t, 0.29, stat.UnitPricePer100MTokens, 0.000001)
 }
 
 func TestGetDepartmentOverviewReturnsCompleteEmptyCompanySnapshot(t *testing.T) {

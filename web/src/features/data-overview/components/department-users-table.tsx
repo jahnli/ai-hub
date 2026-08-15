@@ -69,7 +69,7 @@ interface DepartmentUsersTableProps {
 const DEPT_COLUMN_SORT_MAP: Record<string, string> = {
   quota: 'sub_quota_used',
   total_amount_cny: 'total_amount_cny',
-  average_price: 'avg_price_per_mt',
+  average_price: 'unit_price_per_100m_tokens',
   total_tokens: 'total_tokens',
   total_requests: 'total_requests',
   id: 'id',

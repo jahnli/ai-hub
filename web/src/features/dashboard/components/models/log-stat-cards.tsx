@@ -47,7 +47,7 @@ function formatStatNumber(value: number, locale: Intl.LocalesArgument) {
 }
 
 export function LogStatCards(props: LogStatCardsProps) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const statCardsConfig = useModelStatCardsConfig()
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = !!(user?.role && user.role >= 10)
@@ -117,7 +117,7 @@ export function LogStatCards(props: LogStatCardsProps) {
       const display = formatDashboardQuota(rawValue)
       formatted = { displayValue: display, fullValue: display }
     } else if (config.key === 'avgPrice') {
-      const display = `${formatDashboardQuota(rawValue)}/MT`
+      const display = `${formatDashboardQuota(rawValue)}/${t('100M Tokens')}`
       formatted = { displayValue: display, fullValue: display }
     } else if (config.key === 'tokens') {
       formatted = {

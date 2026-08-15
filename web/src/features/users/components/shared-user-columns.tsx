@@ -38,6 +38,7 @@ import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import { getDemoModeUsername } from '@/lib/demo-mode'
 import { formatQuota, formatTimestamp } from '@/lib/format'
+import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 import { buildFeishuUserChatUrl, cn } from '@/lib/utils'
 
 import { USER_STATUSES, USER_ROLES } from '../constants'
@@ -314,10 +315,10 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
         return 0
       }
 
-      return (cost / tokens) * 1_000_000
+      return calculateUnitPricePer100MTokens(cost, tokens)
     },
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('Avg Price')} />
+      <DataTableColumnHeader column={column} title={t('Unit Price')} />
     ),
     cell: ({ row }) => {
       const averagePrice = row.getValue('average_price') as number
@@ -331,11 +332,11 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
           <TooltipTrigger
             render={<span className='cursor-default text-sm tabular-nums' />}
           >
-            {formatAmountCny(averagePrice)}/MT
+            {formatAmountCny(averagePrice)}/{t('100M Tokens')}
           </TooltipTrigger>
           <TooltipContent>
             <span className='text-xs'>
-              {t('Average price per million tokens')}
+              {t('Unit price per 100M tokens')}
             </span>
           </TooltipContent>
         </Tooltip>
@@ -345,7 +346,7 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
     size: 110,
     meta: {
       mobileHidden: true,
-      description: t('Average price per million tokens'),
+      description: t('Unit price per 100M tokens'),
     },
   }
 }

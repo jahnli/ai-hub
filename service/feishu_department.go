@@ -807,7 +807,7 @@ type SubDepartmentStatItem struct {
 	TotalUsers               int64   `json:"total_users"`
 	TotalQuota               int64   `json:"total_quota"`
 	TotalAmountCNY           float64 `json:"total_amount_cny"`
-	AvgPricePerMT            float64 `json:"avg_price_per_mt"`
+	UnitPricePer100MTokens   float64 `json:"unit_price_per_100m_tokens"`
 	TotalTokens              int64   `json:"total_tokens"`
 	TotalRequests            int64   `json:"total_requests"`
 	ActiveUsers              int64   `json:"active_users"`
@@ -1447,16 +1447,16 @@ const (
 // DepartmentUserItem holds user info with stats for a specific time range.
 type DepartmentUserItem struct {
 	*model.User
-	HasActiveSubscription bool    `json:"has_active_subscription"`
-	TotalAmountCNY        float64 `json:"total_amount_cny"`
-	AvgPricePerMT         float64 `json:"avg_price_per_mt"`
-	TotalTokens           int64   `json:"total_tokens"`
-	TotalRequests         int64   `json:"total_requests"`
-	CommonModel           string  `json:"common_model"`
-	IsRegistered          bool    `json:"is_registered"`
-	RegistrationStatus    string  `json:"registration_status"`
-	SubQuotaUsed          int64   `json:"sub_quota_used"`
-	SubQuotaTotal         int64   `json:"sub_quota_total"`
+	HasActiveSubscription  bool    `json:"has_active_subscription"`
+	TotalAmountCNY         float64 `json:"total_amount_cny"`
+	UnitPricePer100MTokens float64 `json:"unit_price_per_100m_tokens"`
+	TotalTokens            int64   `json:"total_tokens"`
+	TotalRequests          int64   `json:"total_requests"`
+	CommonModel            string  `json:"common_model"`
+	IsRegistered           bool    `json:"is_registered"`
+	RegistrationStatus     string  `json:"registration_status"`
+	SubQuotaUsed           int64   `json:"sub_quota_used"`
+	SubQuotaTotal          int64   `json:"sub_quota_total"`
 }
 
 func buildUnregisteredDepartmentUser(openID string, member feishuDeptMember) *model.User {
@@ -1552,8 +1552,8 @@ func sortDepartmentUserItems(items []DepartmentUserItem, sortBy string, sortOrde
 			less = items[i].SubQuotaUsed < items[j].SubQuotaUsed
 		case "total_amount_cny":
 			less = items[i].TotalAmountCNY < items[j].TotalAmountCNY
-		case "avg_price_per_mt":
-			less = items[i].AvgPricePerMT < items[j].AvgPricePerMT
+		case "unit_price_per_100m_tokens":
+			less = items[i].UnitPricePer100MTokens < items[j].UnitPricePer100MTokens
 		case "total_tokens":
 			less = items[i].TotalTokens < items[j].TotalTokens
 		case "total_requests":

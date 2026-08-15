@@ -84,7 +84,7 @@ export type UserSortBy =
   | 'status'
   | 'sub_quota_used'
   | 'monthly_total_amount_cny'
-  | 'monthly_avg_price_per_mt'
+  | 'monthly_unit_price_per_100m_tokens'
   | 'monthly_total_tokens'
   | 'monthly_total_requests'
 

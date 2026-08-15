@@ -54,15 +54,15 @@ var validSortColumns = map[string]bool{
 
 // ComputedSortColumns are columns computed in Go after DB fetch (not real DB columns).
 var ComputedSortColumns = map[string]bool{
-	"sub_quota_used":           true,
-	"monthly_total_amount_cny": true,
-	"monthly_avg_price_per_mt": true,
-	"monthly_total_tokens":     true,
-	"monthly_total_requests":   true,
-	"total_amount_cny":         true,
-	"avg_price_per_mt":         true,
-	"total_tokens":             true,
-	"total_requests":           true,
+	"sub_quota_used":                     true,
+	"monthly_total_amount_cny":           true,
+	"monthly_unit_price_per_100m_tokens": true,
+	"monthly_total_tokens":               true,
+	"monthly_total_requests":             true,
+	"total_amount_cny":                   true,
+	"unit_price_per_100m_tokens":         true,
+	"total_tokens":                       true,
+	"total_requests":                     true,
 }
 
 // IsComputedSortColumn returns true if the sort column is a computed column.

@@ -41,7 +41,7 @@ export interface SubDepartmentStat {
   total_users: number
   total_quota: number
   total_amount_cny: number
-  avg_price_per_mt: number
+  unit_price_per_100m_tokens: number
   total_tokens: number
   total_requests: number
   active_users: number
@@ -90,7 +90,7 @@ export interface DepartmentStat {
   total_use_time: number
   avg_use_time: number
   error_rate: number
-  avg_price_per_mt: number
+  unit_price_per_100m_tokens: number
   registered_users: number
   unregistered_users: number
   active_users: number

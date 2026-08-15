@@ -55,7 +55,7 @@ function isDisabledUserRow(user: User) {
 const USER_COLUMN_SORT_MAP: Partial<Record<string, UserSortBy>> = {
   quota: 'sub_quota_used',
   monthly_total_amount_cny: 'monthly_total_amount_cny',
-  average_price: 'monthly_avg_price_per_mt',
+  average_price: 'monthly_unit_price_per_100m_tokens',
   monthly_total_tokens: 'monthly_total_tokens',
   monthly_total_requests: 'monthly_total_requests',
   id: 'id',

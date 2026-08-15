@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { IconBadgeTone } from '@/components/ui/icon-badge'
 import { safeDivide } from '@/features/dashboard/lib'
+import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 
 interface StatCardConfig {
   key: string
@@ -46,12 +47,15 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
     },
     {
       key: 'avgPrice',
-      title: t('Avg Price'),
-      description: t('Average price per million tokens'),
+      title: t('Unit Price'),
+      description: t('Unit price per 100M tokens'),
       icon: DollarSign,
       iconTone: 'warning',
       getValue: (stat) =>
-        safeDivide(stat?.quota ?? 0, stat?.tpm ?? 0) * 1_000_000,
+        calculateUnitPricePer100MTokens(
+          stat?.quota ?? 0,
+          stat?.tpm ?? 0
+        ),
     },
     {
       key: 'count',
