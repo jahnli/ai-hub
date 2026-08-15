@@ -1,4 +1,6 @@
 import {
+  ChevronLeft,
+  ChevronRight,
   Copy,
   Download,
   ImageIcon,
@@ -11,7 +13,11 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { useState, type WheelEvent } from 'react'
+import {
+  useState,
+  type KeyboardEvent,
+  type WheelEvent,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -247,6 +253,21 @@ export function ResultGrid({
     setPreviewImage(image)
   }
 
+  const previewImageIndex = previewImage
+    ? record.images.findIndex((image) => image.id === previewImage.id)
+    : -1
+
+  const handleChangePreviewImage = (nextImageIndex: number) => {
+    const imageCount = record.images.length
+    if (imageCount < 2) return
+
+    const wrappedImageIndex =
+      ((nextImageIndex % imageCount) + imageCount) % imageCount
+    setPreviewImage(record.images[wrappedImageIndex])
+    setPreviewZoom(1)
+    setPreviewRotation(0)
+  }
+
   const handleClosePreview = () => {
     setPreviewImage(null)
     setPreviewZoom(1)
@@ -271,6 +292,18 @@ export function ResultGrid({
       const zoomDelta = event.deltaY < 0 ? 0.1 : -0.1
       return Math.min(Math.max(currentZoom + zoomDelta, 0.5), 3)
     })
+  }
+
+  const handlePreviewKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (record.images.length < 2 || previewImageIndex < 0) return
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      handleChangePreviewImage(previewImageIndex - 1)
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      handleChangePreviewImage(previewImageIndex + 1)
+    }
   }
 
   const handleResetPreview = () => {
@@ -404,37 +437,69 @@ export function ResultGrid({
         <DialogContent
           className='[&_[data-slot=dialog-close]]:bg-foreground/45 [&_[data-slot=dialog-close]]:text-background [&_[data-slot=dialog-close]]:hover:bg-foreground/60 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&_[data-slot=dialog-close]]:backdrop-blur-md'
           overlayClassName='bg-black/30 supports-backdrop-filter:backdrop-blur-[1.5px]'
+          onKeyDown={handlePreviewKeyDown}
         >
           <DialogTitle className='sr-only'>{t('Image preview')}</DialogTitle>
           {previewImage && (
             <div
-              className='flex h-screen w-screen min-w-0 flex-col items-center justify-center px-[4vw] py-[4vh]'
+              className='relative flex h-screen w-screen min-w-0 flex-col items-center justify-center px-[4vw] py-[4vh]'
               onClick={handleClosePreview}
             >
               <div
-                className='flex max-h-[calc(96vh-9rem)] w-[min(92vw,960px)] items-center justify-center overflow-hidden'
+                className='relative flex w-full items-center justify-center overflow-hidden'
                 onWheel={handlePreviewWheel}
               >
-                <img
-                  src={previewImage.src}
-                  alt={record.prompt.slice(0, 80)}
-                  className='max-h-[calc(96vh-9rem)] max-w-full rounded-lg object-contain transition-transform duration-150'
-                  style={{
-                    transform: `scale(${previewZoom}) rotate(${previewRotation}deg)`,
-                  }}
-                  onClick={(event) => event.stopPropagation()}
-                />
+                <div className='flex max-h-[calc(96vh-9rem)] w-[min(92vw,960px)] items-center justify-center overflow-hidden'>
+                  <img
+                    src={previewImage.src}
+                    alt={record.prompt.slice(0, 80)}
+                    className='max-h-[calc(96vh-9rem)] max-w-full rounded-lg object-contain transition-transform duration-150'
+                    style={{
+                      transform: `scale(${previewZoom}) rotate(${previewRotation}deg)`,
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </div>
               </div>
               <div
-                className='mt-4 flex flex-col gap-5'
+                className='pointer-events-none absolute inset-x-0 bottom-[4vh] flex flex-col items-center gap-5'
                 onClick={(event) => event.stopPropagation()}
               >
                 {previewImage.revisedPrompt && (
-                  <p className='bg-background/90 text-foreground mx-auto max-h-20 w-[min(92vw,960px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
+                  <p className='pointer-events-auto bg-background/90 text-foreground mx-auto max-h-20 w-[min(92vw,960px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
                     {previewImage.revisedPrompt}
                   </p>
                 )}
-                <div className='bg-background/95 flex flex-wrap items-center justify-center gap-1.5 rounded-full border p-1.5 shadow-sm backdrop-blur-sm sm:self-center'>
+                <div className='pointer-events-auto bg-background/95 flex flex-wrap items-center justify-center gap-1.5 rounded-full border p-1.5 shadow-sm backdrop-blur-sm sm:self-center'>
+                  {record.images.length > 1 && (
+                    <>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon-sm'
+                        onClick={() =>
+                          handleChangePreviewImage(previewImageIndex - 1)
+                        }
+                        aria-label={t('Previous image')}
+                      >
+                        <ChevronLeft className='size-3.5' />
+                      </Button>
+                      <span className='text-muted-foreground min-w-12 text-center text-xs tabular-nums'>
+                        {previewImageIndex + 1} / {record.images.length}
+                      </span>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon-sm'
+                        onClick={() =>
+                          handleChangePreviewImage(previewImageIndex + 1)
+                        }
+                        aria-label={t('Next image')}
+                      >
+                        <ChevronRight className='size-3.5' />
+                      </Button>
+                    </>
+                  )}
                   <Button
                     type='button'
                     variant='ghost'
