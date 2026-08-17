@@ -1,6 +1,13 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 08-07（最后更新 08-07）
+**日期**: 2026-06-25 ~ 08-17（最后更新 08-17）
+
+### 2026-08-17 费用分布人数柱状图
+
+- `web/src/features/data-overview/lib/usage-analysis-chart-data.ts` — 新增费用分桶到柱状图数据的转换：按区间生成人数序列并汇总总人数，全员零消耗时返回空以隐藏图表；区间标签格式化抽为可注入的翻译回调，上界为 0 表示开区间最高档、上下界均为 0 表示零消耗档
+- `web/src/features/data-overview/components/usage-analysis.tsx` — 新增费用分布人数柱状图并置于使用分析区域首位；柱顶直接标注人数（万级折算为“万”），Y 轴同口径格式化，悬停提示只显示纯数值不带单位；组件新增可选 `costBuckets` 入参，仅有费用分桶数据时也会渲染区块
+- `web/src/features/data-overview/index.tsx`、`web/src/features/data-overview/components/sub-department-stats-dialog.tsx` — 使用分析区块从部门统计接口透传费用分桶数据，单用户统计弹窗不传（该维度对单人无意义）
+- `web/src/i18n/locales/{en,zh,zh-TW,fr,ja,ru,vi}.json` — 补齐费用分布人数统计标题与用户数标签的七语言文案
 
 ### 2026-08-07 模型系列统计与模型图表置顶
 

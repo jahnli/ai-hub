@@ -428,7 +428,10 @@ export function DataOverview() {
             {loadingState.showUsageSkeleton && <UsageAnalysisSkeleton />}
 
             {usageQuery.data?.data && (
-              <UsageAnalysisSection data={usageQuery.data.data} />
+              <UsageAnalysisSection
+                data={usageQuery.data.data}
+                costBuckets={statsQuery.data?.data.cost_buckets}
+              />
             )}
           </FadeIn>
         </SectionPageLayout.Content>

@@ -131,7 +131,10 @@ export function SubDepartmentStatsDialog(props: SubDepartmentStatsDialogProps) {
           )}
 
           {usageQuery.data?.data && (
-            <UsageAnalysisSection data={usageQuery.data.data} />
+            <UsageAnalysisSection
+              data={usageQuery.data.data}
+              costBuckets={statsQuery.data?.data.cost_buckets}
+            />
           )}
         </div>
       </DialogContent>

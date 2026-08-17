@@ -11,15 +11,17 @@ import { useMemo, type ElementType, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useChartTheme } from '@/lib/use-chart-theme'
 import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
+import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
 
 import {
   buildModelCallDistributionData,
   buildModelCostRankData,
+  buildCostBucketDistributionData,
 } from '../lib/usage-analysis-chart-data'
 import type {
+  CostBucket,
   DailyStat,
   ModelDailyStat,
   ModelStat,
@@ -28,6 +30,7 @@ import type {
 
 interface UsageAnalysisProps {
   data: UsageAnalysis
+  costBuckets?: CostBucket[]
 }
 
 export function UsageAnalysisSection(props: UsageAnalysisProps) {
@@ -39,8 +42,14 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
   const hasModelSeriesData = modelSeriesStats.length > 0
   const hasDailyData =
     props.data.daily_stats && props.data.daily_stats.length > 0
+  const hasCostBuckets = props.costBuckets && props.costBuckets.length > 0
 
-  if (!hasModelData && !hasModelSeriesData && !hasDailyData) {
+  if (
+    !hasModelData &&
+    !hasModelSeriesData &&
+    !hasDailyData &&
+    !hasCostBuckets
+  ) {
     return null
   }
 
@@ -57,6 +66,12 @@ export function UsageAnalysisSection(props: UsageAnalysisProps) {
       </CardHeader>
       <CardContent className='p-0'>
         <div className='grid grid-cols-1 lg:grid-cols-2'>
+          {hasCostBuckets && (
+            <CostBucketDistributionChart
+              data={props.costBuckets ?? []}
+              {...chartProps}
+            />
+          )}
           {hasModelSeriesData && (
             <ModelCallDistributionChart
               data={modelSeriesStats}
@@ -847,6 +862,95 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
       chartKey={`cost-trend-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
+    />
+  )
+}
+
+// ── 费用分布柱状图 ──
+
+function CostBucketDistributionChart(
+  props: ChartBaseProps & { data: CostBucket[] }
+) {
+  const { t } = useTranslation()
+
+  const spec = useMemo(() => {
+    const chartData = buildCostBucketDistributionData(props.data, {
+      zeroSpend: t('Spent ¥0'),
+      overMin: (min: number) => t('Spent over ¥{{min}}', { min }),
+      between: (min: number, max: number) =>
+        t('Spent ¥{{min}}~¥{{max}}', { min, max }),
+    })
+
+    if (!chartData) return null
+
+    return {
+      type: 'bar' as const,
+      data: [{ values: chartData.values }],
+      xField: 'range',
+      yField: 'users',
+      ...APPEAR_ANIMATION,
+      axes: [
+        {
+          orient: 'bottom',
+          type: 'band',
+          label: {
+            style: { fontSize: 11 },
+            autoRotate: true,
+            autoHide: true,
+            autoHideMethod: 'greedy',
+          },
+        },
+        {
+          orient: 'left',
+          type: 'linear',
+          label: {
+            formatMethod: (v: number) => {
+              if (v >= 1_0000) return `${(v / 1_0000).toFixed(1)}万`
+              return v.toFixed(0)
+            },
+          },
+        },
+      ],
+      bar: {
+        style: {
+          cornerRadius: [4, 4, 0, 0],
+        },
+      },
+      label: {
+        visible: true,
+        position: 'top',
+        style: {
+          fontSize: 11,
+          fontWeight: 500,
+        },
+        formatMethod: (value: number) => {
+          if (value >= 1_0000) return `${(value / 1_0000).toFixed(1)}万`
+          return value.toString()
+        },
+      },
+      tooltip: {
+        mark: {
+          title: { value: (datum: { range?: string }) => datum.range ?? '' },
+          content: [
+            {
+              key: () => t('Number of Users'),
+              value: (datum: { users?: number }) =>
+                (datum.users ?? 0).toString(),
+            },
+          ],
+        },
+      },
+    }
+  }, [props.data, t])
+
+  return (
+    <ChartCard
+      icon={TrendingUp}
+      title={t('Cost Distribution by User Count')}
+      themeReady={props.themeReady}
+      resolvedTheme={props.resolvedTheme}
+      chartKey={`cost-bucket-distribution-${props.resolvedTheme}`}
+      spec={spec}
     />
   )
 }
