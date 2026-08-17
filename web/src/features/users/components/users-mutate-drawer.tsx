@@ -68,7 +68,6 @@ import {
   userFormSchema,
   type UserFormValues,
   USER_FORM_DEFAULT_VALUES,
-  clampBpLevelToDepartment,
   transformFormDataToPayload,
   transformUserToFormDefaults,
 } from '../lib'
@@ -256,7 +255,7 @@ export function UsersMutateDrawer({
                   control={form.control}
                   name='role'
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className='min-w-0'>
                       <FormLabel>{t('Role')}</FormLabel>
                       <Select
                         items={[
@@ -271,8 +270,11 @@ export function UsersMutateDrawer({
                         value={String(field.value)}
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('Select a role')} />
+                          <SelectTrigger className='w-full min-w-0 max-w-full'>
+                            <SelectValue
+                              className='min-w-0 overflow-hidden text-ellipsis'
+                              placeholder={t('Select a role')}
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent alignItemWithTrigger={false}>
@@ -298,42 +300,71 @@ export function UsersMutateDrawer({
                   <FormField
                     control={form.control}
                     name='bp_level'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {t('Overview Department Level')}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type='number'
-                            min={0}
-                            step={1}
-                            value={field.value ?? 0}
-                            onChange={(event) => {
-                              const raw = event.target.value
-                              if (raw === '') {
-                                field.onChange(0)
-                                return
+                    render={({ field }) => {
+                      const departmentName = currentRow?.department_name || ''
+                      const departmentLevels = departmentName
+                        .split(' / ')
+                        .map((segment) => segment.trim())
+                        .filter((segment) => segment !== '')
+
+                      const selectItems = [
+                        {
+                          value: '0',
+                          label: `${t('Level {{level}}', {
+                            level: 0,
+                          })}: ${t('No visible departments')}`,
+                        },
+                        ...departmentLevels.map(
+                          (departmentSegment, segmentIndex) => ({
+                            value: String(segmentIndex + 1),
+                            label: `${t('Level {{level}}', {
+                              level: segmentIndex + 1,
+                            })}: ${departmentSegment}`,
+                          })
+                        ),
+                      ]
+
+                      return (
+                        <FormItem className='min-w-0'>
+                          <FormLabel>
+                            {t('Overview Department Level')}
+                          </FormLabel>
+                          <Select
+                            items={selectItems}
+                            onValueChange={(value) => {
+                              if (value !== null) {
+                                field.onChange(Number.parseInt(value))
                               }
-                              const parsed = Number.parseInt(raw, 10)
-                              const value = Number.isNaN(parsed) ? 0 : parsed
-                              field.onChange(
-                                clampBpLevelToDepartment(
-                                  value,
-                                  currentRow?.department_name
-                                )
-                              )
                             }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          {t(
-                            'Controls which department level this BP member can see in Data Overview. 0 means no visible departments. Levels deeper than the member\'s own department hierarchy fall back to their deepest department.'
-                          )}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                            value={String(field.value ?? 0)}
+                          >
+                            <FormControl>
+                              <SelectTrigger className='w-full min-w-0 max-w-full'>
+                                <SelectValue
+                                  className='min-w-0 overflow-hidden text-ellipsis'
+                                  placeholder={t('Select department level')}
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent alignItemWithTrigger={false}>
+                              <SelectGroup>
+                                {selectItems.map((item) => (
+                                  <SelectItem key={item.value} value={item.value}>
+                                    {item.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            {t(
+                              'Controls which department level this BP member can see in Data Overview. 0 means no visible departments. Levels deeper than the member\'s own department hierarchy fall back to their deepest department.'
+                            )}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )
+                    }}
                   />
                 )}
 
@@ -501,12 +532,12 @@ export function UsersMutateDrawer({
                           permissionCatalog
                         )
                         return (
-                          <FormItem>
-                            <div className='space-y-3'>
+                          <FormItem className='min-w-0'>
+                            <div className='min-w-0 space-y-3'>
                               {permissionCatalog.resources.map((resource) => (
                                 <div
                                   key={resource.resource}
-                                  className='space-y-2 rounded-md border p-3'
+                                  className='min-w-0 space-y-2 rounded-md border p-3'
                                 >
                                   <div className='text-sm font-medium'>
                                     {t(resource.label_key)}
@@ -515,7 +546,7 @@ export function UsersMutateDrawer({
                                     {resource.actions.map((option) => (
                                       <label
                                         key={option.action}
-                                        className='flex items-start gap-3'
+                                        className='flex min-w-0 items-start gap-3'
                                       >
                                         <Checkbox
                                           checked={
@@ -534,11 +565,11 @@ export function UsersMutateDrawer({
                                             })
                                           }}
                                         />
-                                        <span className='flex flex-col gap-1'>
-                                          <span className='text-sm font-medium'>
+                                        <span className='flex min-w-0 flex-1 flex-col gap-1'>
+                                          <span className='break-words text-sm font-medium'>
                                             {t(option.label_key)}
                                           </span>
-                                          <span className='text-muted-foreground text-xs'>
+                                          <span className='text-muted-foreground break-words text-xs'>
                                             {t(option.description_key)}
                                           </span>
                                         </span>
