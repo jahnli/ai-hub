@@ -5,6 +5,7 @@ import dayjs from '@/lib/dayjs'
 import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 
 import type {
+  CostBucket,
   DepartmentStat,
   DepartmentUser,
   DeptTreeNode,
@@ -16,6 +17,7 @@ import {
   renderChartToBase64,
   buildSubDeptBarSpec,
   buildSubDeptPieSpec,
+  buildCostBucketDistributionSpec,
   buildCostTrendSpec,
   buildRequestTrendSpec,
   buildTokenTrendSpec,
@@ -216,6 +218,10 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
     [
       t('Active Users / Active Rate'),
       `${(stat.active_users ?? 0).toLocaleString()} / ${(stat.active_user_rate ?? 0).toFixed(1)}%`,
+    ],
+    [
+      t('Cost >10 Users / Share'),
+      `${(stat.high_cost_users ?? 0).toLocaleString()} / ${(stat.high_cost_user_rate ?? 0).toFixed(1)}%`,
     ],
     [
       t('Tokens per Active User'),
@@ -484,7 +490,7 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
     )
   }
 
-  await embedRightSideCharts(wb, mainWs, params.usage)
+  await embedRightSideCharts(wb, mainWs, params.usage, params.stats.cost_buckets)
 
   if (params.includeUserList) {
     buildUserListSheet(wb, params)
@@ -508,7 +514,12 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
       if (detail.subStats.length > 0) {
         await embedSubDeptCharts(wb, ws, detail.subStats)
       }
-      await embedRightSideCharts(wb, ws, detail.usage)
+      await embedRightSideCharts(
+        wb,
+        ws,
+        detail.usage,
+        detail.stats.cost_buckets
+      )
     }
   }
 
@@ -547,7 +558,8 @@ async function embedSubDeptCharts(
 async function embedRightSideCharts(
   wb: ExcelJS.Workbook,
   ws: ExcelJS.Worksheet,
-  usage: UsageAnalysis
+  usage: UsageAnalysis,
+  costBuckets?: CostBucket[]
 ): Promise<void> {
   const rightCol = 10
   const rightChartColumnCount = 8
@@ -579,6 +591,15 @@ async function embedRightSideCharts(
   const modelDailyStats = usage.model_daily_stats ?? []
 
   const modelTrendSpec = buildModelUsageTrendSpec(modelDailyStats)
+
+  if (costBuckets && costBuckets.length > 0) {
+    const spec = buildCostBucketDistributionSpec(costBuckets)
+    if (spec) {
+      const image = await renderChartToBase64(spec, imgWidth, imgHeight)
+      addImageToSheet(wb, ws, image, row, rightCol, imgWidth, imgHeight)
+      row += rowSpacing
+    }
+  }
 
   if (modelSeriesStats.some((model) => model.total_requests > 0)) {
     const spec = buildModelCallDistributionSpec(

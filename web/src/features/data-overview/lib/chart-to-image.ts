@@ -1,6 +1,8 @@
 import VChart, { type ISpec } from '@visactor/vchart'
+import { t } from 'i18next'
 
 import type {
+  CostBucket,
   DailyStat,
   ModelDailyStat,
   ModelStat,
@@ -8,8 +10,10 @@ import type {
   UserRankingItem,
 } from '../types'
 import {
+  buildCostBucketDistributionData,
   buildModelCallDistributionData,
   buildModelCostRankData,
+  type CostBucketLabelTranslator,
 } from './usage-analysis-chart-data'
 
 const CHART_WIDTH = 680
@@ -455,6 +459,59 @@ export function buildUserRankPieSpec(rankings: UserRankingItem[]): ISpec {
       },
     },
     legends: { visible: true, orient: 'bottom', type: 'discrete' },
+    theme: 'light',
+    background: 'white',
+  } as unknown as ISpec
+}
+
+function fmtUserCount(count: number): string {
+  if (count >= 1_0000) return (count / 1_0000).toFixed(1) + '万'
+  return count.toFixed(0)
+}
+
+export function buildCostBucketDistributionSpec(
+  costBuckets: CostBucket[]
+): ISpec | null {
+  const labels: CostBucketLabelTranslator = {
+    zeroSpend: t('Spent ¥0'),
+    overMin: (min: number) => t('Spent over ¥{{min}}', { min }),
+    between: (min: number, max: number) =>
+      t('Spent ¥{{min}}~¥{{max}}', { min, max }),
+  }
+
+  const chartData = buildCostBucketDistributionData(costBuckets, labels)
+  if (!chartData) return null
+
+  return {
+    type: 'bar',
+    title: { visible: true, text: t('Cost Distribution by User Count') },
+    data: [{ values: chartData.values }],
+    xField: 'range',
+    yField: 'users',
+    axes: [
+      {
+        orient: 'bottom',
+        type: 'band',
+        label: {
+          style: { fontSize: 11 },
+          autoRotate: true,
+          autoHide: true,
+          autoHideMethod: 'greedy',
+        },
+      },
+      {
+        orient: 'left',
+        type: 'linear',
+        label: { formatMethod: (v: number) => fmtUserCount(v) },
+      },
+    ],
+    bar: { style: { cornerRadius: [4, 4, 0, 0] } },
+    label: {
+      visible: true,
+      position: 'top',
+      style: { fontSize: 11, fontWeight: 500 },
+      formatMethod: (v: number) => fmtUserCount(v),
+    },
     theme: 'light',
     background: 'white',
   } as unknown as ISpec
