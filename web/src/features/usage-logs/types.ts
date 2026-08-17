@@ -393,6 +393,8 @@ export interface GetTaskLogsParams {
 export interface FetchLogsConfig {
   logCategory: LogCategory
   isAdmin: boolean
+  canManageScope: boolean
+  selfUsername?: string
   page: number
   pageSize: number
   searchParams: Record<string, unknown>

@@ -67,6 +67,7 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { t } = useTranslation()
   const { canManageScope, isAdminView: isAdmin } = useLogsViewScope()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
+  const currentUsername = useAuthStore((state) => state.auth.user?.username)
   const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const pageKey = `${logCategory}Page`
   const pageSizeKey = `${logCategory}PageSize`
@@ -130,6 +131,8 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
       const result = await fetchLogsByCategory({
         logCategory,
         isAdmin,
+        canManageScope,
+        selfUsername: currentUsername,
         page: pagination.pageIndex + 1,
         pageSize: pagination.pageSize,
         searchParams,

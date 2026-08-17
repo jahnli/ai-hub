@@ -711,36 +711,38 @@ export function useCommonLogsColumns(
     }
   )
 
-  if (isAdmin) {
-    columns.push({
-      id: 'channel',
-      header: t('Channel'),
-      accessorFn: (row) => row.channel,
-      cell: function ChannelCell({ row }) {
-        const { sensitiveVisible, setAffinityTarget, setAffinityDialogOpen } =
-          useUsageLogsContext()
-        const log = row.original
-        if (!isDisplayableLogType(log.type)) return null
-        const other = parseLogOther(log.other)
-        const affinity = other?.admin_info?.channel_affinity
-        const rawUseChannel = other?.admin_info?.use_channel ?? []
-        const useChannel = Array.isArray(rawUseChannel)
-          ? rawUseChannel.map(String).filter(Boolean)
-          : []
-        const hasRetryChain = useChannel.length > 1
-        const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
-        const channelIdDisplay = `#${log.channel}`
-        const channelDisplay = getUsageLogChannelDisplay(
-          log.channel_name,
-          log.channel,
-          sensitiveVisible,
-          demoMode
-        )
-        const multiKeyIndex = other?.admin_info?.multi_key_index
-        const showMultiKeyIndex =
-          other?.admin_info?.is_multi_key === true &&
-          typeof multiKeyIndex === 'number' &&
-          Number.isFinite(multiKeyIndex)
+  columns.push({
+    id: 'channel',
+    header: t('Channel'),
+    accessorFn: (row) => row.channel,
+    cell: function ChannelCell({ row }) {
+      const { sensitiveVisible, setAffinityTarget, setAffinityDialogOpen } =
+        useUsageLogsContext()
+      const log = row.original
+      if (!isDisplayableLogType(log.type)) return null
+      const other = parseLogOther(log.other)
+      const affinity = isAdmin ? other?.admin_info?.channel_affinity : null
+      const rawUseChannel = isAdmin
+        ? other?.admin_info?.use_channel ?? []
+        : []
+      const useChannel = Array.isArray(rawUseChannel)
+        ? rawUseChannel.map(String).filter(Boolean)
+        : []
+      const hasRetryChain = useChannel.length > 1
+      const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
+      const channelIdDisplay = `#${log.channel}`
+      const channelDisplay = getUsageLogChannelDisplay(
+        log.channel_name,
+        log.channel,
+        sensitiveVisible,
+        demoMode
+      )
+      const multiKeyIndex = isAdmin ? other?.admin_info?.multi_key_index : null
+      const showMultiKeyIndex =
+        isAdmin &&
+        other?.admin_info?.is_multi_key === true &&
+        typeof multiKeyIndex === 'number' &&
+        Number.isFinite(multiKeyIndex)
         return (
           <TooltipProvider>
             <Tooltip>
@@ -860,11 +862,10 @@ export function useCommonLogsColumns(
             </Tooltip>
           </TooltipProvider>
         )
-      },
-      size: 115,
-      maxSize: 115,
-    })
-  }
+    },
+    size: 115,
+    maxSize: 115,
+  })
 
   if (isSuperAdmin) {
     columns.push({

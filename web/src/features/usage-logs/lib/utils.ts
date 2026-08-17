@@ -240,8 +240,16 @@ export function buildApiParams(config: {
 export async function fetchLogsByCategory(
   config: FetchLogsConfig
 ): Promise<GetLogsResponse> {
-  const { logCategory, isAdmin, page, pageSize, searchParams, columnFilters } =
-    config
+  const {
+    logCategory,
+    isAdmin,
+    canManageScope,
+    selfUsername,
+    page,
+    pageSize,
+    searchParams,
+    columnFilters,
+  } = config
 
   if (logCategory === 'common') {
     const params = buildApiParams({
@@ -249,9 +257,16 @@ export async function fetchLogsByCategory(
       pageSize,
       searchParams,
       columnFilters,
-      isAdmin,
+      isAdmin: canManageScope,
     })
-    return isAdmin ? await getAllLogs(params) : await getUserLogs(params)
+
+    // If admin viewing their own logs (self view), use admin endpoint with username filter
+    if (canManageScope && !isAdmin && selfUsername) {
+      params.username = selfUsername
+      return await getAllLogs(params)
+    }
+
+    return canManageScope ? await getAllLogs(params) : await getUserLogs(params)
   }
 
   // For drawing and task logs
@@ -273,13 +288,13 @@ export async function fetchLogsByCategory(
   }
 
   if (logCategory === 'drawing') {
-    return isAdmin
+    return canManageScope
       ? await getAllMidjourneyLogs(paramsWithFilter as GetMidjourneyLogsParams)
       : await getUserMidjourneyLogs(paramsWithFilter as GetMidjourneyLogsParams)
   }
 
   // task logs
-  return isAdmin
+  return canManageScope
     ? await getAllTaskLogs(paramsWithFilter as GetTaskLogsParams)
     : await getUserTaskLogs(paramsWithFilter as GetTaskLogsParams)
 }
