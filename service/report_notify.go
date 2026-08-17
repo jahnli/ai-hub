@@ -82,7 +82,7 @@ func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNot
 		if err != nil {
 			return nil, fmt.Errorf("resolve report scope %q: %w", scope.departmentName, err)
 		}
-		stats, err := buildCompanyDepartmentStats(statsRequest, audience)
+		stats, err := buildCompanyDepartmentStats(statsRequest, audience, nil)
 		if err != nil {
 			return nil, fmt.Errorf("build report stats for %q: %w", scope.departmentName, err)
 		}

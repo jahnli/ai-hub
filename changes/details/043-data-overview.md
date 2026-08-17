@@ -198,3 +198,13 @@
 
 - `controller/department.go` — 用户统计相关接口允许管理员在未传 `company_id` 时继续请求；BP、部门负责人及普通用户仍返回公司 ID 必填错误
 - `service/data_overview_company.go` — 单用户统计授权允许管理员省略公司范围并查看全局用户，其他角色继续通过公司组织树校验目标用户可见性
+
+### 2026-08-17 费用分桶统计卡片
+
+- `model/log.go` — `DepartmentStat` 新增 `cost_buckets`、`high_cost_users`、`high_cost_user_rate`、`high_cost_threshold_cny` 字段，并新增 `CostBucket` 结构体（上界为开区间，0 表示无上界）
+- `service/data_overview_company.go` — 新增 `highCostThresholdCNY`（10 元）与 `costBucketUpperBoundsCNY` 分桶边界；`buildCompanyDepartmentStats` 增加可选 `userStats` 参数，overview 聚合路径复用已加载的单用户统计计算分桶，独立统计接口仍自行加载
+- `service/report_notify.go` — 报表通知的部门统计构造同步适配新的分桶字段
+- `web/src/features/data-overview/types.ts` — 补充 `CostBucket` 类型与部门统计的费用分桶字段
+- `web/src/features/data-overview/components/department-stats-cards.tsx` — 未注册/已注册两卡合并为单卡；新增「费用 >10 元人数/占比」卡片，Tooltip 悬停展示各费用区间人数分布，占比复用活跃率配色阈值
+- `web/src/features/data-overview/components/__tests__/stats-card-tooltip.test.tsx` — 测试夹具补充费用分桶字段
+- `web/src/i18n/locales/*.json` — 七语言补充费用分桶相关文案（`Cost Distribution`、`Spent ¥0`、`Spent ¥{{min}}~¥{{max}}`、`Spent over ¥{{min}}`、`Users spending more than ¥10` 等）

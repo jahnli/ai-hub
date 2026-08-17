@@ -25,6 +25,15 @@ const (
 	tokensPerHundredMillion          = 100_000_000
 )
 
+// highCostThresholdCNY is the spend level above which a user is reported as a
+// high-cost user on the data overview cards.
+const highCostThresholdCNY = 10.0
+
+// costBucketUpperBoundsCNY lists the exclusive upper bounds used to group users
+// by spend. The final bucket is unbounded and covers everything above the last
+// value here.
+var costBucketUpperBoundsCNY = []float64{0, 10, 50, 100, 200, 400, 800}
+
 // overviewAudienceCacheTTL lets the five parallel overview endpoints share one
 // lightweight member resolve. Keep short so role/department changes still refresh.
 const overviewAudienceCacheTTL = 30 * time.Second
@@ -782,8 +791,12 @@ func GetDepartmentOverview(req *DepartmentOverviewRequest) (*DepartmentOverviewR
 		return sharedUserStatsErr
 	})
 	group.Go(func() error {
+		<-sharedUserStatsReady
+		if sharedUserStatsErr != nil {
+			return sharedUserStatsErr
+		}
 		var taskErr error
-		stats, taskErr = buildCompanyDepartmentStats(statsReq, audience)
+		stats, taskErr = buildCompanyDepartmentStats(statsReq, audience, sharedUserStats)
 		return taskErr
 	})
 	group.Go(func() error {
@@ -836,10 +849,14 @@ func getCompanyDepartmentStats(req *DepartmentStatsRequest) (*model.DepartmentSt
 	if err != nil {
 		return nil, err
 	}
-	return buildCompanyDepartmentStats(req, audience)
+	return buildCompanyDepartmentStats(req, audience, nil)
 }
 
-func buildCompanyDepartmentStats(req *DepartmentStatsRequest, audience *overviewAudience) (*model.DepartmentStat, error) {
+// buildCompanyDepartmentStats aggregates the overview cards for one department.
+// userStats is optional: when the caller already loaded per-user totals they are
+// reused to group the audience by spend, otherwise the cost buckets are loaded
+// separately so the stats endpoint stays self-contained.
+func buildCompanyDepartmentStats(req *DepartmentStatsRequest, audience *overviewAudience, userStats *overviewUserStats) (*model.DepartmentStat, error) {
 	threshold := getActiveUserThreshold(req.StartTimestamp, req.EndTimestamp)
 	stat, err := model.GetDepartmentStats(
 		audience.registeredUserIDs,
@@ -857,11 +874,81 @@ func buildCompanyDepartmentStats(req *DepartmentStatsRequest, audience *overview
 	if audience.forceRegisteredOnly || stat.UnregisteredUsers < 0 {
 		stat.UnregisteredUsers = 0
 	}
+	if userStats == nil {
+		userStats, err = loadOverviewUserStats(audience.registeredUserIDs, req.StartTimestamp, req.EndTimestamp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	applyCostBuckets(stat, userStats)
 	finalizeDepartmentStat(stat)
 	return stat, nil
 }
 
-func finalizeDepartmentStat(stat *model.DepartmentStat) {
+// applyCostBuckets groups every person in scope by how much they spent during
+// the period. Users without any usage row, plus unregistered users, land in the
+// zero-spend bucket so the buckets always add up to the full headcount.
+func applyCostBuckets(stat *model.DepartmentStat, userStats *overviewUserStats) {
+	conversionFactor := quotaToCNYFactor()
+	buckets := make([]model.CostBucket, 0, len(costBucketUpperBoundsCNY)+1)
+	for index, upperBound := range costBucketUpperBoundsCNY {
+		lowerBound := 0.0
+		if index > 0 {
+			lowerBound = costBucketUpperBoundsCNY[index-1]
+		}
+		buckets = append(buckets, model.CostBucket{
+			MinAmountCNY: lowerBound,
+			MaxAmountCNY: upperBound,
+		})
+	}
+	buckets = append(buckets, model.CostBucket{
+		MinAmountCNY: costBucketUpperBoundsCNY[len(costBucketUpperBoundsCNY)-1],
+	})
+
+	var highCostUsers int64
+	var usersWithSpend int64
+	if userStats != nil {
+		for _, row := range userStats.rows {
+			amountCNY := float64(row.TotalQuota) * conversionFactor
+			if amountCNY <= 0 {
+				continue
+			}
+			usersWithSpend++
+			buckets[findCostBucketIndex(amountCNY)].Users++
+			if amountCNY > highCostThresholdCNY {
+				highCostUsers++
+			}
+		}
+	}
+
+	totalUsers := stat.RegisteredUsers + stat.UnregisteredUsers
+	zeroSpendUsers := totalUsers - usersWithSpend
+	if zeroSpendUsers < 0 {
+		zeroSpendUsers = 0
+	}
+	buckets[0].Users = zeroSpendUsers
+
+	stat.CostBuckets = buckets
+	stat.HighCostUsers = highCostUsers
+	stat.HighCostThresholdCNY = highCostThresholdCNY
+	if totalUsers > 0 {
+		stat.HighCostUserRate = float64(highCostUsers) / float64(totalUsers) * 100
+	}
+}
+
+// findCostBucketIndex returns the bucket owning a positive spend amount. Bucket
+// zero is reserved for users with no spend at all.
+func findCostBucketIndex(amountCNY float64) int {
+	for index := 1; index < len(costBucketUpperBoundsCNY); index++ {
+		if amountCNY <= costBucketUpperBoundsCNY[index] {
+			return index
+		}
+	}
+	return len(costBucketUpperBoundsCNY)
+}
+
+// quotaToCNYFactor converts a raw quota amount into CNY.
+func quotaToCNYFactor() float64 {
 	quotaPerUnit := common.QuotaPerUnit
 	if quotaPerUnit <= 0 {
 		quotaPerUnit = 500000
@@ -870,7 +957,11 @@ func finalizeDepartmentStat(stat *model.DepartmentStat) {
 	if exchangeRate <= 0 {
 		exchangeRate = 1
 	}
-	stat.TotalAmountCNY = float64(stat.TotalQuota) / quotaPerUnit * exchangeRate
+	return exchangeRate / quotaPerUnit
+}
+
+func finalizeDepartmentStat(stat *model.DepartmentStat) {
+	stat.TotalAmountCNY = float64(stat.TotalQuota) * quotaToCNYFactor()
 	if stat.TotalTokens > 0 {
 		stat.UnitPricePer100MTokens = stat.TotalAmountCNY / (float64(stat.TotalTokens) / tokensPerHundredMillion)
 	}

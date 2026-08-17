@@ -1208,6 +1208,21 @@ type DepartmentStat struct {
 	ActiveUserRequestThreshold int64      `json:"active_user_request_threshold"`
 	ActiveUserTokenThreshold   int64      `json:"active_user_token_threshold"`
 	ActiveUserFormula          [3]float64 `json:"active_user_formula"`
+	// CostBuckets groups the audience by how much each user spent during the
+	// period, ordered from the lowest spend range to the highest.
+	CostBuckets []CostBucket `json:"cost_buckets"`
+	// HighCostUsers counts users whose spend exceeded HighCostThresholdCNY.
+	HighCostUsers        int64   `json:"high_cost_users"`
+	HighCostUserRate     float64 `json:"high_cost_user_rate"`
+	HighCostThresholdCNY float64 `json:"high_cost_threshold_cny"`
+}
+
+// CostBucket describes how many users fall inside a spend range for a period.
+// MaxAmountCNY is exclusive and zero means the range has no upper bound.
+type CostBucket struct {
+	MinAmountCNY float64 `json:"min_amount_cny"`
+	MaxAmountCNY float64 `json:"max_amount_cny"`
+	Users        int64   `json:"users"`
 }
 
 // GetDepartmentStats aggregates statistics for a set of user IDs within a time range.

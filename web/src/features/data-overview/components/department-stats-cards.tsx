@@ -6,8 +6,6 @@ import {
   Hash,
   Layers,
   Timer,
-  UserCheck,
-  UserX,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -23,7 +21,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { getActiveUserRateClassName } from '../lib/active-user-rate'
-import type { DepartmentStat } from '../types'
+import type { CostBucket, DepartmentStat } from '../types'
 import { ActivityFormulaTooltip } from './activity-formula-tooltip'
 
 export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
@@ -103,15 +101,57 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return count.toLocaleString()
   }
 
+  const formatCostBucketLabel = (bucket: CostBucket): string => {
+    if (bucket.max_amount_cny === 0) {
+      if (bucket.min_amount_cny === 0) {
+        return t('Spent ¥0')
+      }
+      return t('Spent over ¥{{min}}', { min: bucket.min_amount_cny })
+    }
+    return t('Spent ¥{{min}}~¥{{max}}', {
+      min: bucket.min_amount_cny,
+      max: bucket.max_amount_cny,
+    })
+  }
+
+  const buildCostDistributionTooltip = (): ReactNode => {
+    const costBuckets = stat.cost_buckets ?? []
+    if (costBuckets.length === 0) {
+      return null
+    }
+    return (
+      <div className='text-background max-w-[16rem] space-y-1.5'>
+        <div className='flex items-baseline justify-between gap-4'>
+          <span className='text-xs font-medium'>{t('Cost Distribution')}</span>
+        </div>
+        <div className='border-border/40 space-y-1.5 border-t pt-1.5'>
+          {costBuckets.map((bucket) => (
+            <div
+              key={`${bucket.min_amount_cny}-${bucket.max_amount_cny}`}
+              className='flex items-baseline justify-between gap-4'
+            >
+              <span className='text-xs'>{formatCostBucketLabel(bucket)}</span>
+              <span className='font-mono text-xs font-semibold'>
+                {t('{{count}} people', { count: bucket.users })}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   const activeUserRate = stat.active_user_rate ?? 0
   const tokensPerActiveUser =
     (stat.avg_tokens_per_active_user_mt ?? 0) * 1_000_000
   const activeUserRateClassName = getActiveUserRateClassName(activeUserRate)
+  const highCostUserRate = stat.high_cost_user_rate ?? 0
+  const highCostUserRateClassName = getActiveUserRateClassName(highCostUserRate)
 
   const items: {
     title: string
     titleSuffix?: ReactNode
-    value: string
+    value: ReactNode
     desc?: string
     icon: LucideIcon
     iconTone: IconBadgeTone
@@ -161,20 +201,21 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       iconTone: 'chart-2',
     },
     {
-      title: t('Registered Count'),
-      value: (stat.registered_users ?? 0).toLocaleString(),
-      desc: t('Registered people count'),
-      icon: UserCheck,
-      iconTone: 'success',
-      valueClassName: 'text-success',
-    },
-    {
-      title: t('Unregistered Count'),
-      value: (stat.unregistered_users ?? 0).toLocaleString(),
-      desc: t('Unregistered people count'),
-      icon: UserX,
-      iconTone: 'warning',
-      valueClassName: 'text-warning',
+      title: t('Unregistered / Registered'),
+      value: (
+        <>
+          <span className='text-warning'>
+            {(stat.unregistered_users ?? 0).toLocaleString()}
+          </span>
+          <span className='text-muted-foreground'> / </span>
+          <span className='text-success'>
+            {(stat.registered_users ?? 0).toLocaleString()}
+          </span>
+        </>
+      ),
+      desc: t('Unregistered and registered people count'),
+      icon: Users,
+      iconTone: 'chart-3',
     },
     {
       title: t('Users / Share'),
@@ -186,6 +227,34 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       icon: Users,
       iconTone: 'primary',
       valueClassName: activeUserRateClassName,
+    },
+    {
+      title: t('Cost >10 Users / Share'),
+      titleSuffix: (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type='button'
+                className='text-muted-foreground/70 hover:text-foreground shrink-0 transition-colors'
+                aria-label={t('View cost distribution')}
+              />
+            }
+          >
+            <CircleAlert className='size-3 sm:size-3.5' />
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className='font-sans text-xs'>
+              {buildCostDistributionTooltip()}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      ),
+      value: `${(stat.high_cost_users ?? 0).toLocaleString()} / ${highCostUserRate.toFixed(1)}%`,
+      desc: t('Users spending more than ¥10'),
+      icon: DollarSign,
+      iconTone: 'destructive',
+      valueClassName: highCostUserRateClassName,
     },
     {
       title: t('Tokens per Active User'),

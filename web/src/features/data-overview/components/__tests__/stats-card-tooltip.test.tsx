@@ -50,6 +50,10 @@ const departmentStat: DepartmentStat = {
   active_user_formula: [10, 1_000_000, 0.85],
   active_user_request_threshold: 0,
   active_user_token_threshold: 0,
+  cost_buckets: [],
+  high_cost_users: 0,
+  high_cost_user_rate: 0,
+  high_cost_threshold_cny: 10,
 }
 
 describe('department stats card tooltips', () => {

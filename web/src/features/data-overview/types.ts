@@ -99,6 +99,16 @@ export interface DepartmentStat {
   active_user_formula: [number, number, number]
   active_user_request_threshold: number
   active_user_token_threshold: number
+  cost_buckets: CostBucket[]
+  high_cost_users: number
+  high_cost_user_rate: number
+  high_cost_threshold_cny: number
+}
+
+export interface CostBucket {
+  min_amount_cny: number
+  max_amount_cny: number
+  users: number
 }
 
 export interface ReportNotifySetting {
