@@ -534,7 +534,20 @@ func trimTreeForBP(fullTree []*DeptTreeNode, bpLevel int, departmentName string)
 	}
 	bpLevel = NormalizeBpLevelForDepartment(departmentName, bpLevel)
 
-	targetNode := findNodeByLabel(fullTree, segments[bpLevel-1])
+	// Match by the full ancestor path so that duplicate department names under
+	// different parents resolve to the member's own branch. Some platforms
+	// (e.g. Feishu) may exclude the org root node from the tree while the
+	// synced department_name still includes it, so drop leading segments
+	// progressively before giving up on the path.
+	var targetNode *DeptTreeNode
+	for start := 0; start < bpLevel && targetNode == nil; start++ {
+		targetNode = findNodeByPath(fullTree, segments[start:bpLevel])
+	}
+	if targetNode == nil {
+		// Legacy fallback for stale hierarchies where the exact path no longer
+		// exists: match the target segment by name alone, as before.
+		targetNode = findNodeByLabel(fullTree, segments[bpLevel-1])
+	}
 	if targetNode == nil {
 		return markAllDisabled(fullTree), nil
 	}
@@ -572,6 +585,32 @@ func findNodeByLabel(nodes []*DeptTreeNode, label string) *DeptTreeNode {
 		}
 	}
 	return nil
+}
+
+// findNodeByPath walks labels level by level from the given roots, returning the
+// node at the end of the path. Unlike findNodeByLabel it requires the full
+// ancestor chain, so duplicate names under different parents resolve to the
+// branch that actually matches the path.
+func findNodeByPath(nodes []*DeptTreeNode, path []string) *DeptTreeNode {
+	if len(path) == 0 {
+		return nil
+	}
+	currentNodes := nodes
+	var matched *DeptTreeNode
+	for _, label := range path {
+		matched = nil
+		for _, node := range currentNodes {
+			if node.Label == label {
+				matched = node
+				break
+			}
+		}
+		if matched == nil {
+			return nil
+		}
+		currentNodes = matched.Children
+	}
+	return matched
 }
 
 func collectAllLeaderDepts(nodes []*DeptTreeNode, userOpenID string) []string {

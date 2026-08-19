@@ -161,3 +161,63 @@ func TestTrimTreeForBPDoesNotMutateInputTree(t *testing.T) {
 	assert.False(t, input[0].Children[0].Disabled)
 	assert.False(t, input[0].Children[0].Children[0].Disabled)
 }
+
+// buildDuplicateNameTree returns a tree where two sibling business units both
+// contain a department named 第一开发部, mirroring DingTalk/Feishu orgs that
+// allow duplicate department names across parents.
+func buildDuplicateNameTree() []*DeptTreeNode {
+	teamSeven := &DeptTreeNode{Value: "team-7", Label: "第一开发部", Children: []*DeptTreeNode{}}
+	teamEight := &DeptTreeNode{Value: "team-8", Label: "第一开发部", Children: []*DeptTreeNode{}}
+	buSeven := &DeptTreeNode{Value: "bu-7", Label: "ERP第七事业部", Children: []*DeptTreeNode{teamSeven}}
+	buEight := &DeptTreeNode{Value: "bu-8", Label: "ERP第八事业部", Children: []*DeptTreeNode{teamEight}}
+	root := &DeptTreeNode{Value: "root", Label: "共兴达", Children: []*DeptTreeNode{buSeven, buEight}}
+	return []*DeptTreeNode{root}
+}
+
+func TestTrimTreeForBPMatchesDepartmentByPath(t *testing.T) {
+	tests := []struct {
+		name           string
+		tree           []*DeptTreeNode
+		bpLevel        int
+		departmentName string
+		wantEnabled    []string
+		wantLeaderIDs  []string
+	}{
+		{
+			name:           "duplicate leaf names resolve to the branch matching the full path",
+			tree:           buildDuplicateNameTree(),
+			bpLevel:        3,
+			departmentName: "共兴达 / ERP第八事业部 / 第一开发部",
+			wantEnabled:    []string{"team-8"},
+			wantLeaderIDs:  []string{"team-8"},
+		},
+		{
+			name: "org root segment missing from tree still resolves by suffix path",
+			tree: func() []*DeptTreeNode {
+				tree := buildDuplicateNameTree()
+				return tree[0].Children
+			}(),
+			bpLevel:        3,
+			departmentName: "共兴达 / ERP第八事业部 / 第一开发部",
+			wantEnabled:    []string{"team-8"},
+			wantLeaderIDs:  []string{"team-8"},
+		},
+		{
+			name:           "path absent in tree falls back to name match as before",
+			tree:           buildDuplicateNameTree(),
+			bpLevel:        3,
+			departmentName: "共兴达 / ERP第九事业部 / 第一开发部",
+			wantEnabled:    []string{"team-7"},
+			wantLeaderIDs:  []string{"team-7"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trimmed, leaderIDs := trimTreeForBP(tt.tree, tt.bpLevel, tt.departmentName)
+
+			assert.Equal(t, tt.wantLeaderIDs, leaderIDs)
+			assert.Equal(t, tt.wantEnabled, collectEnabledNodeValues(trimmed))
+		})
+	}
+}

@@ -137,7 +137,7 @@ func getReportNotifyScopes(user *model.User) ([]reportNotifyScope, error) {
 			bpPath = segments[:level]
 		}
 		if len(bpPath) > 0 {
-			if node := findReportNotifyNodeByPath(fullTree, bpPath); node != nil {
+			if node := findNodeByPath(fullTree, bpPath); node != nil {
 				scopes = append(scopes, reportNotifyScope{
 					company:        company,
 					departmentID:   node.Value,
@@ -160,28 +160,6 @@ func getReportNotifyScopes(user *model.User) ([]reportNotifyScope, error) {
 		}
 	}
 	return scopes, nil
-}
-
-func findReportNotifyNodeByPath(nodes []*DeptTreeNode, path []string) *DeptTreeNode {
-	if len(path) == 0 {
-		return nil
-	}
-	currentNodes := nodes
-	var matched *DeptTreeNode
-	for _, label := range path {
-		matched = nil
-		for _, node := range currentNodes {
-			if node.Label == label {
-				matched = node
-				break
-			}
-		}
-		if matched == nil {
-			return nil
-		}
-		currentNodes = matched.Children
-	}
-	return matched
 }
 
 func findReportNotifyNodePath(nodes []*DeptTreeNode, value string, parents []string) ([]string, bool) {

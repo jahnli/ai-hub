@@ -1,6 +1,12 @@
 # 数据总览可见部门级别改为按成员 bp_level 配置
 
-**日期**: 2026-08-17
+**日期**: 2026-08-17 ~ 08-19（最后更新 08-19）
+
+### 2026-08-19 重名部门 BP 裁剪匹配修复
+
+- `service/feishu_department.go` — `trimTreeForBP` 由按目标段名称全局搜索（`findNodeByLabel` 取 DFS 首个命中）改为按 `department_name` 完整路径逐级匹配：新增 `findNodeByPath` 沿各级父子关系消歧，同级重名部门（如多个事业部下的第一开发部）不再串到其他分支；路径不匹配时依次去掉前导段重试（兼容树中不含组织根节点的平台），仍失败则回退为按目标段名称查找保持旧行为
+- `service/report_notify.go` — 删除重复的 `findReportNotifyNodeByPath` 实现，报表范围改用统一的 `findNodeByPath`
+- `service/feishu_department_test.go` — 新增重名部门树回归测试：完整路径命中本人分支、缺根节点时后缀路径命中、路径缺失时名称兜底
 
 ## 涉及文件
 
