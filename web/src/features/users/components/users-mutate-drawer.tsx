@@ -140,7 +140,7 @@ export function UsersMutateDrawer({
   const canEditAdminPermissions = currentUser?.role === ROLE.SUPER_ADMIN
   const targetIsAdmin = (selectedRole ?? currentRow?.role ?? 0) >= ROLE.ADMIN
   const targetRole = selectedRole ?? currentRow?.role ?? 0
-  const targetIsBP = targetRole === ROLE.BU_BP || targetRole === ROLE.CENTER_BP
+  const targetIsBP = targetRole === ROLE.BU_BP
 
   const onSubmit = async (data: UserFormValues) => {
     if (!isUpdate) {
@@ -260,8 +260,7 @@ export function UsersMutateDrawer({
                       <Select
                         items={[
                           { value: '1', label: t('Common User') },
-                          { value: '2', label: t('AI BP') },
-                          { value: '3', label: t('Center BP') },
+                          { value: '2', label: t('BP') },
                           { value: '10', label: t('Admin') },
                         ]}
                         onValueChange={(value) =>
@@ -282,8 +281,7 @@ export function UsersMutateDrawer({
                             <SelectItem value='1'>
                               {t('Common User')}
                             </SelectItem>
-                            <SelectItem value='2'>{t('AI BP')}</SelectItem>
-                            <SelectItem value='3'>{t('Center BP')}</SelectItem>
+                            <SelectItem value='2'>{t('BP')}</SelectItem>
                             <SelectItem value='10'>{t('Admin')}</SelectItem>
                           </SelectGroup>
                         </SelectContent>

@@ -25,23 +25,18 @@ func TestCanAccessDataOverview(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "AI BP with configured bp_level can access",
+			name:     "BP with configured bp_level can access",
 			user:     &model.User{Role: common.RoleBUBP, BpLevel: 2},
 			expected: true,
 		},
 		{
-			name:     "Center BP with configured bp_level can access",
-			user:     &model.User{Role: common.RoleCenterBP, BpLevel: 1},
+			name:     "BP with bp_level 1 can access",
+			user:     &model.User{Role: common.RoleBUBP, BpLevel: 1},
 			expected: true,
 		},
 		{
-			name:     "AI BP with bp_level 0 is denied",
+			name:     "BP with bp_level 0 is denied",
 			user:     &model.User{Role: common.RoleBUBP, BpLevel: 0},
-			expected: false,
-		},
-		{
-			name:     "Center BP with bp_level 0 is denied",
-			user:     &model.User{Role: common.RoleCenterBP, BpLevel: 0},
 			expected: false,
 		},
 		{

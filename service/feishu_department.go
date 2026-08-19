@@ -488,8 +488,8 @@ func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, 
 		return trimmed, leaderDeptIDs
 	}
 
-	// BP roles: scope driven by the member's bp_level configuration.
-	if userRole == common.RoleCenterBP || userRole == common.RoleBUBP {
+	// BP role: scope driven by the member's bp_level configuration.
+	if userRole == common.RoleBUBP {
 		return trimTreeForBP(fullTree, bpLevel, departmentName)
 	}
 

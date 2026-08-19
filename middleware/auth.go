@@ -108,8 +108,7 @@ func canAccessDataOverview(user *model.User) bool {
 	if user.Role >= common.RoleAdminUser {
 		return true
 	}
-	isBP := user.Role == common.RoleCenterBP || user.Role == common.RoleBUBP
-	if isBP {
+	if user.Role == common.RoleBUBP {
 		return user.BpLevel > 0
 	}
 	return user.ComputeIsDeptLeader()

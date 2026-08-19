@@ -63,7 +63,7 @@ func TestGetReportNotifyScopesUsesBpLevelBusinessUnit(t *testing.T) {
 func TestGetReportNotifyScopesUsesBpLevelCenter(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
-		Role: common.RoleCenterBP, Company: company.Name, BpLevel: 1,
+		Role: common.RoleBUBP, Company: company.Name, BpLevel: 1,
 		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
 	}
 

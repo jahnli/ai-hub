@@ -69,8 +69,7 @@ const DEFAULT_BANNER =
 
 const ROLE_TOOLTIP_LABELS: Partial<Record<number, string>> = {
   [USER_ROLE.USER]: '普通用户',
-  [USER_ROLE.BU_BP]: '事业部 AI BP',
-  [USER_ROLE.CENTER_BP]: '中心 AI BP',
+  [USER_ROLE.BU_BP]: 'BP',
   [USER_ROLE.ADMIN]: '管理员',
   [USER_ROLE.ROOT]: '超级管理员',
 }

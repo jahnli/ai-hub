@@ -13,11 +13,10 @@ describe('data overview entry access', () => {
     assert.equal(canAccessDataOverview({ role: ROLE.SUPER_ADMIN }), true)
   })
 
-  test('BP roles pass only with a configured bp_level', () => {
+  test('BP role passes only with a configured bp_level', () => {
     assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 2 }), true)
-    assert.equal(canAccessDataOverview({ role: ROLE.CENTER_BP, bp_level: 1 }), true)
+    assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 1 }), true)
     assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 0 }), false)
-    assert.equal(canAccessDataOverview({ role: ROLE.CENTER_BP, bp_level: 0 }), false)
     assert.equal(canAccessDataOverview({ role: ROLE.BU_BP }), false)
   })
 
