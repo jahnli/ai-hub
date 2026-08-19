@@ -100,6 +100,9 @@ function LogsSection(props: LogsSectionProps) {
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const columns = useCommonLogsColumns(true, {
     canFetchUserDetails: isSuperAdmin,
+    showChannelColumn: false,
+    canViewChannelDetails: isSuperAdmin,
+    canViewGroupRatio: isSuperAdmin,
   })
   const [pagination, setPagination] = usePagination()
 

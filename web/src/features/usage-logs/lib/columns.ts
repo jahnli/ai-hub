@@ -11,6 +11,7 @@ import type { LogCategory } from '../types'
 interface UseColumnsByCategoryOptions {
   canFetchUserDetails?: boolean
   showUserColumn?: boolean
+  showChannelColumn?: boolean
 }
 
 /**
@@ -24,8 +25,11 @@ export function useColumnsByCategory(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): ColumnDef<any>[] {
   const commonColumns = useCommonLogsColumns(isAdmin, options)
-  const drawingColumns = useDrawingLogsColumns(isAdmin)
-  const taskColumns = useTaskLogsColumns(isAdmin)
+  const drawingColumns = useDrawingLogsColumns(
+    isAdmin,
+    options.showChannelColumn
+  )
+  const taskColumns = useTaskLogsColumns(isAdmin, options.showChannelColumn)
 
   switch (logCategory) {
     case 'common':

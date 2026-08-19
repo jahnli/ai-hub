@@ -69,6 +69,7 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const currentUsername = useAuthStore((state) => state.auth.user?.username)
   const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const canViewChannelColumn = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const pageKey = `${logCategory}Page`
   const pageSizeKey = `${logCategory}PageSize`
   const searchParams = route.useSearch()
@@ -158,6 +159,7 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const columns = useColumnsByCategory(logCategory, isAdmin, {
     canFetchUserDetails: canManageScope,
     showUserColumn: canManageScope,
+    showChannelColumn: canViewChannelColumn,
   })
   const isLoadingData = isLoading || (isFetching && !data)
 

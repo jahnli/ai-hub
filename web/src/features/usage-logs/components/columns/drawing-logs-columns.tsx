@@ -64,7 +64,8 @@ function getDrawingTypeIcon(action: string): LucideIcon {
 }
 
 export function useDrawingLogsColumns(
-  isAdmin: boolean
+  isAdmin: boolean,
+  showChannelColumn = isAdmin
 ): ColumnDef<MidjourneyLog>[] {
   const { t } = useTranslation()
   const columns: ColumnDef<MidjourneyLog>[] = [
@@ -93,7 +94,7 @@ export function useDrawingLogsColumns(
     },
   ]
 
-  if (isAdmin) {
+  if (showChannelColumn) {
     columns.push(
       createChannelColumn<MidjourneyLog>({ headerLabel: t('Channel') })
     )

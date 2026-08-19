@@ -92,3 +92,10 @@
 - `web/src/features/usage-logs/lib/columns.ts` — 用户列工厂改为接收独立的列可见性和资料加载权限选项
 - `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 用户列支持独立显示控制，并在完整资料异步加载后同步刷新头像、展示名和用户名
 - `web/src/features/usage-logs/components/columns/__tests__/self-scope-user-details.test.tsx` — 新增「仅自己」模式下头像、用户身份文本和悬停资料卡入口保持可见的组件回归测试
+
+## 2026-08-19 渠道和分组倍率权限收紧
+
+- `web/src/features/usage-logs/components/usage-logs-table.tsx` — 使用日志表格的渠道列可见性收紧为仅超级管理员，并向各日志类型列工厂传递权限。
+- `web/src/features/usage-logs/lib/columns.ts`、`web/src/features/usage-logs/components/columns/drawing-logs-columns.tsx`、`web/src/features/usage-logs/components/columns/task-logs-columns.tsx` — 绘图日志和任务日志列工厂支持独立控制渠道列，普通管理员不再看到渠道列。
+- `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 公共日志的渠道列、令牌列分组倍率摘要和详情预览按超级管理员权限显示。
+- `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 详情弹窗的渠道、重试链和分组倍率按独立权限控制，供数据总览复用时隐藏敏感字段。

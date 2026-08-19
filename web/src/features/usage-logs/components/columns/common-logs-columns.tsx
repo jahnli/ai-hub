@@ -79,9 +79,9 @@ function formatRatioCompact(ratio: number | undefined): string {
 
 function getGroupRatioText(
   other: LogOtherData | null,
-  isAdmin: boolean
+  canViewGroupRatio: boolean
 ): string | null {
-  if (!isAdmin) return null
+  if (!canViewGroupRatio) return null
 
   const userGroupRatio = other?.user_group_ratio
   if (
@@ -113,9 +113,16 @@ function buildDetailSegments(
   log: UsageLog,
   other: LogOtherData | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
-  isAdmin = false
+  isAdmin = false,
+  canViewGroupRatio = isAdmin
 ): DetailSegment[] {
-  const segments = buildTypeDetailSegments(log, other, t, isAdmin)
+  const segments = buildTypeDetailSegments(
+    log,
+    other,
+    t,
+    isAdmin,
+    canViewGroupRatio
+  )
   if (isAdmin && other?.admin_info?.quota_saturation) {
     return [{ text: t('Quota clamped'), danger: true }, ...segments]
   }
@@ -126,7 +133,8 @@ function buildTypeDetailSegments(
   log: UsageLog,
   other: LogOtherData | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
-  isAdmin: boolean
+  isAdmin: boolean,
+  canViewGroupRatio = isAdmin
 ): DetailSegment[] {
   // Audit (type=3) and login (type=7) logs: render localized content from the
   // structured op descriptor instead of the raw (English-fallback) content.
@@ -278,7 +286,7 @@ function buildTypeDetailSegments(
         : t('Group Ratio')
 
       if (
-        isAdmin &&
+        canViewGroupRatio &&
         effectiveRatio != null &&
         Number.isFinite(effectiveRatio)
       ) {
@@ -302,6 +310,9 @@ function buildTypeDetailSegments(
 interface UseCommonLogsColumnsOptions {
   canFetchUserDetails?: boolean
   showUserColumn?: boolean
+  showChannelColumn?: boolean
+  canViewChannelDetails?: boolean
+  canViewGroupRatio?: boolean
 }
 
 export function useCommonLogsColumns(
@@ -314,6 +325,9 @@ export function useCommonLogsColumns(
   const isSuperAdmin = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const canFetchUserDetails = options.canFetchUserDetails ?? isAdmin
   const showUserColumn = options.showUserColumn ?? isAdmin
+  const showChannelColumn = options.showChannelColumn ?? isAdmin
+  const canViewChannelDetails = options.canViewChannelDetails ?? isAdmin
+  const canViewGroupRatio = options.canViewGroupRatio ?? isAdmin
   const columns: ColumnDef<UsageLog>[] = [
     {
       accessorKey: 'created_at',
@@ -711,38 +725,41 @@ export function useCommonLogsColumns(
     }
   )
 
-  columns.push({
-    id: 'channel',
-    header: t('Channel'),
-    accessorFn: (row) => row.channel,
-    cell: function ChannelCell({ row }) {
-      const { sensitiveVisible, setAffinityTarget, setAffinityDialogOpen } =
-        useUsageLogsContext()
-      const log = row.original
-      if (!isDisplayableLogType(log.type)) return null
-      const other = parseLogOther(log.other)
-      const affinity = isAdmin ? other?.admin_info?.channel_affinity : null
-      const rawUseChannel = isAdmin
-        ? other?.admin_info?.use_channel ?? []
-        : []
-      const useChannel = Array.isArray(rawUseChannel)
-        ? rawUseChannel.map(String).filter(Boolean)
-        : []
-      const hasRetryChain = useChannel.length > 1
-      const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
-      const channelIdDisplay = `#${log.channel}`
-      const channelDisplay = getUsageLogChannelDisplay(
-        log.channel_name,
-        log.channel,
-        sensitiveVisible,
-        demoMode
-      )
-      const multiKeyIndex = isAdmin ? other?.admin_info?.multi_key_index : null
-      const showMultiKeyIndex =
-        isAdmin &&
-        other?.admin_info?.is_multi_key === true &&
-        typeof multiKeyIndex === 'number' &&
-        Number.isFinite(multiKeyIndex)
+  if (showChannelColumn) {
+    columns.push({
+      id: 'channel',
+      header: t('Channel'),
+      accessorFn: (row) => row.channel,
+      cell: function ChannelCell({ row }) {
+        const { sensitiveVisible, setAffinityTarget, setAffinityDialogOpen } =
+          useUsageLogsContext()
+        const log = row.original
+        if (!isDisplayableLogType(log.type)) return null
+        const other = parseLogOther(log.other)
+        const affinity = isAdmin ? other?.admin_info?.channel_affinity : null
+        const rawUseChannel = isAdmin
+          ? (other?.admin_info?.use_channel ?? [])
+          : []
+        const useChannel = Array.isArray(rawUseChannel)
+          ? rawUseChannel.map(String).filter(Boolean)
+          : []
+        const hasRetryChain = useChannel.length > 1
+        const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
+        const channelIdDisplay = `#${log.channel}`
+        const channelDisplay = getUsageLogChannelDisplay(
+          log.channel_name,
+          log.channel,
+          sensitiveVisible,
+          demoMode
+        )
+        const multiKeyIndex = isAdmin
+          ? other?.admin_info?.multi_key_index
+          : null
+        const showMultiKeyIndex =
+          isAdmin &&
+          other?.admin_info?.is_multi_key === true &&
+          typeof multiKeyIndex === 'number' &&
+          Number.isFinite(multiKeyIndex)
         return (
           <TooltipProvider>
             <Tooltip>
@@ -862,10 +879,11 @@ export function useCommonLogsColumns(
             </Tooltip>
           </TooltipProvider>
         )
-    },
-    size: 115,
-    maxSize: 115,
-  })
+      },
+      size: 115,
+      maxSize: 115,
+    })
+  }
 
   if (isSuperAdmin) {
     columns.push({
@@ -1023,7 +1041,7 @@ export function useCommonLogsColumns(
         let group = log.group
         if (!group) group = other?.group || ''
         const metaParts: string[] = []
-        const groupRatioText = getGroupRatioText(other, isAdmin)
+        const groupRatioText = getGroupRatioText(other, canViewGroupRatio)
         if (group) {
           metaParts.push(sensitiveVisible ? group : '••••')
         }
@@ -1068,7 +1086,13 @@ export function useCommonLogsColumns(
         const log = row.original
         const other = parseLogOther(log.other)
 
-        const segments = buildDetailSegments(log, other, t, isAdmin)
+        const segments = buildDetailSegments(
+          log,
+          other,
+          t,
+          isAdmin,
+          canViewGroupRatio
+        )
         const primary = segments[0]
         const hasMore = segments.length > 1
         const isErrorLog = log.type === LOG_TYPE_ENUM.ERROR
@@ -1124,6 +1148,8 @@ export function useCommonLogsColumns(
             <DetailsDialog
               log={log}
               isAdmin={isAdmin}
+              canViewChannelDetails={canViewChannelDetails}
+              canViewGroupRatio={canViewGroupRatio}
               open={dialogOpen}
               onOpenChange={setDialogOpen}
             />

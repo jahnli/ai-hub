@@ -202,9 +202,11 @@ function BillingBreakdown(props: {
   log: UsageLog
   other: LogOtherData
   isAdmin: boolean
+  canViewGroupRatio?: boolean
 }) {
   const { t } = useTranslation()
   const { log, other, isAdmin } = props
+  const canViewGroupRatio = props.canViewGroupRatio ?? isAdmin
   const isPerCall = isPerCallBilling(other.model_price)
   const isClaude = other.claude === true
   const isTieredExpr = other.billing_mode === 'tiered_expr'
@@ -266,7 +268,11 @@ function BillingBreakdown(props: {
   const userGR = other.user_group_ratio
   const isUserGR = userGR != null && Number.isFinite(userGR) && userGR !== -1
   const effectiveGR = isUserGR ? userGR : other.group_ratio
-  if (isAdmin && effectiveGR != null && Number.isFinite(effectiveGR)) {
+  if (
+    canViewGroupRatio &&
+    effectiveGR != null &&
+    Number.isFinite(effectiveGR)
+  ) {
     rows.push({
       label: isUserGR ? t('User Exclusive Ratio') : t('Group Ratio'),
       value: `${formatRatio(effectiveGR)}x`,
@@ -532,6 +538,8 @@ function ImageGenerationDetails(props: { other: LogOtherData }) {
 interface DetailsDialogProps {
   log: UsageLog
   isAdmin: boolean
+  canViewChannelDetails?: boolean
+  canViewGroupRatio?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -558,6 +566,8 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const showTiming = isTimingLogType(props.log.type)
   const showAdminIp =
     !!props.log.ip && (showTiming || (props.isAdmin && isTopup))
+  const canViewChannelDetails = props.canViewChannelDetails ?? props.isAdmin
+  const canViewGroupRatio = props.canViewGroupRatio ?? props.isAdmin
   const adminInfo = other?.admin_info
   const topupAuditFields =
     isTopup && props.isAdmin && adminInfo
@@ -663,7 +673,9 @@ export function DetailsDialog(props: DetailsDialogProps) {
 
   const useChannel = other?.admin_info?.use_channel
   const channelChain =
-    useChannel && useChannel.length > 0 ? useChannel.join(' → ') : undefined
+    canViewChannelDetails && useChannel && useChannel.length > 0
+      ? useChannel.join(' → ')
+      : undefined
   const reasoningEffortVariant = getReasoningEffortVariant(
     other?.reasoning_effort
   )
@@ -713,7 +725,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
             />
           )}
 
-          {props.isAdmin && props.log.channel > 0 && (
+          {canViewChannelDetails && props.log.channel > 0 && (
             <DetailRow
               label={t('Channel')}
               value={
@@ -731,7 +743,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
             />
           )}
 
-          {channelChain && props.isAdmin && (
+          {channelChain && (
             <DetailRow label={t('Retry Chain')} value={channelChain} mono />
           )}
 
@@ -1131,6 +1143,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
             log={props.log}
             other={other}
             isAdmin={props.isAdmin}
+            canViewGroupRatio={canViewGroupRatio}
           />
         )}
 
