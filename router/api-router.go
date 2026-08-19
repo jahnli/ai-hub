@@ -277,6 +277,11 @@ func SetApiRouter(router *gin.Engine) {
 			departmentRoute.POST("/user-rankings", controller.GetDepartmentUserRankings)
 			departmentRoute.POST("/user-usage-analysis", controller.GetUserUsageAnalysis)
 		}
+		adminDepartmentRoute := apiRouter.Group("/department")
+		adminDepartmentRoute.Use(middleware.AdminAuth())
+		{
+			adminDepartmentRoute.GET("/full-tree", controller.GetFullDepartmentTreeForAdmin)
+		}
 		reportNotifyRoute := apiRouter.Group("/report-notify-setting")
 		reportNotifyRoute.Use(middleware.UserAuth(), middleware.DataOverviewAccessCheck())
 		{

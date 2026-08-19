@@ -1,4 +1,5 @@
 import type { PermissionCatalog } from '@/lib/admin-permissions'
+import type { DepartmentTreeResponse } from '@/features/data-overview/types'
 import { api } from '@/lib/api'
 
 import type {
@@ -207,6 +208,24 @@ export async function adminUnbindCustomOAuth(
 ): Promise<ApiResponse> {
   const res = await api.delete(
     `/api/user/${userId}/oauth/bindings/${providerId}`
+  )
+  return res.data
+}
+
+// ============================================================================
+// Department Tree (Admin)
+// ============================================================================
+
+/**
+ * Get the full unfiltered department tree for admin configuration.
+ * Used when configuring visible departments for BP users.
+ */
+export async function getAdminFullDepartmentTree(): Promise<{
+  success: boolean
+  data: DepartmentTreeResponse
+}> {
+  const res = await api.get<{ success: boolean; data: DepartmentTreeResponse }>(
+    '/api/department/full-tree'
   )
   return res.data
 }

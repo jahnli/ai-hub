@@ -35,7 +35,7 @@ export const userSchema = z.object({
   group: z.string(),
   status: userStatusSchema,
   role: userRoleSchema,
-  bp_level: z.number().optional(),
+  overview_dept_ids: z.array(z.string()).optional(),
   created_at: z.number().optional(),
   updated_at: z.number().optional(),
   last_login_at: z.number().optional(),
@@ -127,7 +127,7 @@ export interface UserFormData {
   display_name: string
   password?: string
   role?: number // Only used when creating user
-  bp_level?: number // Data overview visible department level (BP roles)
+  overview_dept_ids?: string[] // Explicitly configured visible department node values for BP users
   quota?: number // Only used when updating user
   group?: string // Only used when updating user
   remark?: string // Only used when updating user

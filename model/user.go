@@ -90,7 +90,7 @@ type User struct {
 	OriginalPassword  string                     `json:"original_password" gorm:"-:all"`
 	DisplayName       string                     `json:"display_name" gorm:"index" validate:"max=20"`
 	Role              int                        `json:"role" gorm:"type:int;default:1"`
-	BpLevel           int                        `json:"bp_level" gorm:"type:int;default:0;column:bp_level"`
+	OverviewDeptIDs   []string                   `json:"overview_dept_ids" gorm:"type:text;serializer:json;column:overview_dept_ids;default:'[]'"`
 	Status            int                        `json:"status" gorm:"type:int;default:1"`
 	Email             string                     `json:"email" gorm:"index" validate:"max=50"`
 	OidcId            string                     `json:"oidc_id" gorm:"column:oidc_id;index"`
@@ -851,13 +851,17 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 	}
 
 	newUser := *user
+	overviewDeptIDsJSON, err := common.Marshal(newUser.OverviewDeptIDs)
+	if err != nil {
+		return err
+	}
 	updates := map[string]interface{}{
-		"username":     newUser.Username,
-		"display_name": newUser.DisplayName,
-		"group":        newUser.Group,
-		"remark":       newUser.Remark,
-		"role":         newUser.Role,
-		"bp_level":     newUser.BpLevel,
+		"username":          newUser.Username,
+		"display_name":      newUser.DisplayName,
+		"group":             newUser.Group,
+		"remark":            newUser.Remark,
+		"role":              newUser.Role,
+		"overview_dept_ids": string(overviewDeptIDsJSON),
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

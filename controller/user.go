@@ -457,6 +457,22 @@ func canManageTargetRole(myRole int, targetRole int) bool {
 	return myRole == common.RoleRootUser || myRole > targetRole
 }
 
+const maxOverviewDeptIDs = 100
+
+// validateOverviewDeptIDs checks that the field contains non-empty node values
+// and does not exceed the per-user limit.
+func validateOverviewDeptIDs(ids []string) error {
+	if len(ids) > maxOverviewDeptIDs {
+		return fmt.Errorf("overview_dept_ids exceeds maximum of %d entries", maxOverviewDeptIDs)
+	}
+	for _, id := range ids {
+		if strings.TrimSpace(id) == "" {
+			return fmt.Errorf("overview_dept_ids contains empty entry")
+		}
+	}
+	return nil
+}
+
 func sortUserWithSubQuota(items []userWithSubQuota, sortBy string, sortOrder string) {
 	desc := sortOrder == "desc"
 	sort.Slice(items, func(i, j int) bool {
@@ -650,25 +666,25 @@ func buildSelfUserData(user *model.User) map[string]interface{} {
 	permissions := calculateUserPermissions(user.Role)
 	permissions["admin_permissions"] = authz.Capabilities(user.Id, user.Role)
 	return map[string]interface{}{
-		"id":              user.Id,
-		"username":        user.Username,
-		"display_name":    user.DisplayName,
-		"role":            user.Role,
-		"bp_level":        user.BpLevel,
-		"status":          user.Status,
-		"email":           user.Email,
-		"avatar_url":      user.AvatarUrl,
-		"oidc_id":         user.OidcId,
-		"wechat_id":       user.WeChatId,
-		"group":           user.Group,
-		"quota":           user.Quota,
-		"used_quota":      user.UsedQuota,
-		"request_count":   user.RequestCount,
-		"setting":         user.Setting,
-		"stripe_customer": user.StripeCustomer,
-		"sidebar_modules": userSetting.SidebarModules,
-		"permissions":     permissions,
-		"is_dept_leader":  user.ComputeIsDeptLeader(),
+		"id":                user.Id,
+		"username":          user.Username,
+		"display_name":      user.DisplayName,
+		"role":              user.Role,
+		"overview_dept_ids": user.OverviewDeptIDs,
+		"status":            user.Status,
+		"email":             user.Email,
+		"avatar_url":        user.AvatarUrl,
+		"oidc_id":           user.OidcId,
+		"wechat_id":         user.WeChatId,
+		"group":             user.Group,
+		"quota":             user.Quota,
+		"used_quota":        user.UsedQuota,
+		"request_count":     user.RequestCount,
+		"setting":           user.Setting,
+		"stripe_customer":   user.StripeCustomer,
+		"sidebar_modules":   userSetting.SidebarModules,
+		"permissions":       permissions,
+		"is_dept_leader":    user.ComputeIsDeptLeader(),
 	}
 }
 
@@ -835,12 +851,10 @@ func UpdateUser(c *gin.Context) {
 			return
 		}
 	}
-	if !common.IsValidBpLevel(updatedUser.BpLevel) {
+	if err := validateOverviewDeptIDs(updatedUser.OverviewDeptIDs); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
-	// bp_level 超出本人部门层级时收敛到最深一级，与数据总览裁剪口径一致。
-	updatedUser.BpLevel = service.NormalizeBpLevelForDepartment(originUser.DepartmentName, updatedUser.BpLevel)
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
 	}
@@ -1165,19 +1179,17 @@ func CreateUser(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserCannotCreateHigherLevel)
 		return
 	}
-	if !common.IsValidBpLevel(user.BpLevel) {
+	if err := validateOverviewDeptIDs(user.OverviewDeptIDs); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
-	// bp_level 超出本人部门层级时收敛到最深一级，与数据总览裁剪口径一致。
-	user.BpLevel = service.NormalizeBpLevelForDepartment(user.DepartmentName, user.BpLevel)
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
-		Username:    user.Username,
-		Password:    user.Password,
-		DisplayName: user.DisplayName,
-		Role:        user.Role, // 保持管理员设置的角色
-		BpLevel:     user.BpLevel,
+		Username:        user.Username,
+		Password:        user.Password,
+		DisplayName:     user.DisplayName,
+		Role:            user.Role, // 保持管理员设置的角色
+		OverviewDeptIDs: user.OverviewDeptIDs,
 	}
 	authzTouched := false
 	if err := model.DB.Transaction(func(tx *gorm.DB) error {

@@ -15,7 +15,7 @@ export interface AuthUser {
   avatar_url?: string
   email?: string
   role: number
-  bp_level?: number
+  overview_dept_ids?: string[]
   status?: number
   group?: string
   quota?: number

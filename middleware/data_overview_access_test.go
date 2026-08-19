@@ -25,23 +25,23 @@ func TestCanAccessDataOverview(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "BP with configured bp_level can access",
-			user:     &model.User{Role: common.RoleBUBP, BpLevel: 2},
+			name:     "BP with configured visible departments can access",
+			user:     &model.User{Role: common.RoleBUBP, OverviewDeptIDs: []string{"dept:1:team"}},
 			expected: true,
 		},
 		{
-			name:     "BP with bp_level 1 can access",
-			user:     &model.User{Role: common.RoleBUBP, BpLevel: 1},
+			name:     "BP with multiple visible departments can access",
+			user:     &model.User{Role: common.RoleBUBP, OverviewDeptIDs: []string{"dept:1:team", "dept:1:bu"}},
 			expected: true,
 		},
 		{
-			name:     "BP with bp_level 0 is denied",
-			user:     &model.User{Role: common.RoleBUBP, BpLevel: 0},
+			name:     "BP without visible departments is denied",
+			user:     &model.User{Role: common.RoleBUBP},
 			expected: false,
 		},
 		{
-			name:     "BP with bp_level 0 is denied even when leading departments",
-			user:     &model.User{Role: common.RoleBUBP, BpLevel: 0, OpenId: "ou_bp", Departments: `[{"department_id":"team","leaders":[{"leader_id":"ou_bp"}]}]`},
+			name:     "BP without visible departments is denied even when leading departments",
+			user:     &model.User{Role: common.RoleBUBP, OpenId: "ou_bp", Departments: `[{"department_id":"team","leaders":[{"leader_id":"ou_bp"}]}]`},
 			expected: false,
 		},
 		{

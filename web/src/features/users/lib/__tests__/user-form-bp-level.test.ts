@@ -4,7 +4,6 @@ import { describe, test } from 'node:test'
 import {
   userFormSchema,
   USER_FORM_DEFAULT_VALUES,
-  clampBpLevelToDepartment,
   transformFormDataToPayload,
   transformUserToFormDefaults,
   type UserFormValues,
@@ -36,68 +35,67 @@ function makeUser(overrides: Partial<User> = {}): User {
   }
 }
 
-describe('user form bp_level handling', () => {
-  test('schema accepts any non-negative integer bp_level', () => {
-    for (const level of [0, 1, 3, 9, 20]) {
-      const parsed = userFormSchema.safeParse(makeFormValues({ bp_level: level }))
-      assert.equal(parsed.success, true)
-    }
+describe('user form overview_dept_ids handling', () => {
+  test('schema accepts an array of dept node value strings', () => {
+    const parsed = userFormSchema.safeParse(
+      makeFormValues({ overview_dept_ids: ['1:od-abc', '1:od-def'] })
+    )
+    assert.equal(parsed.success, true)
   })
 
-  test('schema rejects negative and non-integer bp_level', () => {
-    assert.equal(userFormSchema.safeParse(makeFormValues({ bp_level: -1 })).success, false)
-    assert.equal(userFormSchema.safeParse(makeFormValues({ bp_level: 1.5 })).success, false)
+  test('schema accepts an empty array', () => {
+    const parsed = userFormSchema.safeParse(
+      makeFormValues({ overview_dept_ids: [] })
+    )
+    assert.equal(parsed.success, true)
   })
 
-  test('default values start with bp_level 0', () => {
-    assert.equal(USER_FORM_DEFAULT_VALUES.bp_level, 0)
+  test('schema accepts undefined overview_dept_ids', () => {
+    const parsed = userFormSchema.safeParse(
+      makeFormValues({ overview_dept_ids: undefined })
+    )
+    assert.equal(parsed.success, true)
   })
 
-  test('create payload carries the selected bp_level', () => {
-    const payload = transformFormDataToPayload(makeFormValues({ bp_level: 2 }))
-
-    assert.equal(payload.bp_level, 2)
+  test('default values start with empty overview_dept_ids', () => {
+    assert.deepEqual(USER_FORM_DEFAULT_VALUES.overview_dept_ids, [])
   })
 
-  test('create payload defaults bp_level to 0 when unset', () => {
-    const payload = transformFormDataToPayload(makeFormValues())
-
-    assert.equal(payload.bp_level, 0)
-  })
-
-  test('update payload carries the selected bp_level', () => {
+  test('create payload carries the selected overview_dept_ids', () => {
     const payload = transformFormDataToPayload(
-      makeFormValues({ bp_level: 1, group: 'default', remark: '' }),
+      makeFormValues({ overview_dept_ids: ['1:od-xxx', '1:od-yyy'] })
+    )
+    assert.deepEqual(payload.overview_dept_ids, ['1:od-xxx', '1:od-yyy'])
+  })
+
+  test('create payload defaults overview_dept_ids to empty array when unset', () => {
+    const payload = transformFormDataToPayload(makeFormValues())
+    assert.deepEqual(payload.overview_dept_ids, [])
+  })
+
+  test('update payload carries the selected overview_dept_ids', () => {
+    const payload = transformFormDataToPayload(
+      makeFormValues({
+        overview_dept_ids: ['1:od-abc'],
+        group: 'default',
+        remark: '',
+      }),
       42
     )
-
     assert.equal(payload.id, 42)
-    assert.equal(payload.bp_level, 1)
+    assert.deepEqual(payload.overview_dept_ids, ['1:od-abc'])
   })
 
-  test('form defaults map the stored user bp_level', () => {
-    const defaults = transformUserToFormDefaults(makeUser({ bp_level: 3 }))
-
-    assert.equal(defaults.bp_level, 3)
-  })
-
-  test('form defaults fall back to 0 when the user has no bp_level', () => {
-    const defaults = transformUserToFormDefaults(makeUser())
-
-    assert.equal(defaults.bp_level, 0)
-  })
-
-  test('clampBpLevelToDepartment clamps levels beyond the department depth', () => {
-    assert.equal(
-      clampBpLevelToDepartment(9, '数智产品中心 / AI应用技术部 / AI工程效率科'),
-      3
+  test('form defaults map the stored user overview_dept_ids', () => {
+    const defaults = transformUserToFormDefaults(
+      makeUser({ overview_dept_ids: ['1:od-abc', '1:od-def'] })
     )
-    assert.equal(clampBpLevelToDepartment(2, '数智产品中心 / AI应用技术部'), 2)
+    assert.deepEqual(defaults.overview_dept_ids, ['1:od-abc', '1:od-def'])
   })
 
-  test('clampBpLevelToDepartment keeps level when hierarchy is unknown or unset', () => {
-    assert.equal(clampBpLevelToDepartment(5, ''), 5)
-    assert.equal(clampBpLevelToDepartment(5, undefined), 5)
-    assert.equal(clampBpLevelToDepartment(0, '数智产品中心'), 0)
+  test('form defaults fall back to empty array when user has no overview_dept_ids', () => {
+    const defaults = transformUserToFormDefaults(makeUser())
+    assert.deepEqual(defaults.overview_dept_ids, [])
   })
+
 })

@@ -183,17 +183,6 @@ func IsValidateRole(role int) bool {
 	return role == RoleGuestUser || role == RoleCommonUser || role == RoleBUBP || role == RoleAdminUser || role == RoleRootUser
 }
 
-const (
-	BpLevelUnset = 0
-)
-
-// IsValidBpLevel checks whether bp_level is a valid data-overview department level.
-// 0 means unset (the member has no visible departments); any positive value selects
-// the N-th segment of the member's department_name hierarchy.
-func IsValidBpLevel(level int) bool {
-	return level >= BpLevelUnset
-}
-
 var (
 	FileUploadPermission    = RoleGuestUser
 	FileDownloadPermission  = RoleGuestUser

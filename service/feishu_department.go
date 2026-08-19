@@ -462,8 +462,27 @@ func buildDeptTree(items []feishuDeptItem) []*DeptTreeNode {
 
 // ── Permission trimming ───────────────────────────────────────────
 
+// ParseOverviewDeptIDs returns the configured department node values, removing
+// empty and duplicate entries before permission matching.
+func ParseOverviewDeptIDs(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	seenValues := make(map[string]bool, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seenValues[value] {
+			continue
+		}
+		seenValues[value] = true
+		result = append(result, value)
+	}
+	return result
+}
+
 // trimTreeForUser returns the permission-trimmed tree and the list of department IDs the user leads.
-func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, departmentName string, leaderDeptIDs []string, bpLevel int) ([]*DeptTreeNode, []string) {
+func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, leaderDeptIDs []string, overviewDeptIDs []string) ([]*DeptTreeNode, []string) {
 	// Super admin: full tree, no disabled
 	if userRole >= common.RoleRootUser {
 		if len(leaderDeptIDs) == 0 {
@@ -488,9 +507,9 @@ func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, 
 		return trimmed, leaderDeptIDs
 	}
 
-	// BP role: scope driven by the member's bp_level configuration.
+	// BP role: scope driven by explicitly configured department node values.
 	if userRole == common.RoleBUBP {
-		return trimTreeForBP(fullTree, bpLevel, departmentName)
+		return trimTreeForExplicitDepts(fullTree, overviewDeptIDs)
 	}
 
 	// Dept leader (role=1): sees departments where their OpenId is the leader_id.
@@ -509,52 +528,19 @@ func trimTreeForUser(fullTree []*DeptTreeNode, userRole int, userOpenID string, 
 	return markAllDisabled(fullTree), nil
 }
 
-// NormalizeBpLevelForDepartment clamps bpLevel to the depth of departmentName so
-// the stored level never exceeds the member's own department hierarchy. An empty
-// departmentName leaves the level unchanged because the hierarchy is unknown yet.
-func NormalizeBpLevelForDepartment(departmentName string, bpLevel int) int {
-	segments := splitDepartmentName(departmentName)
-	if len(segments) == 0 || bpLevel <= 0 {
-		return bpLevel
-	}
-	if bpLevel > len(segments) {
-		return len(segments)
-	}
-	return bpLevel
-}
-
-// trimTreeForBP trims the tree for BP users based on bp_level:
-// the N-th segment of their department_name and all sub-departments.
-// bp_level <= 0 means unset: the member has no visible departments.
-// Levels deeper than the member's own hierarchy collapse to their deepest segment.
-func trimTreeForBP(fullTree []*DeptTreeNode, bpLevel int, departmentName string) ([]*DeptTreeNode, []string) {
-	segments := splitDepartmentName(departmentName)
-	if bpLevel <= 0 || len(segments) == 0 {
+// trimTreeForExplicitDepts trims the tree so only the explicitly listed node
+// values (and their entire sub-trees) are enabled. Used for BP users with
+// admin-configured visible departments.
+func trimTreeForExplicitDepts(fullTree []*DeptTreeNode, deptNodeValues []string) ([]*DeptTreeNode, []string) {
+	if len(deptNodeValues) == 0 {
 		return markAllDisabled(fullTree), nil
 	}
-	bpLevel = NormalizeBpLevelForDepartment(departmentName, bpLevel)
-
-	// Match by the full ancestor path so that duplicate department names under
-	// different parents resolve to the member's own branch. Some platforms
-	// (e.g. Feishu) may exclude the org root node from the tree while the
-	// synced department_name still includes it, so drop leading segments
-	// progressively before giving up on the path.
-	var targetNode *DeptTreeNode
-	for start := 0; start < bpLevel && targetNode == nil; start++ {
-		targetNode = findNodeByPath(fullTree, segments[start:bpLevel])
+	targetSet := make(map[string]bool, len(deptNodeValues))
+	for _, nodeValue := range deptNodeValues {
+		targetSet[nodeValue] = true
 	}
-	if targetNode == nil {
-		// Legacy fallback for stale hierarchies where the exact path no longer
-		// exists: match the target segment by name alone, as before.
-		targetNode = findNodeByLabel(fullTree, segments[bpLevel-1])
-	}
-	if targetNode == nil {
-		return markAllDisabled(fullTree), nil
-	}
-
-	targetSet := map[string]bool{targetNode.Value: true}
 	trimmed := trimNodes(fullTree, targetSet)
-	return trimmed, []string{targetNode.Value}
+	return trimmed, deptNodeValues
 }
 
 // splitDepartmentName splits "数智产品中心 / AI应用技术部 / AI工程效率科" into
@@ -694,6 +680,57 @@ type DepartmentTreeResponse struct {
 // GetDepartmentTree fetches the department tree, caches raw data, and trims by user permissions.
 func GetDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse, error) {
 	return getCompanyDepartmentTree(userID, userRole)
+}
+
+// GetFullDepartmentTree returns the complete department tree for all configured
+// companies without any permission trimming. Used by admin users when configuring
+// visible departments for BP users.
+func GetFullDepartmentTree() (*DepartmentTreeResponse, error) {
+	companies, err := model.ListEnabledCompanies()
+	if err != nil {
+		return nil, fmt.Errorf("get companies: %w", err)
+	}
+
+	response := &DepartmentTreeResponse{
+		TreeData:      make([]*DeptTreeNode, 0, len(companies)),
+		LeaderDeptIDs: []string{},
+	}
+
+	for _, company := range companies {
+		label := company.Name
+		if company.Alias != "" {
+			label = company.Alias
+		}
+		companyNode := &DeptTreeNode{
+			Value:     companyNodeValue(company.Id),
+			Label:     label,
+			CompanyID: company.Id,
+			Platform:  company.Platform,
+			NodeType:  "company",
+			Children:  []*DeptTreeNode{},
+		}
+		if company.Platform == model.CompanyPlatformNone {
+			response.TreeData = append(response.TreeData, companyNode)
+			continue
+		}
+		directory, loadErr := fetchCompanyDirectory(company)
+		if loadErr != nil {
+			companyNode.Disabled = true
+			companyNode.Error = loadErr.Error()
+			response.TreeData = append(response.TreeData, companyNode)
+			continue
+		}
+		if directory.OrganizationName != company.Name {
+			companyNode.Disabled = true
+			companyNode.Error = fmt.Sprintf("organization name %q does not exactly match company name %q", directory.OrganizationName, company.Name)
+			response.TreeData = append(response.TreeData, companyNode)
+			continue
+		}
+		companyNode.Children = buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
+		response.TreeData = append(response.TreeData, companyNode)
+	}
+
+	return response, nil
 }
 
 type activeUserThreshold struct {

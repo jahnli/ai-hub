@@ -13,6 +13,40 @@ import (
 	"gorm.io/gorm"
 )
 
+func TestOverviewDepartmentBelongsToCompany(t *testing.T) {
+	tests := []struct {
+		name           string
+		departmentIDs  []string
+		companyID      int
+		wantAccessible bool
+	}{
+		{
+			name:           "matches configured company prefix",
+			departmentIDs:  []string{"dept:2:department-a"},
+			companyID:      2,
+			wantAccessible: true,
+		},
+		{
+			name:           "does not match another company",
+			departmentIDs:  []string{"dept:2:department-a"},
+			companyID:      3,
+			wantAccessible: false,
+		},
+		{
+			name:           "ignores empty and duplicate values",
+			departmentIDs:  []string{"", "dept:2:department-a", "dept:2:department-a"},
+			companyID:      2,
+			wantAccessible: true,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.wantAccessible, overviewDepartmentBelongsToCompany(testCase.departmentIDs, testCase.companyID))
+		})
+	}
+}
+
 func TestGetDepartmentTreeReturnsEmptyWhenNoCompaniesExist(t *testing.T) {
 	previousDB := model.DB
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

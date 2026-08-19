@@ -45,11 +45,11 @@ func setupReportNotifyScopeTest(t *testing.T) *model.Company {
 	return company
 }
 
-func TestGetReportNotifyScopesUsesBpLevelBusinessUnit(t *testing.T) {
+func TestGetReportNotifyScopesUsesConfiguredBusinessUnit(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
-		Role: common.RoleBUBP, Company: company.Name, BpLevel: 2,
-		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
+		Role: common.RoleBUBP, Company: company.Name,
+		OverviewDeptIDs: []string{departmentNodeValue(company.Id, "bu")},
 	}
 
 	scopes, err := getReportNotifyScopes(user)
@@ -60,11 +60,11 @@ func TestGetReportNotifyScopesUsesBpLevelBusinessUnit(t *testing.T) {
 	assert.Equal(t, "数智产品中心 / AI应用技术部", scopes[0].departmentName)
 }
 
-func TestGetReportNotifyScopesUsesBpLevelCenter(t *testing.T) {
+func TestGetReportNotifyScopesUsesConfiguredCenter(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
-		Role: common.RoleBUBP, Company: company.Name, BpLevel: 1,
-		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
+		Role: common.RoleBUBP, Company: company.Name,
+		OverviewDeptIDs: []string{departmentNodeValue(company.Id, "center")},
 	}
 
 	scopes, err := getReportNotifyScopes(user)
@@ -75,11 +75,10 @@ func TestGetReportNotifyScopesUsesBpLevelCenter(t *testing.T) {
 	assert.Equal(t, "数智产品中心", scopes[0].departmentName)
 }
 
-func TestGetReportNotifyScopesBpLevelUnsetHasNoScope(t *testing.T) {
+func TestGetReportNotifyScopesWithoutConfiguredDepartmentsHasNoScope(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
 		Role: common.RoleBUBP, Company: company.Name,
-		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
 	}
 
 	scopes, err := getReportNotifyScopes(user)
@@ -88,19 +87,24 @@ func TestGetReportNotifyScopesBpLevelUnsetHasNoScope(t *testing.T) {
 	assert.Empty(t, scopes)
 }
 
-func TestGetReportNotifyScopesBpLevelClampsToDeepest(t *testing.T) {
+func TestGetReportNotifyScopesUsesMultipleConfiguredDepartments(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
-		Role: common.RoleBUBP, Company: company.Name, BpLevel: 9,
-		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
+		Role: common.RoleBUBP, Company: company.Name,
+		OverviewDeptIDs: []string{
+			departmentNodeValue(company.Id, "center"),
+			departmentNodeValue(company.Id, "team"),
+		},
 	}
 
 	scopes, err := getReportNotifyScopes(user)
 
 	require.NoError(t, err)
-	require.Len(t, scopes, 1)
-	assert.Equal(t, departmentNodeValue(company.Id, "team"), scopes[0].departmentID)
-	assert.Equal(t, "数智产品中心 / AI应用技术部 / AI工程效率科", scopes[0].departmentName)
+	require.Len(t, scopes, 2)
+	assert.Equal(t, departmentNodeValue(company.Id, "center"), scopes[0].departmentID)
+	assert.Equal(t, "数智产品中心", scopes[0].departmentName)
+	assert.Equal(t, departmentNodeValue(company.Id, "team"), scopes[1].departmentID)
+	assert.Equal(t, "数智产品中心 / AI应用技术部 / AI工程效率科", scopes[1].departmentName)
 }
 
 func TestGetReportNotifyScopesUsesLeaderDepartments(t *testing.T) {
@@ -118,12 +122,12 @@ func TestGetReportNotifyScopesUsesLeaderDepartments(t *testing.T) {
 	assert.Equal(t, "数智产品中心 / AI应用技术部 / AI工程效率科", scopes[0].departmentName)
 }
 
-func TestGetReportNotifyScopesCombinesBpLevelAndLeaderDepartments(t *testing.T) {
+func TestGetReportNotifyScopesCombinesConfiguredAndLeaderDepartments(t *testing.T) {
 	company := setupReportNotifyScopeTest(t)
 	user := &model.User{
-		Role: common.RoleBUBP, Company: company.Name, OpenId: "ou_bp_leader", BpLevel: 2,
-		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
-		Departments:    `[{"department_id":"team","leaders":[{"leader_id":"ou_bp_leader"}]}]`,
+		Role: common.RoleBUBP, Company: company.Name, OpenId: "ou_bp_leader",
+		OverviewDeptIDs: []string{departmentNodeValue(company.Id, "bu")},
+		Departments:     `[{"department_id":"team","leaders":[{"leader_id":"ou_bp_leader"}]}]`,
 	}
 
 	scopes, err := getReportNotifyScopes(user)
@@ -172,10 +176,10 @@ func TestGetReportNotifyUserReportsUsesDataOverviewStats(t *testing.T) {
 	require.NoError(t, db.Create(company).Error)
 	InvalidateCompanyOverviewCache(company.Id)
 	bp := &model.User{
-		Username: "report-bp", Password: "password", Role: common.RoleBUBP, BpLevel: 2,
+		Username: "report-bp", Password: "password", Role: common.RoleBUBP,
 		Status: common.UserStatusEnabled, Company: company.Name, OpenId: "ou_report_bp", CreatedAt: 1,
-		DepartmentName: "数智产品中心 / AI应用技术部 / AI工程效率科",
-		Departments:    `[{"department_id":"team"}]`,
+		OverviewDeptIDs: []string{departmentNodeValue(company.Id, "bu")},
+		Departments:     `[{"department_id":"team"}]`,
 	}
 	require.NoError(t, db.Create(bp).Error)
 	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {

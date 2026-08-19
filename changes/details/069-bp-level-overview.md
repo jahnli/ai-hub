@@ -1,6 +1,19 @@
-# 数据总览可见部门级别改为按成员 bp_level 配置
+# 数据总览 BP 可见部门配置演进
 
 **日期**: 2026-08-17 ~ 08-19（最后更新 08-19）
+
+### 2026-08-19 显式多部门配置与跨公司权限
+
+- `model/user.go` — 新增 `overview_dept_ids` JSON 数组字段，保留数据库中的 `bp_level` 列但移除其业务字段和运行时依赖；更新用户时显式序列化 JSON，兼容 PostgreSQL 文本列
+- `controller/user.go` — 创建/更新用户时校验可见部门数组最多 100 项且不含空值；安全用户 DTO 下发 `overview_dept_ids`
+- `service/feishu_department.go` — BP 部门树改为按显式节点值裁剪，选中部门及其完整子树可见；新增管理员完整部门树服务
+- `service/data_overview_company.go` — BP 按配置部门所属公司加载树并允许跨公司请求，统一在公司鉴权和部门鉴权处校验配置范围
+- `service/report_notify.go` — 报表通知范围改用显式部门配置，并支持跨公司 BP 范围
+- `controller/department.go`、`router/api-router.go` — 新增管理员专用完整部门树接口 `/api/department/full-tree`
+- `web/src/features/users/components/users-mutate-drawer.tsx` — 用户编辑从抽屉改为 50vw 宽、85vh 高弹窗，BP 配置改为完整部门树多选
+- `web/src/features/users/components/dept-multi-select.tsx` — 新增部门多选级联器，支持搜索、多个选择、移除和清空
+- `web/src/features/data-overview/components/department-tree-select.tsx` — 公司节点不可选但可展开，修复跨公司 BP 公司节点灰显问题
+- `web/src/i18n/locales/*.json` — 补齐相关 7 语言文案
 
 ### 2026-08-19 重名部门 BP 裁剪匹配修复
 
@@ -8,7 +21,9 @@
 - `service/report_notify.go` — 删除重复的 `findReportNotifyNodeByPath` 实现，报表范围改用统一的 `findNodeByPath`
 - `service/feishu_department_test.go` — 新增重名部门树回归测试：完整路径命中本人分支、缺根节点时后缀路径命中、路径缺失时名称兜底
 
-## 涉及文件
+> 下面“涉及文件”中的级别配置内容属于 2026-08-17 的历史实现；2026-08-19 已由上方的 `overview_dept_ids` 显式部门配置替代，数据库中的 `bp_level` 列仅保留用于历史数据兼容。
+
+## 历史实现涉及文件
 
 - `common/constants.go` — 新增 `BpLevelUnset=0` 常量与 `IsValidBpLevel` 校验（非负即可，不设上限）
 - `model/user.go` — `User` 结构体新增 `bp_level` 字段（int，默认 0），GORM AutoMigrate 自动加列不改动既有数据；`EditWithTx` 的 updates map 写入 `bp_level`

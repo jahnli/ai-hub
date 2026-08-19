@@ -21,6 +21,7 @@
   "Copy failed, please download instead": "Copy failed, please download instead",
   "Copy image": "Copy image",
   "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.": "Cost in {{currency}} per request, regardless of tokens used. Will be converted to USD on save.",
+  "current": "current",
   "Current Subscription": "Current Subscription",
   "Custom API base URL. For official channels, AI Gateway has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.": "Custom API base URL. For official channels, AI Gateway has built-in addresses. Only fill this for third-party proxy sites or special endpoints. Do not add /v1 or trailing slash.",
   "Custom label for the LDAP login button": "LDAP 登录按钮的自定义文案",

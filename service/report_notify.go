@@ -40,7 +40,7 @@ type reportNotifyScope struct {
 }
 
 // GetReportNotifyUserReports derives notification scopes from the target
-// user's bp_level configuration and explicit leader relationships, then builds
+// user's explicitly configured visible departments and leader relationships, then builds
 // each scope's statistics with the same builders used by data overview.
 func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNotifyUserReportsResponse, error) {
 	if req == nil || req.UserID <= 0 || req.StartTimestamp <= 0 || req.EndTimestamp <= 0 || req.StartTimestamp > req.EndTimestamp {
@@ -67,7 +67,7 @@ func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNot
 			EndTimestamp:   req.EndTimestamp,
 			RequestUserID:  user.Id,
 			// The trusted internal endpoint has already derived this exact scope
-			// from the user's bp_level or explicit leader relationship. Use root
+			// from the user's configured departments or explicit leader relationship. Use root
 			// authorization only to avoid data-overview role precedence hiding a
 			// leader scope when the same person is also a BP.
 			RequestUserRole: common.RoleRootUser,
@@ -103,7 +103,8 @@ func GetReportNotifyUserReports(req *ReportNotifyUserReportsRequest) (*ReportNot
 
 func getReportNotifyScopes(user *model.User) ([]reportNotifyScope, error) {
 	leaderDepartmentIDs := user.GetLeaderDepartmentIDs()
-	if user.BpLevel <= 0 && len(leaderDepartmentIDs) == 0 {
+	overviewDepartmentIDs := ParseOverviewDeptIDs(user.OverviewDeptIDs)
+	if len(overviewDepartmentIDs) == 0 && len(leaderDepartmentIDs) == 0 {
 		return []reportNotifyScope{}, nil
 	}
 
@@ -130,20 +131,16 @@ func getReportNotifyScopes(user *model.User) ([]reportNotifyScope, error) {
 		}
 		fullTree := buildOverviewDepartmentTree(company.Id, company.Platform, directory.Departments)
 
-		segments := splitDepartmentName(user.DepartmentName)
-		var bpPath []string
-		if user.BpLevel > 0 && len(segments) > 0 {
-			level := NormalizeBpLevelForDepartment(user.DepartmentName, user.BpLevel)
-			bpPath = segments[:level]
-		}
-		if len(bpPath) > 0 {
-			if node := findNodeByPath(fullTree, bpPath); node != nil {
-				scopes = append(scopes, reportNotifyScope{
-					company:        company,
-					departmentID:   node.Value,
-					departmentName: strings.Join(bpPath, " / "),
-				})
+		for _, departmentID := range overviewDepartmentIDs {
+			path, found := findReportNotifyNodePath(fullTree, departmentID, nil)
+			if !found {
+				continue
 			}
+			scopes = append(scopes, reportNotifyScope{
+				company:        company,
+				departmentID:   departmentID,
+				departmentName: strings.Join(path, " / "),
+			})
 		}
 
 		prefixedLeaderDepartmentIDs := prefixLeaderDepartmentIDs(company.Id, leaderDepartmentIDs)

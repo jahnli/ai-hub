@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 
 import {
   SideDrawerSection,
-  sideDrawerContentClassName,
   sideDrawerFooterClassName,
   sideDrawerFormClassName,
   sideDrawerHeaderClassName,
@@ -35,14 +34,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import {
   ADMIN_PERMISSION_ACTIONS,
@@ -62,6 +61,7 @@ import {
   getUser,
   getGroups,
   getPermissionCatalog,
+  getAdminFullDepartmentTree,
 } from '../api'
 import { BINDING_FIELDS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
@@ -72,6 +72,7 @@ import {
   transformUserToFormDefaults,
 } from '../lib'
 import type { User } from '../types'
+import { DeptMultiSelect } from './dept-multi-select'
 import { UserQuotaDialog } from './user-quota-dialog'
 import { useUsers } from './users-provider'
 
@@ -142,6 +143,16 @@ export function UsersMutateDrawer({
   const targetRole = selectedRole ?? currentRow?.role ?? 0
   const targetIsBP = targetRole === ROLE.BU_BP
 
+  const { data: fullDeptTreeResponse, isLoading: fullDeptTreeLoading } =
+    useQuery({
+      queryKey: ['admin-full-department-tree'],
+      queryFn: getAdminFullDepartmentTree,
+      enabled: open && targetIsBP,
+      staleTime: 5 * 60 * 1000,
+    })
+
+  const fullDeptTreeData = fullDeptTreeResponse?.data?.tree_data ?? []
+
   const onSubmit = async (data: UserFormValues) => {
     if (!isUpdate) {
       const passwordLength = data.password?.length || 0
@@ -199,7 +210,7 @@ export function UsersMutateDrawer({
 
   return (
     <>
-      <Sheet
+      <Dialog
         open={open}
         onOpenChange={(v) => {
           onOpenChange(v)
@@ -208,19 +219,17 @@ export function UsersMutateDrawer({
           }
         }}
       >
-        <SheetContent
-          className={sideDrawerContentClassName('sm:max-w-[600px]')}
-        >
-          <SheetHeader className={sideDrawerHeaderClassName()}>
-            <SheetTitle>
+        <DialogContent className='flex h-[85vh] max-h-[85vh] w-[50vw] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[50vw]'>
+          <DialogHeader className={sideDrawerHeaderClassName()}>
+            <DialogTitle>
               {isUpdate ? t('Update') : t('Create')} {t('User')}
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               {isUpdate
                 ? t('Update the user by providing necessary info.')
                 : t('Add a new user by providing necessary info.')}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
           <Form {...form}>
             <form
               id='user-form'
@@ -297,72 +306,30 @@ export function UsersMutateDrawer({
                 {targetIsBP && (
                   <FormField
                     control={form.control}
-                    name='bp_level'
-                    render={({ field }) => {
-                      const departmentName = currentRow?.department_name || ''
-                      const departmentLevels = departmentName
-                        .split(' / ')
-                        .map((segment) => segment.trim())
-                        .filter((segment) => segment !== '')
-
-                      const selectItems = [
-                        {
-                          value: '0',
-                          label: `${t('Level {{level}}', {
-                            level: 0,
-                          })}: ${t('No visible departments')}`,
-                        },
-                        ...departmentLevels.map(
-                          (departmentSegment, segmentIndex) => ({
-                            value: String(segmentIndex + 1),
-                            label: `${t('Level {{level}}', {
-                              level: segmentIndex + 1,
-                            })}: ${departmentSegment}`,
-                          })
-                        ),
-                      ]
-
-                      return (
-                        <FormItem className='min-w-0'>
-                          <FormLabel>
-                            {t('Overview Department Level')}
-                          </FormLabel>
-                          <Select
-                            items={selectItems}
-                            onValueChange={(value) => {
-                              if (value !== null) {
-                                field.onChange(Number.parseInt(value))
-                              }
-                            }}
-                            value={String(field.value ?? 0)}
-                          >
-                            <FormControl>
-                              <SelectTrigger className='w-full min-w-0 max-w-full'>
-                                <SelectValue
-                                  className='min-w-0 overflow-hidden text-ellipsis'
-                                  placeholder={t('Select department level')}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent alignItemWithTrigger={false}>
-                              <SelectGroup>
-                                {selectItems.map((item) => (
-                                  <SelectItem key={item.value} value={item.value}>
-                                    {item.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            {t(
-                              'Controls which department level this BP member can see in Data Overview. 0 means no visible departments. Levels deeper than the member\'s own department hierarchy fall back to their deepest department.'
-                            )}
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )
-                    }}
+                    name='overview_dept_ids'
+                    render={({ field }) => (
+                      <FormItem className='min-w-0'>
+                        <FormLabel>
+                          {t('Overview Visible Departments')}
+                        </FormLabel>
+                        <FormControl>
+                          <DeptMultiSelect
+                            treeData={fullDeptTreeData}
+                            value={field.value ?? []}
+                            onValueChange={field.onChange}
+                            placeholder={t('Select visible departments')}
+                            isLoading={fullDeptTreeLoading}
+                            disabled={fullDeptTreeLoading}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Select which departments this BP user can access in Data Overview. Selecting a department grants access to all its sub-departments.'
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 )}
 
@@ -632,16 +599,16 @@ export function UsersMutateDrawer({
               )}
             </form>
           </Form>
-          <SheetFooter className={sideDrawerFooterClassName()}>
-            <SheetClose render={<Button variant='outline' />}>
+          <DialogFooter className={sideDrawerFooterClassName()}>
+            <DialogClose render={<Button variant='outline' />}>
               {t('Close')}
-            </SheetClose>
+            </DialogClose>
             <Button form='user-form' type='submit' disabled={isSubmitting}>
               {isSubmitting ? t('Saving...') : t('Save changes')}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Adjust Quota Dialog */}
       {currentRow && (

@@ -83,7 +83,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
       // in-flight (loadingNodeValues does not contain the node value).
       const needsFetch =
         node.loading && !props.loadingNodeValues?.has(node.value)
-      if (needsFetch) {
+      if (needsFetch && canNavigateCompanyNode(node)) {
         props.onLoadNodeChildren?.(node)
       }
     },
@@ -91,7 +91,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
   )
 
   const handleSelect = (node: DeptTreeNode) => {
-    if (isDepartmentNodeDisabled(node)) return
+    if (isDepartmentNodeDisabled(node) || node.node_type === 'company') return
     props.onValueChange(node.value, node)
     setOpen(false)
   }
@@ -266,6 +266,7 @@ function CascaderColumn(props: CascaderColumnProps) {
         const isChildrenLoading = props.loadingNodeValues?.has(node.value)
         const hasChildren = node.children.length > 0 || node.loading
         const isDisabled = isDepartmentNodeDisabled(node)
+        const canNavigate = canNavigateCompanyNode(node)
         const errorText = getDepartmentNodeErrorText(node, (key, options) =>
           t(key, options)
         )
@@ -279,14 +280,16 @@ function CascaderColumn(props: CascaderColumnProps) {
             title={errorText}
             className={cn(
               'mx-1 flex cursor-pointer items-start gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors',
-              isDisabled
+              isDisabled && !canNavigate
                 ? 'text-muted-foreground cursor-not-allowed opacity-50'
                 : 'hover:bg-accent',
-              isActive && !isDisabled && 'bg-accent',
+              isActive && (!isDisabled || canNavigate) && 'bg-accent',
               isSelected && !isDisabled && 'text-primary font-medium'
             )}
             onMouseEnter={() => {
-              if (!isDisabled) props.onHover(node, props.depth)
+              if (!isDisabled || canNavigate) {
+                props.onHover(node, props.depth)
+              }
             }}
             onClick={() => props.onSelect(node)}
           >
@@ -310,6 +313,14 @@ function CascaderColumn(props: CascaderColumnProps) {
         )
       })}
     </div>
+  )
+}
+
+function canNavigateCompanyNode(node: DeptTreeNode): boolean {
+  return (
+    node.node_type === 'company' &&
+    !node.error &&
+    (node.loading || node.children.length > 0)
   )
 }
 
@@ -338,6 +349,7 @@ function SearchResultList(props: SearchResultListProps) {
         props.results.map((item) => {
           const isSelected = props.selectedValue === item.node.value
           const isDisabled = isDepartmentNodeDisabled(item.node)
+          const isCompanyNode = item.node.node_type === 'company'
           const errorText = getDepartmentNodeErrorText(
             item.node,
             (key, options) => t(key, options)
@@ -351,7 +363,7 @@ function SearchResultList(props: SearchResultListProps) {
               title={errorText}
               className={cn(
                 'mx-1 flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 transition-colors',
-                isDisabled
+                isDisabled || isCompanyNode
                   ? 'text-muted-foreground cursor-not-allowed opacity-50'
                   : 'hover:bg-accent',
                 isSelected && 'bg-accent'

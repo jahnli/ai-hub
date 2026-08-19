@@ -13,16 +13,22 @@ describe('data overview entry access', () => {
     assert.equal(canAccessDataOverview({ role: ROLE.SUPER_ADMIN }), true)
   })
 
-  test('BP role passes only with a configured bp_level', () => {
-    assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 2 }), true)
-    assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 1 }), true)
-    assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 0 }), false)
+  test('BP role passes only with configured visible departments', () => {
+    assert.equal(
+      canAccessDataOverview({ role: ROLE.BU_BP, overview_dept_ids: ['dept:1:team'] }),
+      true
+    )
+    assert.equal(
+      canAccessDataOverview({ role: ROLE.BU_BP, overview_dept_ids: ['dept:1:team', 'dept:1:bu'] }),
+      true
+    )
+    assert.equal(canAccessDataOverview({ role: ROLE.BU_BP, overview_dept_ids: [] }), false)
     assert.equal(canAccessDataOverview({ role: ROLE.BU_BP }), false)
   })
 
-  test('BP with bp_level 0 is denied even when leading departments', () => {
+  test('BP without configured departments is denied even when leading departments', () => {
     assert.equal(
-      canAccessDataOverview({ role: ROLE.BU_BP, bp_level: 0, is_dept_leader: true }),
+      canAccessDataOverview({ role: ROLE.BU_BP, overview_dept_ids: [], is_dept_leader: true }),
       false
     )
   })
