@@ -49,6 +49,48 @@ func setupManageUserTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
+func TestNormalizeCostCenter(t *testing.T) {
+	tests := []struct {
+		name        string
+		rawValue    string
+		expectValue string
+		expectError bool
+	}{
+		{
+			name:        "empty value becomes empty array",
+			rawValue:    "",
+			expectValue: "[]",
+		},
+		{
+			name:        "selected department is normalized",
+			rawValue:    `[{"department_id":"od-finance","name":"Finance","company_id":7}]`,
+			expectValue: `[{"department_id":"od-finance","name":"Finance","company_id":7}]`,
+		},
+		{
+			name:        "multiple departments are rejected",
+			rawValue:    `[{"department_id":"od-a","name":"A","company_id":7},{"department_id":"od-b","name":"B","company_id":7}]`,
+			expectError: true,
+		},
+		{
+			name:        "company node is rejected",
+			rawValue:    `[{"department_id":"","name":"Company","company_id":7}]`,
+			expectError: true,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			actualValue, err := normalizeCostCenter(testCase.rawValue)
+			if testCase.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, testCase.expectValue, actualValue)
+		})
+	}
+}
+
 func TestAttachSubscriptionQuotaUsesMonthlySpendAndWalletQuotaWithoutSubscription(t *testing.T) {
 	db := setupManageUserTestDB(t)
 	previousQuotaPerUnit := common.QuotaPerUnit

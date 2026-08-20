@@ -79,6 +79,37 @@ func TestUserUpdateDoesNotOverwriteConcurrentAccountingOrTokenChanges(t *testing
 	assert.Equal(t, "rotated-token", got.GetAccessToken())
 }
 
+func TestEditWithTxPersistsAndClearsCostCenter(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Username:    "cost-center-user",
+		Password:    "password",
+		DisplayName: "Cost Center User",
+		Role:        common.RoleCommonUser,
+		Status:      common.UserStatusEnabled,
+		Group:       "default",
+		CostCenter:  "[]",
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	user.CostCenter = `[{"department_id":"od-finance","name":"Finance","company_id":7}]`
+	require.NoError(t, DB.Transaction(func(transaction *gorm.DB) error {
+		return user.EditWithTx(transaction, false)
+	}))
+
+	var storedUser User
+	require.NoError(t, DB.First(&storedUser, user.Id).Error)
+	assert.Equal(t, user.CostCenter, storedUser.CostCenter)
+
+	user.CostCenter = "[]"
+	require.NoError(t, DB.Transaction(func(transaction *gorm.DB) error {
+		return user.EditWithTx(transaction, false)
+	}))
+	require.NoError(t, DB.First(&storedUser, user.Id).Error)
+	assert.Equal(t, "[]", storedUser.CostCenter)
+}
+
 func TestUsageAccountingSupportsSignedDirectAndBatchDeltas(t *testing.T) {
 	setupUserUpdateTestState(t)
 	resetBatchUpdateTestState(t)

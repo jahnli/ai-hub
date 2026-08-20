@@ -459,6 +459,45 @@ func canManageTargetRole(myRole int, targetRole int) bool {
 
 const maxOverviewDeptIDs = 100
 
+type costCenterDepartment struct {
+	DepartmentID string `json:"department_id"`
+	Name         string `json:"name"`
+	CompanyID    int    `json:"company_id"`
+}
+
+// normalizeCostCenter accepts the persisted departments-compatible JSON shape
+// and returns a canonical single-entry array. Company nodes are rejected by
+// requiring a department ID and a positive company ID.
+func normalizeCostCenter(rawValue string) (string, error) {
+	if strings.TrimSpace(rawValue) == "" {
+		return "[]", nil
+	}
+
+	var departments []costCenterDepartment
+	if err := common.UnmarshalJsonStr(rawValue, &departments); err != nil {
+		return "", fmt.Errorf("cost_center must be a JSON array: %w", err)
+	}
+	if len(departments) > 1 {
+		return "", errors.New("cost_center accepts at most one department")
+	}
+	if len(departments) == 0 {
+		return "[]", nil
+	}
+
+	department := departments[0]
+	department.DepartmentID = strings.TrimSpace(department.DepartmentID)
+	department.Name = strings.TrimSpace(department.Name)
+	if department.DepartmentID == "" || department.Name == "" || department.CompanyID <= 0 {
+		return "", errors.New("cost_center must contain a valid department")
+	}
+
+	canonicalValue, err := common.Marshal([]costCenterDepartment{department})
+	if err != nil {
+		return "", err
+	}
+	return string(canonicalValue), nil
+}
+
 // validateOverviewDeptIDs checks that the field contains non-empty node values
 // and does not exceed the per-user limit.
 func validateOverviewDeptIDs(ids []string) error {
@@ -855,6 +894,11 @@ func UpdateUser(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
+	updatedUser.CostCenter, err = normalizeCostCenter(updatedUser.CostCenter)
+	if err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
 	}
@@ -1180,6 +1224,11 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 	if err := validateOverviewDeptIDs(user.OverviewDeptIDs); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	user.CostCenter, err = normalizeCostCenter(user.CostCenter)
+	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}

@@ -1,6 +1,6 @@
 # 用户管理表格统计增强
 
-**日期**: 2026-06-30 ~ 08-07（最后更新 08-07）
+**日期**: 2026-06-30 ~ 08-20（最后更新 08-20）
 
 ## 涉及文件
 
@@ -67,3 +67,15 @@
 - `web/src/components/data-table/core/pagination.tsx`、`web/src/components/data-table/layout/data-table-page.tsx` — 通用分页支持在总计和页数选择之间插入页面专属汇总内容。
 - `web/src/features/users/components/__tests__/status-summary.test.tsx`、`web/src/components/data-table/core/__tests__/pagination-summary.test.tsx` — 覆盖中文人数展示及汇总内容所在位置。
 - `web/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 补充“在职”和“禁用”人数标签翻译。
+
+## 2026-08-20 用户成本中心配置
+
+- `model/user.go` — User 新增 `cost_center` TEXT 字段，默认保存空数组；管理员编辑用户时通过显式更新白名单持久化成本中心。
+- `controller/user.go` — 管理员创建和更新用户时归一化成本中心 JSON，限制最多一个部门并校验 `department_id`、部门名称和 `company_id`，拒绝公司根节点等无效值。
+- `controller/user_manage_test.go` — 覆盖成本中心空值归一化、有效部门规范化、多部门和公司节点拒绝行为。
+- `model/user_update_test.go` — 覆盖用户成本中心写入和清除的数据库持久化行为。
+- `web/src/features/users/components/users-mutate-drawer.tsx` — 用户创建/编辑弹窗新增成本中心单选，复用管理员完整部门树并支持加载、回填和清除；BP 可见部门继续沿用原多选配置。
+- `web/src/features/users/lib/user-form.ts`、`web/src/features/users/lib/index.ts` — 定义成本中心表单值，完成树节点与单元素部门 JSON 数组之间的序列化和回填转换。
+- `web/src/features/users/types.ts` — 用户响应、编辑请求和共享用户行类型补充 `cost_center` 字段。
+- `web/src/features/users/lib/__tests__/user-form-bp-level.test.ts` — 覆盖成本中心默认空值、创建/更新提交、清除及服务端值回填。
+- `web/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 补齐成本中心标签、选择提示、说明和清除操作的七语言文案。

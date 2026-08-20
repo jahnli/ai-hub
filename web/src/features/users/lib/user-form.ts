@@ -11,6 +11,19 @@ import { ROLE } from '@/lib/roles'
 import { DEFAULT_GROUP } from '../constants'
 import type { UserFormData, User } from '../types'
 
+export interface CostCenterSelection {
+  value: string
+  label: string
+  department_id: string
+  company_id: number
+}
+
+interface StoredCostCenter {
+  department_id: string
+  name: string
+  company_id: number
+}
+
 // ============================================================================
 // Form Schema
 // ============================================================================
@@ -21,6 +34,15 @@ export const userFormSchema = z.object({
   password: z.string().optional(),
   role: z.number().optional(),
   overview_dept_ids: z.array(z.string()).optional(),
+  cost_center: z
+    .object({
+      value: z.string(),
+      label: z.string(),
+      department_id: z.string(),
+      company_id: z.number(),
+    })
+    .nullable()
+    .optional(),
   quota_dollars: z.number().min(0).optional(),
   group: z.string().optional(),
   remark: z.string().optional(),
@@ -41,6 +63,7 @@ export const USER_FORM_DEFAULT_VALUES: UserFormValues = {
   password: '',
   role: 1, // Default to common user
   overview_dept_ids: [],
+  cost_center: null,
   quota_dollars: 0,
   group: DEFAULT_GROUP,
   remark: '',
@@ -67,6 +90,7 @@ export function transformFormDataToPayload(
 
   const role = userId === undefined ? data.role || 1 : (data.role ?? 0)
   payload.overview_dept_ids = data.overview_dept_ids ?? []
+  payload.cost_center = serializeCostCenter(data.cost_center)
 
   // Only send the permission matrix when the target is an admin and the catalog
   // is available; without the catalog we cannot build a full matrix, so we omit
@@ -103,9 +127,46 @@ export function transformUserToFormDefaults(user: User): UserFormValues {
     password: '',
     role: user.role,
     overview_dept_ids: user.overview_dept_ids ?? [],
+    cost_center: parseStoredCostCenter(user.cost_center),
     quota_dollars: quotaUnitsToDollars(user.quota),
     group: user.group || DEFAULT_GROUP,
     remark: user.remark || '',
     admin_permissions: user.admin_permissions ?? {},
+  }
+}
+
+function serializeCostCenter(
+  selection: CostCenterSelection | null | undefined
+): string {
+  if (!selection) return '[]'
+  const storedValue: StoredCostCenter = {
+    department_id: selection.department_id,
+    name: selection.label,
+    company_id: selection.company_id,
+  }
+  return JSON.stringify([storedValue])
+}
+
+function parseStoredCostCenter(rawValue?: string): CostCenterSelection | null {
+  if (!rawValue) return null
+  try {
+    const parsed: unknown = JSON.parse(rawValue)
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    const storedValue = parsed[0] as Partial<StoredCostCenter>
+    if (
+      typeof storedValue.department_id !== 'string' ||
+      typeof storedValue.name !== 'string' ||
+      typeof storedValue.company_id !== 'number'
+    ) {
+      return null
+    }
+    return {
+      value: `dept:${storedValue.company_id}:${storedValue.department_id}`,
+      label: storedValue.name,
+      department_id: storedValue.department_id,
+      company_id: storedValue.company_id,
+    }
+  } catch {
+    return null
   }
 }

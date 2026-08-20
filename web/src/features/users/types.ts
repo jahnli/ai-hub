@@ -53,6 +53,7 @@ export const userSchema = z.object({
   custom_field_values: z.string().optional(),
   join_date: z.string().optional(),
   company: z.string().optional(),
+  cost_center: z.string().optional(),
   admin_permissions: z
     .record(z.string(), z.record(z.string(), z.boolean()))
     .optional(),
@@ -128,6 +129,7 @@ export interface UserFormData {
   password?: string
   role?: number // Only used when creating user
   overview_dept_ids?: string[] // Explicitly configured visible department node values for BP users
+  cost_center?: string // Canonical single-department JSON array for the user's cost center
   quota?: number // Only used when updating user
   group?: string // Only used when updating user
   remark?: string // Only used when updating user
@@ -190,6 +192,7 @@ export interface UserColumnRow {
   open_id?: string
   gender?: number
   company?: string
+  cost_center?: string
 }
 
 // ============================================================================

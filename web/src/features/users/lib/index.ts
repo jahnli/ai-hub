@@ -9,6 +9,7 @@ export { getUserActionMessage } from './user-actions'
 export {
   userFormSchema,
   type UserFormValues,
+  type CostCenterSelection,
   USER_FORM_DEFAULT_VALUES,
   transformFormDataToPayload,
   transformUserToFormDefaults,

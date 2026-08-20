@@ -102,6 +102,7 @@ type User struct {
 	RequestCount      int                        `json:"request_count" gorm:"type:int;default:0;"`
 	Group             string                     `json:"group" gorm:"type:varchar(64);default:'default'"`
 	Company           string                     `json:"company" gorm:"type:varchar(128);column:company;default:'';index"`
+	CostCenter        string                     `json:"cost_center" gorm:"type:text;column:cost_center;default:'[]'"`
 	DeletedAt         gorm.DeletedAt             `gorm:"index"`
 	Setting           string                     `json:"setting" gorm:"type:text;column:setting"`
 	Remark            string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
@@ -862,6 +863,7 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 		"remark":            newUser.Remark,
 		"role":              newUser.Role,
 		"overview_dept_ids": string(overviewDeptIDsJSON),
+		"cost_center":       newUser.CostCenter,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

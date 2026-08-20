@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil } from 'lucide-react'
+import { Pencil, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +14,15 @@ import {
 } from '@/components/drawer-layout'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -33,16 +42,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { DepartmentTreeSelect } from '@/features/data-overview/components/department-tree-select'
 import {
   ADMIN_PERMISSION_ACTIONS,
   ADMIN_PERMISSION_RESOURCES,
@@ -67,6 +68,7 @@ import { BINDING_FIELDS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
   userFormSchema,
   type UserFormValues,
+  type CostCenterSelection,
   USER_FORM_DEFAULT_VALUES,
   transformFormDataToPayload,
   transformUserToFormDefaults,
@@ -147,7 +149,7 @@ export function UsersMutateDrawer({
     useQuery({
       queryKey: ['admin-full-department-tree'],
       queryFn: getAdminFullDepartmentTree,
-      enabled: open && targetIsBP,
+      enabled: open,
       staleTime: 5 * 60 * 1000,
     })
 
@@ -273,12 +275,13 @@ export function UsersMutateDrawer({
                           { value: '10', label: t('Admin') },
                         ]}
                         onValueChange={(value) =>
-                          value !== null && field.onChange(Number.parseInt(value))
+                          value !== null &&
+                          field.onChange(Number.parseInt(value))
                         }
                         value={String(field.value)}
                       >
                         <FormControl>
-                          <SelectTrigger className='w-full min-w-0 max-w-full'>
+                          <SelectTrigger className='w-full max-w-full min-w-0'>
                             <SelectValue
                               className='min-w-0 overflow-hidden text-ellipsis'
                               placeholder={t('Select a role')}
@@ -297,6 +300,59 @@ export function UsersMutateDrawer({
                       </Select>
                       <FormDescription>
                         {t("Set the user's role (cannot be Root)")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='cost_center'
+                  render={({ field }) => (
+                    <FormItem className='min-w-0'>
+                      <FormLabel>{t('Cost Center')}</FormLabel>
+                      <div className='flex items-center gap-2'>
+                        <FormControl>
+                          <DepartmentTreeSelect
+                            treeData={fullDeptTreeData}
+                            value={field.value?.value}
+                            onValueChange={(_, node) => {
+                              if (
+                                node.node_type !== 'department' ||
+                                !node.department_id ||
+                                !node.company_id
+                              ) {
+                                return
+                              }
+                              const selection: CostCenterSelection = {
+                                value: node.value,
+                                label: node.label,
+                                department_id: node.department_id,
+                                company_id: node.company_id,
+                              }
+                              field.onChange(selection)
+                            }}
+                            placeholder={t('Select a cost center')}
+                            disabled={fullDeptTreeLoading}
+                          />
+                        </FormControl>
+                        {field.value && (
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='icon'
+                            aria-label={t('Clear cost center')}
+                            onClick={() => field.onChange(null)}
+                          >
+                            <X aria-hidden='true' className='size-4' />
+                          </Button>
+                        )}
+                      </div>
+                      <FormDescription>
+                        {t(
+                          "Select the department used as this user's cost center."
+                        )}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -531,10 +587,10 @@ export function UsersMutateDrawer({
                                           }}
                                         />
                                         <span className='flex min-w-0 flex-1 flex-col gap-1'>
-                                          <span className='break-words text-sm font-medium'>
+                                          <span className='text-sm font-medium break-words'>
                                             {t(option.label_key)}
                                           </span>
-                                          <span className='text-muted-foreground break-words text-xs'>
+                                          <span className='text-muted-foreground text-xs break-words'>
                                             {t(option.description_key)}
                                           </span>
                                         </span>

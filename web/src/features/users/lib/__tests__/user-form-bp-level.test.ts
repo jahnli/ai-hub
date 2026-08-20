@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
+import type { User } from '../../types'
 import {
   userFormSchema,
   USER_FORM_DEFAULT_VALUES,
@@ -8,9 +9,10 @@ import {
   transformUserToFormDefaults,
   type UserFormValues,
 } from '../user-form'
-import type { User } from '../../types'
 
-function makeFormValues(overrides: Partial<UserFormValues> = {}): UserFormValues {
+function makeFormValues(
+  overrides: Partial<UserFormValues> = {}
+): UserFormValues {
   return { ...USER_FORM_DEFAULT_VALUES, username: 'bp-user', ...overrides }
 }
 
@@ -97,5 +99,69 @@ describe('user form overview_dept_ids handling', () => {
     const defaults = transformUserToFormDefaults(makeUser())
     assert.deepEqual(defaults.overview_dept_ids, [])
   })
+})
 
+describe('user form cost_center handling', () => {
+  const selectedCostCenter = {
+    value: 'dept:7:od-cost-center',
+    label: 'Finance',
+    department_id: 'od-cost-center',
+    company_id: 7,
+  }
+
+  test('default values start without a cost center', () => {
+    assert.equal(USER_FORM_DEFAULT_VALUES.cost_center, null)
+  })
+
+  test('create payload serializes the selected department in departments format', () => {
+    const payload = transformFormDataToPayload(
+      makeFormValues({ cost_center: selectedCostCenter })
+    )
+    assert.equal(
+      payload.cost_center,
+      '[{"department_id":"od-cost-center","name":"Finance","company_id":7}]'
+    )
+  })
+
+  test('create payload serializes an empty cost center as an empty array', () => {
+    const payload = transformFormDataToPayload(makeFormValues())
+    assert.equal(payload.cost_center, '[]')
+  })
+
+  test('update payload preserves the selected cost center', () => {
+    const payload = transformFormDataToPayload(
+      makeFormValues({ cost_center: selectedCostCenter }),
+      42
+    )
+    assert.equal(payload.id, 42)
+    assert.equal(
+      payload.cost_center,
+      '[{"department_id":"od-cost-center","name":"Finance","company_id":7}]'
+    )
+  })
+
+  test('update payload clears the cost center with an empty array', () => {
+    const payload = transformFormDataToPayload(
+      makeFormValues({ cost_center: null }),
+      42
+    )
+    assert.equal(payload.cost_center, '[]')
+  })
+
+  test('form defaults restore the selected tree node from stored cost center JSON', () => {
+    const defaults = transformUserToFormDefaults(
+      makeUser({
+        cost_center:
+          '[{"department_id":"od-cost-center","name":"Finance","company_id":7}]',
+      })
+    )
+    assert.deepEqual(defaults.cost_center, selectedCostCenter)
+  })
+
+  test('form defaults fall back to no cost center for empty stored JSON', () => {
+    const defaults = transformUserToFormDefaults(
+      makeUser({ cost_center: '[]' })
+    )
+    assert.equal(defaults.cost_center, null)
+  })
 })
