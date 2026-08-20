@@ -69,6 +69,7 @@ import {
   userFormSchema,
   type UserFormValues,
   type CostCenterSelection,
+  getCostCenterDepartmentPath,
   USER_FORM_DEFAULT_VALUES,
   transformFormDataToPayload,
   transformUserToFormDefaults,
@@ -325,9 +326,14 @@ export function UsersMutateDrawer({
                               ) {
                                 return
                               }
+                              const departmentPath =
+                                getCostCenterDepartmentPath(
+                                  fullDeptTreeData,
+                                  node.value
+                                ) || node.label
                               const selection: CostCenterSelection = {
                                 value: node.value,
-                                label: node.label,
+                                label: departmentPath,
                                 department_id: node.department_id,
                                 company_id: node.company_id,
                               }

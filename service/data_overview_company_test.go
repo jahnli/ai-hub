@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"sync/atomic"
 	"testing"
 
@@ -472,7 +473,7 @@ func TestMatchOverviewDepartmentMembersUsesFirstDepartmentID(t *testing.T) {
 	require.NoError(t, db.Create(&users).Error)
 
 	matchedMembers, matchedUsers, err := matchOverviewDepartmentMembers(
-		"department-match-company",
+		&model.Company{Name: "department-match-company"},
 		[]overviewMember{
 			{OpenID: "primary-open-id"},
 			{OpenID: "secondary-open-id"},
@@ -538,7 +539,7 @@ func TestMatchOverviewDepartmentMembersIncludesDisabledUserFromStoredDepartment(
 	require.NoError(t, db.Create(&users).Error)
 
 	matchedMembers, matchedUsers, err := matchOverviewDepartmentMembers(
-		"disabled-member-company",
+		&model.Company{Name: "disabled-member-company"},
 		[]overviewMember{{OpenID: "active-open-id", ObservedDepartmentID: "target"}},
 		[]string{"target"},
 		200,
@@ -748,4 +749,346 @@ func TestGetDepartmentOverviewSharesUserStatsWithoutChangingModuleResults(t *tes
 	assert.Equal(t, expectedSubStats, response.SubStats)
 	assert.Equal(t, expectedUsers, response.Users)
 	assert.Equal(t, expectedRankings, response.UserRankings)
+}
+
+// TestPartitionMatchedMembersBucketsByCostCenterOverPrimaryDepartment verifies
+// that a user carrying a cost center is bucketed into the cost-center child
+// subtree instead of their directory primary department. Without cost-center
+// awareness this user would land in child-a (via child-a-1) even though their
+// cost center points at child-b.
+func TestPartitionMatchedMembersBucketsByCostCenterOverPrimaryDepartment(t *testing.T) {
+	directory := &overviewDirectory{
+		OrganizationName: "cost-center-partition-company",
+		Departments: []overviewDepartment{
+			{ID: "child-a", ParentID: "0", Name: "Child A"},
+			{ID: "child-a-1", ParentID: "child-a", Name: "Child A1"},
+			{ID: "child-b", ParentID: "0", Name: "Child B"},
+		},
+	}
+	children := []overviewDepartment{
+		{ID: "child-a", ParentID: "0", Name: "Child A"},
+		{ID: "child-b", ParentID: "0", Name: "Child B"},
+	}
+	users := []*model.User{
+		{
+			Id:          1,
+			OpenId:      "user-cc",
+			Departments: `[{"department_id":"child-a-1"}]`,
+			CostCenter:  `[{"department_id":"child-b","name":"Child B","company_id":1}]`,
+		},
+	}
+	members := []overviewMember{
+		{OpenID: "user-cc"},
+	}
+
+	childMembers, childUsers := partitionMatchedMembersByPrimaryDepartment(
+		members,
+		users,
+		directory,
+		children,
+		model.CompanyPlatformFeishu,
+	)
+
+	require.Len(t, childMembers, 2)
+	require.Len(t, childUsers, 2)
+	assert.Empty(t, childMembers[0], "cost-center user must not bucket into primary department subtree")
+	assert.Empty(t, childUsers[0])
+	require.Len(t, childMembers[1], 1)
+	assert.Equal(t, "user-cc", childMembers[1][0].OpenID)
+	require.Len(t, childUsers[1], 1)
+	assert.Equal(t, "user-cc", childUsers[1][0].OpenId)
+}
+
+// TestResolveCompanyOverviewAudiencePrefersCostCenterIncludingEmptyOpenID is the
+// core regression for cost-center-first attribution. It covers four members:
+//   - a cost-center hit reachable from the platform directory (counted, even
+//     though the directory primary department points elsewhere),
+//   - a cost-center hit whose open_id is empty and therefore invisible to the
+//     platform directory (still counted via the local cost-center lookup),
+//   - a cost-center miss absent from the platform directory (dropped),
+//   - a cost-center miss that the platform directory DOES return (skipped
+//     without falling back to the directory primary department).
+func TestResolveCompanyOverviewAudiencePrefersCostCenterIncludingEmptyOpenID(t *testing.T) {
+	previousDB := model.DB
+	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Company{}, &model.User{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		fetchCompanyDirectory = previousDirectoryFetcher
+		fetchCompanyMembers = previousMemberFetcher
+		_ = sqlDB.Close()
+	})
+
+	company := &model.Company{
+		Name:     "cost-center-attribution-company",
+		Platform: model.CompanyPlatformFeishu,
+		Status:   model.CompanyStatusEnabled,
+		Config:   "{}",
+	}
+	require.NoError(t, db.Create(company).Error)
+	t.Cleanup(func() { InvalidateCompanyOverviewCache(company.Id) })
+	companyID := company.Id
+	costCenterDepartment1 := fmt.Sprintf(`[{"department_id":"department-1","name":"Department 1","company_id":%d}]`, companyID)
+	costCenterOutsideTree := fmt.Sprintf(`[{"department_id":"department-9","name":"Other","company_id":%d}]`, companyID)
+
+	users := []*model.User{
+		{
+			Username:    "cc-platform-reachable",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "cc-open",
+			Departments: `[{"department_id":"department-2"}]`,
+			CostCenter:  costCenterDepartment1,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "cc-empty-openid",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "",
+			CostCenter:  costCenterDepartment1,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "cc-miss-invisible",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "other-open",
+			Departments: `[{"department_id":"department-1"}]`,
+			CostCenter:  costCenterOutsideTree,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "cc-miss-platform-reachable",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "primary-open",
+			Departments: `[{"department_id":"department-1"}]`,
+			CostCenter:  costCenterOutsideTree,
+			CreatedAt:   100,
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {
+		return &overviewDirectory{
+			OrganizationName: company.Name,
+			Departments: []overviewDepartment{
+				{ID: "department-1", ParentID: "0", Name: "Department 1"},
+				{ID: "department-2", ParentID: "0", Name: "Department 2"},
+			},
+		}, nil
+	}
+	fetchCompanyMembers = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		if departmentID == "department-1" {
+			return []overviewMember{
+				{OpenID: "cc-open"},
+				{OpenID: "primary-open"},
+			}, nil
+		}
+		return []overviewMember{}, nil
+	}
+
+	departmentValue := companyNodeValue(company.Id)
+	audience, _, err := resolveCompanyOverviewAudience(company.Id, departmentValue, 1, common.RoleRootUser, 200)
+	require.NoError(t, err)
+	require.NotNil(t, audience)
+
+	assert.Equal(t, 2, audience.totalUsers, "only the two cost-center hits should be counted")
+	require.Len(t, audience.registeredUserIDs, 2)
+
+	registeredIDSet := make(map[int]bool, len(audience.registeredUserIDs))
+	for _, id := range audience.registeredUserIDs {
+		registeredIDSet[id] = true
+	}
+	assert.True(t, registeredIDSet[users[0].Id], "cost-center hit reachable from platform should be registered")
+	assert.True(t, registeredIDSet[users[1].Id], "cost-center hit with empty open_id should be registered")
+	assert.False(t, registeredIDSet[users[2].Id], "cost-center miss absent from platform must not be counted")
+	assert.False(t, registeredIDSet[users[3].Id], "cost-center miss returned by platform must be skipped without fallback")
+}
+
+// TestResolveCompanyOverviewAudiencePrefersCostCenterDingTalk mirrors the
+// feishu cost-center regression but exercises the DingTalk platform path,
+// where department IDs are numeric strings and the company root carries the
+// DingTalk root dept id. This guards against platform-specific regressions in
+// cost-center attribution (root id injection, numeric department ids).
+func TestResolveCompanyOverviewAudiencePrefersCostCenterDingTalk(t *testing.T) {
+	previousDB := model.DB
+	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Company{}, &model.User{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		fetchCompanyDirectory = previousDirectoryFetcher
+		fetchCompanyMembers = previousMemberFetcher
+		_ = sqlDB.Close()
+	})
+
+	company := &model.Company{
+		Name:     "dingtalk-cost-center-company",
+		Platform: model.CompanyPlatformDingTalk,
+		Status:   model.CompanyStatusEnabled,
+		Config:   "{}",
+	}
+	require.NoError(t, db.Create(company).Error)
+	t.Cleanup(func() { InvalidateCompanyOverviewCache(company.Id) })
+	companyID := company.Id
+	costCenterDept100 := fmt.Sprintf(`[{"department_id":"100","name":"Dept 100","company_id":%d}]`, companyID)
+
+	users := []*model.User{
+		{
+			Username:    "dt-cost-center-reachable",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "dt-open",
+			Departments: `[{"department_id":"200"}]`,
+			CostCenter:  costCenterDept100,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "dt-cost-center-empty-openid",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "",
+			CostCenter:  costCenterDept100,
+			CreatedAt:   100,
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {
+		return &overviewDirectory{
+			OrganizationName: company.Name,
+			Departments: []overviewDepartment{
+				{ID: "100", ParentID: "1", Name: "Dept 100"},
+				{ID: "200", ParentID: "1", Name: "Dept 200"},
+			},
+		}, nil
+	}
+	fetchCompanyMembers = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		if departmentID == "100" {
+			return []overviewMember{{OpenID: "dt-open"}}, nil
+		}
+		return []overviewMember{}, nil
+	}
+
+	departmentValue := companyNodeValue(company.Id)
+	audience, _, err := resolveCompanyOverviewAudience(company.Id, departmentValue, 1, common.RoleRootUser, 200)
+	require.NoError(t, err)
+	require.NotNil(t, audience)
+
+	assert.Equal(t, 2, audience.totalUsers, "both cost-center hits should be counted under DingTalk")
+	require.Len(t, audience.registeredUserIDs, 2)
+
+	registeredIDSet := make(map[int]bool, len(audience.registeredUserIDs))
+	for _, id := range audience.registeredUserIDs {
+		registeredIDSet[id] = true
+	}
+	assert.True(t, registeredIDSet[users[0].Id], "DingTalk cost-center hit with open_id should be registered")
+	assert.True(t, registeredIDSet[users[1].Id], "DingTalk cost-center hit with empty open_id should be registered")
+}
+
+// TestGetCompanyDepartmentUsersIncludesCostCenterMemberWithEmptyOpenID verifies
+// that the department user list surfaces cost-center-resolved members whose
+// open_id is empty. Such members are present in audience.users (they have a
+// local user record) but cannot be matched by open_id, so the merge step must
+// append them explicitly instead of dropping them.
+func TestGetCompanyDepartmentUsersIncludesCostCenterMemberWithEmptyOpenID(t *testing.T) {
+	previousDB := model.DB
+	previousDirectoryFetcher, previousMemberFetcher := fetchCompanyDirectory, fetchCompanyMembers
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Company{}, &model.User{}, &model.QuotaData{}))
+	model.DB = db
+	t.Cleanup(func() {
+		model.DB = previousDB
+		fetchCompanyDirectory = previousDirectoryFetcher
+		fetchCompanyMembers = previousMemberFetcher
+		_ = sqlDB.Close()
+	})
+
+	company := &model.Company{
+		Name:     "cc-users-company",
+		Platform: model.CompanyPlatformFeishu,
+		Status:   model.CompanyStatusEnabled,
+		Config:   "{}",
+	}
+	require.NoError(t, db.Create(company).Error)
+	t.Cleanup(func() { InvalidateCompanyOverviewCache(company.Id) })
+	companyID := company.Id
+	costCenterDept1 := fmt.Sprintf(`[{"department_id":"department-1","name":"Department 1","company_id":%d}]`, companyID)
+
+	users := []*model.User{
+		{
+			Username:    "cc-users-reachable",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "cc-open",
+			Departments: `[{"department_id":"department-2"}]`,
+			CostCenter:  costCenterDept1,
+			CreatedAt:   100,
+		},
+		{
+			Username:    "cc-users-empty-openid",
+			Password:    "password",
+			Company:     company.Name,
+			OpenId:      "",
+			CostCenter:  costCenterDept1,
+			CreatedAt:   100,
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	fetchCompanyDirectory = func(*model.Company) (*overviewDirectory, error) {
+		return &overviewDirectory{
+			OrganizationName: company.Name,
+			Departments: []overviewDepartment{
+				{ID: "department-1", ParentID: "0", Name: "Department 1"},
+				{ID: "department-2", ParentID: "0", Name: "Department 2"},
+			},
+		}, nil
+	}
+	fetchCompanyMembers = func(_ *model.Company, departmentID string) ([]overviewMember, error) {
+		if departmentID == "department-1" {
+			return []overviewMember{{OpenID: "cc-open"}}, nil
+		}
+		return []overviewMember{}, nil
+	}
+
+	response, err := getCompanyDepartmentUsers(&DepartmentUsersRequest{
+		CompanyID:           company.Id,
+		DepartmentID:        companyNodeValue(company.Id),
+		StartTimestamp:      1,
+		EndTimestamp:        200,
+		Page:                1,
+		PageSize:            50,
+		SortBy:              "id",
+		SortOrder:           "asc",
+		IncludeUnregistered: true,
+		RequestUserRole:     common.RoleRootUser,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	assert.Equal(t, int64(2), response.Total, "both cost-center members should appear in the user list")
+	require.Len(t, response.Items, 2)
+
+	itemUserIDs := make(map[int]bool, len(response.Items))
+	for _, item := range response.Items {
+		if item.User != nil {
+			itemUserIDs[item.User.Id] = true
+		}
+	}
+	assert.True(t, itemUserIDs[users[0].Id], "cost-center member reachable from platform should be listed")
+	assert.True(t, itemUserIDs[users[1].Id], "cost-center member with empty open_id should be listed")
 }

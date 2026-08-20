@@ -140,6 +140,37 @@ func (user *User) GetPrimaryDepartmentID() string {
 	return departments[0].DepartmentID
 }
 
+// costCenterEntry mirrors the persisted cost_center JSON entry shape. Only the
+// fields needed for data-overview department attribution are decoded.
+type costCenterEntry struct {
+	DepartmentID string `json:"department_id"`
+	CompanyID    int    `json:"company_id"`
+}
+
+// GetCostCenter returns the cost center department assignment, if any. When ok
+// is true, departmentID is the cost-center department_id and companyID is the
+// company the cost center belongs to. ok is false when cost_center is empty,
+// "[]", unparseable, or missing a valid department_id/company_id.
+//
+// Data overview uses this to attribute members whose cost center is set,
+// taking precedence over the departments primary department and platform
+// directory membership. Members resolved this way are counted even when
+// open_id is empty, since attribution no longer depends on platform lookup.
+func (user *User) GetCostCenter() (departmentID string, companyID int, ok bool) {
+	if user == nil || user.CostCenter == "" || user.CostCenter == "[]" {
+		return "", 0, false
+	}
+	var entries []costCenterEntry
+	if err := common.UnmarshalJsonStr(user.CostCenter, &entries); err != nil || len(entries) == 0 {
+		return "", 0, false
+	}
+	department := entries[0]
+	if department.DepartmentID == "" || department.CompanyID <= 0 {
+		return "", 0, false
+	}
+	return department.DepartmentID, department.CompanyID, true
+}
+
 // GetLeaderDepartmentIDs returns department IDs where the user's OpenId is listed as leader_id.
 func (user *User) GetLeaderDepartmentIDs() []string {
 	if user.OpenId == "" || user.Departments == "" || user.Departments == "[]" {
@@ -864,6 +895,9 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 		"role":              newUser.Role,
 		"overview_dept_ids": string(overviewDeptIDsJSON),
 		"cost_center":       newUser.CostCenter,
+	}
+	if newUser.DepartmentName != "" {
+		updates["department_name"] = newUser.DepartmentName
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

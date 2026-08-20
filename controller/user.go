@@ -468,34 +468,34 @@ type costCenterDepartment struct {
 // normalizeCostCenter accepts the persisted departments-compatible JSON shape
 // and returns a canonical single-entry array. Company nodes are rejected by
 // requiring a department ID and a positive company ID.
-func normalizeCostCenter(rawValue string) (string, error) {
+func normalizeCostCenter(rawValue string) (string, *costCenterDepartment, error) {
 	if strings.TrimSpace(rawValue) == "" {
-		return "[]", nil
+		return "[]", nil, nil
 	}
 
 	var departments []costCenterDepartment
 	if err := common.UnmarshalJsonStr(rawValue, &departments); err != nil {
-		return "", fmt.Errorf("cost_center must be a JSON array: %w", err)
+		return "", nil, fmt.Errorf("cost_center must be a JSON array: %w", err)
 	}
 	if len(departments) > 1 {
-		return "", errors.New("cost_center accepts at most one department")
+		return "", nil, errors.New("cost_center accepts at most one department")
 	}
 	if len(departments) == 0 {
-		return "[]", nil
+		return "[]", nil, nil
 	}
 
 	department := departments[0]
 	department.DepartmentID = strings.TrimSpace(department.DepartmentID)
 	department.Name = strings.TrimSpace(department.Name)
 	if department.DepartmentID == "" || department.Name == "" || department.CompanyID <= 0 {
-		return "", errors.New("cost_center must contain a valid department")
+		return "", nil, errors.New("cost_center must contain a valid department")
 	}
 
 	canonicalValue, err := common.Marshal([]costCenterDepartment{department})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return string(canonicalValue), nil
+	return string(canonicalValue), &department, nil
 }
 
 // validateOverviewDeptIDs checks that the field contains non-empty node values
@@ -894,10 +894,14 @@ func UpdateUser(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
-	updatedUser.CostCenter, err = normalizeCostCenter(updatedUser.CostCenter)
+	normalizedCostCenter, selectedCostCenter, err := normalizeCostCenter(updatedUser.CostCenter)
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
+	}
+	updatedUser.CostCenter = normalizedCostCenter
+	if originUser.DepartmentName == "" && selectedCostCenter != nil {
+		updatedUser.DepartmentName = selectedCostCenter.Name
 	}
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
@@ -1227,10 +1231,14 @@ func CreateUser(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
-	user.CostCenter, err = normalizeCostCenter(user.CostCenter)
+	normalizedCostCenter, selectedCostCenter, err := normalizeCostCenter(user.CostCenter)
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
+	}
+	user.CostCenter = normalizedCostCenter
+	if selectedCostCenter != nil {
+		user.DepartmentName = selectedCostCenter.Name
 	}
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
@@ -1239,6 +1247,8 @@ func CreateUser(c *gin.Context) {
 		DisplayName:     user.DisplayName,
 		Role:            user.Role, // 保持管理员设置的角色
 		OverviewDeptIDs: user.OverviewDeptIDs,
+		CostCenter:      user.CostCenter,
+		DepartmentName:  user.DepartmentName,
 	}
 	authzTouched := false
 	if err := model.DB.Transaction(func(tx *gorm.DB) error {

@@ -7,6 +7,7 @@ import {
   USER_FORM_DEFAULT_VALUES,
   transformFormDataToPayload,
   transformUserToFormDefaults,
+  getCostCenterDepartmentPath,
   type UserFormValues,
 } from '../user-form'
 
@@ -163,5 +164,48 @@ describe('user form cost_center handling', () => {
       makeUser({ cost_center: '[]' })
     )
     assert.equal(defaults.cost_center, null)
+  })
+
+  test('cost center department path excludes the company name', () => {
+    const path = getCostCenterDepartmentPath(
+      [
+        {
+          value: 'company:7',
+          label: 'AI Company',
+          disabled: false,
+          node_type: 'company',
+          children: [
+            {
+              value: 'dept:7:product',
+              label: 'Product Center',
+              disabled: false,
+              node_type: 'department',
+              children: [
+                {
+                  value: 'dept:7:application',
+                  label: 'AI Application Department',
+                  disabled: false,
+                  node_type: 'department',
+                  children: [
+                    {
+                      value: 'dept:7:efficiency',
+                      label: 'AI Engineering Efficiency Section',
+                      disabled: false,
+                      node_type: 'department',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      'dept:7:efficiency'
+    )
+    assert.equal(
+      path,
+      'Product Center / AI Application Department / AI Engineering Efficiency Section'
+    )
   })
 })

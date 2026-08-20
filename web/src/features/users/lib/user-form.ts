@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import type { DeptTreeNode } from '@/features/data-overview/types'
 import {
   type PermissionCatalog,
   type AdminPermissionMatrix,
@@ -52,6 +53,36 @@ export const userFormSchema = z.object({
 })
 
 export type UserFormValues = z.infer<typeof userFormSchema>
+
+/**
+ * Return the selected department's full path without the company root node.
+ * Cost center names should remain meaningful across companies while matching
+ * the department_name format used elsewhere in the user interface.
+ */
+export function getCostCenterDepartmentPath(
+  treeData: DeptTreeNode[],
+  selectedValue: string
+): string {
+  const findPath = (
+    nodes: DeptTreeNode[],
+    parentPath: DeptTreeNode[]
+  ): DeptTreeNode[] | null => {
+    for (const node of nodes) {
+      const currentPath = [...parentPath, node]
+      if (node.value === selectedValue) return currentPath
+
+      const childPath = findPath(node.children, currentPath)
+      if (childPath) return childPath
+    }
+    return null
+  }
+
+  const path = findPath(treeData, []) ?? []
+  return path
+    .filter((node) => node.node_type !== 'company')
+    .map((node) => node.label)
+    .join(' / ')
+}
 
 // ============================================================================
 // Form Defaults

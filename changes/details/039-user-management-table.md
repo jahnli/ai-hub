@@ -79,3 +79,17 @@
 - `web/src/features/users/types.ts` — 用户响应、编辑请求和共享用户行类型补充 `cost_center` 字段。
 - `web/src/features/users/lib/__tests__/user-form-bp-level.test.ts` — 覆盖成本中心默认空值、创建/更新提交、清除及服务端值回填。
 - `web/src/i18n/locales/{en,fr,ja,ru,vi,zh-TW,zh}.json` — 补齐成本中心标签、选择提示、说明和清除操作的七语言文案。
+
+### 2026-08-20 成本中心完整路径与 department_name 回填
+
+- `web/src/features/users/lib/user-form.ts` — 新增 `getCostCenterDepartmentPath`，按部门树计算不含公司根节点的完整部门路径（如 `数智产品中心 / AI应用技术部 / AI工程效率科`），作为成本中心 `name` 提交与回填展示。
+- `web/src/features/users/components/users-mutate-drawer.tsx` — 选择成本中心时保存完整部门路径而非末级节点名称。
+- `controller/user.go` — 管理员创建/更新用户时，若 `department_name` 为空则以所选成本中心的完整路径回填，已有值不覆盖；创建白名单补充 `cost_center` 与 `department_name`。
+- `model/user.go` — `EditWithTx` 更新白名单支持 `department_name`，用于回填成本中心路径。
+- `model/user_update_test.go`、`controller/user_manage_test.go`、`web/src/features/users/lib/__tests__/user-form-bp-level.test.ts` — 覆盖部门路径排除公司名、`department_name` 回填与成本中心归一化返回值。
+
+### 2026-08-20 数据总览按成本中心归属
+
+- `model/user.go` — 新增 `GetCostCenter` 解析 `cost_center` 的部门与公司归属。
+- `service/data_overview_company.go` — 新增 `queryCostCenterUsers` 按成本中心归属本地用户（不受公司名与 open_id 限制，内存过滤兼容三种数据库）；`matchOverviewDepartmentMembers` 改用公司对象并接入成本中心归属用户。
+- `service/feishu_department.go`、`service/data_overview_company_test.go` — 部门受众构建与回归测试同步支持成本中心归属。

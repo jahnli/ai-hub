@@ -475,7 +475,7 @@ func buildCompanyOverviewAudience(companyID int, departmentValue string, userID 
 	if err != nil {
 		return nil, err
 	}
-	members, users, err := matchOverviewDepartmentMembers(company.Name, members, departmentIDs, registeredBefore)
+	members, users, err := matchOverviewDepartmentMembers(company, members, departmentIDs, registeredBefore)
 	if err != nil {
 		return nil, err
 	}
@@ -561,21 +561,54 @@ func queryOverviewUsers(companyName string, openIDs []string, registeredBefore i
 	return exactUsers, nil
 }
 
-func matchOverviewDepartmentMembers(companyName string, members []overviewMember, departmentIDs []string, registeredBefore int64) ([]overviewMember, []*model.User, error) {
+// queryCostCenterUsers returns local users whose cost_center resolves into the
+// queried company's department tree. Unlike queryOverviewUsers it is not scoped
+// by company name, because cost-center attribution may cross company names, and
+// it does not require open_id, so members without a platform identity remain
+// discoverable. Filtering happens in memory to stay compatible across the
+// supported databases without relying on JSON query functions.
+func queryCostCenterUsers(companyID int, departmentIDs []string) ([]*model.User, error) {
+	allowedDepartmentIDs := make(map[string]bool, len(departmentIDs))
+	for _, departmentID := range departmentIDs {
+		allowedDepartmentIDs[departmentID] = true
+	}
+	var users []*model.User
+	if err := model.DB.Model(&model.User{}).
+		Where("cost_center <> ? AND cost_center <> ?", "[]", "").
+		Omit("password").
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*model.User, 0, len(users))
+	for _, user := range users {
+		departmentID, costCenterCompanyID, ok := user.GetCostCenter()
+		if !ok || costCenterCompanyID != companyID || !allowedDepartmentIDs[departmentID] {
+			continue
+		}
+		result = append(result, user)
+	}
+	return result, nil
+}
+
+func matchOverviewDepartmentMembers(company *model.Company, members []overviewMember, departmentIDs []string, registeredBefore int64) ([]overviewMember, []*model.User, error) {
 	openIDs := make([]string, 0, len(members))
 	for _, member := range members {
 		openIDs = append(openIDs, member.OpenID)
 	}
-	users, err := queryOverviewUsers(companyName, openIDs, 0)
+	users, err := queryOverviewUsers(company.Name, openIDs, 0)
 	if err != nil {
 		return nil, nil, err
 	}
 	var disabledUsers []*model.User
 	if err := model.DB.Model(&model.User{}).
-		Where("company = ? AND status = ?", companyName, common.UserStatusDisabled).
+		Where("company = ? AND status = ?", company.Name, common.UserStatusDisabled).
 		Where("open_id <> ?", "").
 		Omit("password").
 		Find(&disabledUsers).Error; err != nil {
+		return nil, nil, err
+	}
+	costCenterUsers, err := queryCostCenterUsers(company.Id, departmentIDs)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -583,7 +616,7 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 	for _, departmentID := range departmentIDs {
 		allowedDepartmentIDs[departmentID] = true
 	}
-	usersByOpenID := make(map[string]*model.User, len(users))
+	usersByOpenID := make(map[string]*model.User, len(users)+len(disabledUsers))
 	for _, user := range users {
 		if user.OpenId != "" {
 			usersByOpenID[user.OpenId] = user
@@ -595,9 +628,33 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 		}
 	}
 
-	matchedMembers := make([]overviewMember, 0, len(members))
-	matchedUsers := make([]*model.User, 0, len(users)+len(disabledUsers))
-	seenMemberOpenIDs := make(map[string]bool, len(members)+len(disabledUsers))
+	matchedMembers := make([]overviewMember, 0, len(members)+len(costCenterUsers))
+	matchedUsers := make([]*model.User, 0, len(users)+len(disabledUsers)+len(costCenterUsers))
+	seenMemberOpenIDs := make(map[string]bool, len(members)+len(disabledUsers)+len(costCenterUsers))
+	seenUserIDs := make(map[int]bool, len(users)+len(disabledUsers)+len(costCenterUsers))
+
+	// costCenterDepartment reports the cost-center department id, whether the
+	// user has any cost center at all, and whether that cost center hits the
+	// queried company and target tree. The has flag lets callers skip users
+	// whose attribution follows a cost center outside this query instead of
+	// falling back to the directory primary department.
+	costCenterDepartment := func(user *model.User) (departmentID string, has bool, hits bool) {
+		costCenterDepartmentID, costCenterCompanyID, hasCostCenter := user.GetCostCenter()
+		if !hasCostCenter {
+			return "", false, false
+		}
+		if costCenterCompanyID != company.Id || !allowedDepartmentIDs[costCenterDepartmentID] {
+			return costCenterDepartmentID, true, false
+		}
+		return costCenterDepartmentID, true, true
+	}
+
+	addMatchedUser := func(user *model.User) {
+		if registeredBefore <= 0 || user.CreatedAt <= registeredBefore {
+			matchedUsers = append(matchedUsers, user)
+		}
+	}
+
 	for _, member := range members {
 		seenMemberOpenIDs[member.OpenID] = true
 		user := usersByOpenID[member.OpenID]
@@ -605,26 +662,65 @@ func matchOverviewDepartmentMembers(companyName string, members []overviewMember
 			matchedMembers = append(matchedMembers, member)
 			continue
 		}
+		// cost_center takes precedence and never falls back to the primary
+		// department: a member whose cost center points elsewhere is attributed
+		// to that other department, not to their directory primary department.
+		_, hasCostCenter, hits := costCenterDepartment(user)
+		if hasCostCenter {
+			if !hits {
+				continue
+			}
+			matchedMembers = append(matchedMembers, member)
+			seenUserIDs[user.Id] = true
+			addMatchedUser(user)
+			continue
+		}
 		if !allowedDepartmentIDs[user.GetPrimaryDepartmentID()] {
 			continue
 		}
 		matchedMembers = append(matchedMembers, member)
-		if registeredBefore <= 0 || user.CreatedAt <= registeredBefore {
-			matchedUsers = append(matchedUsers, user)
-		}
+		seenUserIDs[user.Id] = true
+		addMatchedUser(user)
 	}
+	// Disabled users that the platform directory no longer returns are
+	// reinstated from local records. Those carrying a cost center are deferred
+	// to the cost-center supplement loop below so attribution stays consistent
+	// and dedup-by-user-id remains authoritative.
 	for _, user := range disabledUsers {
+		if seenMemberOpenIDs[user.OpenId] {
+			continue
+		}
+		if _, _, hasCostCenter := costCenterDepartment(user); hasCostCenter {
+			continue
+		}
 		departmentID := user.GetPrimaryDepartmentID()
-		if seenMemberOpenIDs[user.OpenId] || !allowedDepartmentIDs[departmentID] {
+		if !allowedDepartmentIDs[departmentID] {
 			continue
 		}
 		matchedMembers = append(matchedMembers, overviewMember{
 			OpenID:               user.OpenId,
 			ObservedDepartmentID: departmentID,
 		})
-		if registeredBefore <= 0 || user.CreatedAt <= registeredBefore {
-			matchedUsers = append(matchedUsers, user)
+		seenUserIDs[user.Id] = true
+		addMatchedUser(user)
+	}
+	// Supplement members resolved purely from cost center, including those
+	// whose open_id is empty and therefore never appear in the platform
+	// directory. Dedup by user id against members already attributed above.
+	for _, user := range costCenterUsers {
+		if seenUserIDs[user.Id] {
+			continue
 		}
+		departmentID, _, hits := costCenterDepartment(user)
+		if !hits {
+			continue
+		}
+		matchedMembers = append(matchedMembers, overviewMember{
+			OpenID:               user.OpenId,
+			ObservedDepartmentID: departmentID,
+		})
+		seenUserIDs[user.Id] = true
+		addMatchedUser(user)
 	}
 	return matchedMembers, matchedUsers, nil
 }
@@ -663,7 +759,16 @@ func partitionMatchedMembersByPrimaryDepartment(
 	for _, member := range parentMembers {
 		user := usersByOpenID[member.OpenID]
 		if user != nil {
-			childIndex, ok := departmentToChildIndex[user.GetPrimaryDepartmentID()]
+			// When a cost center is set it overrides the directory primary
+			// department for sub-department bucketing, mirroring the
+			// attribution rules in matchOverviewDepartmentMembers. Members
+			// whose cost center points outside every child subtree are dropped
+			// here rather than falling back to the primary department.
+			bucketDepartmentID := user.GetPrimaryDepartmentID()
+			if departmentID, _, hasCostCenter := user.GetCostCenter(); hasCostCenter {
+				bucketDepartmentID = departmentID
+			}
+			childIndex, ok := departmentToChildIndex[bucketDepartmentID]
 			if !ok {
 				continue
 			}

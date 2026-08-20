@@ -80,7 +80,7 @@ func TestNormalizeCostCenter(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			actualValue, err := normalizeCostCenter(testCase.rawValue)
+			actualValue, _, err := normalizeCostCenter(testCase.rawValue)
 			if testCase.expectError {
 				require.Error(t, err)
 				return
@@ -89,6 +89,15 @@ func TestNormalizeCostCenter(t *testing.T) {
 			assert.Equal(t, testCase.expectValue, actualValue)
 		})
 	}
+}
+
+func TestNormalizeCostCenterReturnsSelectedDepartment(t *testing.T) {
+	_, selectedDepartment, err := normalizeCostCenter(
+		`[{"department_id":"od-finance","name":"Finance","company_id":7}]`,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selectedDepartment)
+	assert.Equal(t, "Finance", selectedDepartment.Name)
 }
 
 func TestAttachSubscriptionQuotaUsesMonthlySpendAndWalletQuotaWithoutSubscription(t *testing.T) {

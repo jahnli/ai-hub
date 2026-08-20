@@ -1585,8 +1585,9 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 		}
 	}
 
-	result := make([]DepartmentUserItem, 0, len(memberOpenIDs))
+	result := make([]DepartmentUserItem, 0, len(memberOpenIDs)+len(users))
 	seen := make(map[string]bool, len(memberOpenIDs))
+	seenUserIDs := make(map[int]bool, len(users))
 	for _, openID := range memberOpenIDs {
 		if openID == "" || seen[openID] {
 			continue
@@ -1606,6 +1607,7 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 				IsRegistered:       isRegistered,
 				RegistrationStatus: userRegistrationStatus,
 			})
+			seenUserIDs[u.Id] = true
 			continue
 		}
 		if !includeUnregistered || (registrationStatus != "" && registrationStatus != departmentRegistrationStatusUnregistered) {
@@ -1615,6 +1617,30 @@ func mergeDepartmentUsersWithMembers(users []*model.User, memberOpenIDs []string
 			User:               buildUnregisteredDepartmentUser(openID, memberDetails[openID]),
 			RegistrationStatus: departmentRegistrationStatusUnregistered,
 		})
+	}
+	// Members resolved from a cost center (or any local-only source) may carry
+	// an empty open_id and therefore never appear in memberOpenIDs. Append the
+	// registered users whose open_id is empty and were not already covered by an
+	// open_id match above, so the department user list reflects the full
+	// audience resolved in matchOverviewDepartmentMembers.
+	for _, u := range users {
+		if u.OpenId != "" || u.Id <= 0 || seenUserIDs[u.Id] {
+			continue
+		}
+		userRegistrationStatus := getDepartmentUserRegistrationStatus(u, endTimestamp)
+		isRegistered := userRegistrationStatus != departmentRegistrationStatusUnregistered
+		if registrationStatus != "" && registrationStatus != userRegistrationStatus {
+			continue
+		}
+		if !isRegistered && !includeUnregistered {
+			continue
+		}
+		result = append(result, DepartmentUserItem{
+			User:               u,
+			IsRegistered:       isRegistered,
+			RegistrationStatus: userRegistrationStatus,
+		})
+		seenUserIDs[u.Id] = true
 	}
 	return result
 }
