@@ -90,13 +90,6 @@ func findOrCreateLDAPUser(c *gin.Context, ldapUser *service.LDAPUserInfo) (*mode
 		if existing.DeletedAt.Valid {
 			return nil, &LDAPUserDeletedError{}
 		}
-		company = model.NormalizeCompany(company)
-		if company != "" && existing.Company != company {
-			if err := model.DB.Model(&model.User{}).Where("id = ?", existing.Id).Update("company", company).Error; err != nil {
-				return nil, err
-			}
-			existing.Company = company
-		}
 		return existing, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
