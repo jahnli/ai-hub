@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
+import { isDepartmentNodeDisabled } from '@/features/data-overview/lib/department-selection'
 import type { DeptTreeNode } from '@/features/data-overview/types'
 
 interface DeptMultiSelectProps {
@@ -298,7 +299,7 @@ function MultiSelectColumn(props: MultiSelectColumnProps) {
         const isActive = props.activeNode?.value === node.value
         const isSelected = props.selectedSet.has(node.value)
         const hasChildren = node.children.length > 0
-        const isUnavailable = node.disabled
+        const isUnavailable = isDepartmentNodeDisabled(node)
         const isSelectable = !isUnavailable
 
         return (
@@ -371,7 +372,7 @@ function MultiSelectSearchResults(props: MultiSelectSearchResultsProps) {
       ) : (
         props.results.map((item) => {
           const isSelected = props.selectedSet.has(item.node.value)
-          const isSelectable = !item.node.disabled
+          const isSelectable = !isDepartmentNodeDisabled(item.node)
           return (
             <div
               key={item.node.value}

@@ -45,6 +45,48 @@ describe('company-aware department selection', () => {
     )
   })
 
+  test('allows a backend-enabled directory-platform company (admin view)', () => {
+    const feishuCompany = createNode({
+      value: 'company:7',
+      company_id: 7,
+      platform: 'feishu',
+      node_type: 'company',
+      disabled: false,
+      children: [
+        createNode({
+          value: 'dept:7:dept-a',
+          company_id: 7,
+          node_type: 'department',
+          department_id: 'dept-a',
+        }),
+      ],
+    })
+
+    assert.equal(isDepartmentNodeDisabled(feishuCompany), false)
+    assert.equal(findFirstSelectableNode([feishuCompany]), feishuCompany)
+  })
+
+  test('disables a directory-platform company when backend marks it disabled (BP/leader view)', () => {
+    const feishuCompany = createNode({
+      value: 'company:7',
+      company_id: 7,
+      platform: 'feishu',
+      node_type: 'company',
+      disabled: true,
+      children: [
+        createNode({
+          value: 'dept:7:dept-a',
+          company_id: 7,
+          node_type: 'department',
+          department_id: 'dept-a',
+        }),
+      ],
+    })
+
+    assert.equal(isDepartmentNodeDisabled(feishuCompany), true)
+    assert.equal(findFirstSelectableNode([feishuCompany]), feishuCompany.children[0])
+  })
+
   test('allows a none-platform company without children to be selected', () => {
     const noneCompany = createNode({
       value: 'company:7',
@@ -62,12 +104,14 @@ describe('company-aware department selection', () => {
     const errorCompany = createNode({
       value: 'company:8',
       company_id: 8,
+      platform: 'feishu',
       node_type: 'company',
       error: 'tenant mismatch',
     })
     const availableCompany = createNode({
       value: 'company:9',
       company_id: 9,
+      platform: 'none',
       node_type: 'company',
     })
 

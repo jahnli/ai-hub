@@ -279,10 +279,10 @@ function CascaderColumn(props: CascaderColumnProps) {
             aria-disabled={isDisabled}
             title={errorText}
             className={cn(
-              'mx-1 flex cursor-pointer items-start gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors',
-              isDisabled && !canNavigate
-                ? 'text-muted-foreground cursor-not-allowed opacity-50'
-                : 'hover:bg-accent',
+              'mx-1 flex items-start gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors',
+              isDisabled && 'text-muted-foreground opacity-50',
+              isDisabled && !canNavigate && 'cursor-not-allowed',
+              (!isDisabled || canNavigate) && 'cursor-pointer hover:bg-accent',
               isActive && (!isDisabled || canNavigate) && 'bg-accent',
               isSelected && !isDisabled && 'text-primary font-medium'
             )}

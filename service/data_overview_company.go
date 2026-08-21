@@ -237,6 +237,7 @@ func getCompanyDepartmentTree(userID int, userRole int) (*DepartmentTreeResponse
 			// Loading=true so the frontend can fetch their subtree on demand
 			// when the user expands them in the selector.
 			if index != 0 && userRole != common.RoleBUBP {
+				companyNode.Disabled = userRole < common.RoleRootUser
 				companyNode.Loading = true
 				return
 			}

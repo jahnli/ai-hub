@@ -2,10 +2,18 @@
 
 **日期**: 2026-08-17 ~ 08-21（最后更新 08-21）
 
-### 2026-08-21 允许选中公司节点
+### 2026-08-21 恢复公司节点按角色不可选（修正前一条回归）
+
+- `web/src/features/data-overview/lib/department-selection.ts` — `isDepartmentNodeDisabled` 回到以 `node.disabled` 为准，不再前端硬编码拦截所有目录平台公司节点。后端按角色设置 `disabled`（`userRole < common.RoleRootUser`），因此管理员可选飞书/钉钉公司根，BP/部门领导不可选；`none` 平台公司后端不设 `disabled`，所有角色均可选
+- `web/src/features/data-overview/components/department-tree-select.tsx` — 级联列样式恢复灰显：`isDisabled` 始终应用 `text-muted-foreground opacity-50`，仅可展开公司节点保留 hover/active 高亮以支持展开查看子部门；搜索结果沿用同一 `isDepartmentNodeDisabled` 判断，公司节点灰显且不可选
+- `web/src/features/users/components/dept-multi-select.tsx` — 列视图与搜索结果的选择判断由 `node.disabled` 改为 `isDepartmentNodeDisabled`，公司节点统一不可勾选；复用数据总览同一选择 helper 保持两个组件语义一致
+- `service/data_overview_company.go` — 修复懒加载占位公司节点未设置 `Disabled`：部门领导看到的非首家目录平台公司在 `Loading=true` 分支同样执行 `companyNode.Disabled = userRole < common.RoleRootUser`，避免前端依赖 `disabled` 字段时占位公司被误判为可选
+
+### 2026-08-21 允许选中公司节点（已回滚）
 
 - `web/src/features/users/components/dept-multi-select.tsx` — 用户管理部门多选器移除公司节点不可选限制：列视图 `isSelectable` 判断移除 `node.node_type !== 'company'` 条件，搜索结果 `isSelectable` 判断同步移除该条件
 - `web/src/features/data-overview/components/department-tree-select.tsx` — 数据总览部门选择器移除公司节点不可选限制：`handleSelect` 移除 `node.node_type === 'company'` 提前返回，搜索结果移除 `isCompanyNode` 变量及其在 disabled 样式中的使用
+
 
 ### 2026-08-19 显式多部门配置与跨公司权限
 

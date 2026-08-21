@@ -1,5 +1,11 @@
 import type { DepartmentQueryParams, DeptTreeNode } from '../types'
 
+// A node is non-selectable when the backend marks it disabled (e.g. a
+// directory-platform company root for BP/department-leader roles), when it
+// carries an error, or when it lacks company metadata. The backend sets
+// `disabled` per role (`userRole < RoleRootUser`), so admins can select
+// directory-platform company roots while BP/leaders cannot. None-platform
+// companies stay selectable for all roles because they are leaf data scopes.
 export function isDepartmentNodeDisabled(node: DeptTreeNode): boolean {
   return node.disabled || Boolean(node.error) || !node.company_id
 }
