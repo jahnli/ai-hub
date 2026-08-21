@@ -299,7 +299,7 @@ function MultiSelectColumn(props: MultiSelectColumnProps) {
         const isSelected = props.selectedSet.has(node.value)
         const hasChildren = node.children.length > 0
         const isUnavailable = node.disabled
-        const isSelectable = !isUnavailable && node.node_type !== 'company'
+        const isSelectable = !isUnavailable
 
         return (
           <div
@@ -371,8 +371,7 @@ function MultiSelectSearchResults(props: MultiSelectSearchResultsProps) {
       ) : (
         props.results.map((item) => {
           const isSelected = props.selectedSet.has(item.node.value)
-          const isSelectable =
-            !item.node.disabled && item.node.node_type !== 'company'
+          const isSelectable = !item.node.disabled
           return (
             <div
               key={item.node.value}

@@ -1,6 +1,11 @@
 # 数据总览 BP 可见部门配置演进
 
-**日期**: 2026-08-17 ~ 08-19（最后更新 08-19）
+**日期**: 2026-08-17 ~ 08-21（最后更新 08-21）
+
+### 2026-08-21 允许选中公司节点
+
+- `web/src/features/users/components/dept-multi-select.tsx` — 用户管理部门多选器移除公司节点不可选限制：列视图 `isSelectable` 判断移除 `node.node_type !== 'company'` 条件，搜索结果 `isSelectable` 判断同步移除该条件
+- `web/src/features/data-overview/components/department-tree-select.tsx` — 数据总览部门选择器移除公司节点不可选限制：`handleSelect` 移除 `node.node_type === 'company'` 提前返回，搜索结果移除 `isCompanyNode` 变量及其在 disabled 样式中的使用
 
 ### 2026-08-19 显式多部门配置与跨公司权限
 

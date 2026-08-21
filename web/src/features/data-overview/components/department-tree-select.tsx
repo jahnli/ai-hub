@@ -91,7 +91,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
   )
 
   const handleSelect = (node: DeptTreeNode) => {
-    if (isDepartmentNodeDisabled(node) || node.node_type === 'company') return
+    if (isDepartmentNodeDisabled(node)) return
     props.onValueChange(node.value, node)
     setOpen(false)
   }
@@ -349,7 +349,6 @@ function SearchResultList(props: SearchResultListProps) {
         props.results.map((item) => {
           const isSelected = props.selectedValue === item.node.value
           const isDisabled = isDepartmentNodeDisabled(item.node)
-          const isCompanyNode = item.node.node_type === 'company'
           const errorText = getDepartmentNodeErrorText(
             item.node,
             (key, options) => t(key, options)
@@ -363,7 +362,7 @@ function SearchResultList(props: SearchResultListProps) {
               title={errorText}
               className={cn(
                 'mx-1 flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 transition-colors',
-                isDisabled || isCompanyNode
+                isDisabled
                   ? 'text-muted-foreground cursor-not-allowed opacity-50'
                   : 'hover:bg-accent',
                 isSelected && 'bg-accent'
