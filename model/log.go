@@ -36,6 +36,66 @@ func applyExplicitLogTextFilter(tx *gorm.DB, column string, value string) (*gorm
 	return tx.Where(condition, pattern), nil
 }
 
+// resolveChannelIDs accepts either a channel ID or part of a channel name.
+// Channel metadata lives in the main database, while logs may use a separate
+// database, so the matching IDs are resolved before filtering the log query.
+func resolveChannelIDs(value string) ([]int, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+
+	channelIDs := make([]int, 0)
+	seenChannelIDs := make(map[int]struct{})
+	addChannelID := func(channelID int) {
+		if channelID <= 0 {
+			return
+		}
+		if _, exists := seenChannelIDs[channelID]; exists {
+			return
+		}
+		seenChannelIDs[channelID] = struct{}{}
+		channelIDs = append(channelIDs, channelID)
+	}
+
+	if channelID, err := strconv.Atoi(value); err == nil {
+		addChannelID(channelID)
+	}
+
+	nameCondition, namePattern, err := buildLogContainsCondition(
+		"name",
+		value,
+		common.MainDatabaseType(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var namedChannelIDs []int
+	if err = DB.Table("channels").Where(nameCondition, namePattern).Pluck("id", &namedChannelIDs).Error; err != nil {
+		return nil, err
+	}
+	for _, channelID := range namedChannelIDs {
+		addChannelID(channelID)
+	}
+
+	return channelIDs, nil
+}
+
+func applyChannelFilter(tx *gorm.DB, column string, value string) (*gorm.DB, error) {
+	if strings.TrimSpace(value) == "" {
+		return tx, nil
+	}
+	channelIDs, err := resolveChannelIDs(value)
+	if err != nil {
+		return nil, err
+	}
+	if len(channelIDs) == 0 {
+		return tx.Where("1 = 0"), nil
+	}
+	return tx.Where(column+" IN ?", channelIDs), nil
+}
+
 func applyLogUserKeywordFilter(tx *gorm.DB, keyword string, logUsernameColumn string) (*gorm.DB, error) {
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {
@@ -598,7 +658,7 @@ func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
 	}
 }
 
-func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
+func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel string, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
 	return getLogsWithUserIDs(nil, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId, userCategory)
 }
 
@@ -606,7 +666,11 @@ func GetLogsByUserIds(userIDs []int, logType int, startTimestamp int64, endTimes
 	if len(userIDs) == 0 {
 		return []*Log{}, 0, nil
 	}
-	return getLogsWithUserIDs(userIDs, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId, "")
+	channelValue := ""
+	if channel != 0 {
+		channelValue = strconv.Itoa(channel)
+	}
+	return getLogsWithUserIDs(userIDs, logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channelValue, group, requestId, upstreamRequestId, "")
 }
 
 func fillLogUserInfo(logs []*Log) error {
@@ -648,7 +712,7 @@ func fillLogUserInfo(logs []*Log) error {
 	return nil
 }
 
-func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
+func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel string, group string, requestId string, upstreamRequestId string, userCategory string) (logs []*Log, total int64, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB
@@ -683,8 +747,8 @@ func getLogsWithUserIDs(userIDs []int, logType int, startTimestamp int64, endTim
 	if endTimestamp != 0 {
 		tx = tx.Where("logs.created_at <= ?", endTimestamp)
 	}
-	if channel != 0 {
-		tx = tx.Where("logs.channel_id = ?", channel)
+	if tx, err = applyChannelFilter(tx, "logs.channel_id", channel); err != nil {
+		return nil, 0, err
 	}
 	if group != "" {
 		tx = tx.Where("logs."+logGroupCol+" = ?", group)
@@ -815,7 +879,7 @@ type Stat struct {
 	Tpm   int `json:"tpm"`
 }
 
-func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string, userCategory string) (stat Stat, err error) {
+func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel string, group string, userCategory string) (stat Stat, err error) {
 	tx := LOG_DB.Table("logs").Select("COALESCE(sum(quota), 0) quota")
 
 	// 为rpm和tpm创建单独的查询
@@ -849,9 +913,11 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	if rpmTpmQuery, err = applyExplicitLogTextFilter(rpmTpmQuery, "model_name", modelName); err != nil {
 		return stat, err
 	}
-	if channel != 0 {
-		tx = tx.Where("channel_id = ?", channel)
-		rpmTpmQuery = rpmTpmQuery.Where("channel_id = ?", channel)
+	if tx, err = applyChannelFilter(tx, "channel_id", channel); err != nil {
+		return stat, err
+	}
+	if rpmTpmQuery, err = applyChannelFilter(rpmTpmQuery, "channel_id", channel); err != nil {
+		return stat, err
 	}
 	if group != "" {
 		tx = tx.Where(logGroupCol+" = ?", group)

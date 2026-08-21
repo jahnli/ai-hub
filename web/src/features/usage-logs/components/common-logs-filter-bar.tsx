@@ -461,7 +461,7 @@ export function CommonLogsFilterBar<TData>(
       {isAdmin && (
         <LogsFilterField>
           <LogsFilterInput
-            placeholder={t('Channel ID')}
+            placeholder={t('Channel')}
             value={filters.channel || ''}
             onChange={(e) => handleChange('channel', e.target.value)}
             onKeyDown={handleKeyDown}

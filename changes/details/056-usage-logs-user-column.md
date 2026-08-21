@@ -99,3 +99,11 @@
 - `web/src/features/usage-logs/lib/columns.ts`、`web/src/features/usage-logs/components/columns/drawing-logs-columns.tsx`、`web/src/features/usage-logs/components/columns/task-logs-columns.tsx` — 绘图日志和任务日志列工厂支持独立控制渠道列，普通管理员不再看到渠道列。
 - `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 公共日志的渠道列、令牌列分组倍率摘要和详情预览按超级管理员权限显示。
 - `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 详情弹窗的渠道、重试链和分组倍率按独立权限控制，供数据总览复用时隐藏敏感字段。
+
+## 2026-08-21 普通日志渠道搜索
+
+- `controller/log.go` — 普通日志列表和统计接口保留渠道搜索字符串，支持后端按渠道 ID 或渠道名称处理。
+- `model/log.go` — 从主数据库渠道表解析渠道 ID 和渠道名称模糊匹配结果，再过滤日志数据库中的普通日志和统计数据；新增渠道 ID/名称查询回归覆盖。
+- `model/log_user_filter_test.go` — 验证普通日志按渠道 ID 精确查询和按渠道名称模糊查询。
+- `web/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志筛选框文案由「Channel ID」改为「Channel」。
+- `web/src/features/usage-logs/lib/utils.ts`、`web/src/features/usage-logs/types.ts` — 渠道筛选参数改为字符串，保留渠道 ID 或渠道名称输入后传给接口。

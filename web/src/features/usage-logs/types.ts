@@ -319,7 +319,7 @@ export interface GetLogsParams {
   model_name?: string
   start_timestamp?: number
   end_timestamp?: number
-  channel?: number
+  channel?: string
   group?: string
   request_id?: string
   upstream_request_id?: string
@@ -344,7 +344,7 @@ export interface GetLogStatsParams {
   model_name?: string
   start_timestamp?: number
   end_timestamp?: number
-  channel?: number
+  channel?: string
   group?: string
   request_id?: string
   upstream_request_id?: string

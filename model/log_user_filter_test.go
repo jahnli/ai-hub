@@ -44,6 +44,59 @@ func TestGetLogsByUserIdsFiltersExactUserAndInclusiveTimeRange(t *testing.T) {
 	assert.Equal(t, []int{101, 101}, []int{got[0].UserId, got[1].UserId})
 }
 
+func TestGetAllLogsFiltersChannelByIDAndFuzzyName(t *testing.T) {
+	truncateTables(t)
+
+	require.NoError(t, DB.Create(&[]Channel{
+		{Id: 101, Name: "OpenAI Primary"},
+		{Id: 102, Name: "Claude Backup"},
+	}).Error)
+	require.NoError(t, LOG_DB.Create(&[]Log{
+		{ChannelId: 101, CreatedAt: 100, Content: "primary channel"},
+		{ChannelId: 102, CreatedAt: 200, Content: "backup channel"},
+	}).Error)
+
+	logsByID, totalByID, err := GetAllLogs(
+		LogTypeUnknown,
+		0,
+		0,
+		"",
+		"",
+		"",
+		0,
+		10,
+		"101",
+		"",
+		"",
+		"",
+		"",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), totalByID)
+	require.Len(t, logsByID, 1)
+	assert.Equal(t, 101, logsByID[0].ChannelId)
+
+	logsByName, totalByName, err := GetAllLogs(
+		LogTypeUnknown,
+		0,
+		0,
+		"",
+		"",
+		"",
+		0,
+		10,
+		"backup",
+		"",
+		"",
+		"",
+		"",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), totalByName)
+	require.Len(t, logsByName, 1)
+	assert.Equal(t, 102, logsByName[0].ChannelId)
+}
+
 func TestGetUserLogsIncludesUserIdentityDetails(t *testing.T) {
 	truncateTables(t)
 
