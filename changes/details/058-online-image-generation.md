@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-08-04
+**日期**: 2026-08-24
 
 ## 涉及文件
 
@@ -52,3 +52,5 @@
 - `web/src/features/system-settings/security/`、`web/src/features/system-settings/types.ts` — 安全审计设置将原历史上限拆分为“在线生图展示上限”和“在线生图存储上限”，分别保存独立配置并补充设置界面回归测试。
 - `web/src/features/image-studio/` — 历史加载及新增记录统一使用服务端下发的动态展示上限，移除前端固定 10 条限制；删除和清空文案明确仅从在线生图历史隐藏，补充展示裁剪、删除行为和可访问文案回归测试。
 - `web/src/i18n/locales/*.json` — 补齐展示上限、存储上限及历史隐藏行为的七语言文案。
+- `model/ability.go` — 分组可用模型按名称倒序返回，使在线生图默认优先选择名称以 g 开头的模型。
+- `controller/model_list_test.go` — 补充分组模型名称倒序接口回归测试，固定 `gpt-image` 排在 `dall-e` 前的契约。
