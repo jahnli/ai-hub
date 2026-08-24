@@ -110,7 +110,6 @@
   "Set the ratio used for models of a specific vendor.": "Set the ratio used for models of a specific vendor.",
   "Show favorites only": "Show favorites only",
   "Sign in with LDAP": "Sign in with LDAP",
-  "Sign in with username or email": "Sign in with username or email",
   "Sign in with your LDAP account": "使用 LDAP 账号登录",
   "Skip TLS certificate verification (not recommended)": "跳过 TLS 证书校验（不推荐）",
   "Skip TLS Verify": "跳过 TLS 校验",

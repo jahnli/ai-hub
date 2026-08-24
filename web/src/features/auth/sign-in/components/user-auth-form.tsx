@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
 import axios from 'axios'
-import { Building2, KeyRound, Loader2, LogIn } from 'lucide-react'
+import { Building2, KeyRound, Loader2, LogIn, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -41,13 +41,18 @@ import { getServerErrorMessageKey } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
-type LoginView = 'ldap' | 'password' | 'oauth'
+import { getLoginViewTitleKey, type LoginView } from '../lib/login-view'
+
+type UserAuthFormProps = AuthFormProps & {
+  onLoginTitleChange?: (loginTitleKey: string) => void
+}
 
 export function UserAuthForm({
   className,
   redirectTo,
+  onLoginTitleChange,
   ...props
-}: AuthFormProps) {
+}: UserAuthFormProps) {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [wechatCode, setWeChatCode] = useState('')
@@ -93,7 +98,6 @@ export function UserAuthForm({
     (requiresLegalConsent && !agreedToLegal)
   const hasWeChatLogin = Boolean(status?.wechat_login)
   const hasLDAPLogin = Boolean(status?.ldap_enabled)
-  const ldapLoginLabel = status?.ldap_login_label || ''
   const hasOAuthLogin = Boolean(
     status?.oidc_enabled || (status?.custom_oauth_providers?.length ?? 0) > 0
   )
@@ -117,6 +121,12 @@ export function UserAuthForm({
     hasAlternativeLogin,
     passwordLoginEnabled,
   ])
+
+  useEffect(() => {
+    if (activeView !== null) {
+      onLoginTitleChange?.(getLoginViewTitleKey(activeView))
+    }
+  }, [activeView, onLoginTitleChange])
 
   useEffect(() => {
     if (requiresLegalConsent) {
@@ -356,7 +366,7 @@ export function UserAuthForm({
       []
     if (activeView !== 'ldap' && hasLDAPLogin) {
       links.push({
-        label: ldapLoginLabel || t('Sign in with LDAP'),
+        label: t('Enterprise account sign in'),
         view: 'ldap',
         icon: <Building2 className='h-4 w-4' />,
       })
@@ -365,6 +375,7 @@ export function UserAuthForm({
       links.push({
         label: t('Sign in with username or email'),
         view: 'password',
+        icon: <UserRound className='h-4 w-4' />,
       })
     }
     if (activeView !== 'oauth' && hasAlternativeLogin) {
@@ -374,14 +385,7 @@ export function UserAuthForm({
       })
     }
     return links
-  }, [
-    activeView,
-    hasLDAPLogin,
-    passwordLoginEnabled,
-    hasAlternativeLogin,
-    ldapLoginLabel,
-    t,
-  ])
+  }, [activeView, hasLDAPLogin, passwordLoginEnabled, hasAlternativeLogin, t])
 
   const renderSwitchLinks = () => {
     if (switchLinks.length === 0) return null
@@ -418,7 +422,12 @@ export function UserAuthForm({
   const renderLdapForm = () => (
     <div className='grid gap-4'>
       <div className='grid gap-2'>
-        <Label htmlFor='ldap-username'>{t('Username')}</Label>
+        <div className='flex items-baseline gap-2'>
+          <Label htmlFor='ldap-username'>{t('Username')}</Label>
+          <span className='text-muted-foreground text-xs'>
+            {t('Example: {{example}}', { example: 'lijiaheng' })}
+          </span>
+        </div>
         <Input
           id='ldap-username'
           placeholder={t('Enter your username')}
@@ -432,9 +441,6 @@ export function UserAuthForm({
             }
           }}
         />
-        <p className='text-muted-foreground text-xs'>
-          {t('Example: {{example}}', { example: 'lijiaheng' })}
-        </p>
       </div>
       <div className='grid gap-2'>
         <Label htmlFor='ldap-password'>{t('Password')}</Label>
@@ -483,7 +489,7 @@ export function UserAuthForm({
         name='username'
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('Username or Email')}</FormLabel>
+            <FormLabel className='h-4'>{t('Username or Email')}</FormLabel>
             <FormControl>
               <Input
                 placeholder={t('Enter your username or email')}

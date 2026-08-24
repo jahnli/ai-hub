@@ -21,7 +21,6 @@
   "Set the ratio \"{{group}}\" uses for models of a specific vendor.": "Set the ratio \"{{group}}\" uses for models of a specific vendor.",
   "Set the ratio used for models of a specific vendor.": "Set the ratio used for models of a specific vendor.",
   "Sign in with LDAP": "Sign in with LDAP",
-  "Sign in with username or email": "Sign in with username or email",
   "Supports one-click configuration and perfectly adapts to AI Gateway multi-protocol configuration.": "Supports one-click configuration and perfectly adapts to AI Gateway multi-protocol configuration.",
   "Text to image": "Text to image",
   "The outer key is the billing group; the inner key is the vendor ID from the model vendor table. Models without a vendor keep the group base ratio.": "The outer key is the billing group; the inner key is the vendor ID from the model vendor table. Models without a vendor keep the group base ratio.",
