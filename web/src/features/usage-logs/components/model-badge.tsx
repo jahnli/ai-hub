@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -143,35 +143,39 @@ export function ModelBadge(props: ModelBadgeProps) {
   }
 
   return (
-    <Popover>
-      <PopoverTrigger
+    <HoverCard>
+      <HoverCardTrigger
+        delay={0}
+        closeDelay={100}
         render={
           <button type='button' className='inline-flex items-center gap-1' />
         }
       >
         <ModelBadgeContent {...props} />
-        <Route className='text-muted-foreground size-3 shrink-0' />
-      </PopoverTrigger>
-      <PopoverContent className='w-72'>
-        <div className='space-y-2'>
-          <div className='flex items-start justify-between gap-3'>
-            <span className='text-muted-foreground text-xs'>
-              {t('Request Model:')}
-            </span>
-            <span className='truncate font-mono text-xs font-medium'>
-              {props.modelName}
-            </span>
-          </div>
-          <div className='flex items-start justify-between gap-3'>
-            <span className='text-muted-foreground text-xs'>
-              {t('Actual Model:')}
-            </span>
-            <span className='truncate font-mono text-xs font-medium'>
-              {props.actualModel}
-            </span>
-          </div>
+        <Route
+          className='text-muted-foreground size-3 shrink-0'
+          aria-hidden='true'
+        />
+      </HoverCardTrigger>
+      <HoverCardContent
+        align='start'
+        className='w-[24rem] max-w-[calc(100vw-2rem)] p-4'
+      >
+        <div className='grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3'>
+          <span className='text-muted-foreground text-xs'>
+            {t('Request Model:')}
+          </span>
+          <span className='min-w-0 text-right font-mono text-xs font-medium break-all'>
+            {props.modelName}
+          </span>
+          <span className='text-muted-foreground text-xs'>
+            {t('Actual Model:')}
+          </span>
+          <span className='min-w-0 text-right font-mono text-xs font-medium break-all'>
+            {props.actualModel}
+          </span>
         </div>
-      </PopoverContent>
-    </Popover>
+      </HoverCardContent>
+    </HoverCard>
   )
 }

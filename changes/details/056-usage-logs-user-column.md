@@ -1,6 +1,6 @@
 # 使用日志增强：用户信息、请求内容与审计
 
-**日期**: 2026-08-05
+**日期**: 2026-08-24
 
 ## 涉及文件
 
@@ -107,3 +107,8 @@
 - `model/log_user_filter_test.go` — 验证普通日志按渠道 ID 精确查询和按渠道名称模糊查询。
 - `web/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志筛选框文案由「Channel ID」改为「Channel」。
 - `web/src/features/usage-logs/lib/utils.ts`、`web/src/features/usage-logs/types.ts` — 渠道筛选参数改为字符串，保留渠道 ID 或渠道名称输入后传给接口。
+
+## 2026-08-24 模型映射详情悬浮展示
+
+- `web/src/features/usage-logs/components/model-badge.tsx` — 模型映射详情由点击弹窗改为悬浮或键盘聚焦显示，浮层宽度调整为 24rem，并允许请求模型和实际模型的长名称完整换行。
+- `web/src/features/usage-logs/components/__tests__/model-badge-interaction.test.tsx` — 回归覆盖模型映射详情使用悬浮卡片、24rem 宽度及长模型名称不截断。
