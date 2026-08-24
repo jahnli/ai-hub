@@ -7,6 +7,8 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
 
+import zhLocale from '@/i18n/locales/zh.json'
+
 import type { DepartmentStat } from '../../types'
 
 mock.module('@/stores/auth-store', () => ({
@@ -25,6 +27,7 @@ await i18n.init({
         'View details': 'View details',
       },
     },
+    zh: zhLocale,
   },
 })
 
@@ -66,5 +69,33 @@ describe('department stats card tooltips', () => {
 
     assert.match(markup, /aria-label="View details"/)
     assert.match(markup, />1\.23 亿</)
+  })
+
+  test('adds spaces between numbers and Chinese text in cost details', async () => {
+    await i18n.changeLanguage('zh')
+    const statWithCostDistribution: DepartmentStat = {
+      ...departmentStat,
+      cost_buckets: [
+        { min_amount_cny: 0, max_amount_cny: 0, users: 2 },
+        { min_amount_cny: 1, max_amount_cny: 10, users: 3 },
+        { min_amount_cny: 10, max_amount_cny: 0, users: 4 },
+      ],
+    }
+
+    const markup = renderToStaticMarkup(
+      <I18nextProvider i18n={i18n}>
+        <DepartmentStatsCards stat={statWithCostDistribution} />
+      </I18nextProvider>
+    )
+
+    assert.match(markup, />费用 &gt; 10 人数\/占比</)
+    assert.match(markup, />消费超过 10 元的人数及占比</)
+    assert.equal(i18n.t('Spent ¥0'), '0 元消费')
+    assert.equal(
+      i18n.t('Spent ¥{{min}}~¥{{max}}', { min: 1, max: 10 }),
+      '1~10 元消费'
+    )
+    assert.equal(i18n.t('Spent over ¥{{min}}', { min: 10 }), '10 元以上消费')
+    assert.equal(i18n.t('{{count}} people', { count: 2 }), '2 人')
   })
 })

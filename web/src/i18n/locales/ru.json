@@ -1259,7 +1259,7 @@
     "Cost = 10 × 0.8 = 8": "Стоимость = 10 × 0,8 = 8",
     "Cost = 10 × 1.0 = 10": "Стоимость = 10 × 1,0 = 10",
     "Cost = model price × that one ratio. Nothing else from the group settings enters the formula.": "Стоимость = цена модели × этот единственный коэффициент. Другие настройки групп в формуле не участвуют.",
-    "Cost >10 Users / Share": "Стоимость >10 Пользователи / Доля",
+    "Cost >10 Users / Share": "Стоимость > 10 Пользователи / Доля",
     "Cost Center": "Центр затрат",
     "Cost Distribution": "Распределение затрат",
     "Cost Distribution by User Count": "Распределение затрат по количеству пользователей",

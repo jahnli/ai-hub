@@ -8,7 +8,7 @@ export const MAX_CHART_TREND_POINTS = 7
 
 export const DEFAULT_DASHBOARD_CHART_PREFERENCES: DashboardChartPreferences = {
   consumptionDistributionChart: 'bar',
-  modelAnalyticsChart: 'trend',
+  modelAnalyticsChart: 'userRank',
   defaultTimeRangeDays: 1,
   defaultTimeGranularity: DEFAULT_TIME_GRANULARITY,
 }
@@ -38,11 +38,11 @@ export const CONSUMPTION_DISTRIBUTION_CHART_OPTIONS = [
 ] as const
 
 export const MODEL_ANALYTICS_CHART_OPTIONS = [
+  { value: 'userRank', labelKey: 'User Consumption' },
   { value: 'trend', labelKey: 'Call Trend' },
   { value: 'proportion', labelKey: 'Call Count Distribution' },
   { value: 'top', labelKey: 'Call Count Ranking' },
   { value: 'quota', labelKey: 'Quota Distribution' },
-  { value: 'userRank', labelKey: 'User Consumption' },
 ] as const
 
 export const EMPTY_DASHBOARD_FILTERS: DashboardFilters = {

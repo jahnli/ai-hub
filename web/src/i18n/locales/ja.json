@@ -1259,7 +1259,7 @@
     "Cost = 10 × 0.8 = 8": "費用 = 10 × 0.8 = 8",
     "Cost = 10 × 1.0 = 10": "費用 = 10 × 1.0 = 10",
     "Cost = model price × that one ratio. Nothing else from the group settings enters the formula.": "費用 = モデル価格 × この1つの倍率。グループ設定の他の項目は計算式に入りません。",
-    "Cost >10 Users / Share": "費用 >10 ユーザー数/割合",
+    "Cost >10 Users / Share": "費用 > 10 ユーザー数/割合",
     "Cost Center": "コストセンター",
     "Cost Distribution": "費用分布",
     "Cost Distribution by User Count": "ユーザー数別コスト分布",
