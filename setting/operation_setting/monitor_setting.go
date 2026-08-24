@@ -8,9 +8,10 @@ import (
 )
 
 type MonitorSetting struct {
-	AutoTestChannelEnabled bool    `json:"auto_test_channel_enabled"`
-	AutoTestChannelMinutes float64 `json:"auto_test_channel_minutes"`
-	ChannelTestMode        string  `json:"channel_test_mode"`
+	AutoTestChannelEnabled        bool    `json:"auto_test_channel_enabled"`
+	AutoTestChannelMinutes        float64 `json:"auto_test_channel_minutes"`
+	ChannelTestMode               string  `json:"channel_test_mode"`
+	FeishuChannelStatusWebhookURL string  `json:"feishu_channel_status_webhook_url"`
 }
 
 const (
@@ -21,9 +22,10 @@ const (
 
 // 默认配置
 var monitorSetting = MonitorSetting{
-	AutoTestChannelEnabled: false,
-	AutoTestChannelMinutes: 10,
-	ChannelTestMode:        ChannelTestModeScheduledAll,
+	AutoTestChannelEnabled:        false,
+	AutoTestChannelMinutes:        10,
+	ChannelTestMode:               ChannelTestModeScheduledAll,
+	FeishuChannelStatusWebhookURL: "",
 }
 
 func init() {

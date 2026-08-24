@@ -186,6 +186,13 @@ func UpdateOption(c *gin.Context) {
 
 			return
 		}
+	case operation_setting.FeishuChannelStatusWebhookOptionKey:
+		normalizedWebhookURL, normalizeErr := operation_setting.NormalizeFeishuRobotWebhookURL(option.Value.(string))
+		if normalizeErr != nil {
+			common.ApiErrorMsg(c, normalizeErr.Error())
+			return
+		}
+		option.Value = normalizedWebhookURL
 	case "audit_setting.off_hours":
 		var offHoursSetting system_setting.OffHoursAuditSetting
 		if unmarshalErr := common.UnmarshalJsonStr(option.Value.(string), &offHoursSetting); unmarshalErr != nil {

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMemo, useRef } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import * as z from 'zod'
@@ -38,6 +38,7 @@ import { SettingsSection } from '../components/settings-section'
 import { useResetForm } from '../hooks/use-reset-form'
 import { useUpdateOption } from '../hooks/use-update-option'
 import { safeNumberFieldProps } from '../utils/numeric-field'
+import { isValidFeishuRobotWebhookUrl } from './feishu-webhook-url'
 
 const numericString = z.string().refine((value) => {
   const trimmed = value.trim()
@@ -52,51 +53,69 @@ const channelTestModes = [
 ] as const
 type ChannelTestMode = (typeof channelTestModes)[number]
 
-const routingReliabilitySchema = z
-  .object({
-    RetryTimes: z.coerce.number().min(0).max(10),
-    ChannelDisableThreshold: numericString,
-    AutomaticDisableChannelEnabled: z.boolean(),
-    AutomaticEnableChannelEnabled: z.boolean(),
-    AutomaticDisableKeywords: z.string(),
-    AutomaticDisableStatusCodes: z.string(),
-    AutomaticRetryStatusCodes: z.string(),
-    monitor_setting: z.object({
-      auto_test_channel_enabled: z.boolean(),
-      auto_test_channel_minutes: z.coerce
-        .number()
-        .int()
-        .min(1, 'Interval must be at least 1 minute'),
-      channel_test_mode: z.enum(channelTestModes),
-    }),
-  })
-  .superRefine((values, ctx) => {
-    const disableParsed = parseHttpStatusCodeRules(
-      values.AutomaticDisableStatusCodes
-    )
-    if (!disableParsed.ok) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['AutomaticDisableStatusCodes'],
-        message: `Invalid status code rules: ${disableParsed.invalidTokens.join(
-          ', '
-        )}`,
-      })
-    }
+const createRoutingReliabilitySchema = (invalidFeishuWebhookMessage: string) =>
+  z
+    .object({
+      RetryTimes: z.coerce.number().min(0).max(10),
+      ChannelDisableThreshold: numericString,
+      AutomaticDisableChannelEnabled: z.boolean(),
+      AutomaticEnableChannelEnabled: z.boolean(),
+      AutomaticDisableKeywords: z.string(),
+      AutomaticDisableStatusCodes: z.string(),
+      AutomaticRetryStatusCodes: z.string(),
+      monitor_setting: z.object({
+        auto_test_channel_enabled: z.boolean(),
+        auto_test_channel_minutes: z.coerce
+          .number()
+          .int()
+          .min(1, 'Interval must be at least 1 minute'),
+        channel_test_mode: z.enum(channelTestModes),
+        feishu_channel_status_webhook_url: z.string(),
+      }),
+    })
+    .superRefine((values, ctx) => {
+      const disableParsed = parseHttpStatusCodeRules(
+        values.AutomaticDisableStatusCodes
+      )
+      if (!disableParsed.ok) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['AutomaticDisableStatusCodes'],
+          message: `Invalid status code rules: ${disableParsed.invalidTokens.join(
+            ', '
+          )}`,
+        })
+      }
 
-    const retryParsed = parseHttpStatusCodeRules(
-      values.AutomaticRetryStatusCodes
-    )
-    if (!retryParsed.ok) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['AutomaticRetryStatusCodes'],
-        message: `Invalid status code rules: ${retryParsed.invalidTokens.join(
-          ', '
-        )}`,
-      })
-    }
-  })
+      const retryParsed = parseHttpStatusCodeRules(
+        values.AutomaticRetryStatusCodes
+      )
+      if (!retryParsed.ok) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['AutomaticRetryStatusCodes'],
+          message: `Invalid status code rules: ${retryParsed.invalidTokens.join(
+            ', '
+          )}`,
+        })
+      }
+
+      if (
+        !isValidFeishuRobotWebhookUrl(
+          values.monitor_setting.feishu_channel_status_webhook_url
+        )
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['monitor_setting', 'feishu_channel_status_webhook_url'],
+          message: invalidFeishuWebhookMessage,
+        })
+      }
+    })
+
+const routingReliabilitySchema = createRoutingReliabilitySchema(
+  'Enter a valid official Feishu robot webhook URL or leave empty'
+)
 
 type RoutingReliabilityFormValues = z.output<typeof routingReliabilitySchema>
 type RoutingReliabilityFormInput = z.input<typeof routingReliabilitySchema>
@@ -113,6 +132,7 @@ type RoutingReliabilitySectionProps = {
     'monitor_setting.auto_test_channel_enabled': boolean
     'monitor_setting.auto_test_channel_minutes': number
     'monitor_setting.channel_test_mode': ChannelTestMode
+    'monitor_setting.feishu_channel_status_webhook_url': string
   }
 }
 
@@ -131,6 +151,7 @@ type NormalizedRoutingReliabilityValues = {
   'monitor_setting.auto_test_channel_enabled': boolean
   'monitor_setting.auto_test_channel_minutes': number
   'monitor_setting.channel_test_mode': ChannelTestMode
+  'monitor_setting.feishu_channel_status_webhook_url': string
 }
 
 function normalizeChannelTestMode(value?: string): ChannelTestMode {
@@ -160,6 +181,8 @@ const buildFormDefaults = (
     channel_test_mode: normalizeChannelTestMode(
       defaults['monitor_setting.channel_test_mode']
     ),
+    feishu_channel_status_webhook_url:
+      defaults['monitor_setting.feishu_channel_status_webhook_url'] ?? '',
   },
 })
 
@@ -186,6 +209,9 @@ const normalizeDefaults = (
   'monitor_setting.channel_test_mode': normalizeChannelTestMode(
     defaults['monitor_setting.channel_test_mode']
   ),
+  'monitor_setting.feishu_channel_status_webhook_url': (
+    defaults['monitor_setting.feishu_channel_status_webhook_url'] ?? ''
+  ).trim(),
 })
 
 const normalizeFormValues = (
@@ -209,6 +235,8 @@ const normalizeFormValues = (
   'monitor_setting.auto_test_channel_minutes':
     values.monitor_setting.auto_test_channel_minutes,
   'monitor_setting.channel_test_mode': values.monitor_setting.channel_test_mode,
+  'monitor_setting.feishu_channel_status_webhook_url':
+    values.monitor_setting.feishu_channel_status_webhook_url.trim(),
 })
 
 export function RoutingReliabilitySection({
@@ -224,21 +252,37 @@ export function RoutingReliabilitySection({
     () => buildFormDefaults(defaultValues),
     [defaultValues]
   )
+  const localizedSchema = useMemo(
+    () =>
+      createRoutingReliabilitySchema(
+        t('Enter a valid official Feishu robot webhook URL or leave empty')
+      ),
+    [t]
+  )
 
   const form = useForm<
     RoutingReliabilityFormInput,
     unknown,
     RoutingReliabilityFormValues
   >({
-    resolver: zodResolver(routingReliabilitySchema),
+    resolver: zodResolver(localizedSchema),
     defaultValues: formDefaults,
   })
 
   useResetForm(form, formDefaults)
 
-  const autoDisableStatusCodes = form.watch('AutomaticDisableStatusCodes')
-  const autoRetryStatusCodes = form.watch('AutomaticRetryStatusCodes')
-  const channelTestMode = form.watch('monitor_setting.channel_test_mode')
+  const autoDisableStatusCodes = useWatch({
+    control: form.control,
+    name: 'AutomaticDisableStatusCodes',
+  })
+  const autoRetryStatusCodes = useWatch({
+    control: form.control,
+    name: 'AutomaticRetryStatusCodes',
+  })
+  const channelTestMode = useWatch({
+    control: form.control,
+    name: 'monitor_setting.channel_test_mode',
+  })
   let channelTestModeDescription: string
   switch (channelTestMode) {
     case 'auto_ban_only':
@@ -290,6 +334,7 @@ export function RoutingReliabilitySection({
   return (
     <SettingsSection title={t('Routing Reliability')}>
       <Form {...form}>
+        {/* eslint-disable react-hooks/refs -- react-hook-form exposes stable submit handlers through the form object. */}
         <SettingsForm onSubmit={form.handleSubmit(onSubmit)}>
           <SettingsPageFormActions
             onSave={form.handleSubmit(onSubmit)}
@@ -353,6 +398,40 @@ export function RoutingReliabilitySection({
                 )}
               />
             </div>
+          </div>
+
+          <Separator />
+
+          <div className='flex min-w-0 flex-col gap-4'>
+            <div className='flex flex-col gap-1'>
+              <h4 className='text-sm font-medium'>
+                {t('Channel status notifications')}
+              </h4>
+            </div>
+            <FormField
+              control={form.control}
+              name='monitor_setting.feishu_channel_status_webhook_url'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Feishu group robot webhook URL')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='url'
+                      autoComplete='off'
+                      placeholder='https://open.feishu.cn/open-apis/bot/v2/hook/...'
+                      value={field.value}
+                      onChange={(event) => field.onChange(event.target.value)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Sends a Feishu group message after a channel is automatically disabled or enabled. Leave empty to disable notifications.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <Separator />

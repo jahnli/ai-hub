@@ -67,6 +67,8 @@ const MODELS_SECTIONS = [
             settings['monitor_setting.auto_test_channel_minutes'],
           'monitor_setting.channel_test_mode':
             settings['monitor_setting.channel_test_mode'],
+          'monitor_setting.feishu_channel_status_webhook_url':
+            settings['monitor_setting.feishu_channel_status_webhook_url'] ?? '',
         }}
       />
     ),
