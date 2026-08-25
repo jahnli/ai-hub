@@ -51,6 +51,7 @@ type LegacyComboboxProps = {
   className?: string
   id?: string
   openOnFocus?: boolean
+  showSelectedOptionContent?: boolean
 }
 
 function Combobox(props: LegacyComboboxProps): React.ReactElement
@@ -76,6 +77,7 @@ function Combobox(
         showCustomValueHint={props.showCustomValueHint}
         filterByValue={props.filterByValue}
         openOnFocus={props.openOnFocus}
+        showSelectedOptionContent={props.showSelectedOptionContent}
       />
     )
   }

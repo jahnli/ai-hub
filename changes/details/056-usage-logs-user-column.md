@@ -108,6 +108,12 @@
 - `web/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志筛选框文案由「Channel ID」改为「Channel」。
 - `web/src/features/usage-logs/lib/utils.ts`、`web/src/features/usage-logs/types.ts` — 渠道筛选参数改为字符串，保留渠道 ID 或渠道名称输入后传给接口。
 
+## 2026-08-25 普通日志渠道下拉筛选
+
+- `web/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 渠道筛选由文本输入改为可搜索下拉框并分页加载全部渠道；启用渠道优先，随后按优先级、权重和 ID 降序排列；选项以编号徽章和渠道名称分栏展示，禁用渠道在末尾显示禁用标签，选中后在筛选框中保留完整样式。
+- `web/src/components/ui/combobox-input.tsx` — 可搜索下拉选项新增尾部内容和完整选中态渲染能力，并将浮层、选项间距、悬停效果及右侧选中对勾统一为 Select 风格。
+- `web/src/components/ui/combobox.tsx` — 透传可搜索下拉框的完整选中态配置。
+
 ## 2026-08-25 渠道名称搜索忽略大小写
 
 - `model/log.go` — 渠道名称模糊匹配统一对字段和搜索参数应用 `LOWER`，确保 SQLite、MySQL 和 PostgreSQL 下均不区分大小写，并同步作用于日志列表和统计查询。

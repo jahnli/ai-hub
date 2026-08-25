@@ -27,6 +27,7 @@ export type ComboboxInputOption = {
   value: string
   label: string
   icon?: React.ReactNode
+  suffix?: React.ReactNode
 }
 
 interface ComboboxInputProps {
@@ -41,6 +42,7 @@ interface ComboboxInputProps {
   showCustomValueHint?: boolean
   filterByValue?: boolean
   openOnFocus?: boolean
+  showSelectedOptionContent?: boolean
 }
 
 export function ComboboxInput({
@@ -55,6 +57,7 @@ export function ComboboxInput({
   showCustomValueHint = true,
   filterByValue = true,
   openOnFocus = true,
+  showSelectedOptionContent = false,
 }: ComboboxInputProps) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
@@ -200,12 +203,30 @@ export function ComboboxInput({
           pointerFocusRef.current = false
         }}
         onKeyDown={handleKeyDown}
-        className={cn('pr-9', className)}
+        className={cn(
+          'pr-9',
+          showSelectedOptionContent &&
+            selectedOption &&
+            !open &&
+            'text-transparent caret-transparent',
+          className
+        )}
       />
+      {showSelectedOptionContent && selectedOption && !open && (
+        <div className='pointer-events-none absolute inset-y-0 right-9 left-2.5 flex min-w-0 items-center gap-1.5 text-sm'>
+          {selectedOption.icon && <span>{selectedOption.icon}</span>}
+          <span className='min-w-0 flex-1 truncate'>
+            {selectedOption.label}
+          </span>
+          {selectedOption.suffix && (
+            <span className='ml-auto shrink-0'>{selectedOption.suffix}</span>
+          )}
+        </div>
+      )}
       <ChevronsUpDown className='pointer-events-none absolute top-1/2 right-3 size-4 shrink-0 -translate-y-1/2 opacity-50' />
 
       {showDropdown && (
-        <div className='bg-popover text-popover-foreground absolute top-full z-100 mt-1 w-full rounded-md border shadow-md'>
+        <div className='bg-popover text-popover-foreground ring-foreground/10 absolute top-full z-100 mt-1 w-full overflow-hidden rounded-lg shadow-md ring-1'>
           {filteredOptions.length > 0 ? (
             <ul
               ref={listRef}
@@ -219,7 +240,7 @@ export function ComboboxInput({
                   aria-selected={value === option.value}
                   data-highlighted={index === highlightedIndex}
                   className={cn(
-                    'relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm select-none',
+                    'relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none',
                     index === highlightedIndex &&
                       'bg-accent text-accent-foreground',
                     value === option.value && 'font-medium'
@@ -230,14 +251,19 @@ export function ComboboxInput({
                     handleSelect(option.value)
                   }}
                 >
+                  {option.icon && <span>{option.icon}</span>}
+                  <span className='min-w-0 flex-1 truncate'>
+                    {option.label}
+                  </span>
+                  {option.suffix && (
+                    <span className='ml-auto shrink-0'>{option.suffix}</span>
+                  )}
                   <Check
                     className={cn(
-                      'size-4 shrink-0',
+                      'pointer-events-none absolute right-2 size-4 shrink-0',
                       value === option.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  {option.icon && <span>{option.icon}</span>}
-                  <span className='truncate'>{option.label}</span>
                 </li>
               ))}
             </ul>
