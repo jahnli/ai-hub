@@ -1,4 +1,4 @@
-import type { ImageStudioConfig, PromptPreset } from './types'
+import type { PromptPreset } from './types'
 
 export const API_ENDPOINTS = {
   IMAGE_GENERATIONS: '/pg/images/generations',
@@ -11,40 +11,9 @@ export const API_ENDPOINTS = {
 
 export const DEFAULT_GROUP = 'default' as const
 
+export const DEFAULT_IMAGE_MODEL = 'gpt-image-2' as const
+
 export const CUSTOM_SIZE = 'custom' as const
-
-/** keyword fragments used to pre-filter image-capable models */
-export const IMAGE_MODEL_KEYWORDS = [
-  'dall-e',
-  'gpt-image',
-  'midjourney',
-  'nano-banana',
-  'imagen',
-  'flux',
-  'seedream',
-  'seededit',
-  'wan-image',
-  'hunyuan-image',
-  'cogview',
-  'grok-image',
-  'glm-image',
-]
-
-export const DEFAULT_CONFIG: ImageStudioConfig = {
-  group: DEFAULT_GROUP,
-  model: '',
-  size: 'auto',
-  customWidth: 1024,
-  customHeight: 1024,
-  quality: 'auto',
-  moderation: 'auto',
-  n: 1,
-  background: 'auto',
-  outputFormat: 'png',
-  outputCompression: null,
-  watermark: false,
-  optimizePromptMode: 'standard',
-}
 
 /** fallback estimate (ms) when no local history exists for the model */
 export const DEFAULT_ESTIMATE_MS = 60000

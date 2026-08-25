@@ -1,7 +1,20 @@
-import { CUSTOM_SIZE } from '../../../constants'
 import type { SeedreamConfig, SeedreamParameterConfig } from './types'
 
+const CUSTOM_SIZE = 'custom'
+
+export const DEFAULT_SEEDREAM_PARAMETERS: SeedreamConfig = {
+  family: 'seedream',
+  size: '2K',
+  customWidth: 2048,
+  customHeight: 2048,
+  n: 1,
+  outputFormat: 'jpeg',
+  watermark: false,
+  optimizePromptMode: 'standard',
+}
+
 export const SEEDREAM_PARAMETERS: SeedreamParameterConfig = {
+  defaultParameters: DEFAULT_SEEDREAM_PARAMETERS,
   sizePresets: [
     '1K',
     '2K',
@@ -17,55 +30,59 @@ export const SEEDREAM_PARAMETERS: SeedreamParameterConfig = {
   ],
   promptOptimizationOptions: ['standard', 'fast'],
   outputFormatOptions: ['jpeg', 'png'],
-  maxImages: 8,
-  maxReferenceImages: 10,
-  maxTotalImages: 15,
-  normalizeConfig(config: SeedreamConfig): SeedreamConfig {
-    const nextConfig = { ...config }
-    if (
-      nextConfig.size === 'auto' ||
-      (nextConfig.size !== CUSTOM_SIZE &&
-        !this.sizePresets.includes(nextConfig.size))
-    ) {
-      nextConfig.size = '2K'
-    }
-    nextConfig.quality = 'auto'
-    nextConfig.moderation = 'auto'
-    if (!this.outputFormatOptions.includes(nextConfig.outputFormat)) {
-      nextConfig.outputFormat = 'jpeg'
-    }
-    if (
-      !this.promptOptimizationOptions.includes(nextConfig.optimizePromptMode)
-    ) {
-      nextConfig.optimizePromptMode = 'standard'
-    }
-    nextConfig.outputCompression = null
-    nextConfig.n = Math.min(this.maxImages, Math.max(1, nextConfig.n))
-    return nextConfig
+  runtimeLimits: {
+    maxImages: 8,
+    maxReferenceImages: 10,
+    maxTotalImages: 15,
+    usesGenerationEndpointForEdits: true,
   },
-  isCustomSizeValid(config: SeedreamConfig): boolean {
-    if (config.size !== CUSTOM_SIZE) return true
-    const width = config.customWidth
-    const height = config.customHeight
-    if (width <= 0 || height <= 0) return false
-    const aspectRatio = width / height
-    const pixelCount = width * height
+  normalizeParameters(parameters: SeedreamConfig): SeedreamConfig {
+    const normalizedParameters = { ...parameters, family: 'seedream' as const }
+    if (
+      normalizedParameters.size === 'auto' ||
+      (normalizedParameters.size !== CUSTOM_SIZE &&
+        !this.sizePresets.includes(normalizedParameters.size))
+    ) {
+      normalizedParameters.size = '2K'
+    }
+    if (!this.outputFormatOptions.includes(normalizedParameters.outputFormat)) {
+      normalizedParameters.outputFormat = 'jpeg'
+    }
+    if (
+      !this.promptOptimizationOptions.includes(
+        normalizedParameters.optimizePromptMode
+      )
+    ) {
+      normalizedParameters.optimizePromptMode = 'standard'
+    }
+    normalizedParameters.n = Math.min(
+      this.runtimeLimits.maxImages,
+      Math.max(1, normalizedParameters.n)
+    )
+    return normalizedParameters
+  },
+  isCustomSizeValid(parameters: SeedreamConfig): boolean {
+    if (parameters.size !== CUSTOM_SIZE) return true
+    const aspectRatio = parameters.customWidth / parameters.customHeight
+    const pixelCount = parameters.customWidth * parameters.customHeight
     return (
-      width <= 4096 &&
-      height <= 4096 &&
+      parameters.customWidth > 0 &&
+      parameters.customHeight > 0 &&
+      parameters.customWidth <= 4096 &&
+      parameters.customHeight <= 4096 &&
       aspectRatio >= 1 / 16 &&
       aspectRatio <= 16 &&
       pixelCount >= 1280 * 720 &&
       pixelCount <= 4096 * 4096
     )
   },
-  buildPayload(config: SeedreamConfig) {
+  buildPayload(parameters: SeedreamConfig) {
     return {
-      output_format: config.outputFormat,
+      output_format: parameters.outputFormat,
       response_format: 'b64_json',
-      watermark: config.watermark,
+      watermark: parameters.watermark,
       optimize_prompt_options: {
-        mode: config.optimizePromptMode as 'standard' | 'fast',
+        mode: parameters.optimizePromptMode as 'standard' | 'fast',
       },
     }
   },

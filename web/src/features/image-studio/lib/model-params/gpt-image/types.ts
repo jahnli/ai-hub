@@ -1,23 +1,40 @@
-import type {
-  ImageGenerationPayload,
-  ImageStudioConfig,
-  StudioMode,
-} from '../../../types'
+import type { ImageGenerationPayload, StudioMode } from '../../../types'
 
-export type GptImageConfig = ImageStudioConfig
+export interface GptImageConfig {
+  family: 'gpt-image'
+  size: string
+  customWidth: number
+  customHeight: number
+  quality: string
+  moderation: string
+  n: number
+  background: string
+  outputFormat: string
+  outputCompression: number | null
+}
+
+export type GptImageConfigUpdater = <Key extends keyof GptImageConfig>(
+  key: Key,
+  value: GptImageConfig[Key]
+) => void
 
 export interface GptImageParameterConfig {
+  defaultParameters: GptImageConfig
   sizePresets: readonly string[]
   qualityOptions: readonly string[]
   moderationOptions: readonly string[]
   backgroundOptions: readonly string[]
   outputFormatOptions: readonly string[]
-  maxImages: number
-  maxReferenceImages: number
-  normalizeConfig: (config: GptImageConfig) => GptImageConfig
-  isCustomSizeValid: (config: GptImageConfig) => boolean
+  runtimeLimits: {
+    maxImages: number
+    maxReferenceImages: number
+    maxTotalImages: null
+    usesGenerationEndpointForEdits: false
+  }
+  normalizeParameters: (parameters: GptImageConfig) => GptImageConfig
+  isCustomSizeValid: (parameters: GptImageConfig) => boolean
   buildPayload: (
-    config: GptImageConfig,
+    parameters: GptImageConfig,
     mode: StudioMode
   ) => Partial<ImageGenerationPayload>
 }

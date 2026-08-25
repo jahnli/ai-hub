@@ -1,15 +1,33 @@
-import type { ImageGenerationPayload, ImageStudioConfig } from '../../../types'
+import type { ImageGenerationPayload } from '../../../types'
 
-export type SeedreamConfig = ImageStudioConfig
+export interface SeedreamConfig {
+  family: 'seedream'
+  size: string
+  customWidth: number
+  customHeight: number
+  n: number
+  outputFormat: string
+  watermark: boolean
+  optimizePromptMode: string
+}
+
+export type SeedreamConfigUpdater = <Key extends keyof SeedreamConfig>(
+  key: Key,
+  value: SeedreamConfig[Key]
+) => void
 
 export interface SeedreamParameterConfig {
+  defaultParameters: SeedreamConfig
   sizePresets: readonly string[]
   promptOptimizationOptions: readonly string[]
   outputFormatOptions: readonly string[]
-  maxImages: number
-  maxReferenceImages: number
-  maxTotalImages: number
-  normalizeConfig: (config: SeedreamConfig) => SeedreamConfig
-  isCustomSizeValid: (config: SeedreamConfig) => boolean
-  buildPayload: (config: SeedreamConfig) => Partial<ImageGenerationPayload>
+  runtimeLimits: {
+    maxImages: number
+    maxReferenceImages: number
+    maxTotalImages: number
+    usesGenerationEndpointForEdits: true
+  }
+  normalizeParameters: (parameters: SeedreamConfig) => SeedreamConfig
+  isCustomSizeValid: (parameters: SeedreamConfig) => boolean
+  buildPayload: (parameters: SeedreamConfig) => Partial<ImageGenerationPayload>
 }

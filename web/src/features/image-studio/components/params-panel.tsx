@@ -3,17 +3,19 @@ import { useTranslation } from 'react-i18next'
 import { ModelGroupSelector } from '@/components/model-group-selector'
 import { Label } from '@/components/ui/label'
 
+import { resolveImageModelAdapter } from '../lib/model-params'
 import { GptImageParams } from '../lib/model-params/gpt-image/params'
-import { isSeedreamModel } from '../lib/model-params/seedream/config'
+import type { GptImageConfigUpdater } from '../lib/model-params/gpt-image/types'
 import { SeedreamParams } from '../lib/model-params/seedream/params'
+import type { SeedreamConfigUpdater } from '../lib/model-params/seedream/types'
 import type { GroupOption, ImageStudioConfig, ModelOption } from '../types'
 
 interface ParamsPanelProps {
   config: ImageStudioConfig
-  updateConfig: <Key extends keyof ImageStudioConfig>(
-    key: Key,
-    value: ImageStudioConfig[Key]
-  ) => void
+  updateModel: (model: string) => void
+  updateGroup: (group: string) => void
+  updateGptImageConfig: GptImageConfigUpdater
+  updateSeedreamConfig: SeedreamConfigUpdater
   groups: GroupOption[]
   models: ModelOption[]
   isLoadingModels: boolean
@@ -22,19 +24,32 @@ interface ParamsPanelProps {
 
 export function ParamsPanel(props: ParamsPanelProps) {
   const { t } = useTranslation()
-  const modelParameters = isSeedreamModel(props.config.model) ? (
-    <SeedreamParams
-      config={props.config}
-      updateConfig={props.updateConfig}
-      disabled={props.disabled}
-    />
-  ) : (
-    <GptImageParams
-      config={props.config}
-      updateConfig={props.updateConfig}
-      disabled={props.disabled}
-    />
-  )
+  const adapter = resolveImageModelAdapter(props.config.model)
+
+  let modelParameters: React.ReactNode = null
+  if (
+    adapter?.family === 'gpt-image' &&
+    props.config.parameters.family === 'gpt-image'
+  ) {
+    modelParameters = (
+      <GptImageParams
+        config={props.config.parameters}
+        updateConfig={props.updateGptImageConfig}
+        disabled={props.disabled}
+      />
+    )
+  } else if (
+    adapter?.family === 'seedream' &&
+    props.config.parameters.family === 'seedream'
+  ) {
+    modelParameters = (
+      <SeedreamParams
+        config={props.config.parameters}
+        updateConfig={props.updateSeedreamConfig}
+        disabled={props.disabled}
+      />
+    )
+  }
 
   return (
     <div className='flex flex-col gap-4'>
@@ -45,10 +60,10 @@ export function ParamsPanel(props: ParamsPanelProps) {
         <ModelGroupSelector
           selectedModel={props.config.model}
           models={props.models}
-          onModelChange={(value) => props.updateConfig('model', value)}
+          onModelChange={props.updateModel}
           selectedGroup={props.config.group}
           groups={props.groups}
-          onGroupChange={(value) => props.updateConfig('group', value)}
+          onGroupChange={props.updateGroup}
           disabled={props.disabled || props.isLoadingModels}
         />
       </div>

@@ -1,24 +1,14 @@
+import type { GptImageConfig } from './lib/model-params/gpt-image/types'
+import type { SeedreamConfig } from './lib/model-params/seedream/types'
+
 export type StudioMode = 'generate' | 'edit'
+
+export type ImageStudioParameters = GptImageConfig | SeedreamConfig
 
 export interface ImageStudioConfig {
   group: string
   model: string
-  /** preset size value, or 'custom' */
-  size: string
-  customWidth: number
-  customHeight: number
-  /** '' means "do not send" */
-  quality: string
-  /** '' means "do not send" */
-  moderation: string
-  /** number of parallel single-image requests; never sent to the relay */
-  n: number
-  /** advanced params, '' / null means "do not send" */
-  background: string
-  outputFormat: string
-  outputCompression: number | null
-  watermark: boolean
-  optimizePromptMode: string
+  parameters: ImageStudioParameters
 }
 
 export interface ModelOption {
@@ -71,15 +61,16 @@ export interface GenerationRecord {
   prompt: string
   model: string
   group: string
+  /** Exact family parameters used for this generation. */
+  parameterSnapshot?: ImageStudioParameters
+  /** Legacy display fields retained for stored records created before snapshots. */
   size: string
   quality?: string
   moderation?: string
   outputFormat?: string
   n: number
   images: GeneratedImage[]
-  /** Failed image requests represented as placeholders in the result grid. */
   failedImageCount?: number
-  /** Errors for individual requests or image persistence operations. */
   imageErrors?: string[]
   usage?: GenerationUsage
   channelId?: number
@@ -102,7 +93,6 @@ export interface ImageGenerationPayload {
   sequential_image_generation?: 'disabled' | 'auto'
   sequential_image_generation_options?: { max_images: number }
   optimize_prompt_options?: { mode: 'standard' | 'fast' }
-  /** edit mode: reference images as data URLs */
   image?: string[]
 }
 
@@ -134,6 +124,7 @@ export interface ImageStudioGenerationRecord {
   prompt: string
   model: string
   group: string
+  parameter_snapshot?: ImageStudioParameters
   size: string
   quality?: string
   moderation?: string
@@ -155,6 +146,7 @@ export interface StoreImageStudioGenerationPayload {
   prompt: string
   model: string
   group: string
+  parameter_snapshot?: ImageStudioParameters
   size: string
   quality?: string
   moderation?: string

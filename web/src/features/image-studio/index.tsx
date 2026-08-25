@@ -27,8 +27,17 @@ import type {
 
 export function ImageStudio() {
   const { t } = useTranslation()
-  const { config, updateConfig, groups, models, isLoadingModels } =
-    useImageStudioState()
+  const {
+    config,
+    updateGroup,
+    updateModel,
+    updateParameters,
+    updateGptImageConfig,
+    updateSeedreamConfig,
+    groups,
+    models,
+    isLoadingModels,
+  } = useImageStudioState()
   const {
     history,
     addRecord,
@@ -69,14 +78,20 @@ export function ImageStudio() {
 
   const runtimeLimits = getImageModelRuntimeLimits(config.model)
   const customSizeValid = isCustomSizeValid(config)
-  const imageCountValid = config.n >= 1 && config.n <= runtimeLimits.maxImages
+  const imageCountValid =
+    runtimeLimits !== null &&
+    config.parameters.n >= 1 &&
+    config.parameters.n <= runtimeLimits.maxImages
 
   const referenceCountValid =
+    runtimeLimits !== null &&
     referenceImages.length <= runtimeLimits.maxReferenceImages
   const totalImageCountValid =
-    runtimeLimits.maxTotalImages === null ||
-    mode !== 'edit' ||
-    referenceImages.length + config.n <= runtimeLimits.maxTotalImages
+    runtimeLimits !== null &&
+    (runtimeLimits.maxTotalImages === null ||
+      mode !== 'edit' ||
+      referenceImages.length + config.parameters.n <=
+        runtimeLimits.maxTotalImages)
 
   const canGenerate =
     !isGenerating &&
@@ -122,9 +137,12 @@ export function ImageStudio() {
       setPrompt(record.prompt)
       setMode(record.mode)
       setReferenceImages(record.referenceImages ?? [])
-      updateConfig('model', record.model)
+      updateModel(record.model)
+      if (record.parameterSnapshot) {
+        updateParameters(record.parameterSnapshot)
+      }
     },
-    [setActiveRecordId, setGenerationError, updateConfig]
+    [setActiveRecordId, setGenerationError, updateModel, updateParameters]
   )
 
   const handleEditImage = useCallback(
@@ -190,7 +208,10 @@ export function ImageStudio() {
       <ScrollArea className='lg:after:bg-border min-h-0 rounded-lg border p-3 lg:relative lg:h-full lg:rounded-none lg:border-0 lg:p-4 lg:after:absolute lg:after:top-1.5 lg:after:right-0 lg:after:bottom-1.5 lg:after:w-px'>
         <ParamsPanel
           config={config}
-          updateConfig={updateConfig}
+          updateModel={updateModel}
+          updateGroup={updateGroup}
+          updateGptImageConfig={updateGptImageConfig}
+          updateSeedreamConfig={updateSeedreamConfig}
           groups={groups}
           models={models}
           isLoadingModels={isLoadingModels}
@@ -223,7 +244,7 @@ export function ImageStudio() {
             onRetry={handleGenerate}
             onRetryImage={(errorIndex) => {
               if (!activeRecord) return
-              void retryImage({ config, record: activeRecord, errorIndex })
+              void retryImage({ record: activeRecord, errorIndex })
             }}
             retryingImageErrorIndexes={retryingImageErrorIndexes}
             onEditImage={handleEditImage}

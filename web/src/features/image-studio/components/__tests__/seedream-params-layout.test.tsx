@@ -5,7 +5,7 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
 
-import { DEFAULT_CONFIG } from '../../constants'
+import { DEFAULT_SEEDREAM_PARAMETERS } from '../../lib/model-params/seedream/config'
 import { SeedreamParams } from '../../lib/model-params/seedream/params'
 
 const i18n = createInstance()
@@ -21,8 +21,7 @@ describe('Seedream parameter layout', () => {
       <I18nextProvider i18n={i18n}>
         <SeedreamParams
           config={{
-            ...DEFAULT_CONFIG,
-            model: 'doubao-seedream-4-0-250828',
+            ...DEFAULT_SEEDREAM_PARAMETERS,
             size: '2K',
           }}
           updateConfig={() => undefined}
@@ -45,5 +44,9 @@ describe('Seedream parameter layout', () => {
       [...labelPositions].sort((left, right) => left - right)
     )
     assert.doesNotMatch(markup, /Advanced parameters/)
+    assert.match(
+      markup,
+      /<input[^>]*type="number"[^>]*aria-label="Image count"/
+    )
   })
 })

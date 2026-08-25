@@ -127,6 +127,10 @@ mock.module('../../lib/model-params', () => ({
     maxTotalImages: null,
     usesGenerationEndpointForEdits: false,
   }),
+  restoreParametersFromRecord: (record: GenerationRecord) =>
+    record.parameterSnapshot ?? config.parameters,
+  resolveParameterSize: (parameters: ImageStudioConfig['parameters']) =>
+    parameters.size,
 }))
 
 const { act } = await import('react')
@@ -142,18 +146,19 @@ type ImageGenerationHook = ReturnType<typeof useImageGeneration>
 
 const config: ImageStudioConfig = {
   group: 'default',
-  model: 'test-image-model',
-  size: '1024x1024',
-  customWidth: 1024,
-  customHeight: 1024,
-  quality: 'auto',
-  moderation: 'auto',
-  n: 2,
-  background: 'auto',
-  outputFormat: 'png',
-  outputCompression: null,
-  watermark: false,
-  optimizePromptMode: 'standard',
+  model: 'gpt-image-test-model',
+  parameters: {
+    family: 'gpt-image',
+    size: '1024x1024',
+    customWidth: 1024,
+    customHeight: 1024,
+    quality: 'auto',
+    moderation: 'auto',
+    n: 2,
+    background: 'auto',
+    outputFormat: 'png',
+    outputCompression: null,
+  },
 }
 
 async function renderGenerationHook(callbacks: {
@@ -209,7 +214,7 @@ describe('image studio generation progress', () => {
       prompt: 'progressive result',
       model: config.model,
       group: config.group,
-      size: config.size,
+      size: config.parameters.size,
       output_format: 'png',
       n: 2,
       duration_ms: 100,
@@ -405,7 +410,7 @@ describe('image studio generation progress', () => {
       prompt: 'partial success',
       model: config.model,
       group: config.group,
-      size: config.size,
+      size: config.parameters.size,
       outputFormat: 'png',
       n: 2,
       images: [
@@ -438,7 +443,6 @@ describe('image studio generation progress', () => {
     let retryPromise: Promise<void> | null = null
     await act(async () => {
       retryPromise = rendered.current().retryImage({
-        config,
         record: failedRecord,
         errorIndex: 0,
       })

@@ -7,14 +7,12 @@ import {
   generateImages,
   storeImageStudioGeneration,
 } from '../api'
-import {
-  CUSTOM_SIZE,
-  DEFAULT_ESTIMATE_MS,
-  ESTIMATE_SAMPLE_SIZE,
-} from '../constants'
+import { DEFAULT_ESTIMATE_MS, ESTIMATE_SAMPLE_SIZE } from '../constants'
 import {
   buildImageGenerationPayload,
   getImageModelRuntimeLimits,
+  resolveParameterSize,
+  restoreParametersFromRecord,
 } from '../lib/model-params'
 import type {
   GeneratedImage,
@@ -28,11 +26,6 @@ function imageMimeTypeForOutputFormat(outputFormat: string): string {
   if (outputFormat === 'jpeg') return 'image/jpeg'
   if (outputFormat === 'webp') return 'image/webp'
   return 'image/png'
-}
-
-function resolveSize(config: ImageStudioConfig): string {
-  if (config.size !== CUSTOM_SIZE) return config.size
-  return `${config.customWidth}x${config.customHeight}`
 }
 
 function extractApiErrorMessage(error: unknown): string {
@@ -73,7 +66,6 @@ export interface GenerateArgs {
 }
 
 export interface RetryImageArgs {
-  config: ImageStudioConfig
   record: GenerationRecord
   errorIndex: number
 }
@@ -133,9 +125,12 @@ export function useImageGeneration({
         referenceImages
       )
       const runtimeLimits = getImageModelRuntimeLimits(config.model)
+      if (!runtimeLimits) {
+        throw new Error(`Unsupported image model: ${config.model}`)
+      }
       const requestedImageCount = Math.min(
         runtimeLimits.maxImages,
-        Math.max(1, config.n)
+        Math.max(1, config.parameters.n)
       )
       const controller = new AbortController()
       abortRef.current = controller
@@ -192,7 +187,8 @@ export function useImageGeneration({
                     prompt,
                     model: config.model,
                     group: config.group,
-                    size: resolveSize(config),
+                    parameter_snapshot: { ...config.parameters },
+                    size: resolveParameterSize(config.parameters),
                     quality: payload.quality,
                     moderation: payload.moderation,
                     output_format: payload.output_format,
@@ -226,6 +222,9 @@ export function useImageGeneration({
                 prompt: storedRecord.prompt,
                 model: storedRecord.model,
                 group: storedRecord.group,
+                parameterSnapshot: storedRecord.parameter_snapshot ?? {
+                  ...config.parameters,
+                },
                 size: storedRecord.size,
                 quality: storedRecord.quality || undefined,
                 moderation: storedRecord.moderation || undefined,
@@ -292,7 +291,8 @@ export function useImageGeneration({
             prompt,
             model: config.model,
             group: config.group,
-            size: resolveSize(config),
+            parameterSnapshot: { ...config.parameters },
+            size: resolveParameterSize(config.parameters),
             quality: payload.quality,
             moderation: payload.moderation,
             outputFormat: payload.output_format,
@@ -308,9 +308,10 @@ export function useImageGeneration({
           return failedRecord
         }
 
+        const completedRecord = activeRecord as GenerationRecord
         const durationMs = accumulatedDurationMs
         const record: GenerationRecord = {
-          ...activeRecord,
+          ...completedRecord,
           failedImageCount: requestErrors.length,
           imageErrors: requestErrors,
           usage: { durationMs },
@@ -368,7 +369,14 @@ export function useImageGeneration({
   )
 
   const retryImage = useCallback(
-    async ({ config, record, errorIndex }: RetryImageArgs): Promise<void> => {
+    async ({ record, errorIndex }: RetryImageArgs): Promise<void> => {
+      const parameters = restoreParametersFromRecord(record)
+      const runtimeLimits = getImageModelRuntimeLimits(record.model)
+      const referenceImages = record.referenceImages ?? []
+      const editReferencesUnavailable =
+        record.mode === 'edit' && referenceImages.length === 0
+      if (!parameters || !runtimeLimits || editReferencesUnavailable) return
+
       if (retryingImageIndexesRef.current.has(errorIndex)) return
       retryingImageIndexesRef.current.add(errorIndex)
       if (
@@ -383,14 +391,17 @@ export function useImageGeneration({
         }
       }
 
-      const referenceImages = record.referenceImages ?? []
+      const retryConfig: ImageStudioConfig = {
+        model: record.model,
+        group: record.group,
+        parameters: { ...parameters, n: 1 },
+      }
       const payload = buildImageGenerationPayload(
-        { ...config, n: 1, model: record.model, group: record.group },
+        retryConfig,
         record.prompt,
         record.mode,
         referenceImages
       )
-      const runtimeLimits = getImageModelRuntimeLimits(record.model)
       const send =
         record.mode === 'edit' && !runtimeLimits.usesGenerationEndpointForEdits
           ? editImages
@@ -409,7 +420,8 @@ export function useImageGeneration({
         )
         if (!responseImage) throw new Error('empty image response')
 
-        const outputFormat = payload.output_format ?? record.outputFormat ?? 'png'
+        const outputFormat =
+          payload.output_format ?? record.outputFormat ?? 'png'
         const imageSource = responseImage.b64_json
           ? `data:${imageMimeTypeForOutputFormat(outputFormat)};base64,${responseImage.b64_json}`
           : (responseImage.url ?? '')
@@ -430,6 +442,7 @@ export function useImageGeneration({
                 prompt: record.prompt,
                 model: record.model,
                 group: record.group,
+                parameter_snapshot: { ...parameters },
                 size: record.size,
                 quality: record.quality,
                 moderation: record.moderation,

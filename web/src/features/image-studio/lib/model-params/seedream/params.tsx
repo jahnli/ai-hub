@@ -21,22 +21,22 @@ import {
 } from '@/components/ui/tooltip'
 
 import { CUSTOM_SIZE } from '../../../constants'
-import type { ImageStudioConfig } from '../../../types'
 import { SEEDREAM_PARAMETERS } from './config'
+import type { SeedreamConfig, SeedreamConfigUpdater } from './types'
 
 interface SeedreamParamsProps {
-  config: ImageStudioConfig
-  updateConfig: <Key extends keyof ImageStudioConfig>(
-    key: Key,
-    value: ImageStudioConfig[Key]
-  ) => void
+  config: SeedreamConfig
+  updateConfig: SeedreamConfigUpdater
   disabled: boolean
 }
 
 export function SeedreamParams(props: SeedreamParamsProps) {
   const { t } = useTranslation()
   const clampImageCount = (imageCount: number) =>
-    Math.min(SEEDREAM_PARAMETERS.maxImages, Math.max(1, imageCount))
+    Math.min(
+      SEEDREAM_PARAMETERS.runtimeLimits.maxImages,
+      Math.max(1, imageCount)
+    )
 
   const renderSelect = (
     value: string,
@@ -84,9 +84,22 @@ export function SeedreamParams(props: SeedreamParamsProps) {
           >
             <Minus className='size-3.5' />
           </Button>
-          <span className='w-8 text-center text-sm font-medium tabular-nums'>
-            {props.config.n}
-          </span>
+          <Input
+            type='number'
+            min={1}
+            max={SEEDREAM_PARAMETERS.runtimeLimits.maxImages}
+            step={1}
+            value={props.config.n}
+            onChange={(event) =>
+              props.updateConfig(
+                'n',
+                clampImageCount(Number(event.target.value) || 1)
+              )
+            }
+            disabled={props.disabled}
+            className='h-8 min-w-0 flex-1 text-center font-medium tabular-nums'
+            aria-label={t('Image count')}
+          />
           <Button
             type='button'
             variant='outline'
@@ -96,7 +109,8 @@ export function SeedreamParams(props: SeedreamParamsProps) {
               props.updateConfig('n', clampImageCount(props.config.n + 1))
             }
             disabled={
-              props.disabled || props.config.n >= SEEDREAM_PARAMETERS.maxImages
+              props.disabled ||
+              props.config.n >= SEEDREAM_PARAMETERS.runtimeLimits.maxImages
             }
             aria-label={t('Increase count')}
           >

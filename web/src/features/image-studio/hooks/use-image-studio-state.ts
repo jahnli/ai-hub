@@ -1,86 +1,179 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getUserGroups, getUserModels } from '../api'
-import { DEFAULT_CONFIG, IMAGE_MODEL_KEYWORDS } from '../constants'
-import { normalizeConfigForModel } from '../lib/model-params'
-import type { GroupOption, ImageStudioConfig, ModelOption } from '../types'
+import { DEFAULT_GROUP, DEFAULT_IMAGE_MODEL } from '../constants'
+import {
+  createDefaultParametersForModel,
+  isSupportedImageModel,
+  resolveImageModelAdapter,
+} from '../lib/model-params'
+import type {
+  GptImageConfig,
+  GptImageConfigUpdater,
+} from '../lib/model-params/gpt-image/types'
+import type {
+  SeedreamConfig,
+  SeedreamConfigUpdater,
+} from '../lib/model-params/seedream/types'
+import type {
+  GroupOption,
+  ImageStudioConfig,
+  ImageStudioParameters,
+  ModelOption,
+} from '../types'
 
 export function isLikelyImageModel(model: string): boolean {
-  const lower = model.toLowerCase()
-  return IMAGE_MODEL_KEYWORDS.some((keyword) => lower.includes(keyword))
+  return isSupportedImageModel(model)
 }
 
 export function useImageStudioState() {
+  const defaultParameters = createDefaultParametersForModel(DEFAULT_IMAGE_MODEL)
+  if (!defaultParameters) {
+    throw new Error(`Unsupported default image model: ${DEFAULT_IMAGE_MODEL}`)
+  }
+
   const [config, setConfig] = useState<ImageStudioConfig>(() => ({
-    ...DEFAULT_CONFIG,
+    group: DEFAULT_GROUP,
+    model: DEFAULT_IMAGE_MODEL,
+    parameters: { ...defaultParameters },
   }))
+  const parameterCacheRef = useRef<
+    Partial<Record<'gpt-image' | 'seedream', ImageStudioParameters>>
+  >({
+    'gpt-image': { ...defaultParameters },
+  })
   const [groups, setGroups] = useState<GroupOption[]>([])
   const [models, setModels] = useState<ModelOption[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
 
-  const updateConfig = useCallback(
-    <K extends keyof ImageStudioConfig>(
-      key: K,
-      value: ImageStudioConfig[K]
-    ) => {
-      setConfig((prev) => {
-        const next = { ...prev, [key]: value }
-        // model families support different size/quality/n subsets
-        return key === 'model' ? normalizeConfigForModel(next) : next
+  const updateGroup = useCallback((group: string) => {
+    setConfig((previousConfig) => ({ ...previousConfig, group }))
+  }, [])
+
+  const updateModel = useCallback((model: string) => {
+    setConfig((previousConfig) => {
+      const nextAdapter = resolveImageModelAdapter(model)
+      if (!nextAdapter) return previousConfig
+      parameterCacheRef.current[previousConfig.parameters.family] =
+        previousConfig.parameters
+      const cachedParameters = parameterCacheRef.current[nextAdapter.family]
+      const parameters =
+        cachedParameters?.family === nextAdapter.family
+          ? cachedParameters
+          : createDefaultParametersForModel(model)
+      if (!parameters) return previousConfig
+      return { ...previousConfig, model, parameters: { ...parameters } }
+    })
+  }, [])
+
+  const updateParameters = useCallback((parameters: ImageStudioParameters) => {
+    setConfig((previousConfig) => {
+      const adapter = resolveImageModelAdapter(previousConfig.model)
+      if (!adapter || adapter.family !== parameters.family) {
+        return previousConfig
+      }
+      parameterCacheRef.current[parameters.family] = parameters
+      return { ...previousConfig, parameters }
+    })
+  }, [])
+
+  const updateGptImageConfig = useCallback<GptImageConfigUpdater>(
+    (key, value) => {
+      setConfig((previousConfig) => {
+        if (previousConfig.parameters.family !== 'gpt-image') {
+          return previousConfig
+        }
+        const parameters: GptImageConfig = {
+          ...previousConfig.parameters,
+          [key]: value,
+        }
+        parameterCacheRef.current['gpt-image'] = parameters
+        return { ...previousConfig, parameters }
       })
     },
     []
   )
 
-  // Load groups once
+  const updateSeedreamConfig = useCallback<SeedreamConfigUpdater>(
+    (key, value) => {
+      setConfig((previousConfig) => {
+        if (previousConfig.parameters.family !== 'seedream') {
+          return previousConfig
+        }
+        const parameters: SeedreamConfig = {
+          ...previousConfig.parameters,
+          [key]: value,
+        }
+        parameterCacheRef.current.seedream = parameters
+        return { ...previousConfig, parameters }
+      })
+    },
+    []
+  )
+
   useEffect(() => {
     let cancelled = false
-    getUserGroups()
-      .then((loaded) => {
-        if (cancelled || loaded.length === 0) return
-        setGroups(loaded)
-        setConfig((prev) => {
-          if (loaded.some((g) => g.value === prev.group)) return prev
-          return { ...prev, group: loaded[0].value }
+    void getUserGroups()
+      .then((loadedGroups) => {
+        if (cancelled || loadedGroups.length === 0) return
+        setGroups(loadedGroups)
+        setConfig((previousConfig) => {
+          if (
+            loadedGroups.some((group) => group.value === previousConfig.group)
+          ) {
+            return previousConfig
+          }
+          return { ...previousConfig, group: loadedGroups[0].value }
         })
       })
-      .catch(() => {
-        /* group loading failure keeps the stored group */
-      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
     }
   }, [])
 
-  // Load models when group changes
   useEffect(() => {
     let cancelled = false
     setIsLoadingModels(true)
-    getUserModels(config.group)
-      .then((loaded) => {
+    void getUserModels(config.group)
+      .then((loadedModels) => {
         if (cancelled) return
-        const imageModels = loaded.filter((model) =>
-          isLikelyImageModel(model.value)
+        const supportedModels = loadedModels.filter((model) =>
+          isSupportedImageModel(model.value)
         )
-        setModels(imageModels)
-        setConfig((prev) => {
+        setModels(supportedModels)
+        setConfig((previousConfig) => {
           if (
-            prev.model &&
-            imageModels.some((model) => model.value === prev.model)
+            previousConfig.model &&
+            supportedModels.some(
+              (model) => model.value === previousConfig.model
+            )
           ) {
-            return prev
+            return previousConfig
           }
-          const fallback = imageModels[0]
-          return fallback
-            ? normalizeConfigForModel({ ...prev, model: fallback.value })
-            : { ...prev, model: '' }
+          const defaultModel = supportedModels.find(
+            (model) => model.value === DEFAULT_IMAGE_MODEL
+          )
+          const nextModel = defaultModel ?? supportedModels[0]
+          if (!nextModel) return { ...previousConfig, model: '' }
+          const adapter = resolveImageModelAdapter(nextModel.value)
+          if (!adapter) return { ...previousConfig, model: '' }
+          const cachedParameters = parameterCacheRef.current[adapter.family]
+          const parameters =
+            cachedParameters?.family === adapter.family
+              ? cachedParameters
+              : createDefaultParametersForModel(nextModel.value)
+          if (!parameters) return { ...previousConfig, model: '' }
+          return {
+            ...previousConfig,
+            model: nextModel.value,
+            parameters: { ...parameters },
+          }
         })
       })
+      .catch(() => undefined)
       .finally(() => {
         if (!cancelled) setIsLoadingModels(false)
-      })
-      .catch(() => {
-        /* model loading failure keeps the stored model */
       })
     return () => {
       cancelled = true
@@ -89,7 +182,11 @@ export function useImageStudioState() {
 
   return {
     config,
-    updateConfig,
+    updateGroup,
+    updateModel,
+    updateParameters,
+    updateGptImageConfig,
+    updateSeedreamConfig,
     groups,
     models,
     isLoadingModels,

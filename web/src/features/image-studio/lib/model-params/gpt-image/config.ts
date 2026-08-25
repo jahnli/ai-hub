@@ -1,7 +1,22 @@
-import { CUSTOM_SIZE } from '../../../constants'
 import type { GptImageConfig, GptImageParameterConfig } from './types'
 
+const CUSTOM_SIZE = 'custom'
+
+export const DEFAULT_GPT_IMAGE_PARAMETERS: GptImageConfig = {
+  family: 'gpt-image',
+  size: 'auto',
+  customWidth: 1024,
+  customHeight: 1024,
+  quality: 'auto',
+  moderation: 'auto',
+  n: 1,
+  background: 'auto',
+  outputFormat: 'png',
+  outputCompression: null,
+}
+
 export const GPT_IMAGE_PARAMETERS: GptImageParameterConfig = {
+  defaultParameters: DEFAULT_GPT_IMAGE_PARAMETERS,
   sizePresets: [
     '1024x1024',
     '1024x1792',
@@ -17,58 +32,68 @@ export const GPT_IMAGE_PARAMETERS: GptImageParameterConfig = {
   moderationOptions: ['auto', 'low'],
   backgroundOptions: ['auto', 'opaque'],
   outputFormatOptions: ['png', 'webp', 'jpeg'],
-  maxImages: 8,
-  maxReferenceImages: 4,
-  normalizeConfig(config: GptImageConfig): GptImageConfig {
-    const nextConfig = { ...config }
-    const sizeInvalid =
-      nextConfig.size !== 'auto' &&
-      nextConfig.size !== CUSTOM_SIZE &&
-      !this.sizePresets.includes(nextConfig.size)
-    if (sizeInvalid) nextConfig.size = 'auto'
-    if (!this.qualityOptions.includes(nextConfig.quality)) {
-      nextConfig.quality = 'auto'
-    }
-    if (!this.moderationOptions.includes(nextConfig.moderation)) {
-      nextConfig.moderation = 'auto'
-    }
-    if (!this.backgroundOptions.includes(nextConfig.background)) {
-      nextConfig.background = 'auto'
-    }
-    if (!this.outputFormatOptions.includes(nextConfig.outputFormat)) {
-      nextConfig.outputFormat = 'png'
-    }
-    nextConfig.n = Math.min(this.maxImages, Math.max(1, nextConfig.n))
-    return nextConfig
+  runtimeLimits: {
+    maxImages: 8,
+    maxReferenceImages: 4,
+    maxTotalImages: null,
+    usesGenerationEndpointForEdits: false,
   },
-  isCustomSizeValid(config: GptImageConfig): boolean {
-    if (config.size !== CUSTOM_SIZE) return true
-    const width = config.customWidth
-    const height = config.customHeight
-    if (width <= 0 || height <= 0) return false
-    const aspectRatio = width / height
+  normalizeParameters(parameters: GptImageConfig): GptImageConfig {
+    const normalizedParameters = { ...parameters, family: 'gpt-image' as const }
+    const sizeInvalid =
+      normalizedParameters.size !== 'auto' &&
+      normalizedParameters.size !== CUSTOM_SIZE &&
+      !this.sizePresets.includes(normalizedParameters.size)
+    if (sizeInvalid) normalizedParameters.size = 'auto'
+    if (!this.qualityOptions.includes(normalizedParameters.quality)) {
+      normalizedParameters.quality = 'auto'
+    }
+    if (!this.moderationOptions.includes(normalizedParameters.moderation)) {
+      normalizedParameters.moderation = 'auto'
+    }
+    if (!this.backgroundOptions.includes(normalizedParameters.background)) {
+      normalizedParameters.background = 'auto'
+    }
+    if (!this.outputFormatOptions.includes(normalizedParameters.outputFormat)) {
+      normalizedParameters.outputFormat = 'png'
+    }
+    normalizedParameters.n = Math.min(
+      this.runtimeLimits.maxImages,
+      Math.max(1, normalizedParameters.n)
+    )
+    return normalizedParameters
+  },
+  isCustomSizeValid(parameters: GptImageConfig): boolean {
+    if (parameters.size !== CUSTOM_SIZE) return true
+    const aspectRatio = parameters.customWidth / parameters.customHeight
     return (
-      width % 16 === 0 &&
-      height % 16 === 0 &&
+      parameters.customWidth > 0 &&
+      parameters.customHeight > 0 &&
+      parameters.customWidth % 16 === 0 &&
+      parameters.customHeight % 16 === 0 &&
       aspectRatio >= 1 / 3 &&
       aspectRatio <= 3 &&
-      width <= 3840 &&
-      height <= 3840 &&
-      width * height <= 3840 * 2160
+      parameters.customWidth <= 3840 &&
+      parameters.customHeight <= 3840 &&
+      parameters.customWidth * parameters.customHeight <= 3840 * 2160
     )
   },
-  buildPayload(config: GptImageConfig, mode) {
+  buildPayload(parameters: GptImageConfig, mode) {
     const payload: Partial<import('../../../types').ImageGenerationPayload> = {}
-    if (config.quality !== 'auto') payload.quality = config.quality
-    if (mode === 'generate' && config.moderation !== 'auto') {
-      payload.moderation = config.moderation
+    if (parameters.quality !== 'auto') payload.quality = parameters.quality
+    if (mode === 'generate' && parameters.moderation !== 'auto') {
+      payload.moderation = parameters.moderation
     }
-    if (config.background !== 'auto') payload.background = config.background
-    if (config.outputFormat) payload.output_format = config.outputFormat
+    if (parameters.background !== 'auto') {
+      payload.background = parameters.background
+    }
+    if (parameters.outputFormat) {
+      payload.output_format = parameters.outputFormat
+    }
     const outputCompressionSupported =
-      config.outputFormat === 'jpeg' || config.outputFormat === 'webp'
-    if (outputCompressionSupported && config.outputCompression !== null) {
-      payload.output_compression = config.outputCompression
+      parameters.outputFormat === 'jpeg' || parameters.outputFormat === 'webp'
+    if (outputCompressionSupported && parameters.outputCompression !== null) {
+      payload.output_compression = parameters.outputCompression
     }
     return payload
   },

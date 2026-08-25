@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-08-24
+**日期**: 2026-08-25
 
 ## 涉及文件
 
@@ -54,3 +54,7 @@
 - `web/src/i18n/locales/*.json` — 补齐展示上限、存储上限及历史隐藏行为的七语言文案。
 - `model/ability.go` — 分组可用模型按名称倒序返回，使在线生图默认优先选择名称以 g 开头的模型。
 - `controller/model_list_test.go` — 补充分组模型名称倒序接口回归测试，固定 `gpt-image` 排在 `dall-e` 前的契约。
+- `web/src/features/image-studio/lib/model-params/`、`web/src/features/image-studio/types.ts` — 将模型参数重构为可辨识联合类型和模型适配器注册表，由各适配器集中管理默认值、支持范围、参数校验、配置归一化与请求构建；GPT Image 和 Seedream 参数类型、尺寸及数量约束相互隔离。
+- `web/src/features/image-studio/hooks/use-image-studio-state.ts`、`web/src/features/image-studio/hooks/use-image-studio.ts` — 默认选择 `gpt-image-2`，按模型族缓存并恢复参数，模型或分组切换时归一化配置；生成过程中禁用参数和模型切换，单次任务使用启动时的参数快照，避免异步生成期间配置漂移。
+- `web/src/features/image-studio/components/generate-panel.tsx`、`web/src/features/image-studio/components/params-panel.tsx`、`web/src/features/image-studio/index.tsx` — 参数面板改为基于当前模型适配器渲染，数量参数下沉至模型专属配置，并统一生成按钮、参考图和模型选择器的禁用状态。
+- `web/src/features/image-studio/components/__tests__/*.test.tsx`、`web/src/features/image-studio/hooks/__tests__/generation-progress.test.tsx` — 更新模型专属参数布局测试，并增加生成期间锁定模型与参数控件的回归覆盖。

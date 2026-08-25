@@ -14,22 +14,22 @@ import {
 } from '@/components/ui/select'
 
 import { CUSTOM_SIZE } from '../../../constants'
-import type { ImageStudioConfig } from '../../../types'
 import { GPT_IMAGE_PARAMETERS } from './config'
+import type { GptImageConfig, GptImageConfigUpdater } from './types'
 
 interface GptImageParamsProps {
-  config: ImageStudioConfig
-  updateConfig: <Key extends keyof ImageStudioConfig>(
-    key: Key,
-    value: ImageStudioConfig[Key]
-  ) => void
+  config: GptImageConfig
+  updateConfig: GptImageConfigUpdater
   disabled: boolean
 }
 
 export function GptImageParams(props: GptImageParamsProps) {
   const { t } = useTranslation()
   const clampImageCount = (imageCount: number) =>
-    Math.min(GPT_IMAGE_PARAMETERS.maxImages, Math.max(1, imageCount))
+    Math.min(
+      GPT_IMAGE_PARAMETERS.runtimeLimits.maxImages,
+      Math.max(1, imageCount)
+    )
 
   const renderSelect = (
     value: string,
@@ -77,9 +77,22 @@ export function GptImageParams(props: GptImageParamsProps) {
           >
             <Minus className='size-3.5' />
           </Button>
-          <span className='w-8 text-center text-sm font-medium tabular-nums'>
-            {props.config.n}
-          </span>
+          <Input
+            type='number'
+            min={1}
+            max={GPT_IMAGE_PARAMETERS.runtimeLimits.maxImages}
+            step={1}
+            value={props.config.n}
+            onChange={(event) =>
+              props.updateConfig(
+                'n',
+                clampImageCount(Number(event.target.value) || 1)
+              )
+            }
+            disabled={props.disabled}
+            className='h-8 min-w-0 flex-1 text-center font-medium tabular-nums'
+            aria-label={t('Image count')}
+          />
           <Button
             type='button'
             variant='outline'
@@ -89,7 +102,8 @@ export function GptImageParams(props: GptImageParamsProps) {
               props.updateConfig('n', clampImageCount(props.config.n + 1))
             }
             disabled={
-              props.disabled || props.config.n >= GPT_IMAGE_PARAMETERS.maxImages
+              props.disabled ||
+              props.config.n >= GPT_IMAGE_PARAMETERS.runtimeLimits.maxImages
             }
             aria-label={t('Increase count')}
           >

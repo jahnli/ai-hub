@@ -36,6 +36,7 @@ function fromServerRecord(
     prompt: record.prompt,
     model: record.model,
     group: record.group,
+    parameterSnapshot: record.parameter_snapshot,
     size: record.size,
     quality: record.quality || undefined,
     moderation: record.moderation || undefined,
