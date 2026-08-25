@@ -112,6 +112,32 @@ describe('image studio result loading slots', () => {
     assert.doesNotMatch(markup, /<button[^>]*\sdisabled(?:=""|="disabled")/)
   })
 
+  test('does not duplicate a historical failed frame while retrying', () => {
+    const record: GenerationRecord = {
+      id: 'historical-generation-with-failure',
+      createdAt: 1,
+      mode: 'generate',
+      prompt: 'Partial historical generation',
+      model: 'gpt-image-2',
+      group: 'default',
+      size: '1024x1024',
+      n: 1,
+      images: [],
+      failedImageCount: 1,
+    }
+    const markup = renderResultGrid(
+      record,
+      0,
+      ['stale global error'],
+      false,
+      [0]
+    )
+
+    assert.equal((markup.match(/role="status"/g) ?? []).length, 1)
+    assert.equal((markup.match(/role="alert"/g) ?? []).length, 0)
+    assert.doesNotMatch(markup, /stale global error/)
+  })
+
   test('replaces completed loading frames with generated images', () => {
     const record: GenerationRecord = {
       id: 'generation-1',
