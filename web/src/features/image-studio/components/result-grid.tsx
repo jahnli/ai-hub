@@ -1,6 +1,4 @@
 import {
-  ChevronLeft,
-  ChevronRight,
   Copy,
   Download,
   ImageIcon,
@@ -8,22 +6,15 @@ import {
   PackageOpen,
   Pencil,
   RefreshCw,
-  RotateCcw,
   Sparkles,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react'
-import {
-  useState,
-  type KeyboardEvent,
-  type WheelEvent,
-} from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { ImagePreviewDialog } from '@/components/image-preview-dialog/image-preview-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Empty } from '@/components/ui/empty'
 import {
   Tooltip,
@@ -162,9 +153,9 @@ export function ResultGrid({
   imageErrors,
 }: ResultGridProps) {
   const { t } = useTranslation()
-  const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null)
-  const [previewZoom, setPreviewZoom] = useState(1)
-  const [previewRotation, setPreviewRotation] = useState(0)
+  const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(
+    null
+  )
 
   if (error) {
     return (
@@ -247,70 +238,6 @@ export function ResultGrid({
     }
   }
 
-  const handleOpenPreview = (image: GeneratedImage) => {
-    setPreviewZoom(1)
-    setPreviewRotation(0)
-    setPreviewImage(image)
-  }
-
-  const previewImageIndex = previewImage
-    ? record.images.findIndex((image) => image.id === previewImage.id)
-    : -1
-
-  const handleChangePreviewImage = (nextImageIndex: number) => {
-    const imageCount = record.images.length
-    if (imageCount < 2) return
-
-    const wrappedImageIndex =
-      ((nextImageIndex % imageCount) + imageCount) % imageCount
-    setPreviewImage(record.images[wrappedImageIndex])
-    setPreviewZoom(1)
-    setPreviewRotation(0)
-  }
-
-  const handleClosePreview = () => {
-    setPreviewImage(null)
-    setPreviewZoom(1)
-    setPreviewRotation(0)
-  }
-
-  const handleZoomIn = () => {
-    setPreviewZoom((currentZoom) => Math.min(currentZoom + 0.25, 3))
-  }
-
-  const handleZoomOut = () => {
-    setPreviewZoom((currentZoom) => Math.max(currentZoom - 0.25, 0.5))
-  }
-
-  const handleRotatePreview = () => {
-    setPreviewRotation((currentRotation) => (currentRotation + 90) % 360)
-  }
-
-  const handlePreviewWheel = (event: WheelEvent<HTMLDivElement>) => {
-    event.stopPropagation()
-    setPreviewZoom((currentZoom) => {
-      const zoomDelta = event.deltaY < 0 ? 0.1 : -0.1
-      return Math.min(Math.max(currentZoom + zoomDelta, 0.5), 3)
-    })
-  }
-
-  const handlePreviewKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (record.images.length < 2 || previewImageIndex < 0) return
-
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault()
-      handleChangePreviewImage(previewImageIndex - 1)
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault()
-      handleChangePreviewImage(previewImageIndex + 1)
-    }
-  }
-
-  const handleResetPreview = () => {
-    setPreviewZoom(1)
-    setPreviewRotation(0)
-  }
-
   const visibleImageErrors = isGenerating ? imageErrors : record.imageErrors
   const genericFailedImageCount =
     !isGenerating && visibleImageErrors === undefined
@@ -344,7 +271,7 @@ export function ResultGrid({
             <button
               type='button'
               className='block w-full'
-              onClick={() => handleOpenPreview(image)}
+              onClick={() => setPreviewImageIndex(index)}
             >
               <img
                 src={image.src}
@@ -402,12 +329,12 @@ export function ResultGrid({
         {visibleImageErrors?.map((message, errorIndex) =>
           retryingImageErrorIndexes.includes(errorIndex) ? (
             <LoadingImageSlot
-              key={`retrying-image-error-${errorIndex}`}
+              key={`retrying-image-error-${message}`}
               slotIndex={record.images.length + errorIndex}
             />
           ) : (
             <ImageErrorSlot
-              key={`image-error-${errorIndex}`}
+              key={`image-error-${message}`}
               message={message}
               onRetry={() => onRetryImage(errorIndex)}
               retryDisabled={isGenerating}
@@ -416,11 +343,13 @@ export function ResultGrid({
         )}
         {Array.from({ length: genericFailedImageCount }, (_, index) =>
           retryingImageErrorIndexes.includes(index) ? (
+            // oxlint-disable-next-line react/no-array-index-key -- Generic failure slots have no backend identity.
             <LoadingImageSlot
               key={`retrying-failed-image-${index}`}
               slotIndex={record.images.length + index}
             />
           ) : (
+            // oxlint-disable-next-line react/no-array-index-key -- Generic failure slots have no backend identity.
             <ImageErrorSlot
               key={`failed-image-${index}`}
               message={t('Image generation failed')}
@@ -431,166 +360,26 @@ export function ResultGrid({
         )}
       </div>
 
-      <Dialog
-        open={previewImage !== null}
+      <ImagePreviewDialog
+        open={previewImageIndex !== null}
         onOpenChange={(open) => {
-          if (!open) handleClosePreview()
+          if (!open) setPreviewImageIndex(null)
         }}
-      >
-        <DialogContent
-          className='[&_[data-slot=dialog-close]]:bg-foreground/45 [&_[data-slot=dialog-close]]:text-background [&_[data-slot=dialog-close]]:hover:bg-foreground/60 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&_[data-slot=dialog-close]]:backdrop-blur-md'
-          overlayClassName='bg-black/30 supports-backdrop-filter:backdrop-blur-[1.5px]'
-          onKeyDown={handlePreviewKeyDown}
-        >
-          <DialogTitle className='sr-only'>{t('Image preview')}</DialogTitle>
-          {previewImage && (
-            <div
-              className='relative flex h-screen w-screen min-w-0 flex-col items-center justify-center px-[4vw] py-[4vh]'
-              onClick={handleClosePreview}
-            >
-              <div
-                className='relative flex w-full items-center justify-center overflow-hidden'
-                onWheel={handlePreviewWheel}
-              >
-                <div className='flex max-h-[calc(96vh-9rem)] w-[min(92vw,960px)] items-center justify-center overflow-hidden'>
-                  <img
-                    src={previewImage.src}
-                    alt={record.prompt.slice(0, 80)}
-                    className='max-h-[calc(96vh-9rem)] max-w-full rounded-lg object-contain transition-transform duration-150'
-                    style={{
-                      transform: `scale(${previewZoom}) rotate(${previewRotation}deg)`,
-                    }}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                </div>
-              </div>
-              <div
-                className='pointer-events-none absolute inset-x-0 bottom-[4vh] flex flex-col items-center gap-5'
-                onClick={(event) => event.stopPropagation()}
-              >
-                {previewImage.revisedPrompt && (
-                  <p className='pointer-events-auto bg-background/90 text-foreground mx-auto max-h-20 w-[min(92vw,960px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
-                    {previewImage.revisedPrompt}
-                  </p>
-                )}
-                <div className='pointer-events-auto bg-background/95 flex flex-wrap items-center justify-center gap-1.5 rounded-full border p-1.5 shadow-sm backdrop-blur-sm sm:self-center'>
-                  {record.images.length > 1 && (
-                    <>
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='icon-sm'
-                        onClick={() =>
-                          handleChangePreviewImage(previewImageIndex - 1)
-                        }
-                        aria-label={t('Previous image')}
-                      >
-                        <ChevronLeft className='size-3.5' />
-                      </Button>
-                      <span className='text-muted-foreground min-w-12 text-center text-xs tabular-nums'>
-                        {previewImageIndex + 1} / {record.images.length}
-                      </span>
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='icon-sm'
-                        onClick={() =>
-                          handleChangePreviewImage(previewImageIndex + 1)
-                        }
-                        aria-label={t('Next image')}
-                      >
-                        <ChevronRight className='size-3.5' />
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={handleZoomOut}
-                    disabled={previewZoom <= 0.5}
-                    aria-label={t('Zoom out')}
-                  >
-                    <ZoomOut className='size-3.5' />
-                  </Button>
-                  <span className='text-muted-foreground min-w-12 text-center text-xs tabular-nums'>
-                    {Math.round(previewZoom * 100)}%
-                  </span>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={handleZoomIn}
-                    disabled={previewZoom >= 3}
-                    aria-label={t('Zoom in')}
-                  >
-                    <ZoomIn className='size-3.5' />
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={handleRotatePreview}
-                    aria-label={t('Rotate')}
-                  >
-                    <RotateCcw className='size-3.5' />
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={handleResetPreview}
-                    aria-label={t('Reset view')}
-                  >
-                    <RefreshCw className='size-3.5' />
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={() => void handleCopy(previewImage)}
-                    aria-label={t('Copy image')}
-                  >
-                    <Copy className='size-3.5' />
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={() =>
-                      void downloadImage(
-                        previewImage.src,
-                        imageFileName(
-                          record.images.findIndex(
-                            (item) => item.id === previewImage.id
-                          ),
-                          previewImage.src,
-                          record.outputFormat
-                        )
-                      )
-                    }
-                    aria-label={t('Download')}
-                  >
-                    <Download className='size-3.5' />
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon-sm'
-                    onClick={() => {
-                      onEditImage(previewImage)
-                      handleClosePreview()
-                    }}
-                    aria-label={t('Edit this image')}
-                  >
-                    <Pencil className='size-3.5' />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        images={record.images.map((image, index) => ({
+          id: image.id,
+          src: image.src,
+          alt: record.prompt.slice(0, 80),
+          description: image.revisedPrompt,
+          onCopy: () => handleCopy(image),
+          onDownload: () =>
+            downloadImage(
+              image.src,
+              imageFileName(index, image.src, record.outputFormat)
+            ),
+          onEdit: () => onEditImage(image),
+        }))}
+        initialIndex={previewImageIndex ?? 0}
+      />
     </div>
   )
 }

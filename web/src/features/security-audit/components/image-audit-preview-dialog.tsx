@@ -1,19 +1,7 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Download,
-  RefreshCw,
-  RotateCcw,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react'
-import { useEffect, useState, type KeyboardEvent, type WheelEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { ImagePreviewDialog } from '@/components/image-preview-dialog/image-preview-dialog'
 import {
   copyImageToClipboard,
   downloadImage,
@@ -28,219 +16,38 @@ interface ImageAuditPreviewDialogProps {
   target: ImageAuditPreviewTarget | null
 }
 
-/**
- * Fullscreen lightbox for audit images. Mirrors the image-studio result
- * preview (zoom / rotate / copy / download) and adds prev-next navigation
- * across all images of a generation, including arrow-key support.
- */
 export function ImageAuditPreviewDialog(props: ImageAuditPreviewDialogProps) {
   const { t } = useTranslation()
-  const [index, setIndex] = useState(0)
-  const [zoom, setZoom] = useState(1)
-  const [rotation, setRotation] = useState(0)
 
-  useEffect(() => {
-    if (props.target) {
-      setIndex(props.target.index)
-      setZoom(1)
-      setRotation(0)
-    }
-  }, [props.target])
-
-  if (!props.target) return null
+  if (!props.target || !props.target.item.images?.length) return null
 
   const item = props.target.item
-  const images = item.images ?? []
-  if (images.length === 0) return null
-  const safeIndex = Math.min(Math.max(index, 0), images.length - 1)
-  const image = images[safeIndex]
-  const promptText = image.revised_prompt || item.prompt
-
-  const goTo = (nextIndex: number) => {
-    const count = images.length
-    setIndex(((nextIndex % count) + count) % count)
-    setZoom(1)
-    setRotation(0)
-  }
-
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    event.stopPropagation()
-    setZoom((currentZoom) => {
-      const zoomDelta = event.deltaY < 0 ? 0.1 : -0.1
-      return Math.min(Math.max(currentZoom + zoomDelta, 0.5), 3)
-    })
-  }
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (images.length < 2) return
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault()
-      goTo(safeIndex - 1)
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault()
-      goTo(safeIndex + 1)
-    }
-  }
-
-  const handleCopy = async () => {
-    try {
-      await copyImageToClipboard(image.url)
-      toast.success(t('Image copied to clipboard'))
-    } catch {
-      toast.error(t('Copy failed, please download instead'))
-    }
-  }
+  const previewImages = item.images.map((image, index) => ({
+    id: `${item.id}-${index}`,
+    src: image.url,
+    alt: (image.revised_prompt || item.prompt).slice(0, 80),
+    description: image.revised_prompt || item.prompt,
+    onCopy: async () => {
+      try {
+        await copyImageToClipboard(image.url)
+        toast.success(t('Image copied to clipboard'))
+      } catch {
+        toast.error(t('Copy failed, please download instead'))
+      }
+    },
+    onDownload: () =>
+      downloadImage(
+        image.url,
+        imageFileName(index, image.url, item.output_format)
+      ),
+  }))
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent
-        className='[&_[data-slot=dialog-close]]:bg-foreground/45 [&_[data-slot=dialog-close]]:text-background [&_[data-slot=dialog-close]]:hover:bg-foreground/60 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&_[data-slot=dialog-close]]:backdrop-blur-md'
-        overlayClassName='bg-black/30 supports-backdrop-filter:backdrop-blur-[1.5px]'
-        onKeyDown={handleKeyDown}
-      >
-        <DialogTitle className='sr-only'>{t('Image preview')}</DialogTitle>
-        <div
-          className='flex h-screen w-screen min-w-0 flex-col items-center justify-center px-[4vw] py-[4vh]'
-          onClick={() => props.onOpenChange(false)}
-        >
-          <div
-            className='relative flex w-full items-center justify-center overflow-hidden'
-            onWheel={handleWheel}
-          >
-            {images.length > 1 && (
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon'
-                className='bg-foreground/45 text-background hover:bg-foreground/60 hover:text-background absolute left-2 z-10 rounded-full backdrop-blur-md'
-                onClick={(event) => {
-                  event.stopPropagation()
-                  goTo(safeIndex - 1)
-                }}
-                aria-label={t('Previous image')}
-              >
-                <ChevronLeft className='size-5' />
-              </Button>
-            )}
-            <div className='flex max-h-[calc(96vh-9rem)] w-[min(92vw,960px)] items-center justify-center overflow-hidden'>
-              <img
-                src={image.url}
-                alt={promptText.slice(0, 80)}
-                className='max-h-[calc(96vh-9rem)] max-w-full rounded-lg object-contain transition-transform duration-150'
-                style={{
-                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                }}
-                onClick={(event) => event.stopPropagation()}
-              />
-            </div>
-            {images.length > 1 && (
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon'
-                className='bg-foreground/45 text-background hover:bg-foreground/60 hover:text-background absolute right-2 z-10 rounded-full backdrop-blur-md'
-                onClick={(event) => {
-                  event.stopPropagation()
-                  goTo(safeIndex + 1)
-                }}
-                aria-label={t('Next image')}
-              >
-                <ChevronRight className='size-5' />
-              </Button>
-            )}
-          </div>
-          <div
-            className='mt-4 flex flex-col gap-5'
-            onClick={(event) => event.stopPropagation()}
-          >
-            {promptText && (
-              <p className='bg-background/90 text-foreground mx-auto max-h-20 w-[min(92vw,960px)] overflow-auto rounded-lg border px-3 py-2 text-center text-xs leading-relaxed shadow-sm backdrop-blur-md'>
-                {promptText}
-              </p>
-            )}
-            <div className='bg-background/95 flex flex-wrap items-center justify-center gap-1.5 rounded-full border p-1.5 shadow-sm backdrop-blur-sm sm:self-center'>
-              {images.length > 1 && (
-                <span className='text-muted-foreground min-w-12 text-center text-xs tabular-nums'>
-                  {safeIndex + 1} / {images.length}
-                </span>
-              )}
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon-sm'
-                onClick={() =>
-                  setZoom((currentZoom) => Math.max(currentZoom - 0.25, 0.5))
-                }
-                disabled={zoom <= 0.5}
-                aria-label={t('Zoom out')}
-              >
-                <ZoomOut className='size-3.5' />
-              </Button>
-              <span className='text-muted-foreground min-w-12 text-center text-xs tabular-nums'>
-                {Math.round(zoom * 100)}%
-              </span>
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon-sm'
-                onClick={() =>
-                  setZoom((currentZoom) => Math.min(currentZoom + 0.25, 3))
-                }
-                disabled={zoom >= 3}
-                aria-label={t('Zoom in')}
-              >
-                <ZoomIn className='size-3.5' />
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon-sm'
-                onClick={() =>
-                  setRotation((currentRotation) => (currentRotation + 90) % 360)
-                }
-                aria-label={t('Rotate')}
-              >
-                <RotateCcw className='size-3.5' />
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon-sm'
-                onClick={() => {
-                  setZoom(1)
-                  setRotation(0)
-                }}
-                aria-label={t('Reset view')}
-              >
-                <RefreshCw className='size-3.5' />
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon-sm'
-                onClick={() => void handleCopy()}
-                aria-label={t('Copy image')}
-              >
-                <Copy className='size-3.5' />
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                size='icon-sm'
-                onClick={() =>
-                  void downloadImage(
-                    image.url,
-                    imageFileName(safeIndex, image.url, item.output_format)
-                  )
-                }
-                aria-label={t('Download')}
-              >
-                <Download className='size-3.5' />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ImagePreviewDialog
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      images={previewImages}
+      initialIndex={props.target.index}
+    />
   )
 }
