@@ -62,17 +62,16 @@ func resolveChannelIDs(value string) ([]int, error) {
 		addChannelID(channelID)
 	}
 
-	nameCondition, namePattern, err := buildLogContainsCondition(
-		"name",
-		value,
-		common.MainDatabaseType(),
-	)
+	namePattern, err := sanitizeContainsLikePattern(value, common.MainDatabaseType())
 	if err != nil {
 		return nil, err
 	}
 
 	var namedChannelIDs []int
-	if err = DB.Table("channels").Where(nameCondition, namePattern).Pluck("id", &namedChannelIDs).Error; err != nil {
+	if err = DB.Table("channels").Where(
+		"LOWER(name) LIKE LOWER(?) ESCAPE '!'",
+		namePattern,
+	).Pluck("id", &namedChannelIDs).Error; err != nil {
 		return nil, err
 	}
 	for _, channelID := range namedChannelIDs {
