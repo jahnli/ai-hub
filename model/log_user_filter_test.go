@@ -3,6 +3,8 @@ package model
 import (
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,8 +46,14 @@ func TestGetLogsByUserIdsFiltersExactUserAndInclusiveTimeRange(t *testing.T) {
 	assert.Equal(t, []int{101, 101}, []int{got[0].UserId, got[1].UserId})
 }
 
-func TestGetAllLogsFiltersChannelByIDAndFuzzyName(t *testing.T) {
+func TestGetAllLogsFiltersChannelByIDAndCaseInsensitiveFuzzyName(t *testing.T) {
 	truncateTables(t)
+	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
+		require.NoError(t, DB.Exec("PRAGMA case_sensitive_like = ON").Error)
+		t.Cleanup(func() {
+			assert.NoError(t, DB.Exec("PRAGMA case_sensitive_like = OFF").Error)
+		})
+	}
 
 	require.NoError(t, DB.Create(&[]Channel{
 		{Id: 101, Name: "OpenAI Primary"},
@@ -85,7 +93,7 @@ func TestGetAllLogsFiltersChannelByIDAndFuzzyName(t *testing.T) {
 		"",
 		0,
 		10,
-		"backup",
+		"BACKUP",
 		"",
 		"",
 		"",

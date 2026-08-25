@@ -1,6 +1,6 @@
 # 使用日志增强：用户信息、请求内容与审计
 
-**日期**: 2026-08-24
+**日期**: 2026-08-25
 
 ## 涉及文件
 
@@ -107,6 +107,11 @@
 - `model/log_user_filter_test.go` — 验证普通日志按渠道 ID 精确查询和按渠道名称模糊查询。
 - `web/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 普通日志筛选框文案由「Channel ID」改为「Channel」。
 - `web/src/features/usage-logs/lib/utils.ts`、`web/src/features/usage-logs/types.ts` — 渠道筛选参数改为字符串，保留渠道 ID 或渠道名称输入后传给接口。
+
+## 2026-08-25 渠道名称搜索忽略大小写
+
+- `model/log.go` — 渠道名称模糊匹配统一对字段和搜索参数应用 `LOWER`，确保 SQLite、MySQL 和 PostgreSQL 下均不区分大小写，并同步作用于日志列表和统计查询。
+- `model/log_user_filter_test.go` — 使用大写搜索词匹配混合大小写渠道名称，回归保护大小写不敏感的模糊搜索行为。
 
 ## 2026-08-24 模型映射详情悬浮展示
 
