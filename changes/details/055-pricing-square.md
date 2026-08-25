@@ -1,16 +1,18 @@
 # 模型广场优化
 
-**日期**: 2026-08-11
+**日期**: 2026-08-25
 
 ## 涉及文件
 
 - `web/default/src/features/pricing/components/model-card.tsx` — 「动态计费」标签颜色从橙色改为主题色。
 - `web/default/src/components/status-badge.tsx` — 新增 primary variant 支持主题色状态标签。
 - `controller/pricing.go` — 超级管理员可查看全部分组。
-- `web/src/features/pricing/index.tsx` — 根据当前用户角色判断是否展示分组倍率，并将用户所属分组传入模型卡片与模型详情。
+- `web/src/features/pricing/index.tsx` — 根据当前用户角色判断是否展示分组倍率，并将用户所属分组和当前筛选分组传入模型卡片与模型详情。
 - `web/default/src/features/pricing/components/pricing-toolbar.tsx` — 向筛选侧边栏透传分组倍率可见性。
 - `web/default/src/features/pricing/components/pricing-sidebar.tsx` — 分组筛选项按权限显示或隐藏倍率后缀。
-- `web/src/features/pricing/components/model-details.tsx` — 模型详情按权限过滤分组：管理员可查看全部分组与倍率，普通用户仅能查看所属分组，并隐藏倍率与自动分组链；将同一可见分组范围传入 API 速率限制区域。
+- `web/src/features/pricing/components/model-details.tsx` — 模型详情按权限过滤分组：管理员可查看全部分组与倍率，普通用户仅能查看所属分组，并隐藏倍率与自动分组链；将同一可见分组范围传入 API 速率限制区域；独立详情页使用模型实际有效分组倍率。
+- `web/src/features/pricing/components/model-details-price.tsx` — 模型详情基础价格按当前筛选分组或用户实际所属分组计算，覆盖 Token、按次及动态表达式计费，并保留供应商分组倍率。
+- `web/src/features/pricing/components/__tests__/base-price-group.test.tsx` — 覆盖筛选分组优先、全部分组时回退用户所属分组，以及动态计费应用实际分组倍率的回归场景。
 - `web/src/features/pricing/components/model-details-api.tsx` — API 速率限制表按权限过滤后的可见分组渲染，无可见分组时隐藏该区域。
 - `web/src/features/pricing/lib/mock-stats.ts` — 速率限制数据生成支持显式指定可见分组，并区分未指定分组与空可见分组。
 - `web/src/features/pricing/components/__tests__/rate-limit-visibility.test.ts` — 覆盖普通用户仅查看所属分组、管理员查看全部分组以及无可见分组时隐藏速率限制的回归场景。

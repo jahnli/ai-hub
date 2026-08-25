@@ -277,6 +277,7 @@ export function Pricing() {
               tokenUnit={tokenUnit}
               showGroupRatios={isAdmin}
               currentUserGroup={currentUserGroup}
+              selectedGroup={groupFilter}
               showRechargePrice={showRechargePrice}
               maskPrices={demoMode}
             />

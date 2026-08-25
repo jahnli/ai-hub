@@ -39,6 +39,7 @@ import type { UsageLog } from '../../data/schema'
 import { getUsageLogChannelDisplay } from '../../lib/channel-visibility'
 import {
   formatModelName,
+  getEffectiveLogGroupRatio,
   getFirstResponseTimeColor,
   getResponseTimeColor,
   getTieredBillingSummary,
@@ -181,11 +182,12 @@ function buildTypeDetailSegments(
   }
   const isTieredExpr = other.billing_mode === 'tiered_expr'
   const tieredSummary = getTieredBillingSummary(other)
+  const groupPriceRatio = getEffectiveLogGroupRatio(other)
   if (isTieredExpr) {
     if (tieredSummary) {
       const baseEntries = tieredSummary.priceEntries
         .filter((entry) => ['inputPrice', 'outputPrice'].includes(entry.field))
-        .map((entry) => formatPriceCompact(entry.price))
+        .map((entry) => formatPriceCompact(entry.price * groupPriceRatio))
       if (baseEntries.length > 0) {
         const tierLabel = tieredSummary.tier.label || t('Default')
         segments.push({
@@ -200,7 +202,7 @@ function buildTypeDetailSegments(
           )
         )
         .map((entry) => {
-          return formatPriceCompact(entry.price)
+          return formatPriceCompact(entry.price * groupPriceRatio)
         })
       if (cacheEntries.length > 0) {
         segments.push({
@@ -220,7 +222,10 @@ function buildTypeDetailSegments(
               'cacheCreate1hPrice',
             ].includes(entry.field)
         )
-        .map((entry) => `${t(entry.shortLabel)} ${formatPrice(entry.price)}`)
+        .map(
+          (entry) =>
+            `${t(entry.shortLabel)} ${formatPrice(entry.price * groupPriceRatio)}`
+        )
       if (otherEntries.length > 0) {
         segments.push({
           text: otherEntries.join(' · '),
@@ -238,10 +243,10 @@ function buildTypeDetailSegments(
     if (isPerCall) {
       const modelPrice = other.model_price ?? 0
       segments.push({
-        text: `${t('Per-call')} · ${formatBillingCurrencyFromUSD(modelPrice, priceOpts)}`,
+        text: `${t('Per-call')} · ${formatBillingCurrencyFromUSD(modelPrice * groupPriceRatio, priceOpts)}`,
       })
     } else if (other.model_ratio != null) {
-      const inputPriceUSD = other.model_ratio * 2.0
+      const inputPriceUSD = other.model_ratio * 2.0 * groupPriceRatio
       const baseEntries = [formatPriceCompact(inputPriceUSD)]
       if (other.completion_ratio != null) {
         baseEntries.push(

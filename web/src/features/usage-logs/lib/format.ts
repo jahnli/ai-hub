@@ -11,6 +11,26 @@ import type { LogOtherData } from '../types'
 
 export { normalizeTierLabel }
 
+export function getEffectiveLogGroupRatio(
+  other: LogOtherData | null | undefined
+): number {
+  const userGroupRatio = other?.user_group_ratio
+  if (
+    userGroupRatio != null &&
+    userGroupRatio >= 0 &&
+    Number.isFinite(userGroupRatio)
+  ) {
+    return userGroupRatio
+  }
+
+  const groupRatio = other?.group_ratio
+  if (groupRatio != null && groupRatio >= 0 && Number.isFinite(groupRatio)) {
+    return groupRatio
+  }
+
+  return 1
+}
+
 const PARAM_OVERRIDE_ACTION_MAP: Record<string, string> = {
   set: 'Set',
   delete: 'Delete',

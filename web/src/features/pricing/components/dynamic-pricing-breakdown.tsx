@@ -52,6 +52,8 @@ type DynamicPricingBreakdownProps = {
    */
   compact?: boolean
   maskPrices?: boolean
+  /** Multiplier applied to displayed tier prices, such as a log's group ratio. */
+  priceMultiplier?: number
 }
 
 const VAR_LABELS: Record<string, string> = {
@@ -158,6 +160,7 @@ export function DynamicPricingBreakdown({
   hideCacheColumns = false,
   compact = false,
   maskPrices = false,
+  priceMultiplier = 1,
 }: DynamicPricingBreakdownProps) {
   const { t } = useTranslation()
   const expr = billingExpr || ''
@@ -194,6 +197,10 @@ export function DynamicPricingBreakdown({
   const normalizedMatchedTierLabel = normalizeTierLabel(
     matchedTierLabel ?? undefined
   )
+  const effectivePriceMultiplier =
+    Number.isFinite(priceMultiplier) && priceMultiplier >= 0
+      ? priceMultiplier
+      : 1
 
   if (!expr) return null
 
@@ -313,7 +320,7 @@ export function DynamicPricingBreakdown({
                       if (maskPrices) {
                         displayedPrice = DEMO_MODE_MASK
                       } else if (value > 0) {
-                        displayedPrice = `${symbol}${(value * rate).toFixed(4)}`
+                        displayedPrice = `${symbol}${(value * effectivePriceMultiplier * rate).toFixed(4)}`
                       }
                       return (
                         <div key={v.field} className='min-w-0'>
@@ -421,7 +428,7 @@ export function DynamicPricingBreakdown({
                   }
                   return value > 0 ? (
                     <span className={cn(!compact && 'font-semibold')}>
-                      {`${symbol}${(value * rate).toFixed(4)}`}
+                      {`${symbol}${(value * effectivePriceMultiplier * rate).toFixed(4)}`}
                     </span>
                   ) : (
                     '-'

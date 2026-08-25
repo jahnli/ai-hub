@@ -51,6 +51,7 @@ import {
   getParamOverrideActionLabel,
   parseAuditLine,
   decodeBillingExprB64,
+  getEffectiveLogGroupRatio,
   getTieredBillingSummary,
   hasAnyCacheTokens,
   isViolationFeeLog,
@@ -198,7 +199,7 @@ function quotaSaturationKindLabel(
   return t('Invalid (NaN)')
 }
 
-function BillingBreakdown(props: {
+export function BillingBreakdown(props: {
   log: UsageLog
   other: LogOtherData
   isAdmin: boolean
@@ -211,11 +212,13 @@ function BillingBreakdown(props: {
   const isClaude = other.claude === true
   const isTieredExpr = other.billing_mode === 'tiered_expr'
   const tieredSummary = getTieredBillingSummary(other)
+  const groupPriceRatio = getEffectiveLogGroupRatio(other)
 
   const rows: Array<{ label: string; value: string }> = []
   const priceOpts = { digitsLarge: 4, digitsSmall: 6, abbreviate: false }
   const fmtPrice = (usd: number) => formatBillingCurrencyFromUSD(usd, priceOpts)
-  const baseInputUSD = other.model_ratio != null ? other.model_ratio * 2.0 : 0
+  const baseInputUSD =
+    other.model_ratio != null ? other.model_ratio * 2.0 * groupPriceRatio : 0
 
   if (isTieredExpr) {
     rows.push({
@@ -232,7 +235,7 @@ function BillingBreakdown(props: {
       for (const entry of tieredSummary.priceEntries) {
         rows.push({
           label: t(entry.shortLabel),
-          value: `${fmtPrice(entry.price)}/M`,
+          value: `${fmtPrice(entry.price * groupPriceRatio)}/M`,
         })
       }
     } else {
@@ -246,7 +249,7 @@ function BillingBreakdown(props: {
     if (other.model_price != null) {
       rows.push({
         label: t('Model Price'),
-        value: fmtPrice(other.model_price),
+        value: fmtPrice(other.model_price * groupPriceRatio),
       })
     }
   } else {
@@ -344,28 +347,28 @@ function BillingBreakdown(props: {
   if (other.web_search && other.web_search_call_count) {
     rows.push({
       label: t('Web Search'),
-      value: `${other.web_search_call_count}x${other.web_search_price ? ` (${fmtPrice(other.web_search_price)})` : ''}`,
+      value: `${other.web_search_call_count}x${other.web_search_price ? ` (${fmtPrice(other.web_search_price * groupPriceRatio)})` : ''}`,
     })
   }
 
   if (other.file_search && other.file_search_call_count) {
     rows.push({
       label: t('File Search'),
-      value: `${other.file_search_call_count}x${other.file_search_price ? ` (${fmtPrice(other.file_search_price)})` : ''}`,
+      value: `${other.file_search_call_count}x${other.file_search_price ? ` (${fmtPrice(other.file_search_price * groupPriceRatio)})` : ''}`,
     })
   }
 
   if (other.image_generation_call && other.image_generation_call_price) {
     rows.push({
       label: t('Image Generation'),
-      value: fmtPrice(other.image_generation_call_price),
+      value: fmtPrice(other.image_generation_call_price * groupPriceRatio),
     })
   }
 
   if (other.audio_input_seperate_price && other.audio_input_price) {
     rows.push({
       label: t('Audio Input Price'),
-      value: fmtPrice(other.audio_input_price),
+      value: fmtPrice(other.audio_input_price * groupPriceRatio),
     })
   }
 
@@ -1156,6 +1159,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
               matchedTierLabel={other.matched_tier}
               requestRules={other.request_rules}
               hideCacheColumns={!hasAnyCacheTokens(other)}
+              priceMultiplier={getEffectiveLogGroupRatio(other)}
             />
           </DetailSection>
         )}
