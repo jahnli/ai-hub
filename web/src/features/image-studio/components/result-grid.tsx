@@ -311,6 +311,12 @@ export function ResultGrid({
     setPreviewRotation(0)
   }
 
+  const visibleImageErrors = isGenerating ? imageErrors : record.imageErrors
+  const genericFailedImageCount =
+    !isGenerating && visibleImageErrors === undefined
+      ? (record.failedImageCount ?? 0)
+      : 0
+
   return (
     <div className='flex flex-col gap-3'>
       <div className='flex flex-wrap items-center justify-between gap-2'>
@@ -393,39 +399,36 @@ export function ResultGrid({
               slotIndex={index}
             />
           ))}
-        {(isGenerating ? imageErrors : (record.imageErrors ?? imageErrors)).map(
-          (message, errorIndex) =>
-            retryingImageErrorIndexes.includes(errorIndex) ? (
-              <LoadingImageSlot
-                key={`retrying-image-error-${message}`}
-                slotIndex={record.images.length + errorIndex}
-              />
-            ) : (
-              <ImageErrorSlot
-                key={message}
-                message={message}
-                onRetry={() => onRetryImage(errorIndex)}
-                retryDisabled={isGenerating}
-              />
-            )
+        {visibleImageErrors?.map((message, errorIndex) =>
+          retryingImageErrorIndexes.includes(errorIndex) ? (
+            <LoadingImageSlot
+              key={`retrying-image-error-${errorIndex}`}
+              slotIndex={record.images.length + errorIndex}
+            />
+          ) : (
+            <ImageErrorSlot
+              key={`image-error-${errorIndex}`}
+              message={message}
+              onRetry={() => onRetryImage(errorIndex)}
+              retryDisabled={isGenerating}
+            />
+          )
         )}
-        {!isGenerating &&
-          !record.imageErrors &&
-          Array.from({ length: record.failedImageCount ?? 0 }, (_, index) =>
-            retryingImageErrorIndexes.includes(index) ? (
-              <LoadingImageSlot
-                key={`retrying-failed-image-${index}`}
-                slotIndex={record.images.length + index}
-              />
-            ) : (
-              <ImageErrorSlot
-                key={`failed-image-${index}`}
-                message={t('Image generation failed')}
-                onRetry={() => onRetryImage(index)}
-                retryDisabled={false}
-              />
-            )
-          )}
+        {Array.from({ length: genericFailedImageCount }, (_, index) =>
+          retryingImageErrorIndexes.includes(index) ? (
+            <LoadingImageSlot
+              key={`retrying-failed-image-${index}`}
+              slotIndex={record.images.length + index}
+            />
+          ) : (
+            <ImageErrorSlot
+              key={`failed-image-${index}`}
+              message={t('Image generation failed')}
+              onRetry={() => onRetryImage(index)}
+              retryDisabled={false}
+            />
+          )
+        )}
       </div>
 
       <Dialog
