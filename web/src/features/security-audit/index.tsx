@@ -44,17 +44,10 @@ function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`
 }
 
-function getDefaultTimeRange(section: SecurityAuditSectionId): {
+function getDefaultTimeRange(): {
   startTime: dayjs.Dayjs
   endTime: dayjs.Dayjs
 } {
-  if (section === 'off-hours') {
-    return {
-      startTime: dayjs().startOf('day'),
-      endTime: dayjs().endOf('day'),
-    }
-  }
-
   return {
     startTime: dayjs().startOf('month'),
     endTime: dayjs().endOf('month'),
@@ -107,10 +100,7 @@ export function SecurityAudit() {
     })
   }, [activeSection, navigate, settingQuery.isLoading, visibleSectionIds])
 
-  const defaultTimeRange = useMemo(
-    () => getDefaultTimeRange(activeSection),
-    [activeSection]
-  )
+  const defaultTimeRange = useMemo(() => getDefaultTimeRange(), [])
   const startTimestamp = search.startTime ?? defaultTimeRange.startTime.unix()
   const endTimestamp = search.endTime ?? defaultTimeRange.endTime.unix()
 
@@ -153,7 +143,7 @@ export function SecurityAudit() {
   }, [navigate, activeSection, startTimeInput, endTimeInput, usernameInput])
 
   const resetFilters = useCallback(() => {
-    const defaultTimeRange = getDefaultTimeRange(activeSection)
+    const defaultTimeRange = getDefaultTimeRange()
     setStartTimeInput(defaultTimeRange.startTime.toDate())
     setEndTimeInput(defaultTimeRange.endTime.toDate())
     setUsernameInput('')
