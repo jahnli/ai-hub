@@ -1,10 +1,8 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, mock, test } from 'bun:test'
-
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, test, vi } from 'vitest'
 
-mock.module('@/components/ui/alert-dialog', () => ({
+vi.mock('@/components/ui/alert-dialog', () => ({
   AlertDialog: (props: { children: ReactNode }) => <div>{props.children}</div>,
   AlertDialogCancel: (props: { children: ReactNode; disabled?: boolean }) => (
     <button type='button' disabled={props.disabled}>
@@ -28,7 +26,7 @@ mock.module('@/components/ui/alert-dialog', () => ({
   ),
 }))
 
-mock.module('@/components/ui/button', () => ({
+vi.mock('@/components/ui/button', () => ({
   Button: (props: { children: ReactNode; disabled?: boolean }) => (
     <button type='button' disabled={props.disabled}>
       {props.children}
@@ -36,7 +34,7 @@ mock.module('@/components/ui/button', () => ({
   ),
 }))
 
-mock.module('@/components/ui/spinner', () => ({
+vi.mock('@/components/ui/spinner', () => ({
   Spinner: () => <span data-testid='loading-spinner'>Loading</span>,
 }))
 

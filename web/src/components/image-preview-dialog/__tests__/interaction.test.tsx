@@ -1,69 +1,7 @@
-import assert from 'node:assert/strict'
-import { after, describe, test } from 'node:test'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, test, vi } from 'vitest'
 
-import { Window } from 'happy-dom'
-
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'HTMLButtonElement',
-  'HTMLImageElement',
-  'Node',
-  'Element',
-  'Event',
-  'CustomEvent',
-  'KeyboardEvent',
-  'WheelEvent',
-  'MutationObserver',
-  'ResizeObserver',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-  'getComputedStyle',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
-
-const { act } = await import('react')
-const { createRoot } = await import('react-dom/client')
-const i18next = (await import('i18next')).default
-const { initReactI18next } = await import('react-i18next')
-await i18next.use(initReactI18next).init({
-  lng: 'en',
-  resources: {
-    en: {
-      translation: {
-        'Image preview': 'Image preview',
-        'Previous image': 'Previous image',
-        'Next image': 'Next image',
-        'Zoom out': 'Zoom out',
-        'Zoom in': 'Zoom in',
-        Rotate: 'Rotate',
-        'Reset view': 'Reset view',
-        'Copy image': 'Copy image',
-        Download: 'Download',
-        'Edit this image': 'Edit this image',
-      },
-    },
-  },
-})
-const { ImagePreviewDialog } = await import('../image-preview-dialog')
-const reactTestGlobals = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean
-}
-reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
-
-type RenderedPreview = {
-  container: HTMLDivElement
-  root: ReturnType<typeof createRoot>
-}
+import { ImagePreviewDialog } from '../image-preview-dialog'
 
 const images = [
   {
@@ -84,95 +22,60 @@ const images = [
   },
 ]
 
-async function renderPreview(
-  componentProps: React.ComponentProps<typeof ImagePreviewDialog>
-): Promise<RenderedPreview> {
-  const container = document.createElement('div')
-  document.body.append(container)
-  const root = createRoot(container)
-
-  await act(async () => {
-    root.render(<ImagePreviewDialog {...componentProps} />)
-  })
-
-  return { container, root }
-}
-
-async function unmountPreview(renderedPreview: RenderedPreview) {
-  await act(async () => renderedPreview.root.unmount())
-  renderedPreview.container.remove()
-}
-
-function getButton(accessibleName: string): HTMLButtonElement {
-  const matchingButton = [...document.querySelectorAll('button')].find(
-    (button) => button.getAttribute('aria-label') === accessibleName
-  )
-  assert.ok(matchingButton instanceof HTMLButtonElement)
-  return matchingButton
-}
-
 describe('ImagePreviewDialog interactions', () => {
-  after(() => {
-    domWindow.close()
-  })
-
-  test('navigates with shared toolbar controls and resets the transformed view', async () => {
-    const renderedPreview = await renderPreview({
-      open: true,
-      onOpenChange: () => undefined,
-      images,
-      initialIndex: 0,
-    })
-    const previewImage = document.querySelector('img[alt="First image"]')
-    assert.ok(previewImage instanceof HTMLImageElement)
-
-    await act(async () => getButton('Zoom in').click())
-    await act(async () => getButton('Rotate').click())
-    assert.equal(previewImage.style.transform, 'scale(1.25) rotate(90deg)')
-
-    await act(async () => getButton('Next image').click())
-    const nextImage = document.querySelector('img[alt="Second image"]')
-    assert.ok(nextImage instanceof HTMLImageElement)
-    assert.equal(nextImage.style.transform, 'scale(1) rotate(0deg)')
-    assert.match(document.body.textContent ?? '', /2 \/ 2/)
-    assert.match(document.body.textContent ?? '', /Second prompt/)
-
-    await unmountPreview(renderedPreview)
-  })
-
-  test('wraps keyboard navigation and exposes edit only when provided', async () => {
-    const editCalls: string[] = []
-    const openChanges: boolean[] = []
-    const renderedPreview = await renderPreview({
-      open: true,
-      onOpenChange: (open) => openChanges.push(open),
-      images: [
-        images[0],
-        {
-          ...images[1],
-          onEdit: () => editCalls.push('second'),
-        },
-      ],
-      initialIndex: 0,
-    })
-    const dialog = document.querySelector('[role="dialog"]')
-    assert.ok(dialog instanceof HTMLElement)
-    assert.equal(
-      document.querySelector('button[aria-label="Edit this image"]'),
-      null
+  test('navigates with shared toolbar controls and resets the transformed view', () => {
+    render(
+      <ImagePreviewDialog
+        open
+        onOpenChange={() => undefined}
+        images={images}
+        initialIndex={0}
+      />
     )
+    const previewImage = screen.getByRole('img', { name: 'First image' })
 
-    await act(async () => {
-      dialog.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
-      )
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate' }))
+    expect(previewImage).toHaveStyle({
+      transform: 'scale(1.25) rotate(90deg)',
     })
-    assert.ok(document.querySelector('img[alt="Second image"]'))
 
-    await act(async () => getButton('Edit this image').click())
-    assert.deepEqual(editCalls, ['second'])
-    assert.deepEqual(openChanges, [false])
+    fireEvent.click(screen.getByRole('button', { name: 'Next image' }))
+    const nextImage = screen.getByRole('img', { name: 'Second image' })
+    expect(nextImage).toHaveStyle({ transform: 'scale(1) rotate(0deg)' })
+    expect(screen.getByText('2 / 2')).toBeInTheDocument()
+    expect(screen.getByText('Second prompt')).toBeInTheDocument()
+  })
 
-    await unmountPreview(renderedPreview)
+  test('wraps keyboard navigation and exposes edit only when provided', () => {
+    const onEdit = vi.fn()
+    const onOpenChange = vi.fn()
+    render(
+      <ImagePreviewDialog
+        open
+        onOpenChange={onOpenChange}
+        images={[
+          images[0],
+          {
+            ...images[1],
+            onEdit,
+          },
+        ]}
+        initialIndex={0}
+      />
+    )
+    const dialog = screen.getByRole('dialog')
+    expect(
+      screen.queryByRole('button', { name: 'Edit this image' })
+    ).not.toBeInTheDocument()
+
+    fireEvent.keyDown(dialog, { key: 'ArrowLeft' })
+    expect(
+      screen.getByRole('img', { name: 'Second image' })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit this image' }))
+    expect(onEdit).toHaveBeenCalledOnce()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 })

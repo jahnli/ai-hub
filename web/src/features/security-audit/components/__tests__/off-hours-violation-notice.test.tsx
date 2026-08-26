@@ -1,10 +1,8 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { assert, describe, expect, test, vi } from 'vitest'
 
 import { Dialog } from '@/components/ui/dialog'
 
@@ -12,6 +10,10 @@ import type { OffHoursDetailTarget } from '../../types'
 import { useOffHoursColumns } from '../off-hours-columns'
 import { OffHoursDetailDialogHeader } from '../off-hours-detail-dialog'
 import { OffHoursViolationNoticeButton } from '../off-hours-violation-notice'
+
+vi.mock('@/lib/lobe-icon', () => ({
+  getLobeIcon: () => null,
+}))
 
 const i18n = createInstance()
 await i18n.init({
@@ -56,7 +58,7 @@ describe('off-hours violation notice', () => {
     )
 
     assert.match(html, /quota,models/)
-    assert.doesNotMatch(html, /violation_notice/)
+    expect(html).not.toMatch(/violation_notice/)
   })
 
   test('shows the violation notice action in the log dialog header', () => {

@@ -1,9 +1,7 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { assert, describe, expect, test } from 'vitest'
 
 import { DEFAULT_SEEDREAM_PARAMETERS } from '../../lib/model-params/seedream/config'
 import { SeedreamParams } from '../../lib/model-params/seedream/params'
@@ -43,7 +41,7 @@ describe('Seedream parameter layout', () => {
       labelPositions,
       [...labelPositions].sort((left, right) => left - right)
     )
-    assert.doesNotMatch(markup, /Advanced parameters/)
+    expect(markup).not.toMatch(/Advanced parameters/)
     assert.match(
       markup,
       /<input[^>]*type="number"[^>]*aria-label="Image count"/

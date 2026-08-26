@@ -1,9 +1,7 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { assert, describe, test } from 'vitest'
 
 import { UserStatusSummary } from '../user-status-summary'
 

@@ -1,11 +1,13 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { assert, describe, expect, test, vi } from 'vitest'
 
 import type { UserColumnRow } from '../../types'
 import { userNameColumn } from '../shared-user-columns'
+
+vi.mock('@/lib/lobe-icon', () => ({
+  getLobeIcon: () => null,
+}))
 
 const user: UserColumnRow = {
   id: 42,
@@ -37,8 +39,8 @@ describe('shared username column visibility', () => {
     const html = renderToStaticMarkup(element as ReactElement)
 
     assert.match(html, /\*\*\*/)
-    assert.doesNotMatch(html, /alice/i)
-    assert.doesNotMatch(html, /Finance administrator/)
-    assert.doesNotMatch(html, /<img|<a/)
+    expect(html).not.toMatch(/alice/i)
+    expect(html).not.toMatch(/Finance administrator/)
+    expect(html).not.toMatch(/<img|<a/)
   })
 })

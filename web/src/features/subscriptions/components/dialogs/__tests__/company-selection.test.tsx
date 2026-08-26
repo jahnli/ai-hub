@@ -1,12 +1,10 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, mock, test } from 'bun:test'
-
 import { createInstance } from 'i18next'
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { describe, expect, test, vi } from 'vitest'
 
-mock.module('@tanstack/react-query', () => ({
+vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: {
       data: [
@@ -19,7 +17,7 @@ mock.module('@tanstack/react-query', () => ({
   }),
 }))
 
-mock.module('@/components/confirm-dialog', () => ({
+vi.mock('@/components/confirm-dialog', () => ({
   ConfirmDialog: (props: {
     title: ReactNode
     desc: ReactNode
@@ -43,13 +41,13 @@ mock.module('@/components/confirm-dialog', () => ({
   ),
 }))
 
-mock.module('@/components/ui/label', () => ({
+vi.mock('@/components/ui/label', () => ({
   Label: (props: { htmlFor?: string; children: ReactNode }) => (
     <label htmlFor={props.htmlFor}>{props.children}</label>
   ),
 }))
 
-mock.module('@/components/ui/select', () => ({
+vi.mock('@/components/ui/select', () => ({
   Select: (props: { children: ReactNode }) => <div>{props.children}</div>,
   SelectContent: (props: { children: ReactNode }) => (
     <div>{props.children}</div>
@@ -68,7 +66,7 @@ mock.module('@/components/ui/select', () => ({
   ),
 }))
 
-mock.module('../../subscriptions-provider', () => ({
+vi.mock('../../subscriptions-provider', () => ({
   useSubscriptions: () => ({
     open: 'subscribe-all',
     setOpen: () => undefined,

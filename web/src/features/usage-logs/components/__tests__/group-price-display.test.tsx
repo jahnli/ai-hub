@@ -1,10 +1,8 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, test } from 'bun:test'
-
 import { createInstance } from 'i18next'
 import type { ComponentType } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { describe, expect, test, vi } from 'vitest'
 
 import { DynamicPricingBreakdown } from '@/features/pricing/components/dynamic-pricing-breakdown'
 
@@ -12,6 +10,10 @@ import type { UsageLog } from '../../data/schema'
 import type { LogOtherData } from '../../types'
 import { useCommonLogsColumns } from '../columns/common-logs-columns'
 import { BillingBreakdown } from '../dialogs/details-dialog'
+
+vi.mock('@/lib/lobe-icon', () => ({
+  getLobeIcon: () => null,
+}))
 
 const i18n = createInstance()
 await i18n.init({

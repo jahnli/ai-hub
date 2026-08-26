@@ -1,31 +1,16 @@
-import assert from 'node:assert/strict'
-import { after, describe, test } from 'node:test'
+import { beforeAll, describe, expect, test } from 'vitest'
 
-import { Window } from 'happy-dom'
+import { buildCCSwitchURL } from '../../../lib/cc-switch-import'
 
-const domWindow = new Window({ url: 'https://console.example.com/api/keys' })
-
-Object.defineProperty(globalThis, 'window', {
-  configurable: true,
-  value: domWindow,
+beforeAll(() => {
+  window.history.replaceState({}, '', '/api/keys')
+  localStorage.setItem(
+    'status',
+    JSON.stringify({ server_address: 'https://configured.example.com' })
+  )
 })
-Object.defineProperty(globalThis, 'localStorage', {
-  configurable: true,
-  value: domWindow.localStorage,
-})
-
-domWindow.localStorage.setItem(
-  'status',
-  JSON.stringify({ server_address: 'https://configured.example.com' })
-)
-
-const { buildCCSwitchURL } = await import('../../../lib/cc-switch-import')
 
 describe('CC Switch import URL', () => {
-  after(() => {
-    domWindow.close()
-  })
-
   test('uses the current page origin for Claude instead of the cached server address', () => {
     const url = new URL(
       buildCCSwitchURL(
@@ -36,14 +21,8 @@ describe('CC Switch import URL', () => {
       )
     )
 
-    assert.equal(
-      url.searchParams.get('homepage'),
-      'https://console.example.com'
-    )
-    assert.equal(
-      url.searchParams.get('endpoint'),
-      'https://console.example.com'
-    )
+    expect(url.searchParams.get('homepage')).toBe(window.location.origin)
+    expect(url.searchParams.get('endpoint')).toBe(window.location.origin)
   })
 
   test('appends v1 to the current page origin for Codex', () => {
@@ -51,13 +30,9 @@ describe('CC Switch import URL', () => {
       buildCCSwitchURL('codex', 'My Codex', { model: 'gpt-5' }, 'sk-test')
     )
 
-    assert.equal(
-      url.searchParams.get('homepage'),
-      'https://console.example.com'
-    )
-    assert.equal(
-      url.searchParams.get('endpoint'),
-      'https://console.example.com/v1'
+    expect(url.searchParams.get('homepage')).toBe(window.location.origin)
+    expect(url.searchParams.get('endpoint')).toBe(
+      `${window.location.origin}/v1`
     )
   })
 })

@@ -22,13 +22,13 @@ import type { CustomOAuthProviderInfo } from '@/features/auth/types'
 import { useDialogs } from '@/hooks/use-dialog'
 import { useStatus } from '@/hooks/use-status'
 import { api } from '@/lib/api'
-import { buildOIDCOAuthUrl } from '@/lib/oauth'
-
 import {
-  getSelfOAuthBindings,
-  unbindCustomOAuth,
+  buildOIDCOAuthUrl,
+  indexCustomOAuthBindings,
   type CustomOAuthBinding,
-} from '../../api'
+} from '@/lib/oauth'
+
+import { getSelfOAuthBindings, unbindCustomOAuth } from '../../api'
 import type { UserProfile, BindingItem } from '../../types'
 import { EmailBindDialog } from '../dialogs/email-bind-dialog'
 import { WeChatBindDialog } from '../dialogs/wechat-bind-dialog'
@@ -87,6 +87,10 @@ export function AccountBindingsTab({
   const customProviders = status?.custom_oauth_providers as
     | CustomOAuthProviderInfo[]
     | undefined
+  const customBindingsByProviderId = useMemo(
+    () => indexCustomOAuthBindings(customBindings),
+    [customBindings]
+  )
 
   const fetchCustomBindings = useCallback(async () => {
     if (!customProviders || customProviders.length === 0) return
@@ -376,9 +380,7 @@ export function AccountBindingsTab({
           </p>
           <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3'>
             {customProviders.map((provider) => {
-              const binding = customBindings.find(
-                (b) => b.provider_id === String(provider.id)
-              )
+              const binding = customBindingsByProviderId.get(provider.id)
               const isBound = !!binding
               return (
                 <div
@@ -402,7 +404,7 @@ export function AccountBindingsTab({
                       </div>
                       <p className='text-muted-foreground truncate text-xs'>
                         {isBound
-                          ? binding?.external_id || t('Bound')
+                          ? binding?.provider_user_id || t('Bound')
                           : t('Not bound')}
                       </p>
                     </div>

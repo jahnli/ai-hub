@@ -1,31 +1,9 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test'
-
-import { Window } from 'happy-dom'
-import type { ReactNode } from 'react'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { GenerationHistoryResult } from '../../lib/storage'
 import type { GenerationRecord } from '../../types'
-
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'Node',
-  'Element',
-  'Event',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
+import { useGenerationHistory } from '../use-generation-history'
 
 const createRecord = (id: string): GenerationRecord => ({
   id,
@@ -43,7 +21,7 @@ let historyResult: GenerationHistoryResult
 let deletedIds: string[]
 let clearCalls: number
 
-mock.module('../../lib/storage', () => ({
+vi.mock('../../lib/storage', () => ({
   listGenerations: async () => historyResult,
   saveGeneration: async () => undefined,
   updateGeneration: async () => undefined,
@@ -55,45 +33,20 @@ mock.module('../../lib/storage', () => ({
   },
 }))
 
-const { act } = await import('react')
-const { createRoot } = await import('react-dom/client')
-const { useGenerationHistory } = await import('../use-generation-history')
-
-const reactTestGlobals = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean
-}
-reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
-
 type HistoryHook = ReturnType<typeof useGenerationHistory>
 
 async function renderHistoryHook(): Promise<{
   current: () => HistoryHook
-  unmount: () => Promise<void>
+  unmount: () => void
 }> {
-  let latest: HistoryHook | null = null
-  const container = document.createElement('div')
-  document.body.append(container)
-  const root = createRoot(container)
-
-  function Harness(): ReactNode {
-    latest = useGenerationHistory()
-    return null
-  }
-
-  await act(async () => {
-    root.render(<Harness />)
-    await Promise.resolve()
+  const renderedHook = renderHook(() => useGenerationHistory())
+  await waitFor(() => {
+    expect(renderedHook.result.current.history).toHaveLength(2)
   })
 
   return {
-    current: () => {
-      if (!latest) throw new Error('history hook did not render')
-      return latest
-    },
-    unmount: async () => {
-      await act(async () => root.unmount())
-      container.remove()
-    },
+    current: () => renderedHook.result.current,
+    unmount: renderedHook.unmount,
   }
 }
 
@@ -105,10 +58,6 @@ describe('image studio history display limit', () => {
     }
     deletedIds = []
     clearCalls = 0
-  })
-
-  afterAll(() => {
-    domWindow.close()
   })
 
   test('keeps only the configured number when loading and adding records', async () => {

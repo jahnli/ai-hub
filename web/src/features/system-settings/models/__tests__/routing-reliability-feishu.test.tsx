@@ -1,11 +1,9 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, mock, test } from 'bun:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { describe, expect, test, vi } from 'vitest'
 
-mock.module('../../hooks/use-update-option', () => ({
+vi.mock('../../hooks/use-update-option', () => ({
   useUpdateOption: () => ({
     isPending: false,
     mutateAsync: async () => undefined,
@@ -41,6 +39,7 @@ describe('routing reliability Feishu notifications', () => {
             AutomaticRetryStatusCodes: '429,500-599',
             'monitor_setting.auto_test_channel_enabled': true,
             'monitor_setting.auto_test_channel_minutes': 10,
+            'monitor_setting.channel_test_concurrency': 1,
             'monitor_setting.channel_test_mode': 'scheduled_all',
             'monitor_setting.feishu_channel_status_webhook_url':
               configuredWebhookUrl,

@@ -1,15 +1,13 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, mock, test } from 'bun:test'
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createInstance } from 'i18next'
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { describe, expect, test, vi } from 'vitest'
 
 import type { Company } from '../types'
 
-mock.module('@/components/dialog', () => ({
+vi.mock('@/components/dialog', () => ({
   Dialog: (props: {
     title: ReactNode
     children: ReactNode
@@ -23,7 +21,7 @@ mock.module('@/components/dialog', () => ({
   ),
 }))
 
-mock.module('@/components/ui/dialog', () => ({
+vi.mock('@/components/ui/dialog', () => ({
   DialogClose: (props: { children: ReactNode }) => (
     <button type='button'>{props.children}</button>
   ),

@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
+import { assert, describe, test } from 'vitest'
 
 import {
   createDepartmentQueryParams,
@@ -84,7 +83,10 @@ describe('company-aware department selection', () => {
     })
 
     assert.equal(isDepartmentNodeDisabled(feishuCompany), true)
-    assert.equal(findFirstSelectableNode([feishuCompany]), feishuCompany.children[0])
+    assert.equal(
+      findFirstSelectableNode([feishuCompany]),
+      feishuCompany.children[0]
+    )
   })
 
   test('allows a none-platform company without children to be selected', () => {

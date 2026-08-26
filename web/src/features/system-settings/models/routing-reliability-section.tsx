@@ -52,8 +52,11 @@ const channelTestModes = [
   'passive_recovery',
 ] as const
 type ChannelTestMode = (typeof channelTestModes)[number]
+const MAX_CHANNEL_TEST_CONCURRENCY = 32
 
-const createRoutingReliabilitySchema = (invalidFeishuWebhookMessage: string) =>
+const createRoutingReliabilitySchema = (
+  t: (key: string, options?: Record<string, unknown>) => string
+) =>
   z
     .object({
       RetryTimes: z.coerce.number().min(0).max(10),
@@ -68,7 +71,15 @@ const createRoutingReliabilitySchema = (invalidFeishuWebhookMessage: string) =>
         auto_test_channel_minutes: z.coerce
           .number()
           .int()
-          .min(1, 'Interval must be at least 1 minute'),
+          .min(1, t('Interval must be at least 1 minute')),
+        channel_test_concurrency: z.coerce
+          .number()
+          .int(t('Enter a positive integer'))
+          .min(1, t('Channel test concurrency must be between 1 and 32'))
+          .max(
+            MAX_CHANNEL_TEST_CONCURRENCY,
+            t('Channel test concurrency must be between 1 and 32')
+          ),
         channel_test_mode: z.enum(channelTestModes),
         feishu_channel_status_webhook_url: z.string(),
       }),
@@ -81,9 +92,9 @@ const createRoutingReliabilitySchema = (invalidFeishuWebhookMessage: string) =>
         ctx.addIssue({
           code: 'custom',
           path: ['AutomaticDisableStatusCodes'],
-          message: `Invalid status code rules: ${disableParsed.invalidTokens.join(
-            ', '
-          )}`,
+          message: t('Invalid status code rules: {{tokens}}', {
+            tokens: disableParsed.invalidTokens.join(', '),
+          }),
         })
       }
 
@@ -94,9 +105,9 @@ const createRoutingReliabilitySchema = (invalidFeishuWebhookMessage: string) =>
         ctx.addIssue({
           code: 'custom',
           path: ['AutomaticRetryStatusCodes'],
-          message: `Invalid status code rules: ${retryParsed.invalidTokens.join(
-            ', '
-          )}`,
+          message: t('Invalid status code rules: {{tokens}}', {
+            tokens: retryParsed.invalidTokens.join(', '),
+          }),
         })
       }
 
@@ -108,17 +119,18 @@ const createRoutingReliabilitySchema = (invalidFeishuWebhookMessage: string) =>
         ctx.addIssue({
           code: 'custom',
           path: ['monitor_setting', 'feishu_channel_status_webhook_url'],
-          message: invalidFeishuWebhookMessage,
+          message: t(
+            'Enter a valid official Feishu robot webhook URL or leave empty'
+          ),
         })
       }
     })
 
-const routingReliabilitySchema = createRoutingReliabilitySchema(
-  'Enter a valid official Feishu robot webhook URL or leave empty'
-)
-
-type RoutingReliabilityFormValues = z.output<typeof routingReliabilitySchema>
-type RoutingReliabilityFormInput = z.input<typeof routingReliabilitySchema>
+type RoutingReliabilitySchema = ReturnType<
+  typeof createRoutingReliabilitySchema
+>
+type RoutingReliabilityFormValues = z.output<RoutingReliabilitySchema>
+type RoutingReliabilityFormInput = z.input<RoutingReliabilitySchema>
 
 type RoutingReliabilitySectionProps = {
   defaultValues: {
@@ -131,6 +143,7 @@ type RoutingReliabilitySectionProps = {
     AutomaticRetryStatusCodes: string
     'monitor_setting.auto_test_channel_enabled': boolean
     'monitor_setting.auto_test_channel_minutes': number
+    'monitor_setting.channel_test_concurrency': number
     'monitor_setting.channel_test_mode': ChannelTestMode
     'monitor_setting.feishu_channel_status_webhook_url': string
   }
@@ -150,6 +163,7 @@ type NormalizedRoutingReliabilityValues = {
   AutomaticRetryStatusCodes: string
   'monitor_setting.auto_test_channel_enabled': boolean
   'monitor_setting.auto_test_channel_minutes': number
+  'monitor_setting.channel_test_concurrency': number
   'monitor_setting.channel_test_mode': ChannelTestMode
   'monitor_setting.feishu_channel_status_webhook_url': string
 }
@@ -178,6 +192,8 @@ const buildFormDefaults = (
       defaults['monitor_setting.auto_test_channel_enabled'],
     auto_test_channel_minutes:
       defaults['monitor_setting.auto_test_channel_minutes'],
+    channel_test_concurrency:
+      defaults['monitor_setting.channel_test_concurrency'],
     channel_test_mode: normalizeChannelTestMode(
       defaults['monitor_setting.channel_test_mode']
     ),
@@ -206,6 +222,8 @@ const normalizeDefaults = (
     defaults['monitor_setting.auto_test_channel_enabled'],
   'monitor_setting.auto_test_channel_minutes':
     defaults['monitor_setting.auto_test_channel_minutes'],
+  'monitor_setting.channel_test_concurrency':
+    defaults['monitor_setting.channel_test_concurrency'],
   'monitor_setting.channel_test_mode': normalizeChannelTestMode(
     defaults['monitor_setting.channel_test_mode']
   ),
@@ -234,6 +252,8 @@ const normalizeFormValues = (
     values.monitor_setting.auto_test_channel_enabled,
   'monitor_setting.auto_test_channel_minutes':
     values.monitor_setting.auto_test_channel_minutes,
+  'monitor_setting.channel_test_concurrency':
+    values.monitor_setting.channel_test_concurrency,
   'monitor_setting.channel_test_mode': values.monitor_setting.channel_test_mode,
   'monitor_setting.feishu_channel_status_webhook_url':
     values.monitor_setting.feishu_channel_status_webhook_url.trim(),
@@ -244,6 +264,10 @@ export function RoutingReliabilitySection({
 }: RoutingReliabilitySectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const routingReliabilitySchema = useMemo(
+    () => createRoutingReliabilitySchema(t),
+    [t]
+  )
   const baselineRef = useRef<NormalizedRoutingReliabilityValues>(
     normalizeDefaults(defaultValues)
   )
@@ -252,20 +276,13 @@ export function RoutingReliabilitySection({
     () => buildFormDefaults(defaultValues),
     [defaultValues]
   )
-  const localizedSchema = useMemo(
-    () =>
-      createRoutingReliabilitySchema(
-        t('Enter a valid official Feishu robot webhook URL or leave empty')
-      ),
-    [t]
-  )
 
   const form = useForm<
     RoutingReliabilityFormInput,
     unknown,
     RoutingReliabilityFormValues
   >({
-    resolver: zodResolver(localizedSchema),
+    resolver: zodResolver(routingReliabilitySchema),
     defaultValues: formDefaults,
   })
 
@@ -539,6 +556,31 @@ export function RoutingReliabilitySection({
                             'How frequently the system checks auto-disabled channels for recovery'
                           )
                         : t('How frequently the system tests all channels')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='monitor_setting.channel_test_concurrency'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Channel test concurrency')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={1}
+                        max={MAX_CHANNEL_TEST_CONCURRENCY}
+                        step={1}
+                        {...safeNumberFieldProps(field)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'Maximum number of channels tested at the same time (1-32)'
+                      )}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

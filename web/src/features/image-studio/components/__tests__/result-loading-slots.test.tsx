@@ -1,9 +1,7 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { assert, describe, expect, test } from 'vitest'
 
 import type { GenerationRecord } from '../../types'
 import { ResultGrid } from '../result-grid'
@@ -62,7 +60,7 @@ describe('image studio result loading slots', () => {
 
     assert.equal((markup.match(/role="alert"/g) ?? []).length, 1)
     assert.match(markup, /<button[^>]*>.*Retry.*<\/button>/s)
-    assert.doesNotMatch(markup, /<button[^>]*\sdisabled(?:=""|="disabled")/)
+    expect(markup).not.toMatch(/<button[^>]*\sdisabled(?:=""|="disabled")/)
   })
 
   test('disables retry inside a failed image frame while generation continues', () => {
@@ -89,7 +87,7 @@ describe('image studio result loading slots', () => {
     assert.equal((markup.match(/role="alert"/g) ?? []).length, 1)
     assert.equal((markup.match(/role="status"/g) ?? []).length, 1)
     assert.match(markup, /first failed/)
-    assert.doesNotMatch(markup, /second failed/)
+    expect(markup).not.toMatch(/second failed/)
   })
 
   test('keeps other failed image retry buttons enabled during a retry', () => {
@@ -109,7 +107,7 @@ describe('image studio result loading slots', () => {
 
     assert.equal((markup.match(/role="status"/g) ?? []).length, 1)
     assert.equal((markup.match(/<button/g) ?? []).length, 1)
-    assert.doesNotMatch(markup, /<button[^>]*\sdisabled(?:=""|="disabled")/)
+    expect(markup).not.toMatch(/<button[^>]*\sdisabled(?:=""|="disabled")/)
   })
 
   test('does not duplicate a historical failed frame while retrying', () => {
@@ -135,7 +133,7 @@ describe('image studio result loading slots', () => {
 
     assert.equal((markup.match(/role="status"/g) ?? []).length, 1)
     assert.equal((markup.match(/role="alert"/g) ?? []).length, 0)
-    assert.doesNotMatch(markup, /stale global error/)
+    expect(markup).not.toMatch(/stale global error/)
   })
 
   test('replaces completed loading frames with generated images', () => {

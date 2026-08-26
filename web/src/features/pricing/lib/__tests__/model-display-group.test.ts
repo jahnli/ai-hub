@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
+import { assert, describe, test } from 'vitest'
 
 import type { PricingModel } from '../../types'
 import { getModelDisplayGroup } from '../model-helpers'

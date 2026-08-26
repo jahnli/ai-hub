@@ -1,14 +1,16 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import type { Row } from '@tanstack/react-table'
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { assert, describe, expect, test, vi } from 'vitest'
 
 import type { AuditRow, ImageAuditItem } from '../../types'
 import { ImageAuditUserCell } from '../image-audit-columns'
 import { OffHoursIdentityCell } from '../off-hours-columns'
+
+vi.mock('@/lib/lobe-icon', () => ({
+  getLobeIcon: () => null,
+}))
 
 const i18n = createInstance()
 await i18n.init({
@@ -44,8 +46,8 @@ describe('security audit user visibility', () => {
     )
 
     assert.match(html, /\*\*\*/)
-    assert.doesNotMatch(html, /alice/i)
-    assert.doesNotMatch(html, /<img/)
+    expect(html).not.toMatch(/alice/i)
+    expect(html).not.toMatch(/<img/)
   })
 
   test('masks image audit users without exposing avatars or names', () => {
@@ -75,7 +77,7 @@ describe('security audit user visibility', () => {
     )
 
     assert.match(html, /\*\*\*/)
-    assert.doesNotMatch(html, /bob/i)
-    assert.doesNotMatch(html, /<img/)
+    expect(html).not.toMatch(/bob/i)
+    expect(html).not.toMatch(/<img/)
   })
 })

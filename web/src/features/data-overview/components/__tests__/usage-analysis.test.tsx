@@ -1,15 +1,11 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { mock } from 'bun:test'
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { assert, describe, test, vi } from 'vitest'
 
 import type { UsageAnalysis } from '../../types'
 
-mock.module('@visactor/react-vchart', () => ({
+vi.mock('@visactor/react-vchart', () => ({
   VChart: () => null,
 }))
 

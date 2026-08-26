@@ -1,16 +1,14 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, mock, test } from 'bun:test'
-
 import { createInstance } from 'i18next'
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { describe, expect, test, vi } from 'vitest'
 
 import type { GenerationRecord } from '../../types'
 
 type ChildrenProps = { children?: ReactNode }
 
-mock.module('@/components/ui/alert-dialog', () => ({
+vi.mock('@/components/ui/alert-dialog', () => ({
   AlertDialog: (props: ChildrenProps) => <div>{props.children}</div>,
   AlertDialogAction: (props: ChildrenProps) => (
     <button type='button'>{props.children}</button>

@@ -1,3 +1,4 @@
+import { act, renderHook } from '@testing-library/react'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -16,11 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test'
-
-import { Window } from 'happy-dom'
-import type { ReactNode } from 'react'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import type { ImageRequestResult } from '../../api'
 import type {
@@ -28,26 +25,7 @@ import type {
   ImageStudioConfig,
   ImageStudioGenerationRecord,
 } from '../../types'
-
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'Node',
-  'Element',
-  'Event',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
+import { useImageGeneration } from '../use-image-studio'
 
 interface DeferredRequest {
   promise: Promise<ImageRequestResult>
@@ -85,7 +63,7 @@ let resolveStorePromise:
 let storeCallCount = 0
 let appendCallCount = 0
 
-mock.module('../../api', () => ({
+vi.mock('../../api', () => ({
   appendImageStudioGenerationImage: async () => {
     appendCallCount += 1
     return storedGeneration
@@ -114,7 +92,7 @@ mock.module('../../api', () => ({
   },
 }))
 
-mock.module('../../lib/model-params', () => ({
+vi.mock('../../lib/model-params', () => ({
   buildImageGenerationPayload: (config: ImageStudioConfig, prompt: string) => ({
     model: config.model,
     group: config.group,
@@ -132,15 +110,6 @@ mock.module('../../lib/model-params', () => ({
   resolveParameterSize: (parameters: ImageStudioConfig['parameters']) =>
     parameters.size,
 }))
-
-const { act } = await import('react')
-const { createRoot } = await import('react-dom/client')
-const { useImageGeneration } = await import('../use-image-studio')
-
-const reactTestGlobals = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean
-}
-reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
 
 type ImageGenerationHook = ReturnType<typeof useImageGeneration>
 
@@ -161,41 +130,25 @@ const config: ImageStudioConfig = {
   },
 }
 
-async function renderGenerationHook(callbacks: {
+function renderGenerationHook(callbacks: {
   addRecord: (record: GenerationRecord) => void
   patchRecordLocally: (id: string, patch: Partial<GenerationRecord>) => void
-}): Promise<{
+}): {
   current: () => ImageGenerationHook
-  unmount: () => Promise<void>
-}> {
-  let latestHook: ImageGenerationHook | null = null
-  const container = document.createElement('div')
-  document.body.append(container)
-  const root = createRoot(container)
-
-  function Harness(): ReactNode {
-    latestHook = useImageGeneration({
+  unmount: () => void
+} {
+  const renderedHook = renderHook(() =>
+    useImageGeneration({
       history: [],
       addRecord: callbacks.addRecord,
       patchRecordLocally: callbacks.patchRecordLocally,
       patchRecord: () => undefined,
     })
-    return null
-  }
-
-  await act(async () => {
-    root.render(<Harness />)
-  })
+  )
 
   return {
-    current: () => {
-      if (!latestHook) throw new Error('generation hook did not render')
-      return latestHook
-    },
-    unmount: async () => {
-      await act(async () => root.unmount())
-      container.remove()
-    },
+    current: () => renderedHook.result.current,
+    unmount: renderedHook.unmount,
   }
 }
 
@@ -233,10 +186,6 @@ describe('image studio generation progress', () => {
         },
       ],
     }
-  })
-
-  afterAll(() => {
-    domWindow.close()
   })
 
   test('shows the first successful image while later requests are pending', async () => {

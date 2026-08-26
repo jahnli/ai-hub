@@ -1,3 +1,6 @@
+import { createInstance } from 'i18next'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { I18nextProvider, initReactI18next } from 'react-i18next'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -16,12 +19,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
-import { createInstance } from 'i18next'
-import { renderToStaticMarkup } from 'react-dom/server'
-import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { assert, describe, test } from 'vitest'
 
 import { DataTablePagination } from '../pagination'
 

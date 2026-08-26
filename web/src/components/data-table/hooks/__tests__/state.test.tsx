@@ -1,3 +1,5 @@
+import type { ColumnDef } from '@tanstack/react-table'
+import { renderToStaticMarkup } from 'react-dom/server'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -16,11 +18,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
-
-import type { ColumnDef } from '@tanstack/react-table'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { assert, test } from 'vitest'
 
 import { useDataTable } from '../use-data-table'
 

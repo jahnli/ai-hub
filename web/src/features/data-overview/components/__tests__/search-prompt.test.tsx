@@ -1,9 +1,7 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { describe, expect, test } from 'bun:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { describe, expect, test } from 'vitest'
 
 import { DepartmentSearchPrompt } from '../department-search-prompt'
 

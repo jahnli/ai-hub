@@ -1,38 +1,15 @@
-// @ts-expect-error Bun supplies this module at test runtime without @types/bun.
-import { afterEach, describe, expect, mock, test } from 'bun:test'
-
-import { Window } from 'happy-dom'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
-
-const domWindow = new Window()
-for (const globalName of [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'HTMLButtonElement',
-  'HTMLInputElement',
-  'SVGElement',
-  'Node',
-  'Element',
-  'Event',
-  'MouseEvent',
-  'MutationObserver',
-] as const) {
-  Object.defineProperty(globalThis, globalName, {
-    configurable: true,
-    value: domWindow[globalName],
-  })
-}
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 let subscriptionTotal = 1_000
 const decreaseRequests: Array<{ subscriptionId: number; amount: number }> = []
 
-mock.module('sonner', () => ({
+vi.mock('sonner', () => ({
   toast: { error: () => undefined, success: () => undefined },
 }))
 
-mock.module('../../../api', () => ({
+vi.mock('../../../api', () => ({
   createUserSubscription: async () => ({ success: true }),
   decreaseUserSubscriptionQuota: async (
     subscriptionId: number,
@@ -69,7 +46,7 @@ mock.module('../../../api', () => ({
   resetUserSubscriptionsByPlan: async () => ({ success: true }),
 }))
 
-mock.module('@/components/confirm-dialog', () => ({
+vi.mock('@/components/confirm-dialog', () => ({
   ConfirmDialog: (props: {
     title: ReactNode
     desc: ReactNode
@@ -88,7 +65,7 @@ mock.module('@/components/confirm-dialog', () => ({
   ),
 }))
 
-mock.module('@/components/data-table', () => ({
+vi.mock('@/components/data-table', () => ({
   DataTableRowActionMenu: (props: { children: ReactNode }) => (
     <div>{props.children}</div>
   ),
@@ -111,21 +88,21 @@ mock.module('@/components/data-table', () => ({
   ),
 }))
 
-mock.module('@/components/drawer-layout', () => ({
+vi.mock('@/components/drawer-layout', () => ({
   sideDrawerContentClassName: () => '',
   sideDrawerFormClassName: () => '',
   sideDrawerHeaderClassName: () => '',
 }))
 
-mock.module('@/components/status-badge', () => ({
+vi.mock('@/components/status-badge', () => ({
   StatusBadge: (props: { label: ReactNode }) => <span>{props.label}</span>,
 }))
 
-mock.module('@/components/table-id', () => ({
+vi.mock('@/components/table-id', () => ({
   TableId: (props: { value: ReactNode }) => <span>{props.value}</span>,
 }))
 
-mock.module('@/components/ui/button', () => ({
+vi.mock('@/components/ui/button', () => ({
   Button: (props: {
     children: ReactNode
     disabled?: boolean
@@ -137,7 +114,7 @@ mock.module('@/components/ui/button', () => ({
   ),
 }))
 
-mock.module('@/components/ui/dropdown-menu', () => ({
+vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenuItem: (props: {
     children: ReactNode
     disabled?: boolean
@@ -153,19 +130,19 @@ mock.module('@/components/ui/dropdown-menu', () => ({
   ),
 }))
 
-mock.module('@/components/ui/input', () => ({
+vi.mock('@/components/ui/input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input {...props} />
   ),
 }))
 
-mock.module('@/components/ui/label', () => ({
+vi.mock('@/components/ui/label', () => ({
   Label: (props: React.LabelHTMLAttributes<HTMLLabelElement>) => (
     <label {...props} />
   ),
 }))
 
-mock.module('@/components/ui/select', () => ({
+vi.mock('@/components/ui/select', () => ({
   Select: (props: { children: ReactNode }) => <div>{props.children}</div>,
   SelectContent: (props: { children: ReactNode }) => (
     <div>{props.children}</div>
@@ -180,7 +157,7 @@ mock.module('@/components/ui/select', () => ({
   ),
 }))
 
-mock.module('@/components/ui/sheet', () => ({
+vi.mock('@/components/ui/sheet', () => ({
   Sheet: (props: { children: ReactNode }) => <div>{props.children}</div>,
   SheetContent: (props: { children: ReactNode }) => <div>{props.children}</div>,
   SheetDescription: (props: { children: ReactNode }) => (
@@ -192,12 +169,10 @@ mock.module('@/components/ui/sheet', () => ({
   SheetTitle: (props: { children: ReactNode }) => <h1>{props.children}</h1>,
 }))
 
-mock.module('@/components/ui/switch', () => ({
+vi.mock('@/components/ui/switch', () => ({
   Switch: () => <input type='checkbox' />,
 }))
 
-const { act } = await import('react')
-const { createRoot } = await import('react-dom/client')
 const { createInstance } = await import('i18next')
 const { I18nextProvider, initReactI18next } = await import('react-i18next')
 const { UserSubscriptionsDialog } = await import('../user-subscriptions-dialog')
@@ -208,50 +183,20 @@ await i18n.use(initReactI18next).init({
   resources: { en: { translation: {} } },
 })
 
-const reactTestGlobals = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean
-}
-reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
-
-let renderedRoot: ReturnType<typeof createRoot> | null = null
-
-async function waitForButton(label: string): Promise<HTMLButtonElement> {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const button = [...document.querySelectorAll('button')].find(
-      (candidate) => candidate.textContent?.trim() === label
-    )
-    if (button) return button
-    await new Promise((resolve) => setTimeout(resolve, 0))
-  }
-  throw new Error(`Button not found: ${label}`)
-}
-
 async function renderDialog(): Promise<void> {
-  const host = document.createElement('div')
-  document.body.append(host)
-  renderedRoot = createRoot(host)
-  await act(async () => {
-    renderedRoot?.render(
-      <I18nextProvider i18n={i18n}>
-        <UserSubscriptionsDialog
-          open
-          onOpenChange={() => undefined}
-          user={{ id: 5, username: 'alice' }}
-        />
-      </I18nextProvider>
-    )
-  })
-  await act(async () => {
-    await waitForButton('Decrease')
-  })
+  render(
+    <I18nextProvider i18n={i18n}>
+      <UserSubscriptionsDialog
+        open
+        onOpenChange={() => undefined}
+        user={{ id: 5, username: 'alice' }}
+      />
+    </I18nextProvider>
+  )
+  await screen.findByRole('button', { name: 'Decrease' })
 }
 
-afterEach(async () => {
-  if (renderedRoot) {
-    await act(async () => renderedRoot?.unmount())
-  }
-  renderedRoot = null
-  document.body.replaceChildren()
+afterEach(() => {
   decreaseRequests.length = 0
   subscriptionTotal = 1_000
 })
@@ -259,25 +204,25 @@ afterEach(async () => {
 describe('user subscription quota decrease', () => {
   test('submits the default CNY amount for an active finite subscription', async () => {
     await renderDialog()
-    const decreaseButton = await waitForButton('Decrease')
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease' }))
+    const decreaseButtons = screen.getAllByRole('button', { name: 'Decrease' })
+    const dialogConfirmButton = decreaseButtons.at(-1)
+    if (!dialogConfirmButton) {
+      throw new Error('Decrease confirmation button was not rendered')
+    }
+    fireEvent.click(dialogConfirmButton)
 
-    await act(async () => decreaseButton.click())
-    const confirmButton = await waitForButton('Decrease')
-    const decreaseButtons = [...document.querySelectorAll('button')].filter(
-      (button) => button.textContent?.trim() === 'Decrease'
-    )
-    const dialogConfirmButton = decreaseButtons.at(-1) || confirmButton
-    await act(async () => dialogConfirmButton.click())
-
-    expect(decreaseRequests).toEqual([{ subscriptionId: 42, amount: 500 }])
+    await waitFor(() => {
+      expect(decreaseRequests).toEqual([{ subscriptionId: 42, amount: 500 }])
+    })
   })
 
   test('disables decrease for an unlimited subscription', async () => {
     subscriptionTotal = 0
     await renderDialog()
 
-    const decreaseButton = await waitForButton('Decrease')
+    const decreaseButton = screen.getByRole('button', { name: 'Decrease' })
 
-    expect(decreaseButton.disabled).toBe(true)
+    expect(decreaseButton).toBeDisabled()
   })
 })

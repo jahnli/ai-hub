@@ -1,9 +1,7 @@
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
-
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { assert, describe, expect, test } from 'vitest'
 
 import { DEFAULT_GPT_IMAGE_PARAMETERS } from '../../lib/model-params/gpt-image/config'
 import { GptImageParams } from '../../lib/model-params/gpt-image/params'
@@ -45,7 +43,7 @@ describe('GPT Image parameter layout', () => {
       labelPositions,
       [...labelPositions].sort((left, right) => left - right)
     )
-    assert.doesNotMatch(markup, /Advanced parameters/)
+    expect(markup).not.toMatch(/Advanced parameters/)
     assert.match(
       markup,
       /<input[^>]*type="number"[^>]*aria-label="Image count"/
@@ -66,6 +64,6 @@ describe('GPT Image parameter layout', () => {
       </I18nextProvider>
     )
 
-    assert.doesNotMatch(markup, /Output compression/)
+    expect(markup).not.toMatch(/Output compression/)
   })
 })

@@ -1,50 +1,16 @@
-import assert from 'node:assert/strict'
-import { after, describe, test } from 'node:test'
-
-import { Window } from 'happy-dom'
+import { render } from '@testing-library/react'
+import { createInstance } from 'i18next'
 import type { ComponentType } from 'react'
+import { I18nextProvider, initReactI18next } from 'react-i18next'
+import { describe, expect, test, vi } from 'vitest'
 
 import type { UsageLog } from '../../../data/schema'
+import { UsageLogsProvider } from '../../usage-logs-provider'
+import { useCommonLogsColumns } from '../common-logs-columns'
 
-const domWindow = new Window()
-const domGlobals = [
-  'window',
-  'document',
-  'navigator',
-  'HTMLElement',
-  'HTMLImageElement',
-  'SVGElement',
-  'Node',
-  'Element',
-  'Event',
-  'CustomEvent',
-  'MutationObserver',
-  'requestAnimationFrame',
-  'cancelAnimationFrame',
-  'getComputedStyle',
-  'matchMedia',
-  'customElements',
-] as const
-
-for (const key of domGlobals) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value: domWindow[key],
-  })
-}
-document.write('<!doctype html><html><body></body></html>')
-
-const { act } = await import('react')
-const { createRoot } = await import('react-dom/client')
-const { createInstance } = await import('i18next')
-const { I18nextProvider, initReactI18next } = await import('react-i18next')
-const { UsageLogsProvider } = await import('../../usage-logs-provider')
-const { useCommonLogsColumns } = await import('../common-logs-columns')
-
-const reactTestGlobals = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean
-}
-reactTestGlobals.IS_REACT_ACT_ENVIRONMENT = true
+vi.mock('@/lib/lobe-icon', () => ({
+  getLobeIcon: () => null,
+}))
 
 const i18n = createInstance()
 await i18n.use(initReactI18next).init({
@@ -96,31 +62,20 @@ function SelfScopeUserCell() {
 }
 
 describe('self-scope usage log user details', () => {
-  after(() => {
-    domWindow.close()
-  })
+  test('keeps the avatar, identity text, and profile detail affordance visible', () => {
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <UsageLogsProvider>
+          <SelfScopeUserCell />
+        </UsageLogsProvider>
+      </I18nextProvider>
+    )
 
-  test('keeps the avatar, identity text, and profile detail affordance visible', async () => {
-    const container = document.createElement('div')
-    document.body.append(container)
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <I18nextProvider i18n={i18n}>
-          <UsageLogsProvider>
-            <SelfScopeUserCell />
-          </UsageLogsProvider>
-        </I18nextProvider>
-      )
-    })
-
-    assert.match(container.textContent ?? '', /Alice Example/)
-    assert.match(container.textContent ?? '', /alice/)
-    assert.ok(container.querySelector('[data-slot="avatar"]'))
-    assert.ok(container.querySelector('[data-slot="hover-card-trigger"]'))
-
-    await act(async () => root.unmount())
-    container.remove()
+    expect(container).toHaveTextContent('Alice Example')
+    expect(container).toHaveTextContent('alice')
+    expect(container.querySelector('[data-slot="avatar"]')).not.toBeNull()
+    expect(
+      container.querySelector('[data-slot="hover-card-trigger"]')
+    ).not.toBeNull()
   })
 })
