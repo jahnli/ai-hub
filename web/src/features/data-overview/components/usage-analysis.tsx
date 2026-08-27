@@ -7,10 +7,18 @@ import {
   PieChart,
   TrendingUp,
 } from 'lucide-react'
-import { useMemo, type ElementType, type ReactNode } from 'react'
+import { useMemo, useState, type ElementType, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
 import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
@@ -20,6 +28,12 @@ import {
   buildModelCostRankData,
   buildCostBucketDistributionData,
 } from '../lib/usage-analysis-chart-data'
+import {
+  aggregateDailyStats,
+  aggregateModelDailyStats,
+  formatUsageBucketLabel,
+  type UsageTimeGranularity,
+} from '../lib/usage-analysis-granularity'
 import type {
   CostBucket,
   DailyStat,
@@ -134,6 +148,65 @@ interface ChartBaseProps {
   quotaToCnyRate: number
 }
 
+const GRANULARITY_OPTIONS: {
+  value: UsageTimeGranularity
+  labelKey: 'Daily' | 'Weekly' | 'Monthly'
+}[] = [
+  { value: 'day', labelKey: 'Daily' },
+  { value: 'week', labelKey: 'Weekly' },
+  { value: 'month', labelKey: 'Monthly' },
+]
+
+function GranularitySelect(props: {
+  chartTitle: string
+  value: UsageTimeGranularity
+  onValueChange: (value: UsageTimeGranularity) => void
+}) {
+  const { t } = useTranslation()
+  const items = useMemo(
+    () =>
+      GRANULARITY_OPTIONS.map((option) => ({
+        value: option.value,
+        label: t(option.labelKey),
+      })),
+    [t]
+  )
+  const selectedOption = GRANULARITY_OPTIONS.find(
+    (option) => option.value === props.value
+  )
+
+  return (
+    <Select
+      items={items}
+      value={props.value}
+      onValueChange={(value) => {
+        if (value === 'day' || value === 'week' || value === 'month') {
+          props.onValueChange(value)
+        }
+      }}
+    >
+      <SelectTrigger
+        size='sm'
+        className='min-w-24'
+        aria-label={`${props.chartTitle}: ${t('Time Granularity')}`}
+      >
+        <SelectValue>
+          {selectedOption ? t(selectedOption.labelKey) : ''}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent align='end' alignItemWithTrigger={false}>
+        <SelectGroup>
+          {GRANULARITY_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {t(option.labelKey)}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  )
+}
+
 function ChartCard(props: {
   icon: ElementType
   title: string
@@ -171,11 +244,6 @@ function ChartCard(props: {
       </div>
     </div>
   )
-}
-
-function formatDateLabel(v: string): string {
-  const parts = v.split('-')
-  return parts.length === 3 ? parts[1] + '-' + parts[2] : v
 }
 
 function formatLargeNumber(v: number): string {
@@ -227,7 +295,8 @@ function makeAreaSpec(
   data: { date: string; value: number }[],
   yAxisFormat: (v: number) => string,
   tooltipKey: string,
-  tooltipFormat: (v: number) => string
+  tooltipFormat: (v: number) => string,
+  granularity: UsageTimeGranularity
 ) {
   return {
     type: 'area' as const,
@@ -249,7 +318,7 @@ function makeAreaSpec(
           style: { fontSize: 11 },
           autoHide: true,
           autoHideMethod: 'greedy',
-          formatMethod: (v: string) => formatDateLabel(v),
+          formatMethod: (v: string) => formatUsageBucketLabel(v, granularity),
         },
       },
       {
@@ -268,7 +337,10 @@ function makeAreaSpec(
         ],
       },
       mark: {
-        title: { value: (d: { date?: string }) => d.date ?? '' },
+        title: {
+          value: (d: { date?: string }) =>
+            formatUsageBucketLabel(d.date ?? '', granularity),
+        },
         content: [
           {
             key: tooltipKey,
@@ -305,27 +377,37 @@ function formatUnitPrice(
 
 function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   const { t } = useTranslation()
+  const [granularity, setGranularity] = useState<UsageTimeGranularity>('day')
+  const title = t('Request Count Trend')
 
   const spec = useMemo(() => {
-    const values = props.data.map((item) => ({
+    const values = aggregateDailyStats(props.data, granularity).map((item) => ({
       date: item.date,
       value: item.total_requests,
     }))
     return makeAreaSpec(
       values,
-      (v) => formatLargeNumber(v) + ' ' + t('times'),
+      (v) => `${formatLargeNumber(v)} ${t('times')}`,
       t('Requests'),
-      (v) => formatLargeNumber(v) + ' ' + t('times')
+      (v) => `${formatLargeNumber(v)} ${t('times')}`,
+      granularity
     )
-  }, [props.data, t])
+  }, [granularity, props.data, t])
 
   return (
     <ChartCard
       icon={Hash}
-      title={t('Request Count Trend')}
+      title={title}
+      actions={
+        <GranularitySelect
+          chartTitle={title}
+          value={granularity}
+          onValueChange={setGranularity}
+        />
+      }
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`request-trend-${props.resolvedTheme}`}
+      chartKey={`request-trend-${granularity}-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />
@@ -336,9 +418,11 @@ function RequestTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
 
 function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   const { t } = useTranslation()
+  const [granularity, setGranularity] = useState<UsageTimeGranularity>('day')
+  const title = t('Token Usage Trend')
 
   const spec = useMemo(() => {
-    const values = props.data.map((item) => ({
+    const values = aggregateDailyStats(props.data, granularity).map((item) => ({
       date: item.date,
       value: item.total_tokens,
       cost: item.total_quota * props.quotaToCnyRate,
@@ -380,7 +464,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             style: { fontSize: 11 },
             autoHide: true,
             autoHideMethod: 'greedy',
-            formatMethod: (v: string) => formatDateLabel(v),
+            formatMethod: (v: string) => formatUsageBucketLabel(v, granularity),
           },
         },
         {
@@ -394,20 +478,30 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
           content: tooltipContent,
         },
         mark: {
-          title: { value: (d: { date?: string }) => d.date ?? '' },
+          title: {
+            value: (d: { date?: string }) =>
+              formatUsageBucketLabel(d.date ?? '', granularity),
+          },
           content: tooltipContent,
         },
       },
     }
-  }, [props.data, props.quotaToCnyRate, t])
+  }, [granularity, props.data, props.quotaToCnyRate, t])
 
   return (
     <ChartCard
       icon={Layers}
-      title={t('Token Usage Trend')}
+      title={title}
+      actions={
+        <GranularitySelect
+          chartTitle={title}
+          value={granularity}
+          onValueChange={setGranularity}
+        />
+      }
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`token-trend-${props.resolvedTheme}`}
+      chartKey={`token-trend-${granularity}-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />
@@ -420,17 +514,20 @@ function ModelUsageTrendChart(
   props: ChartBaseProps & { data: ModelDailyStat[] }
 ) {
   const { t } = useTranslation()
+  const [granularity, setGranularity] = useState<UsageTimeGranularity>('day')
+  const title = t('Model Usage Trend')
 
   const spec = useMemo(() => {
     if (props.data.length === 0) return null
 
-    const dayCount = new Set(props.data.map((d) => d.date)).size
+    const aggregatedData = aggregateModelDailyStats(props.data, granularity)
+    const bucketCount = new Set(aggregatedData.map((item) => item.date)).size
 
     return {
       type: 'line' as const,
       data: [
         {
-          values: props.data.map((item) => ({
+          values: aggregatedData.map((item) => ({
             date: item.date,
             model: item.model_name,
             tokens: item.total_tokens,
@@ -440,10 +537,10 @@ function ModelUsageTrendChart(
       xField: 'date',
       yField: 'tokens',
       seriesField: 'model',
-      point: { visible: dayCount <= 60, size: 3 },
+      point: { visible: bucketCount <= 60, size: 3 },
       line: { style: { curveType: 'monotone' } },
       ...APPEAR_ANIMATION,
-      ...(dayCount > DATA_ZOOM_THRESHOLD
+      ...(bucketCount > DATA_ZOOM_THRESHOLD
         ? { dataZoom: makeDataZoom('line') }
         : {}),
       axes: [
@@ -454,7 +551,7 @@ function ModelUsageTrendChart(
             style: { fontSize: 11 },
             autoHide: true,
             autoHideMethod: 'greedy',
-            formatMethod: (v: string) => formatDateLabel(v),
+            formatMethod: (v: string) => formatUsageBucketLabel(v, granularity),
           },
         },
         {
@@ -487,7 +584,10 @@ function ModelUsageTrendChart(
           ],
         },
         mark: {
-          title: { value: (d: { date?: string }) => d.date ?? '' },
+          title: {
+            value: (d: { date?: string }) =>
+              formatUsageBucketLabel(d.date ?? '', granularity),
+          },
           content: [
             {
               key: (d: { model?: string }) => d.model ?? '',
@@ -498,17 +598,24 @@ function ModelUsageTrendChart(
         },
       },
     }
-  }, [props.data])
+  }, [granularity, props.data])
 
   if (props.data.length === 0) return null
 
   return (
     <ChartCard
       icon={TrendingUp}
-      title={t('Model Usage Trend')}
+      title={title}
+      actions={
+        <GranularitySelect
+          chartTitle={title}
+          value={granularity}
+          onValueChange={setGranularity}
+        />
+      }
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`model-usage-trend-${props.resolvedTheme}`}
+      chartKey={`model-usage-trend-${granularity}-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />
@@ -751,9 +858,11 @@ function ModelCostRankChart(
 
 function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
   const { t } = useTranslation()
+  const [granularity, setGranularity] = useState<UsageTimeGranularity>('day')
+  const title = t('Quota Consumption Trend')
 
   const spec = useMemo(() => {
-    const values = props.data.map((item) => ({
+    const values = aggregateDailyStats(props.data, granularity).map((item) => ({
       date: item.date,
       value: item.total_quota * props.quotaToCnyRate,
       tokens: item.total_tokens,
@@ -780,7 +889,8 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             style: { fontSize: 11 },
             autoHide: true,
             autoHideMethod: 'greedy',
-            formatMethod: (value: string) => formatDateLabel(value),
+            formatMethod: (value: string) =>
+              formatUsageBucketLabel(value, granularity),
           },
         },
         {
@@ -821,7 +931,10 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
           ],
         },
         mark: {
-          title: { value: (datum: { date?: string }) => datum.date ?? '' },
+          title: {
+            value: (datum: { date?: string }) =>
+              formatUsageBucketLabel(datum.date ?? '', granularity),
+          },
           content: [
             {
               key: () => t('Total Cost'),
@@ -851,15 +964,22 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
         },
       },
     }
-  }, [props.data, props.quotaToCnyRate, t])
+  }, [granularity, props.data, props.quotaToCnyRate, t])
 
   return (
     <ChartCard
       icon={DollarSign}
-      title={t('Quota Consumption Trend')}
+      title={title}
+      actions={
+        <GranularitySelect
+          chartTitle={title}
+          value={granularity}
+          onValueChange={setGranularity}
+        />
+      }
       themeReady={props.themeReady}
       resolvedTheme={props.resolvedTheme}
-      chartKey={`cost-trend-${props.resolvedTheme}`}
+      chartKey={`cost-trend-${granularity}-${props.resolvedTheme}`}
       spec={spec}
       height='h-[340px]'
     />

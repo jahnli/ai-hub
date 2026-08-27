@@ -1,6 +1,13 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 08-25（最后更新 08-25）
+**日期**: 2026-06-25 ~ 08-27（最后更新 08-27）
+
+### 2026-08-27 使用分析趋势图时间粒度
+
+- `web/src/features/data-overview/components/usage-analysis.tsx` — 为额度消耗、请求次数、Token 用量和模型使用四张趋势图分别增加日、周、月粒度选择器；切换时复用后端每日数据在前端聚合，不触发额外接口请求，并同步更新横轴、Tooltip、缩放范围和图表刷新键
+- `web/src/features/data-overview/lib/usage-analysis-granularity.ts` — 新增每日统计与模型每日统计的通用粒度聚合逻辑；周粒度固定以周一为起点，月粒度按自然月汇总，使用 UTC 日期运算避免本地时区偏移
+- `web/src/features/data-overview/components/__tests__/usage-analysis.test.tsx` — 覆盖四张趋势图独立选择器的默认日粒度、可访问名称，以及切换请求趋势为周粒度时仅聚合当前图的交互行为
+- `web/src/features/data-overview/lib/__tests__/usage-analysis-granularity.test.ts` — 覆盖日、周、月聚合、跨年边界、模型独立汇总、标签格式和空数据行为
 
 ### 2026-08-25 费用文案间距统一
 
