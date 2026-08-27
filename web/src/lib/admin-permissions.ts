@@ -10,6 +10,7 @@ export const ADMIN_PERMISSION_RESOURCES = {
 } as const
 
 export const ADMIN_PERMISSION_ACTIONS = {
+  INTERFACE_VIEW: 'interface_view',
   READ: 'read',
   OPERATE: 'operate',
   WRITE: 'write',
@@ -60,7 +61,7 @@ export function hasPermission(
   action: string
 ): boolean {
   if (!user) return false
-  if (user.role === ROLE.SUPER_ADMIN) return true
+  if (user.role >= ROLE.SUPER_ADMIN) return true
   return user.permissions?.admin_permissions?.[resource]?.[action] === true
 }
 

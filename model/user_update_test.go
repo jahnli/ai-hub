@@ -110,6 +110,28 @@ func TestEditWithTxPersistsAndClearsCostCenter(t *testing.T) {
 	assert.Equal(t, "[]", storedUser.CostCenter)
 }
 
+func TestEditWithTxRoleChangeIncrementsAuthVersion(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Username:    "role-change-user",
+		Password:    "password",
+		Role:        common.RoleCommonUser,
+		Status:      common.UserStatusEnabled,
+		Group:       "default",
+		AuthVersion: 1,
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	user.Role = common.RoleAdminUser
+	require.NoError(t, DB.Transaction(func(transaction *gorm.DB) error {
+		return user.EditWithTx(transaction, false)
+	}))
+
+	assert.EqualValues(t, 2, user.AuthVersion)
+	assert.Equal(t, common.RoleAdminUser, user.Role)
+}
+
 func TestUsageAccountingSupportsSignedDirectAndBatchDeltas(t *testing.T) {
 	setupUserUpdateTestState(t)
 	resetBatchUpdateTestState(t)

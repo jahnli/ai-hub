@@ -102,6 +102,10 @@ export const STATIC_I18N_KEYS = [
   'Failed to delete user',
   'No user selected',
 
+  // Admin permission catalog (backend-provided labels)
+  'Channel interface view',
+  'Access the channel management interface.',
+
   // Company management
   'No platform',
   'Feishu',

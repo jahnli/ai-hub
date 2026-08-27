@@ -2,6 +2,11 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import z from 'zod'
 
 import { Channels } from '@/features/channels'
+import {
+  ADMIN_PERMISSION_ACTIONS,
+  ADMIN_PERMISSION_RESOURCES,
+  hasPermission,
+} from '@/lib/admin-permissions'
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -19,7 +24,15 @@ export const Route = createFileRoute('/_authenticated/channels/')({
   beforeLoad: () => {
     const { auth } = useAuthStore.getState()
 
-    if (!auth.user || auth.user.role < ROLE.SUPER_ADMIN) {
+    if (
+      !auth.user ||
+      auth.user.role < ROLE.ADMIN ||
+      !hasPermission(
+        auth.user,
+        ADMIN_PERMISSION_RESOURCES.CHANNEL,
+        ADMIN_PERMISSION_ACTIONS.INTERFACE_VIEW
+      )
+    ) {
       throw redirect({
         to: '/403',
       })

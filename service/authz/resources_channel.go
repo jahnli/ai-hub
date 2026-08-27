@@ -3,6 +3,7 @@ package authz
 const (
 	ResourceChannel = "channel"
 
+	ActionInterfaceView  = "interface_view"
 	ActionRead           = "read"
 	ActionOperate        = "operate"
 	ActionWrite          = "write"
@@ -11,6 +12,7 @@ const (
 )
 
 var (
+	ChannelInterfaceView  = Permission{Resource: ResourceChannel, Action: ActionInterfaceView}
 	ChannelRead           = Permission{Resource: ResourceChannel, Action: ActionRead}
 	ChannelOperate        = Permission{Resource: ResourceChannel, Action: ActionOperate}
 	ChannelWrite          = Permission{Resource: ResourceChannel, Action: ActionWrite}
@@ -23,6 +25,11 @@ func init() {
 		Resource: ResourceChannel,
 		LabelKey: "Channel Management",
 		Actions: []ActionDefinition{
+			{
+				Action:         ActionInterfaceView,
+				LabelKey:       "Channel interface view",
+				DescriptionKey: "Access the channel management interface.",
+			},
 			{
 				Action:         ActionRead,
 				LabelKey:       "Read channels",

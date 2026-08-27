@@ -22,6 +22,10 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import type { SidebarData } from '@/components/layout/types'
+import {
+  ADMIN_PERMISSION_ACTIONS,
+  ADMIN_PERMISSION_RESOURCES,
+} from '@/lib/admin-permissions'
 import { ROLE, canAccessDataOverview } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -125,7 +129,11 @@ export function useSidebarData(): SidebarData {
             title: t('Channels'),
             url: '/channels',
             icon: Radio,
-            requiredRole: ROLE.SUPER_ADMIN,
+            requiredRole: ROLE.ADMIN,
+            requiredPermission: {
+              resource: ADMIN_PERMISSION_RESOURCES.CHANNEL,
+              action: ADMIN_PERMISSION_ACTIONS.INTERFACE_VIEW,
+            },
           },
           {
             title: t('Models'),
