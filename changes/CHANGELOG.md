@@ -76,3 +76,4 @@
 | 069 | 2026-08-21 | 数据总览 BP 可见范围改为显式多部门配置：新增 overview_dept_ids JSON 数组并完全替代 bp_level 业务代码；用户编辑加载完整部门树支持多选，选择父部门包含全部子部门；BP 入口、部门树、接口鉴权和报表范围统一按配置部门计算；支持跨公司部门范围；用户编辑抽屉改为 50% 宽、85% 高弹窗并补齐七语言文案；保留 bp_level 数据库列不动；公司级别节点改为可选中（数据总览部门选择器与用户管理部门多选器均允许选中公司） | [详情](details/069-bp-level-overview.md) |
 | 071 | 2026-08-19 | 移除中心 BP（role=3）角色：删除后端 RoleCenterBP 常量及所有相关分支，前端去掉 CENTER_BP 选项与翻译，数据库中 role=3 统一替换为 role=2；AI BP 角色改名为 BP（七语言同步更新） | [详情](details/071-remove-center-bp-role.md) |
 | 072 | 2026-08-24 | 路由可靠性新增飞书群机器人通知：配置官方 Webhook 后，在渠道确认自动禁用或启用时异步发送群消息，并统一 Midjourney 无可用账号实例的自动禁用链路 | [详情](details/072-feishu-channel-status-notify.md) |
+| 073 | 2026-08-28 | 合并 upstream/main 的 6 个提交：钱包与充值额度升级为 64 位安全边界，新增 vLLM thinking_token_budget、智谱 Responses、Ollama Claude/Responses 透传，构建升级 Bun 1.4.0 并更新贡献模板；逐文件解决 5 个冲突，保留兑换码移除、品牌类型、订阅、用户管理和日志等二开功能 | [详情](details/073-upstream-merge.md) |
