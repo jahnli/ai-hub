@@ -1319,7 +1319,7 @@ function VendorRatioRules({
                     </div>
                     <CollapsibleContent>
                       {groupData.rules.length > 0 && (
-                        <div className='border-t'>
+                        <div className='mx-4 border-t px-5'>
                           <StaticDataTable
                             className='rounded-none border-0'
                             data={groupData.rules}
