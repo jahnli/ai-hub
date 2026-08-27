@@ -1349,6 +1349,11 @@ function VendorRatioRules({
                                   const baseRatio = baseRatioByName.get(
                                     groupData.group
                                   )
+                                  const ratioChangeClassName =
+                                    baseRatio !== undefined &&
+                                    rule.ratio > baseRatio
+                                      ? 'text-amber-600 dark:text-amber-400'
+                                      : 'text-emerald-600 dark:text-emerald-400'
                                   return baseRatio !== undefined &&
                                     baseRatio !== rule.ratio ? (
                                     <span
@@ -1359,10 +1364,12 @@ function VendorRatioRules({
                                         {baseRatio}
                                       </span>
                                       <ChevronRight
-                                        className='text-muted-foreground h-4 w-4 translate-y-0.5'
+                                        className={`h-4 w-4 translate-y-0.5 ${ratioChangeClassName}`}
                                         aria-hidden='true'
                                       />
-                                      <span className='font-semibold'>
+                                      <span
+                                        className={`font-semibold ${ratioChangeClassName}`}
+                                      >
                                         {rule.ratio}
                                       </span>
                                     </span>

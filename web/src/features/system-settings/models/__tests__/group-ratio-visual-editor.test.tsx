@@ -73,6 +73,12 @@ describe('GroupRatioVisualEditor vendor ratio layout', () => {
     expect(
       ratioChange?.querySelector('svg.lucide-chevron-right')
     ).not.toBeNull()
+    expect(ratioChange?.querySelector('svg.lucide-chevron-right')).toHaveClass(
+      'text-amber-600'
+    )
+    expect(ratioChange?.querySelector('span.font-semibold')).toHaveClass(
+      'text-amber-600'
+    )
     expect(ratioChange).toHaveTextContent('11.2')
   })
 })
