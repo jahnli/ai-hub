@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
   ChevronDown,
+  ChevronRight,
   GripVertical,
   Info,
   Plus,
@@ -1348,17 +1349,26 @@ function VendorRatioRules({
                                   const baseRatio = baseRatioByName.get(
                                     groupData.group
                                   )
-                                  return (
-                                    <span className='inline-flex items-center gap-1.5'>
+                                  return baseRatio !== undefined &&
+                                    baseRatio !== rule.ratio ? (
+                                    <span
+                                      className='inline-flex items-center gap-1.5'
+                                      aria-label={`${baseRatio} → ${rule.ratio}`}
+                                    >
+                                      <span className='text-muted-foreground text-xs'>
+                                        {baseRatio}
+                                      </span>
+                                      <ChevronRight
+                                        className='text-muted-foreground h-4 w-4 translate-y-0.5'
+                                        aria-hidden='true'
+                                      />
+                                      <span className='font-semibold'>
+                                        {rule.ratio}
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <span className='font-medium'>
                                       {rule.ratio}
-                                      {baseRatio !== undefined &&
-                                        baseRatio !== rule.ratio && (
-                                          <span className='text-muted-foreground text-xs'>
-                                            {t('(instead of {{ratio}})', {
-                                              ratio: baseRatio,
-                                            })}
-                                          </span>
-                                        )}
                                     </span>
                                   )
                                 },

@@ -30,7 +30,7 @@ vi.mock('@/features/models/api', () => ({
 }))
 
 describe('GroupRatioVisualEditor vendor ratio layout', () => {
-  test('adds horizontal spacing around the expanded vendor ratio table', async () => {
+  test('shows base and current ratios directly in the expanded vendor table', async () => {
     const user = userEvent.setup()
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -67,5 +67,12 @@ describe('GroupRatioVisualEditor vendor ratio layout', () => {
     expect(vendorTable).toBeDefined()
     const vendorTableWrapper = vendorTable?.closest('.mx-4')
     expect(vendorTableWrapper).toHaveClass('mx-4', 'px-5')
+
+    const ratioChange = vendorTable?.querySelector('[aria-label="1 → 1.2"]')
+    expect(ratioChange).not.toBeNull()
+    expect(
+      ratioChange?.querySelector('svg.lucide-chevron-right')
+    ).not.toBeNull()
+    expect(ratioChange).toHaveTextContent('11.2')
   })
 })
