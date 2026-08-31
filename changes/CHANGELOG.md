@@ -77,3 +77,4 @@
 | 071 | 2026-08-19 | 移除中心 BP（role=3）角色：删除后端 RoleCenterBP 常量及所有相关分支，前端去掉 CENTER_BP 选项与翻译，数据库中 role=3 统一替换为 role=2；AI BP 角色改名为 BP（七语言同步更新） | [详情](details/071-remove-center-bp-role.md) |
 | 072 | 2026-08-24 | 路由可靠性新增飞书群机器人通知：配置官方 Webhook 后，在渠道确认自动禁用或启用时异步发送群消息，并统一 Midjourney 无可用账号实例的自动禁用链路 | [详情](details/072-feishu-channel-status-notify.md) |
 | 073 | 2026-08-28 | 合并 upstream/main 的 6 个提交：钱包与充值额度升级为 64 位安全边界，新增 vLLM thinking_token_budget、智谱 Responses、Ollama Claude/Responses 透传，构建升级 Bun 1.4.0 并更新贡献模板；逐文件解决 5 个冲突，保留兑换码移除、品牌类型、订阅、用户管理和日志等二开功能 | [详情](details/073-upstream-merge.md) |
+| 074 | 2026-09-01 | 合并 upstream/main 的 3 个提交：修复用量统计 quota 被 RPM/TPM 查询覆盖，新增 PostgreSQL Token key 旧唯一约束迁移，并同步 Video API 文档链接；逐文件解决 2 个冲突，保留本地飞书文档、废弃用户列清理和 prefill 迁移 | [详情](details/074-upstream-merge.md) |
