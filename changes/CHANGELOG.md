@@ -70,11 +70,8 @@
 | 063 | 2026-07-06 | 本地访问限流默认关闭：全局 API/Web、关键接口和搜索限流默认禁用 | `common/init.go` |
 | 064 | 2026-07-25 | 新增 AI 中转站周报统计脚本：按使用日志历史计费快照拆分输入、输出与缓存 Token/费用，汇总均价、缓存命中率及费用 Top 5 模型；支持上周/本周周期选择、内置模型归一化映射，并补充 Claude Sonnet 5；修正 Anthropic 缓存写入统计，优先采用显式 cache_write_tokens 并增强 Claude 语义识别，避免缓存 Token 重复计算 | `scripts/weekly_stats.py` |
 | 065 | 2026-08-04 | 用户演示模式：个人设置开启后即时生效；渠道页隐藏分组/模型，模型广场遮罩价格、动态计费表达式/分组倍率，使用日志遮罩渠道；用户管理、数据总览、使用日志和安全审计统一以 `***` 脱敏用户名，并隐藏真实头像、资料卡和飞书跳转；更新通知配置不覆盖其他用户设置 | [详情](details/065-user-demo-mode.md) |
-| 066 | 2026-07-26 | 合并 upstream/main 的 13 个提交：引入腾讯 TokenHub、Gemini 图片模型、统一 JSON 编辑器、渠道字段更新稳定性及模型定价保存修复；逐文件解决 6 个冲突，并保留品牌、渠道余额移除、演示模式和本地货币定价等二开功能 | [详情](details/066-upstream-merge.md) |
 | 067 | 2026-08-10 | 全站分页参数隔离：各界面独立保存 pageSize，Usage Logs 与 Security Audit 的不同分区使用独立页码和每页数量；渠道桌面端默认每页 50 条 |
 | 068 | 2026-08-10 | 图片审计新增实际使用渠道列：从请求日志回写真实渠道 ID，查询渠道名称并以使用日志样式展示彩色渠道标签；调整表格列顺序为时间、用户、耗时、图片、请求内容、渠道、模型、模式、参数、费用；耗时拆分为独立列 | `model/image_studio.go`、`controller/image_studio_storage.go`、`relay/image_studio_hook.go`、`web/src/features/security-audit/components/image-audit-columns.tsx`、`web/src/features/image-studio/api.ts`、`web/src/features/image-studio/hooks/use-image-studio.ts`、`web/src/features/image-studio/lib/storage.ts` | [详情](details/067-pagination-isolation.md) |
 | 069 | 2026-08-21 | 数据总览 BP 可见范围改为显式多部门配置：新增 overview_dept_ids JSON 数组并完全替代 bp_level 业务代码；用户编辑加载完整部门树支持多选，选择父部门包含全部子部门；BP 入口、部门树、接口鉴权和报表范围统一按配置部门计算；支持跨公司部门范围；用户编辑抽屉改为 50% 宽、85% 高弹窗并补齐七语言文案；保留 bp_level 数据库列不动；公司级别节点改为可选中（数据总览部门选择器与用户管理部门多选器均允许选中公司） | [详情](details/069-bp-level-overview.md) |
 | 071 | 2026-08-19 | 移除中心 BP（role=3）角色：删除后端 RoleCenterBP 常量及所有相关分支，前端去掉 CENTER_BP 选项与翻译，数据库中 role=3 统一替换为 role=2；AI BP 角色改名为 BP（七语言同步更新） | [详情](details/071-remove-center-bp-role.md) |
 | 072 | 2026-08-24 | 路由可靠性新增飞书群机器人通知：配置官方 Webhook 后，在渠道确认自动禁用或启用时异步发送群消息，并统一 Midjourney 无可用账号实例的自动禁用链路 | [详情](details/072-feishu-channel-status-notify.md) |
-| 073 | 2026-08-28 | 合并 upstream/main 的 6 个提交：钱包与充值额度升级为 64 位安全边界，新增 vLLM thinking_token_budget、智谱 Responses、Ollama Claude/Responses 透传，构建升级 Bun 1.4.0 并更新贡献模板；逐文件解决 5 个冲突，保留兑换码移除、品牌类型、订阅、用户管理和日志等二开功能 | [详情](details/073-upstream-merge.md) |
-| 074 | 2026-09-01 | 合并 upstream/main 的 3 个提交：修复用量统计 quota 被 RPM/TPM 查询覆盖，新增 PostgreSQL Token key 旧唯一约束迁移，并同步 Video API 文档链接；逐文件解决 2 个冲突，保留本地飞书文档、废弃用户列清理和 prefill 迁移 | [详情](details/074-upstream-merge.md) |

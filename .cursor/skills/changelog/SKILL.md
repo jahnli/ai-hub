@@ -1,7 +1,7 @@
 ---
 name: changelog
 description: >-
-分析 Git 的 staged 或 working-tree 中的更改，生成语义化变更日志条目。读取 Git 差异文件，生成简洁的一行中文描述，将一行内容添加到 changes/CHANGELOG.md 中并正确编号，若涉及超过 3 个文件，则在 changes/details/ 目录下创建详细 Markdown 文件。完成一组更改后，使用 /changelog 命令调用该功能。
+  分析 Git 的 staged 或 working-tree 更改，仅为实际本地二开功能生成语义化变更日志。上游同步、合并提交、冲突解决和纯上游功能不得写入 changes/CHANGELOG.md。完成一组二开更改后，使用 /changelog 命令调用该功能。
 ---
 
 # /changelog — 变更日志生成
@@ -12,6 +12,20 @@ description: >-
 
 - `/changelog`、`生成 changelog`、`更新 changelog`、`写 changelog`
 - 或 commit 前自动触发
+
+## 上游合并排除规则（硬规则）
+
+以下内容**一律不得**新增或合并到 `changes/CHANGELOG.md`，也不得在 `changes/details/` 创建对应详情文件：
+
+- `git fetch`、`pull`、`merge`、`rebase`、`cherry-pick` 等上游同步操作
+- 合并提交、上游 commit 列表、合并统计、冲突文件、冲突解决策略和验证结果
+- 直接来自 upstream 的功能、修复、依赖升级、文档调整或文件增删
+- 仅为保持本地现有二开行为而做的冲突适配
+- 文件名或标题类似 `upstream-merge`、`merge-upstream`、`sync-upstream` 的记录
+
+禁止创建诸如“合并 upstream/main 的 N 个提交”一类条目。`changes/CHANGELOG.md` 只追踪本地相对上游新增或改变的二开行为。
+
+如果上游合并期间额外实现了一个独立的本地功能或改变了本地业务行为，只记录该功能本身；说明中不得包含上游 commit、合并过程、冲突数量或同步背景。
 
 ## 工作流程
 
@@ -27,7 +41,7 @@ git status --porcelain
 
 若变更仅涉及以下目录/文件，**无需生成 changelog**，直接告知用户跳过：
 
-- `changes/`、`.cursor/`、`.agents/`、`.githooks/`、`.github/`
+- `changes/`、`.cursor/`、`.agents/`、`.claude/`、`.codex/`、`.githooks/`、`.github/`
 - `package-lock.json`、`bun.lockb`
 - `AGENTS.md`、`CLAUDE.md`、`README.*.md`、`LICENSE`
 - 纯格式化/注释变更
@@ -158,6 +172,7 @@ git add changes/details/{编号}-{短标识}.md
 5. **纯格式化/注释等无需记录的变更直接告知用户跳过**
 6. **同一界面/功能的连续修改必须合并到已有条目，不要新增编号**
 7. **仅在变更与所有已有条目均不相关时，才新增编号并在末尾追加**
+8. **上游同步、合并过程和纯上游改动永不记录；不得创建 upstream-merge 详情文件**
 
 ## 合并与新增规则（详细）
 
