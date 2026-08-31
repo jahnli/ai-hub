@@ -20,7 +20,7 @@ export function HowItWorks() {
           <Link to='/keys' className='text-primary font-medium hover:underline'>
             API Keys
           </Link>
-          {', set up channels and configure access permissions'}
+          , set up channels and configure access permissions
         </Trans>
       ),
       icon: <Settings className='size-6' strokeWidth={1.5} />,

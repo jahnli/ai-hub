@@ -1,3 +1,21 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
 import type { ColumnDef } from '@tanstack/react-table'
 import { CircleAlert, GitBranch, Globe, KeyRound, Sparkles } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
@@ -124,10 +142,22 @@ function buildDetailSegments(
     isAdmin,
     canViewGroupRatio
   )
+  const adminSegments: DetailSegment[] = []
+  // Quota saturation is a rare, admin-only anomaly marker; surface it first
+  // and in danger styling so it stands out on the related billing log. The
+  // backend already strips admin_info for non-admins; gate on isAdmin too as
+  // defense in depth so the marker never leaks if that changes.
   if (isAdmin && other?.admin_info?.quota_saturation) {
-    return [{ text: t('Quota clamped'), danger: true }, ...segments]
+    adminSegments.push({ text: t('Quota clamped'), danger: true })
   }
-  return segments
+  const plugin = isAdmin ? other?.admin_info?.task_plugin : undefined
+  if (plugin) {
+    const version = plugin.version ? ` @ ${plugin.version}` : ''
+    adminSegments.push({
+      text: `${t('Plugin')}: ${plugin.name || plugin.key}${version}`,
+    })
+  }
+  return [...adminSegments, ...segments]
 }
 
 function buildTypeDetailSegments(
@@ -318,6 +348,7 @@ interface UseCommonLogsColumnsOptions {
   showChannelColumn?: boolean
   canViewChannelDetails?: boolean
   canViewGroupRatio?: boolean
+  isRoot?: boolean
 }
 
 export function useCommonLogsColumns(
@@ -333,6 +364,7 @@ export function useCommonLogsColumns(
   const showChannelColumn = options.showChannelColumn ?? isAdmin
   const canViewChannelDetails = options.canViewChannelDetails ?? isAdmin
   const canViewGroupRatio = options.canViewGroupRatio ?? isAdmin
+  const isRoot = options.isRoot ?? false
   const columns: ColumnDef<UsageLog>[] = [
     {
       accessorKey: 'created_at',
@@ -577,6 +609,10 @@ export function useCommonLogsColumns(
         const frtVariant = frt
           ? getFirstResponseTimeColor(frt / 1000)
           : 'neutral'
+        let streamLabel = log.is_stream ? t('Stream') : t('Non-stream')
+        if (other?.is_task === true) {
+          streamLabel = t('Async')
+        }
 
         const timingBgMap: Record<string, string> = {
           success:
@@ -625,7 +661,7 @@ export function useCommonLogsColumns(
             </div>
             <div className='flex items-center gap-1 [font-family:var(--font-body)] !text-xs leading-none'>
               <span className='text-muted-foreground/60 [font-family:var(--font-body)] !text-xs leading-none'>
-                {log.is_stream ? t('Stream') : t('Non-stream')}
+                {streamLabel}
                 {tokensPerSecond != null && (
                   <>
                     {' · '}
@@ -1155,6 +1191,7 @@ export function useCommonLogsColumns(
               isAdmin={isAdmin}
               canViewChannelDetails={canViewChannelDetails}
               canViewGroupRatio={canViewGroupRatio}
+              isRoot={isRoot}
               open={dialogOpen}
               onOpenChange={setDialogOpen}
             />

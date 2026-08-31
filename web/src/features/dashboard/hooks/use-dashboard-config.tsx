@@ -52,10 +52,7 @@ export function useModelStatCardsConfig(): StatCardConfig[] {
       icon: DollarSign,
       iconTone: 'warning',
       getValue: (stat) =>
-        calculateUnitPricePer100MTokens(
-          stat?.quota ?? 0,
-          stat?.tpm ?? 0
-        ),
+        calculateUnitPricePer100MTokens(stat?.quota ?? 0, stat?.tpm ?? 0),
     },
     {
       key: 'count',

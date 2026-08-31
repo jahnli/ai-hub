@@ -170,12 +170,12 @@ export function CompactDateTimeRangePicker({
     const sMin = dayjs(start).startOf('second').valueOf()
     const eMin = end ? dayjs(end).startOf('second').valueOf() : 0
     const presets = buildPresetMap(dayjs())
-    const skipRelative: PresetKind[] = ['lastHour']
+    const skipRelative = new Set<PresetKind>(['lastHour'])
     for (const [kind, range] of Object.entries(presets) as [
       PresetKind,
       { start: Date; end: Date },
     ][]) {
-      if (skipRelative.includes(kind)) continue
+      if (skipRelative.has(kind)) continue
       const ps = dayjs(range.start).startOf('second').valueOf()
       const pe = dayjs(range.end).startOf('second').valueOf()
       if (sMin === ps && eMin === pe) return kind

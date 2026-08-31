@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, RefreshCw, Trash2, Power, PowerOff } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -58,6 +58,8 @@ export function MultiKeyManageDialog({
 }: MultiKeyManageDialogProps) {
   const { t } = useTranslation()
   const { currentRow } = useChannels()
+  const currentRowId = currentRow?.id
+  const dialogKey = open && currentRowId ? currentRowId : null
   const queryClient = useQueryClient()
   const currentUser = useAuthStore((s) => s.auth.user)
   const canEditSensitive = hasPermission(
@@ -67,7 +69,7 @@ export function MultiKeyManageDialog({
   )
 
   // Data state
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(Boolean(dialogKey))
   const [keys, setKeys] = useState<KeyStatus[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -82,64 +84,112 @@ export function MultiKeyManageDialog({
   const [confirmAction, setConfirmAction] =
     useState<MultiKeyConfirmAction | null>(null)
   const [isPerformingAction, setIsPerformingAction] = useState(false)
+  const [initializedDialogKey, setInitializedDialogKey] = useState(dialogKey)
 
-  // Reset and load data when dialog opens
-  useEffect(() => {
-    if (open && currentRow) {
+  if (initializedDialogKey !== dialogKey) {
+    setInitializedDialogKey(dialogKey)
+    if (dialogKey) {
       setCurrentPage(1)
       setStatusFilter(null)
-      loadKeyStatus(1, pageSize, null)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, currentRow?.id])
-
-  const loadKeyStatus = async (
-    page: number = currentPage,
-    size: number = pageSize,
-    status: number | null = statusFilter
-  ) => {
-    if (!currentRow) return
-
-    setIsLoading(true)
-    try {
-      const response = await getMultiKeyStatus(
-        currentRow.id,
-        page,
-        size,
-        status === null ? undefined : status
-      )
-
-      if (response.success && response.data) {
-        setKeys(response.data.keys || [])
-        setTotal(response.data.total || 0)
-        setCurrentPage(response.data.page || 1)
-        setPageSize(response.data.page_size || 10)
-        setTotalPages(response.data.total_pages || 0)
-        setEnabledCount(response.data.enabled_count || 0)
-        setManualDisabledCount(response.data.manual_disabled_count || 0)
-        setAutoDisabledCount(response.data.auto_disabled_count || 0)
-      } else {
-        toast.error(response.message || t('Failed to load key status'))
-      }
-    } catch (error: unknown) {
-      toast.error(
-        error instanceof Error ? error.message : t('Failed to load key status')
-      )
-    } finally {
-      setIsLoading(false)
+      setIsLoading(true)
     }
   }
 
+  const loadKeyStatus = useCallback(
+    async (
+      page: number,
+      size: number,
+      status: number | null,
+      showLoading = true
+    ) => {
+      if (!currentRowId) return
+
+      if (showLoading) setIsLoading(true)
+      try {
+        const response = await getMultiKeyStatus(
+          currentRowId,
+          page,
+          size,
+          status === null ? undefined : status
+        )
+
+        if (response.success && response.data) {
+          setKeys(response.data.keys || [])
+          setTotal(response.data.total || 0)
+          setCurrentPage(response.data.page || 1)
+          setPageSize(response.data.page_size || 10)
+          setTotalPages(response.data.total_pages || 0)
+          setEnabledCount(response.data.enabled_count || 0)
+          setManualDisabledCount(response.data.manual_disabled_count || 0)
+          setAutoDisabledCount(response.data.auto_disabled_count || 0)
+        } else {
+          toast.error(response.message || t('Failed to load key status'))
+        }
+      } catch (error: unknown) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : t('Failed to load key status')
+        )
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [currentRowId, t]
+  )
+
+  // Reset and load data when dialog opens
+  useEffect(() => {
+    if (!open || !currentRowId) return
+
+    let cancelled = false
+
+    const loadInitialKeyStatus = async () => {
+      try {
+        const response = await getMultiKeyStatus(currentRowId, 1, pageSize)
+        if (cancelled) return
+
+        if (response.success && response.data) {
+          setKeys(response.data.keys || [])
+          setTotal(response.data.total || 0)
+          setCurrentPage(response.data.page || 1)
+          setPageSize(response.data.page_size || 10)
+          setTotalPages(response.data.total_pages || 0)
+          setEnabledCount(response.data.enabled_count || 0)
+          setManualDisabledCount(response.data.manual_disabled_count || 0)
+          setAutoDisabledCount(response.data.auto_disabled_count || 0)
+        } else {
+          toast.error(response.message || t('Failed to load key status'))
+        }
+      } catch (error: unknown) {
+        if (cancelled) return
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : t('Failed to load key status')
+        )
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    void loadInitialKeyStatus()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, currentRowId, pageSize, t])
+
   const handleStatusFilterChange = (value: string) => {
-    const newFilter = value === 'all' ? null : parseInt(value)
+    const newFilter = value === 'all' ? null : Number.parseInt(value)
     setStatusFilter(newFilter)
     setCurrentPage(1)
-    loadKeyStatus(1, pageSize, newFilter)
+    void loadKeyStatus(1, pageSize, newFilter)
   }
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage)
-    loadKeyStatus(newPage, pageSize)
+    void loadKeyStatus(newPage, pageSize, statusFilter)
   }
 
   const performAction = async () => {
@@ -181,9 +231,9 @@ export function MultiKeyManageDialog({
         const isBulkAction = type.includes('all') || type === 'delete-disabled'
         if (isBulkAction) {
           setCurrentPage(1)
-          loadKeyStatus(1, pageSize)
+          void loadKeyStatus(1, pageSize, statusFilter)
         } else {
-          loadKeyStatus(currentPage, pageSize)
+          void loadKeyStatus(currentPage, pageSize, statusFilter)
         }
       } else {
         toast.error(response?.message || t('Operation failed'))
@@ -276,12 +326,10 @@ export function MultiKeyManageDialog({
           {/* Toolbar */}
           <div className='flex shrink-0 items-center justify-between'>
             <Select
-              items={[
-                ...MULTI_KEY_FILTER_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: t(option.label),
-                })),
-              ]}
+              items={MULTI_KEY_FILTER_OPTIONS.map((option) => ({
+                value: option.value,
+                label: t(option.label),
+              }))}
               value={statusFilter === null ? 'all' : statusFilter.toString()}
               onValueChange={(v) => v !== null && handleStatusFilterChange(v)}
             >
@@ -303,7 +351,9 @@ export function MultiKeyManageDialog({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => loadKeyStatus()}
+                onClick={() =>
+                  void loadKeyStatus(currentPage, pageSize, statusFilter)
+                }
                 disabled={isLoading}
               >
                 <RefreshCw className='h-4 w-4' />
@@ -360,15 +410,17 @@ export function MultiKeyManageDialog({
 
           {/* Table */}
           <div className='min-h-0 flex-1 overflow-auto rounded-md border'>
-            {isLoading ? (
+            {isLoading && (
               <div className='flex items-center justify-center py-12'>
                 <Loader2 className='text-muted-foreground h-8 w-8 animate-spin' />
               </div>
-            ) : keys.length === 0 ? (
+            )}
+            {!isLoading && keys.length === 0 && (
               <div className='text-muted-foreground py-12 text-center'>
                 {t('No keys found')}
               </div>
-            ) : (
+            )}
+            {!isLoading && keys.length > 0 && (
               <StaticDataTable
                 className='rounded-none border-0'
                 tableClassName='min-w-[800px]'

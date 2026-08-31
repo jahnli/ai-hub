@@ -247,14 +247,14 @@ function ChartCard(props: {
 }
 
 function formatLargeNumber(v: number): string {
-  if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(2) + ' 亿'
-  if (v >= 1_0000) return (v / 1_0000).toFixed(2) + ' 万'
+  if (v >= 1_0000_0000) return `${(v / 1_0000_0000).toFixed(2)} 亿`
+  if (v >= 1_0000) return `${(v / 1_0000).toFixed(2)} 万`
   return v.toLocaleString()
 }
 
 function formatTokenValue(v: number): string {
   if (v === 0) return '0'
-  return (v / 1_0000_0000).toFixed(2) + ' 亿'
+  return `${(v / 1_0000_0000).toFixed(2)} 亿`
 }
 
 function formatTokensDetail(tokens: number): string {
@@ -569,7 +569,7 @@ function ModelUsageTrendChart(
         item: {
           label: {
             formatMethod: (v: string) =>
-              v.length > 18 ? v.slice(0, 18) + '…' : v,
+              v.length > 18 ? `${v.slice(0, 18)}…` : v,
           },
         },
       },
@@ -675,9 +675,10 @@ function ModelCallDistributionChart(
           const name = datum.name ?? ''
           const pct =
             chartData.totalRequests > 0
-              ? (((datum.value ?? 0) / chartData.totalRequests) * 100).toFixed(
-                  2
-                ) + '%'
+              ? `${(
+                  ((datum.value ?? 0) / chartData.totalRequests) *
+                  100
+                ).toFixed(2)}%`
               : ''
           return pct ? `${name} ${pct}` : name
         },
@@ -688,7 +689,7 @@ function ModelCallDistributionChart(
             {
               key: () => t('Requests'),
               value: (datum: { value?: number }) =>
-                formatLargeNumber(datum.value ?? 0) + ' ' + t('times'),
+                `${formatLargeNumber(datum.value ?? 0)} ${t('times')}`,
             },
             {
               key: () => 'Token',
@@ -711,7 +712,7 @@ function ModelCallDistributionChart(
           label: {
             style: { fontSize: 11 },
             formatMethod: (label: string) =>
-              label.length > 12 ? label.slice(0, 12) + '…' : label,
+              label.length > 12 ? `${label.slice(0, 12)}…` : label,
           },
         },
         maxRow: 12,
@@ -769,7 +770,7 @@ function ModelCostRankChart(
         visible: true,
         position: 'outside',
         formatMethod: (value: number) =>
-          value === 0 ? '¥0' : '¥' + value.toFixed(2),
+          value === 0 ? '¥0' : `¥${value.toFixed(2)}`,
       },
       bar: { style: { cornerRadius: [0, 4, 4, 0] } },
       axes: [
@@ -779,7 +780,7 @@ function ModelCostRankChart(
           label: {
             style: { fontSize: 11 },
             formatMethod: (v: string) =>
-              v.length > 20 ? v.slice(0, 20) + '…' : v,
+              v.length > 20 ? `${v.slice(0, 20)}…` : v,
           },
         },
         {
@@ -805,7 +806,7 @@ function ModelCostRankChart(
             {
               key: () => t('Requests'),
               value: (d: { requests?: number }) =>
-                formatLargeNumber(d.requests ?? 0) + ' ' + t('times'),
+                `${formatLargeNumber(d.requests ?? 0)} ${t('times')}`,
             },
             {
               key: () => t('Unit Price'),
@@ -828,7 +829,7 @@ function ModelCostRankChart(
             {
               key: () => t('Requests'),
               value: (d: { requests?: number }) =>
-                formatLargeNumber(d.requests ?? 0) + ' ' + t('times'),
+                `${formatLargeNumber(d.requests ?? 0)} ${t('times')}`,
             },
             {
               key: () => t('Unit Price'),
@@ -917,7 +918,7 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             {
               key: () => t('Requests'),
               value: (datum: { requests?: number }) =>
-                formatLargeNumber(datum.requests ?? 0) + ' ' + t('times'),
+                `${formatLargeNumber(datum.requests ?? 0)} ${t('times')}`,
             },
             {
               key: () => t('Unit Price'),
@@ -949,7 +950,7 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             {
               key: () => t('Requests'),
               value: (datum: { requests?: number }) =>
-                formatLargeNumber(datum.requests ?? 0) + ' ' + t('times'),
+                `${formatLargeNumber(datum.requests ?? 0)} ${t('times')}`,
             },
             {
               key: () => t('Unit Price'),

@@ -89,4 +89,44 @@ describe('model details base price group', () => {
     expect(html).toContain('$6')
     expect(html).toContain('$24')
   })
+
+  test('shows task usage prices with their declared unit and group ratio', () => {
+    const taskModel: PricingModel = {
+      ...tokenModel,
+      id: 4,
+      model_name: 'group-priced-task-model',
+      billing_mode: 'tiered_expr',
+      billing_expr: 'tier("base", u("seconds") * 0.4)',
+      billing_usage_schema: {
+        seconds: { type: 'number', unit: 'second' },
+      },
+    }
+
+    const html = renderPriceSection(taskModel, {
+      selectedGroup: 'vip',
+      currentUserGroup: 'default',
+    })
+
+    expect(html).toContain('$1.2')
+    expect(html).toContain('/ s')
+    expect(html).not.toContain('/ 1M')
+  })
+
+  test('shows an explicit unconfigured state for task usage pricing', () => {
+    const taskModel: PricingModel = {
+      ...tokenModel,
+      id: 5,
+      model_name: 'unconfigured-task-model',
+      billing_usage_schema: {
+        seconds: { type: 'number', unit: 'second' },
+      },
+    }
+
+    const html = renderPriceSection(taskModel, {
+      currentUserGroup: 'default',
+    })
+
+    expect(html).toContain('Usage-based billing · price not configured')
+    expect(html).not.toContain('/ 1M')
+  })
 })

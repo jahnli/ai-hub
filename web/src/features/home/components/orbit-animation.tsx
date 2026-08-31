@@ -24,13 +24,13 @@ const OUTER_ICONS: OrbitIconDef[] = [
 ]
 
 function OrbitDots(props: { icons: OrbitIconDef[]; radius: number }) {
-  return props.icons.map((icon, i) => {
+  return props.icons.map((icon) => {
     const rad = (icon.angle * Math.PI) / 180
     const x = props.radius * Math.cos(rad)
     const y = props.radius * Math.sin(rad)
     return (
       <div
-        key={i}
+        key={icon.name}
         className='orbit-dot'
         style={{
           top: `calc(50% + ${y}px - 22px)`,

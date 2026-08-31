@@ -97,8 +97,8 @@ type User struct {
 	WeChatId          string                     `json:"wechat_id" gorm:"column:wechat_id;index"`
 	VerificationCode  string                     `json:"verification_code" gorm:"-:all"`
 	AccessToken       *string                    `json:"-" gorm:"type:char(32);column:access_token;uniqueIndex"`
-	Quota             int                        `json:"quota" gorm:"type:int;default:0"`
-	UsedQuota         int                        `json:"used_quota" gorm:"type:int;default:0;column:used_quota"`
+	Quota             int                        `json:"quota" gorm:"type:bigint;default:0"`
+	UsedQuota         int                        `json:"used_quota" gorm:"type:bigint;default:0;column:used_quota"`
 	RequestCount      int                        `json:"request_count" gorm:"type:int;default:0;"`
 	Group             string                     `json:"group" gorm:"type:varchar(64);default:'default'"`
 	Company           string                     `json:"company" gorm:"type:varchar(128);column:company;default:'';index"`

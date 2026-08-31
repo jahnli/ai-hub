@@ -3,7 +3,7 @@ export function sendToFluent(apiKey: string, serverAddress?: string): boolean {
     return false
   }
 
-  const container = document.getElementById('fluent-ai-gateway-container')
+  const container = document.querySelector('#fluent-ai-gateway-container')
   if (!container) {
     return false
   }

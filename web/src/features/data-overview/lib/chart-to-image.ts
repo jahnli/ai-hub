@@ -60,19 +60,19 @@ export async function renderChartToBase64(
 
 function fmtTokens(v: number): string {
   if (v === 0) return '0'
-  if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(2) + ' 亿'
-  if (v >= 1_0000) return (v / 1_0000).toFixed(2) + ' 万'
+  if (v >= 1_0000_0000) return `${(v / 1_0000_0000).toFixed(2)} 亿`
+  if (v >= 1_0000) return `${(v / 1_0000).toFixed(2)} 万`
   return v.toLocaleString()
 }
 
 function fmtCny(v: number): string {
   if (v === 0) return '¥0'
-  return '¥' + v.toFixed(2)
+  return `¥${v.toFixed(2)}`
 }
 
 function fmtLargeNum(v: number): string {
-  if (v >= 1_0000_0000) return (v / 1_0000_0000).toFixed(2) + ' 亿'
-  if (v >= 1_0000) return (v / 1_0000).toFixed(2) + ' 万'
+  if (v >= 1_0000_0000) return `${(v / 1_0000_0000).toFixed(2)} 亿`
+  if (v >= 1_0000) return `${(v / 1_0000).toFixed(2)} 万`
   return v.toLocaleString()
 }
 
@@ -105,7 +105,7 @@ export function buildSubDeptBarSpec(subStats: SubDepartmentStat[]): ISpec {
         label: {
           style: { fontSize: 11 },
           formatMethod: (v: string) =>
-            v.length > 12 ? v.slice(0, 12) + '…' : v,
+            v.length > 12 ? `${v.slice(0, 12)}…` : v,
         },
       },
       {
@@ -143,7 +143,7 @@ export function buildSubDeptPieSpec(subStats: SubDepartmentStat[]): ISpec {
       position: 'outside',
       formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
         const pct =
-          total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''
+          total > 0 ? `${(((d.value ?? 0) / total) * 100).toFixed(1)}%` : ''
         return pct ? `${d.name} ${pct}` : (d.name ?? '')
       },
     },
@@ -309,8 +309,9 @@ export function buildModelCallDistributionSpec(
       formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
         const pct =
           chartData.totalRequests > 0
-            ? (((d.value ?? 0) / chartData.totalRequests) * 100).toFixed(2) +
-              '%'
+            ? `${(((d.value ?? 0) / chartData.totalRequests) * 100).toFixed(
+                2
+              )}%`
             : ''
         return pct ? `${d.name} ${pct}` : (d.name ?? '')
       },
@@ -323,7 +324,7 @@ export function buildModelCallDistributionSpec(
         label: {
           style: { fontSize: 10 },
           formatMethod: (v: string) =>
-            v.length > 14 ? v.slice(0, 14) + '…' : v,
+            v.length > 14 ? `${v.slice(0, 14)}…` : v,
         },
       },
       autoPage: true,
@@ -368,7 +369,7 @@ export function buildModelCostRankSpec(
         label: {
           style: { fontSize: 10 },
           formatMethod: (v: string) =>
-            v.length > 18 ? v.slice(0, 18) + '…' : v,
+            v.length > 18 ? `${v.slice(0, 18)}…` : v,
         },
       },
       {
@@ -413,7 +414,7 @@ export function buildUserRankBarSpec(rankings: UserRankingItem[]): ISpec {
         label: {
           style: { fontSize: 11 },
           formatMethod: (v: string) =>
-            v.length > 12 ? v.slice(0, 12) + '…' : v,
+            v.length > 12 ? `${v.slice(0, 12)}…` : v,
         },
       },
       {
@@ -454,7 +455,7 @@ export function buildUserRankPieSpec(rankings: UserRankingItem[]): ISpec {
       position: 'outside',
       formatMethod: (_: unknown, d: { name?: string; value?: number }) => {
         const pct =
-          total > 0 ? (((d.value ?? 0) / total) * 100).toFixed(1) + '%' : ''
+          total > 0 ? `${(((d.value ?? 0) / total) * 100).toFixed(1)}%` : ''
         return pct ? `${d.name} ${pct}` : (d.name ?? '')
       },
     },
@@ -465,7 +466,7 @@ export function buildUserRankPieSpec(rankings: UserRankingItem[]): ISpec {
 }
 
 function fmtUserCount(count: number): string {
-  if (count >= 1_0000) return (count / 1_0000).toFixed(1) + '万'
+  if (count >= 1_0000) return `${(count / 1_0000).toFixed(1)}万`
   return count.toFixed(0)
 }
 

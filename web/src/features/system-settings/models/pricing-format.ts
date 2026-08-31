@@ -41,3 +41,21 @@ export function formatPricingNumber(value: unknown): string {
   const normalized = snapFloatDrift(num)
   return Number.parseFloat(normalized.toFixed(DISPLAY_DECIMALS)).toString()
 }
+
+export function normalizePricingExchangeRate(rate: number | undefined): number {
+  return rate != null && Number.isFinite(rate) && rate > 0 ? rate : 1
+}
+
+export function convertPricingToDisplay(
+  value: number,
+  exchangeRate: number
+): number {
+  return Number(formatPricingNumber(value * exchangeRate))
+}
+
+export function convertPricingToUSD(
+  value: number,
+  exchangeRate: number
+): number {
+  return Number(formatPricingNumber(value / exchangeRate))
+}

@@ -82,6 +82,7 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 		constant.ChannelTypeJimeng,
 		constant.ChannelTypeDoubaoVideo,
 		constant.ChannelTypeVidu,
+		constant.ChannelTypeTaskPlugin,
 	}
 	if lo.Contains(unsupportedTestChannelTypes, channel.Type) {
 		channelTypeName := constant.GetChannelTypeName(channel.Type)
@@ -983,11 +984,7 @@ func runChannelTestWorkers(
 					if channel != nil && channel.Status != common.ChannelStatusManuallyDisabled {
 						result = run(ctx, channel)
 					}
-					select {
-					case <-ctx.Done():
-						return
-					case results <- result:
-					}
+					results <- result
 					if common.RequestInterval > 0 {
 						select {
 						case <-ctx.Done():

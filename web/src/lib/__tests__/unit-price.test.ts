@@ -4,9 +4,7 @@ import { calculateUnitPricePer100MTokens } from '../unit-price'
 
 describe('calculateUnitPricePer100MTokens', () => {
   it('returns the cost of exactly 100M tokens', () => {
-    expect(calculateUnitPricePer100MTokens(0.29, 100_000_000)).toBeCloseTo(
-      0.29
-    )
+    expect(calculateUnitPricePer100MTokens(0.29, 100_000_000)).toBeCloseTo(0.29)
   })
 
   it('converts a former per-million price to the equivalent 100M-token price', () => {

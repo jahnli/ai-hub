@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createInstance } from 'i18next'
 import type { ComponentType } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -76,10 +77,15 @@ function DetailsColumnCell(props: { log: UsageLog }) {
 }
 
 function renderDetailsColumn(log: UsageLog): string {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return renderToStaticMarkup(
-    <I18nextProvider i18n={i18n}>
-      <DetailsColumnCell log={log} />
-    </I18nextProvider>
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={i18n}>
+        <DetailsColumnCell log={log} />
+      </I18nextProvider>
+    </QueryClientProvider>
   )
 }
 

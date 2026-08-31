@@ -296,7 +296,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
                     render={
                       <button
                         type='button'
-                        className='text-muted-foreground/70 hover:text-foreground -translate-y-3 shrink-0 transition-colors'
+                        className='text-muted-foreground/70 hover:text-foreground shrink-0 -translate-y-3 transition-colors'
                         aria-label={t('View details')}
                       />
                     }

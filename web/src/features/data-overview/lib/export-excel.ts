@@ -35,18 +35,18 @@ import {
 
 function fmtCny(value: number): string {
   if (value === 0) return '¥0.00'
-  return '¥' + value.toFixed(2)
+  return `¥${value.toFixed(2)}`
 }
 
 function fmtTokens(tokens: number): string {
   if (tokens === 0) return '0'
-  if (tokens >= 1_0000_0000) return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
-  if (tokens >= 1_0000) return (tokens / 1_0000).toFixed(2) + ' 万'
+  if (tokens >= 1_0000_0000) return `${(tokens / 1_0000_0000).toFixed(2)} 亿`
+  if (tokens >= 1_0000) return `${(tokens / 1_0000).toFixed(2)} 万`
   return tokens.toLocaleString()
 }
 
 function fmtRequests(count: number): string {
-  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + ' 万'
+  if (count >= 1_0000) return `${(count / 1_0000).toFixed(2)} 万`
   return count.toLocaleString()
 }
 
@@ -206,13 +206,13 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
     [t('Cache Write'), fmtTokens(stat.cache_write_tokens ?? 0)],
     [t('Total Cost'), fmtCny(stat.total_amount_cny)],
     [
-      t('Unit Price') + '/' + t('100M Tokens'),
+      `${t('Unit Price')}/${t('100M Tokens')}`,
       !stat.unit_price_per_100m_tokens
         ? '¥0.00'
         : fmtCny(stat.unit_price_per_100m_tokens),
     ],
     [t('Total Requests'), fmtRequests(stat.total_requests)],
-    [t('Avg Response Time'), (stat.avg_use_time ?? 0).toFixed(1) + 's'],
+    [t('Avg Response Time'), `${(stat.avg_use_time ?? 0).toFixed(1)}s`],
     [t('Registered Count'), (stat.registered_users ?? 0).toLocaleString()],
     [t('Unregistered Count'), (stat.unregistered_users ?? 0).toLocaleString()],
     [
@@ -227,7 +227,7 @@ function addStatsTable(ws: ExcelJS.Worksheet, stat: DepartmentStat): void {
       t('Tokens per Active User'),
       fmtTokens((stat.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
     ],
-    [t('Error Rate'), (stat.error_rate ?? 0).toFixed(1) + '%'],
+    [t('Error Rate'), `${(stat.error_rate ?? 0).toFixed(1)}%`],
   ]
   rows.forEach(([label, value], i) => {
     const r = ws.addRow([label, value])
@@ -270,7 +270,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
       t('Total Users'),
       t('Total Tokens'),
       t('Total Cost'),
-      t('Unit Price') + '/' + t('100M Tokens'),
+      `${t('Unit Price')}/${t('100M Tokens')}`,
       t('Request Count'),
       t('Active Users / Active Rate'),
       t('Tokens per Active User'),
@@ -286,7 +286,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
           sub.total_users,
           fmtTokens(sub.total_tokens),
           fmtCny(sub.total_amount_cny),
-          fmtCny(sub.unit_price_per_100m_tokens) + '/' + t('100M Tokens'),
+          `${fmtCny(sub.unit_price_per_100m_tokens)}/${t('100M Tokens')}`,
           fmtRequests(sub.total_requests),
           `${(sub.active_users ?? 0).toLocaleString()} / ${(sub.active_user_rate ?? 0).toFixed(1)}%`,
           fmtTokens((sub.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
@@ -332,7 +332,7 @@ function buildSubDeptSheet(
       t('Total Users'),
       t('Total Tokens'),
       t('Total Cost'),
-      t('Unit Price') + '/' + t('100M Tokens'),
+      `${t('Unit Price')}/${t('100M Tokens')}`,
       t('Request Count'),
       t('Active Users / Active Rate'),
       t('Tokens per Active User'),
@@ -348,7 +348,7 @@ function buildSubDeptSheet(
           sub.total_users,
           fmtTokens(sub.total_tokens),
           fmtCny(sub.total_amount_cny),
-          fmtCny(sub.unit_price_per_100m_tokens) + '/' + t('100M Tokens'),
+          `${fmtCny(sub.unit_price_per_100m_tokens)}/${t('100M Tokens')}`,
           fmtRequests(sub.total_requests),
           `${(sub.active_users ?? 0).toLocaleString()} / ${(sub.active_user_rate ?? 0).toFixed(1)}%`,
           fmtTokens((sub.avg_tokens_per_active_user_mt ?? 0) * 1_000_000),
@@ -383,7 +383,7 @@ function buildUserListSheet(wb: ExcelJS.Workbook, p: ExportParams): void {
   const hdr = ws.addRow([
     t('Display Name'),
     t('Total Cost'),
-    t('Unit Price') + '/' + t('100M Tokens'),
+    `${t('Unit Price')}/${t('100M Tokens')}`,
     t('Total Tokens'),
     t('Requests'),
     t('Common Model'),
@@ -490,7 +490,12 @@ export async function exportDataOverview(params: ExportParams): Promise<void> {
     )
   }
 
-  await embedRightSideCharts(wb, mainWs, params.usage, params.stats.cost_buckets)
+  await embedRightSideCharts(
+    wb,
+    mainWs,
+    params.usage,
+    params.stats.cost_buckets
+  )
 
   if (params.includeUserList) {
     buildUserListSheet(wb, params)

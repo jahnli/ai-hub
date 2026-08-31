@@ -94,7 +94,7 @@ export function ExportDialog(props: ExportDialogProps) {
       const node = findNodeByValue(props.treeData, department_id)
       const departmentName = node?.label ?? department_id
 
-      let subDepartmentDetails: SubDepartmentDetail[] = []
+      const subDepartmentDetails: SubDepartmentDetail[] = []
       if (includeSubDepts && props.subStats.length > 0) {
         for (const sub of props.subStats) {
           const [statsRes, subStatsRes, usageRes] = await Promise.all([

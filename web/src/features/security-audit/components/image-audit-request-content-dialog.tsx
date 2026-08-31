@@ -98,8 +98,7 @@ export function ImageAuditRequestContentDialog(
     status: 1,
     role: 1,
   }
-  const resolvedUser =
-    userData?.id === item.user_id ? userData : fallbackUser
+  const resolvedUser = userData?.id === item.user_id ? userData : fallbackUser
   const primaryName =
     resolvedUser.display_name || resolvedUser.username || `#${item.user_id}`
   const shouldShowUsername =
@@ -124,10 +123,7 @@ export function ImageAuditRequestContentDialog(
           <UserProfileHoverCard user={resolvedUser}>
             <Avatar className='size-9 shrink-0' onMouseEnter={handleFetchUser}>
               {resolvedUser.avatar_url && (
-                <AvatarImage
-                  src={resolvedUser.avatar_url}
-                  alt={primaryName}
-                />
+                <AvatarImage src={resolvedUser.avatar_url} alt={primaryName} />
               )}
               <AvatarFallback
                 className='text-sm font-semibold text-white'
@@ -139,7 +135,9 @@ export function ImageAuditRequestContentDialog(
           </UserProfileHoverCard>
           <div className='flex min-w-0 flex-1 flex-wrap items-start gap-x-4 gap-y-1'>
             <div className='flex min-w-24 shrink-0 flex-col'>
-              <span className='truncate text-sm font-medium'>{primaryName}</span>
+              <span className='truncate text-sm font-medium'>
+                {primaryName}
+              </span>
               {shouldShowUsername && (
                 <span className='text-muted-foreground truncate text-xs'>
                   {resolvedUser.username}
@@ -172,7 +170,9 @@ export function ImageAuditRequestContentDialog(
           <div className='grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-4 lg:pr-2'>
             <section className='flex min-h-0 flex-col overflow-hidden rounded-lg border'>
               <div className='flex items-center justify-between gap-2 px-3 py-2'>
-                <span className='text-sm font-medium'>{t('Request content')}</span>
+                <span className='text-sm font-medium'>
+                  {t('Request content')}
+                </span>
                 <Button
                   type='button'
                   variant='ghost'

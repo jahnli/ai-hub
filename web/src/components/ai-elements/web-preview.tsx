@@ -25,6 +25,8 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useImperativeHandle,
+  useRef,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -159,21 +161,21 @@ export const WebPreviewUrl = ({
   value,
   onChange,
   onKeyDown,
+  ref,
   ...props
 }: WebPreviewUrlProps) => {
   const { t } = useTranslation()
   const { url, setUrl } = useWebPreview()
-  const [inputValue, setInputValue] = useState(url)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  // Sync input value with context URL when it changes externally
+  useImperativeHandle(ref, () => inputRef.current as HTMLInputElement)
+
+  // Keep an uncontrolled input synchronized when the URL changes externally.
   useEffect(() => {
-    setInputValue(url)
-  }, [url])
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(event.target.value)
-    onChange?.(event)
-  }
+    if (value === undefined && inputRef.current) {
+      inputRef.current.value = url
+    }
+  }, [url, value])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -186,10 +188,12 @@ export const WebPreviewUrl = ({
   return (
     <Input
       className='h-8 flex-1 text-sm'
-      onChange={onChange ?? handleChange}
+      defaultValue={value === undefined ? url : undefined}
+      onChange={onChange}
       onKeyDown={handleKeyDown}
       placeholder={t('Enter URL...')}
-      value={value ?? inputValue}
+      ref={inputRef}
+      value={value}
       {...props}
     />
   )
@@ -212,7 +216,7 @@ export const WebPreviewBody = ({
     <div className='flex-1'>
       <iframe
         className={cn('size-full', className)}
-        sandbox='allow-scripts allow-same-origin allow-forms allow-popups allow-presentation'
+        sandbox='allow-scripts allow-forms allow-popups allow-presentation'
         src={(src ?? url) || undefined}
         title={t('Preview')}
         {...props}
@@ -272,7 +276,7 @@ export const WebPreviewConsole = ({
           {logs.length === 0 ? (
             <p className='text-muted-foreground'>{t('No console output')}</p>
           ) : (
-            logs.map((log, index) => (
+            logs.map((log) => (
               <div
                 className={cn(
                   'text-xs',
@@ -280,7 +284,7 @@ export const WebPreviewConsole = ({
                   log.level === 'warn' && 'text-warning',
                   log.level === 'log' && 'text-foreground'
                 )}
-                key={`${log.timestamp.getTime()}-${index}`}
+                key={`${log.timestamp.getTime()}-${log.level}-${log.message}`}
               >
                 <span className='text-muted-foreground'>
                   {dayjs(log.timestamp).format('HH:mm:ss')}

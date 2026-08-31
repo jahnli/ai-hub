@@ -112,7 +112,10 @@ export function UsageAnalysisSkeleton() {
       <CardContent className='p-0'>
         <div className='grid grid-cols-1 lg:grid-cols-2'>
           {USAGE_ANALYSIS_SKELETON_KEYS.map((key) => (
-            <div key={key} className='border-border/60 border-b lg:odd:border-r'>
+            <div
+              key={key}
+              className='border-border/60 border-b lg:odd:border-r'
+            >
               <div className='px-5 py-3'>
                 <Skeleton className='h-4 w-32' />
               </div>

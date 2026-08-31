@@ -243,7 +243,7 @@ export function formatTokenCount(tokens: number): string {
   if (tokens === 0) return '0'
   if (tokens > 1_000_000) {
     const yi = tokens / 100_000_000
-    return yi.toFixed(2).replace(/\.?0+$/, '') + ' 亿'
+    return `${yi.toFixed(2).replace(/\.?0+$/, '')} 亿`
   }
   return Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
     tokens
@@ -258,7 +258,7 @@ export function formatRequestCount(count: number): string {
   if (count === 0) return '0'
   if (count > 10000) {
     const wan = count / 10000
-    return wan.toFixed(2).replace(/\.?0+$/, '') + ' 万'
+    return `${wan.toFixed(2).replace(/\.?0+$/, '')} 万`
   }
   return Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
     count

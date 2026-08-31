@@ -4,10 +4,10 @@ interface StepConnectionLineProps {
   index: number
 }
 
-const CONTAINER_STYLE: React.CSSProperties = {
-  ['--step-line-light' as string]: 'var(--primary)',
-  ['--step-line-mid' as string]: 'var(--primary)',
-  ['--step-line-deep' as string]: 'var(--primary)',
+const CONTAINER_STYLE: React.CSSProperties & Record<`--${string}`, string> = {
+  '--step-line-light': 'var(--primary)',
+  '--step-line-mid': 'var(--primary)',
+  '--step-line-deep': 'var(--primary)',
 }
 
 export function StepConnectionLine(props: StepConnectionLineProps) {
@@ -17,20 +17,19 @@ export function StepConnectionLine(props: StepConnectionLineProps) {
   useEffect(() => {
     const svg = svgRef.current
     if (!svg) return
+    const parent = svg.parentElement
+    if (!parent) return
 
     const updateSize = () => {
-      const parent = svg.parentElement
-      if (parent) {
-        setDimensions({
-          width: parent.offsetWidth,
-          height: parent.offsetHeight,
-        })
-      }
+      setDimensions({
+        width: parent.offsetWidth,
+        height: parent.offsetHeight,
+      })
     }
 
     updateSize()
     const ro = new ResizeObserver(updateSize)
-    ro.observe(svg.parentElement!)
+    ro.observe(parent)
     return () => ro.disconnect()
   }, [])
 

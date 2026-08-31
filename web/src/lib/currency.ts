@@ -321,7 +321,7 @@ function formatCurrencyValue(
         notation: options.compact ? 'compact' : 'standard',
         minimumFractionDigits: options.compact
           ? 0
-          : options.fixedFractionDigits ?? 0,
+          : (options.fixedFractionDigits ?? 0),
         maximumFractionDigits: options.compact ? 1 : digits,
       }).format(adjustedValue)
     }
@@ -333,7 +333,7 @@ function formatCurrencyValue(
       notation: options.compact ? 'compact' : 'standard',
       minimumFractionDigits: options.compact
         ? 0
-        : options.fixedFractionDigits ?? 0,
+        : (options.fixedFractionDigits ?? 0),
       maximumFractionDigits: options.compact ? 1 : digits,
     }).format(adjustedValue)
     return formatted
@@ -344,7 +344,7 @@ function formatCurrencyValue(
     maximumFractionDigits: options.compact ? 1 : digits,
     minimumFractionDigits: options.compact
       ? 0
-      : options.fixedFractionDigits ?? 0,
+      : (options.fixedFractionDigits ?? 0),
   }).format(adjustedValue)
 
   return options.showSymbol ? `${meta.symbol} ${decimal}` : decimal

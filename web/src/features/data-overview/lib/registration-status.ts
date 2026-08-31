@@ -1,7 +1,4 @@
-import type {
-  DepartmentRegistrationStatus,
-  DepartmentUser,
-} from '../types'
+import type { DepartmentRegistrationStatus, DepartmentUser } from '../types'
 
 export const DEPARTMENT_REGISTRATION_STATUS = {
   REGISTERED: 'registered',

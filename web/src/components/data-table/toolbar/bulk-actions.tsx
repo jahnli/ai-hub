@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type Table } from '@tanstack/react-table'
+import type { Table } from '@tanstack/react-table'
 import { X } from 'lucide-react'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -56,11 +56,13 @@ export function DataTableBulkActions<TData>({
   const selectedRows = table.getFilteredSelectedRowModel().rows
   const selectedCount = selectedRows.length
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const buttonsRef = useRef<NodeListOf<HTMLButtonElement> | null>(null)
+  const buttonsRef = useRef<HTMLButtonElement[]>([])
   const [announcement, setAnnouncement] = useState('')
 
   useLayoutEffect(() => {
-    buttonsRef.current = toolbarRef.current?.querySelectorAll('button') ?? null
+    buttonsRef.current = [
+      ...(toolbarRef.current?.querySelectorAll('button') ?? []),
+    ]
   })
 
   // Announce selection changes to screen readers
@@ -82,9 +84,9 @@ export function DataTableBulkActions<TData>({
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     const buttons = buttonsRef.current
-    if (!buttons) return
+    if (buttons.length === 0) return
 
-    const currentIndex = Array.from(buttons).findIndex(
+    const currentIndex = [...buttons].findIndex(
       (button) => button === document.activeElement
     )
 
@@ -108,7 +110,7 @@ export function DataTableBulkActions<TData>({
         break
       case 'End':
         event.preventDefault()
-        buttons[buttons.length - 1]?.focus()
+        buttons.at(-1)?.focus()
         break
       case 'Escape': {
         // Check if the Escape key came from a dropdown trigger or content

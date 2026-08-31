@@ -95,10 +95,7 @@ export function ImageAuditTable(props: ImageAuditTableProps) {
     [previewOpen]
   )
 
-  const columns = useImageAuditColumns(
-    handlePreview,
-    handleViewRequestContent
-  )
+  const columns = useImageAuditColumns(handlePreview, handleViewRequestContent)
 
   const { table } = useDataTable({
     data: items,

@@ -229,7 +229,7 @@ export function DepartmentTreeSelect(props: DepartmentTreeSelectProps) {
 function LoadingColumn() {
   return (
     <div
-      className='border-l flex min-w-[160px] items-center justify-center'
+      className='flex min-w-[160px] items-center justify-center border-l'
       style={{ height: 'min(240px, 40vh)' }}
     >
       <Loader2 className='text-muted-foreground size-5 animate-spin' />

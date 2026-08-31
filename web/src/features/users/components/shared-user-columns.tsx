@@ -335,9 +335,7 @@ export function userAveragePriceColumn<T extends UserColumnRow>(
             {formatAmountCny(averagePrice)}/{t('100M Tokens')}
           </TooltipTrigger>
           <TooltipContent>
-            <span className='text-xs'>
-              {t('Unit price per 100M tokens')}
-            </span>
+            <span className='text-xs'>{t('Unit price per 100M tokens')}</span>
           </TooltipContent>
         </Tooltip>
       )

@@ -17,10 +17,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
-
 import { isDepartmentNodeDisabled } from '@/features/data-overview/lib/department-selection'
 import type { DeptTreeNode } from '@/features/data-overview/types'
+import { cn } from '@/lib/utils'
 
 interface DeptMultiSelectProps {
   treeData: DeptTreeNode[]
@@ -38,10 +37,7 @@ export function DeptMultiSelect(props: DeptMultiSelectProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const selectedSet = useMemo(
-    () => new Set(props.value),
-    [props.value]
-  )
+  const selectedSet = useMemo(() => new Set(props.value), [props.value])
 
   useEffect(() => {
     if (open) {
@@ -158,7 +154,9 @@ export function DeptMultiSelect(props: DeptMultiSelectProps) {
             <Building2 className='text-muted-foreground size-4 shrink-0' />
           )}
           {selectedLabels.length === 0 ? (
-            <span className='text-muted-foreground truncate'>{triggerLabel}</span>
+            <span className='text-muted-foreground truncate'>
+              {triggerLabel}
+            </span>
           ) : (
             <>
               {selectedLabels.slice(0, 3).map((item) => (
@@ -219,7 +217,7 @@ export function DeptMultiSelect(props: DeptMultiSelectProps) {
         </div>
 
         {selectedLabels.length > 0 && (
-          <div className='border-b flex flex-wrap gap-1 px-3 py-2'>
+          <div className='flex flex-wrap gap-1 border-b px-3 py-2'>
             {selectedLabels.map((item) => (
               <Badge
                 key={item.value}
@@ -344,7 +342,9 @@ function MultiSelectColumn(props: MultiSelectColumnProps) {
         )
       })}
       {props.nodes.length === 0 && (
-        <p className='text-muted-foreground px-3 py-2 text-sm'>{t('No departments')}</p>
+        <p className='text-muted-foreground px-3 py-2 text-sm'>
+          {t('No departments')}
+        </p>
       )}
     </div>
   )

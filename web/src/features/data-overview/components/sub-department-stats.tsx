@@ -48,7 +48,7 @@ const SUB_DEPARTMENT_PINNED_COLUMNS = [
 
 function formatCNY(amount: number): string {
   if (!amount) return '¥0'
-  return '¥' + amount.toFixed(2)
+  return `¥${amount.toFixed(2)}`
 }
 
 function formatUnitPrice(amount: number, unitLabel: string): string {
@@ -58,7 +58,7 @@ function formatUnitPrice(amount: number, unitLabel: string): string {
 
 function formatTokens(tokens: number): string {
   if (!tokens) return '0'
-  return (tokens / 1_0000_0000).toFixed(2) + ' 亿'
+  return `${(tokens / 1_0000_0000).toFixed(2)} 亿`
 }
 
 function formatTokensDetail(tokens: number): string {
@@ -67,7 +67,7 @@ function formatTokensDetail(tokens: number): string {
 }
 
 function formatRequests(count: number): string {
-  if (count >= 1_0000) return (count / 1_0000).toFixed(2) + ' 万'
+  if (count >= 1_0000) return `${(count / 1_0000).toFixed(2)} 万`
   return count.toLocaleString()
 }
 
@@ -326,7 +326,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           label: {
             style: { fontSize: 11 },
             formatMethod: (v: string) =>
-              v.length > 10 ? v.slice(0, 10) + '…' : v,
+              v.length > 10 ? `${v.slice(0, 10)}…` : v,
           },
         },
         {
@@ -335,7 +335,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           label: {
             formatMethod: (v: number) => {
               if (v === 0) return '0'
-              return (v / 1_0000_0000).toFixed(2) + ' 亿'
+              return `${(v / 1_0000_0000).toFixed(2)} 亿`
             },
           },
         },
@@ -352,7 +352,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
               key: t('Cost'),
               value: (d: { cost?: number }) => {
                 const v = d.cost ?? 0
-                return v === 0 ? '¥0' : '¥' + v.toFixed(2)
+                return v === 0 ? '¥0' : `¥${v.toFixed(2)}`
               },
             },
           ],
@@ -402,7 +402,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           const name = d.name ?? ''
           const pct =
             totalCost > 0
-              ? (((d.value ?? 0) / totalCost) * 100).toFixed(1) + '%'
+              ? `${(((d.value ?? 0) / totalCost) * 100).toFixed(1)}%`
               : ''
           return pct ? `${name} ${pct}` : name
         },
@@ -414,9 +414,9 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
               key: (d: { name?: string }) => d.name ?? '',
               value: (d: { value?: number }) => {
                 const v = d.value ?? 0
-                const cost = v === 0 ? '¥0' : '¥' + v.toFixed(2)
+                const cost = v === 0 ? '¥0' : `¥${v.toFixed(2)}`
                 const pct =
-                  totalCost > 0 ? ((v / totalCost) * 100).toFixed(1) + '%' : ''
+                  totalCost > 0 ? `${((v / totalCost) * 100).toFixed(1)}%` : ''
                 return pct ? `${cost} (${pct})` : cost
               },
             },
@@ -431,7 +431,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
           label: {
             style: { fontSize: 11 },
             formatMethod: (label: string) =>
-              label.length > 14 ? label.slice(0, 14) + '…' : label,
+              label.length > 14 ? `${label.slice(0, 14)}…` : label,
           },
         },
         autoPage: true,
@@ -497,7 +497,7 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
               </span>
               <span className='text-muted-foreground ml-auto text-sm'>
                 {t('Total')}:{' '}
-                {totalCost === 0 ? '¥0' : '¥' + totalCost.toFixed(2)}
+                {totalCost === 0 ? '¥0' : `¥${totalCost.toFixed(2)}`}
               </span>
             </div>
             <div

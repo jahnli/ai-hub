@@ -3,8 +3,8 @@ import { BarChart3, PieChart } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useChartTheme } from '@/lib/use-chart-theme'
 import { calculateUnitPricePer100MTokens } from '@/lib/unit-price'
+import { useChartTheme } from '@/lib/use-chart-theme'
 import { VCHART_OPTION } from '@/lib/vchart'
 
 import type { UserRankingItem } from '../types'
@@ -15,7 +15,7 @@ interface UserConsumptionChartsProps {
 
 function formatCost(value: number): string {
   if (value === 0) return '¥0'
-  return '¥' + value.toFixed(2)
+  return `¥${value.toFixed(2)}`
 }
 
 function formatTokensDetail(tokens: number): string {
@@ -73,7 +73,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
           label: {
             style: { fontSize: 11 },
             formatMethod: (v: string) =>
-              v.length > 10 ? v.slice(0, 10) + '…' : v,
+              v.length > 10 ? `${v.slice(0, 10)}…` : v,
           },
         },
         {
@@ -161,7 +161,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
           const name = d.name ?? ''
           const pct =
             totalCost > 0
-              ? (((d.value ?? 0) / totalCost) * 100).toFixed(1) + '%'
+              ? `${(((d.value ?? 0) / totalCost) * 100).toFixed(1)}%`
               : ''
           return pct ? `${name} ${pct}` : name
         },
@@ -186,7 +186,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
               value: (d: { value?: number }) => {
                 const v = d.value ?? 0
                 return totalCost > 0
-                  ? ((v / totalCost) * 100).toFixed(1) + '%'
+                  ? `${((v / totalCost) * 100).toFixed(1)}%`
                   : '-'
               },
             },
@@ -201,7 +201,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
           label: {
             style: { fontSize: 11 },
             formatMethod: (label: string) =>
-              label.length > 14 ? label.slice(0, 14) + '…' : label,
+              label.length > 14 ? `${label.slice(0, 14)}…` : label,
           },
         },
         autoPage: true,

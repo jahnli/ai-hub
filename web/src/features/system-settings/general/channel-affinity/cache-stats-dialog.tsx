@@ -27,38 +27,60 @@ interface Props {
 
 export function CacheStatsDialog(props: Props) {
   const { t } = useTranslation()
-  const [loading, setLoading] = useState(false)
-  const [stats, setStats] = useState<Record<string, unknown> | null>(null)
+  const targetKey =
+    props.open && props.target?.rule_name && props.target.key_fp
+      ? [
+          props.target.rule_name,
+          props.target.using_group,
+          props.target.key_hint,
+          props.target.key_fp,
+        ].join('\u0000')
+      : ''
+  const [requestState, setRequestState] = useState<{
+    key: string
+    loading: boolean
+    stats: Record<string, unknown> | null
+  }>(() => ({ key: targetKey, loading: Boolean(targetKey), stats: null }))
   const seqRef = useRef(0)
+
+  if (requestState.key !== targetKey) {
+    setRequestState({
+      key: targetKey,
+      loading: Boolean(targetKey),
+      stats: null,
+    })
+  }
 
   useEffect(() => {
     if (!props.open || !props.target?.rule_name || !props.target?.key_fp) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStats(null)
+      seqRef.current += 1
       return
     }
 
     const seq = ++seqRef.current
 
-    setLoading(true)
-
-    setStats(null)
-
     getAffinityUsageCache(props.target)
       .then((res) => {
         if (seq !== seqRef.current) return
-        if (res.success) setStats((res.data as Record<string, unknown>) || {})
-        else toast.error(res.message || t('Request failed'))
+        if (res.success) {
+          setRequestState({
+            key: targetKey,
+            loading: false,
+            stats: (res.data as Record<string, unknown>) || {},
+          })
+        } else toast.error(res.message || t('Request failed'))
+      })
+      .finally(() => {
+        if (seq !== seqRef.current) return
+        setRequestState((current) => ({ ...current, loading: false }))
       })
       .catch(() => {
         if (seq !== seqRef.current) return
         toast.error(t('Request failed'))
       })
-      .finally(() => {
-        if (seq !== seqRef.current) return
-        setLoading(false)
-      })
-  }, [props.open, props.target, t])
+  }, [props.open, props.target, t, targetKey])
+
+  const stats = requestState.stats
 
   const rows = useMemo(() => {
     if (!stats) return []
@@ -67,51 +89,90 @@ export function CacheStatsDialog(props: Props) {
     const hit = Number(s.hit || 0)
     const total = Number(s.total || 0)
 
-    if (s.rule_name || props.target?.rule_name)
+    if (s.rule_name || props.target?.rule_name) {
       data.push({
         key: t('Rule'),
         value: (s.rule_name || props.target?.rule_name || '') as string,
       })
-    if (s.using_group || props.target?.using_group)
+    }
+    if (s.using_group || props.target?.using_group) {
       data.push({
         key: t('Group'),
         value: (s.using_group || props.target?.using_group || '') as string,
       })
-    if (props.target?.key_hint)
+    }
+    if (props.target?.key_hint) {
       data.push({ key: t('Key Summary'), value: props.target.key_hint })
-    if (s.key_fp || props.target?.key_fp)
+    }
+    if (s.key_fp || props.target?.key_fp) {
       data.push({
         key: t('Key Fingerprint'),
         value: (s.key_fp || props.target?.key_fp || '') as string,
       })
-    if (Number(s.window_seconds || 0) > 0)
+    }
+    if (Number(s.window_seconds || 0) > 0) {
       data.push({ key: t('TTL (seconds)'), value: s.window_seconds as number })
-    if (total > 0)
+    }
+    if (total > 0) {
       data.push({
         key: t('Hit Rate'),
         value: `${hit}/${total} (${formatRate(hit, total)})`,
       })
-    if (Number(s.last_seen_at || 0) > 0)
+    }
+    if (Number(s.last_seen_at || 0) > 0) {
       data.push({
         key: t('Last Seen'),
         value: formatTimestampToDate(s.last_seen_at as number | undefined),
       })
+    }
 
     const promptTokens = Number(s.prompt_tokens || 0)
     const cachedTokens = Number(s.cached_tokens || 0)
     const completionTokens = Number(s.completion_tokens || 0)
     const totalTokens = Number(s.total_tokens || 0)
 
-    if (promptTokens > 0)
+    if (promptTokens > 0) {
       data.push({ key: 'Prompt tokens', value: promptTokens })
-    if (cachedTokens > 0)
+    }
+    if (cachedTokens > 0) {
       data.push({ key: 'Cached tokens', value: cachedTokens })
-    if (completionTokens > 0)
+    }
+    if (completionTokens > 0) {
       data.push({ key: 'Completion tokens', value: completionTokens })
+    }
     if (totalTokens > 0) data.push({ key: 'Total tokens', value: totalTokens })
 
     return data
   }, [stats, props.target, t])
+
+  let content = (
+    <div className='text-muted-foreground py-8 text-center text-sm'>
+      {t('No data available')}
+    </div>
+  )
+  if (requestState.loading) {
+    content = (
+      <div className='text-muted-foreground py-8 text-center text-sm'>
+        {t('Loading...')}
+      </div>
+    )
+  } else if (rows.length > 0) {
+    content = (
+      <div className='space-y-2'>
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className='flex justify-between gap-4 border-b pb-1 text-sm'
+          >
+            <span className='text-muted-foreground'>{row.key}</span>
+            <span className='text-right font-medium break-all'>
+              {row.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <Dialog
@@ -127,29 +188,7 @@ export function CacheStatsDialog(props: Props) {
           'Hit criteria: If cached tokens exist in usage, it counts as a hit.'
         )}
       </p>
-      {loading ? (
-        <div className='text-muted-foreground py-8 text-center text-sm'>
-          {t('Loading...')}
-        </div>
-      ) : rows.length > 0 ? (
-        <div className='space-y-2'>
-          {rows.map((row) => (
-            <div
-              key={row.key}
-              className='flex justify-between gap-4 border-b pb-1 text-sm'
-            >
-              <span className='text-muted-foreground'>{row.key}</span>
-              <span className='text-right font-medium break-all'>
-                {row.value}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className='text-muted-foreground py-8 text-center text-sm'>
-          {t('No data available')}
-        </div>
-      )}
+      {content}
     </Dialog>
   )
 }

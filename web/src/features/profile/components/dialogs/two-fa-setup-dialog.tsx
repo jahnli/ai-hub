@@ -53,9 +53,7 @@ export function TwoFASetupDialog({
         toast.error(response.message || t('Failed to setup 2FA'))
         onOpenChange(false)
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Setup 2FA error:', error)
+    } catch {
       toast.error(t('Failed to setup 2FA'))
       onOpenChange(false)
     } finally {
@@ -84,7 +82,7 @@ export function TwoFASetupDialog({
       } else {
         toast.error(response.message || t('Failed to enable 2FA'))
       }
-    } catch (_error) {
+    } catch {
       toast.error(t('Failed to enable 2FA'))
     } finally {
       setLoading(false)
@@ -107,9 +105,13 @@ export function TwoFASetupDialog({
 
   // Initialize when dialog opens
   useEffect(() => {
-    if (open && !setupData && !initializing) {
-      handleSetup()
-    }
+    if (!open || setupData || initializing) return
+
+    const timeoutId = window.setTimeout(() => {
+      void handleSetup()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [open, setupData, initializing, handleSetup])
 
   return (
@@ -159,20 +161,22 @@ export function TwoFASetupDialog({
       }
     >
       <div className='space-y-4 py-4'>
-        {initializing ? (
+        {initializing && (
           <div className='flex flex-col items-center justify-center gap-3 py-8'>
             <div className='border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent' />
             <div className='text-muted-foreground text-sm'>
               {t('Setting up 2FA...')}
             </div>
           </div>
-        ) : !setupData ? (
+        )}
+        {!initializing && !setupData && (
           <div className='flex justify-center py-8'>
             <div className='text-muted-foreground'>
               {t('Failed to load setup data')}
             </div>
           </div>
-        ) : (
+        )}
+        {!initializing && setupData && (
           <>
             {/* Step 0: QR Code */}
             {step === 0 && (
@@ -218,9 +222,9 @@ export function TwoFASetupDialog({
                 </Alert>
                 <div className='rounded-lg border p-4'>
                   <div className='grid grid-cols-2 gap-2'>
-                    {setupData.backup_codes.map((code, index) => (
+                    {setupData.backup_codes.map((code) => (
                       <div
-                        key={index}
+                        key={code}
                         className='bg-muted rounded-md p-2 text-center font-mono text-sm'
                       >
                         {code}
