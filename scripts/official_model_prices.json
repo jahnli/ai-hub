@@ -48,10 +48,11 @@
     "cache_read": 2.1,
     "cache_write": 42
   },
-  "grok-4.5": {
+  "grok-4.6": {
     "input": 14,
     "output": 42,
-    "cache_read": 2.1,
+    "cache_read": 3.5,
     "cache_write": null
   }
+  
 }

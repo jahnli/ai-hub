@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 """导出模型广场中全部模型的四类 Token 单价。
 
-价格计算与模型广场保持相同口径：默认采用当前用户可见分组中的最低倍率，
-并使用 /api/status 返回的美元兑人民币汇率换算为元/百万 Token。
+价格计算与模型广场保持相同口径：默认采用当前用户可见分组中的最低有效倍率，
+并按照用户特殊倍率 > 分组供应商倍率 > 分组基础倍率的优先级解析倍率，
+再使用 /api/status 返回的美元兑人民币汇率换算为元/百万 Token。
 
 用法：
     python scripts/model_square_prices.py --token <控制台访问令牌>
-    python scripts/model_square_prices.py --token <令牌> --multiplier 0.8
     python scripts/model_square_prices.py --base-url https://example.com --output prices.xlsx
 
 官方价格在同目录 official_model_prices.json 中维护，单位同样为元/百万 Token。
-倍率只应用于该文件中已配置官方价格的模型；未配置的模型保持模型广场原价。
 相对于官网的折扣仅按双方的非缓存输入单价计算。
 """
 
@@ -75,8 +74,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-url",
-        default=os.getenv("MODEL_SQUARE_BASE_URL", "http://localhost:3000"),
-        help="站点地址，默认读取 MODEL_SQUARE_BASE_URL 或 http://localhost:3000",
+        default=os.getenv("MODEL_SQUARE_BASE_URL", "https://ai.semi-tech.com/"),
+        help="站点地址，默认读取 MODEL_SQUARE_BASE_URL 或 https://ai.semi-tech.com/",
     )
     parser.add_argument(
         "--token",
@@ -88,12 +87,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_OFFICIAL_PRICES,
         help=f"官方价格 JSON，默认 {DEFAULT_OFFICIAL_PRICES}",
-    )
-    parser.add_argument(
-        "--multiplier",
-        type=positive_decimal,
-        default=Decimal("1"),
-        help="已配置官方价格模型的单价倍率，默认 1",
     )
     parser.add_argument(
         "--timeout",
@@ -187,17 +180,33 @@ def load_official_prices(path: Path) -> dict[str, dict[str, Decimal | None]]:
     return prices
 
 
-def get_display_group_ratio(model: dict[str, Any], group_ratios: dict[str, Any]) -> Decimal:
+def get_display_group_ratio(
+    model: dict[str, Any],
+    group_ratios: dict[str, Any],
+    group_vendor_ratios: dict[str, Any],
+    special_groups: set[str],
+) -> Decimal:
     enabled_groups = model.get("enable_groups")
     if not isinstance(enabled_groups, list) or not enabled_groups:
         return Decimal("1")
 
+    vendor_id = model.get("vendor_id")
+    vendor_key = str(vendor_id) if vendor_id else ""
     ratios: list[Decimal] = []
     for group in enabled_groups:
-        if not isinstance(group, str) or group not in group_ratios:
+        if not isinstance(group, str):
             continue
+
+        raw_ratio = group_ratios.get(group)
+        if vendor_key and group not in special_groups:
+            vendor_ratios = group_vendor_ratios.get(group)
+            if isinstance(vendor_ratios, dict) and vendor_key in vendor_ratios:
+                raw_ratio = vendor_ratios[vendor_key]
+        if raw_ratio is None:
+            continue
+
         try:
-            ratio = to_decimal(group_ratios[group], f"group_ratio.{group}")
+            ratio = to_decimal(raw_ratio, f"effective_group_ratio.{group}")
         except ValueError:
             continue
         if ratio.is_finite():
@@ -224,12 +233,19 @@ def parse_first_dynamic_tier(expression: str) -> dict[str, Decimal] | None:
 def calculate_prices(
     model: dict[str, Any],
     group_ratios: dict[str, Any],
+    group_vendor_ratios: dict[str, Any],
+    special_groups: set[str],
     exchange_rate: Decimal,
 ) -> dict[str, Decimal | None]:
     if model.get("quota_type") != 0:
         return {field: None for field in PRICE_FIELDS}
 
-    group_ratio = get_display_group_ratio(model, group_ratios)
+    group_ratio = get_display_group_ratio(
+        model,
+        group_ratios,
+        group_vendor_ratios,
+        special_groups,
+    )
     conversion = group_ratio * exchange_rate
 
     if model.get("billing_mode") == "tiered_expr" and model.get("billing_expr"):
@@ -265,17 +281,6 @@ def calculate_prices(
     }
 
 
-def apply_multiplier(
-    prices: dict[str, Decimal | None], multiplier: Decimal, has_official_price: bool
-) -> dict[str, Decimal | None]:
-    if not has_official_price:
-        return prices
-    return {
-        field: value * multiplier if value is not None else None
-        for field, value in prices.items()
-    }
-
-
 def format_discount(
     prices: dict[str, Decimal | None],
     official_prices: dict[str, Decimal | None] | None,
@@ -298,9 +303,10 @@ def format_discount(
 def build_rows(
     models: list[dict[str, Any]],
     group_ratios: dict[str, Any],
+    group_vendor_ratios: dict[str, Any],
+    special_groups: set[str],
     exchange_rate: Decimal,
     official_prices: dict[str, dict[str, Decimal | None]],
-    multiplier: Decimal,
 ) -> list[
     tuple[
         str,
@@ -329,11 +335,12 @@ def build_rows(
         if not model_name:
             continue
         model_official_prices = official_prices.get(model_name)
-        prices = calculate_prices(model, group_ratios, exchange_rate)
-        prices = apply_multiplier(
-            prices,
-            multiplier,
-            model_official_prices is not None,
+        prices = calculate_prices(
+            model,
+            group_ratios,
+            group_vendor_ratios,
+            special_groups,
+            exchange_rate,
         )
         rows.append(
             (
@@ -479,12 +486,20 @@ def main() -> int:
         status = status_payload.get("data")
         models = pricing_payload.get("data")
         group_ratios = pricing_payload.get("group_ratio")
+        group_vendor_ratios = pricing_payload.get("group_vendor_ratio", {})
+        group_special_ratios = pricing_payload.get("group_special_ratios", [])
         if not isinstance(status, dict):
             raise RuntimeError("/api/status 返回的数据结构不正确")
         if not isinstance(models, list):
             raise RuntimeError("/api/pricing 返回的模型列表不正确")
         if not isinstance(group_ratios, dict):
             raise RuntimeError("/api/pricing 返回的分组倍率不正确")
+        if not isinstance(group_vendor_ratios, dict):
+            raise RuntimeError("/api/pricing 返回的供应商分组倍率不正确")
+        if not isinstance(group_special_ratios, list) or not all(
+            isinstance(group, str) for group in group_special_ratios
+        ):
+            raise RuntimeError("/api/pricing 返回的用户特殊倍率分组不正确")
 
         exchange_rate = to_decimal(
             status.get("usd_exchange_rate", 1),
@@ -495,9 +510,10 @@ def main() -> int:
         rows = build_rows(
             models,
             group_ratios,
+            group_vendor_ratios,
+            set(group_special_ratios),
             exchange_rate,
             official_prices,
-            args.multiplier,
         )
         write_excel(args.output, rows)
     except (RuntimeError, ValueError) as exc:

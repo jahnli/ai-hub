@@ -4,11 +4,15 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import base64
 import json
 import re
 import sys
+import tempfile
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_FLOOR
@@ -28,6 +32,11 @@ DEFAULT_QUOTA_PER_UNIT = 500_000.0
 TOKENS_PER_HUNDRED_MILLION = 100_000_000.0
 CONSUME_LOG_TYPE = 2
 TARGET_COMPANY = "赛美特集团"
+# 填入飞书群自定义机器人的 Webhook 地址，例如：
+FEISHU_WEBHOOK_URL = "https://open.feishu.cn/open-apis/bot/v2/hook/68044cb8-52eb-4960-9a84-5373e74be828"
+# 上传本地图片需要企业自建应用，请填写应用凭证并开通图片上传权限。
+FEISHU_APP_ID = "cli_a9491465af3c9bc0"
+FEISHU_APP_SECRET = "Ym7zULMcUA5KUFFv2vTvMhdvRlMbSLro"
 ALLOCATION_BUCKETS = ("input", "output", "cache_input", "cache_output")
 
 ModelMapping = tuple[str, list[str]]
@@ -672,6 +681,7 @@ def save_consumption_histogram(
     end: datetime,
     total_users: int,
     distribution: ConsumptionDistribution,
+    output_path: Path | None = None,
 ) -> Path:
     try:
         import matplotlib
@@ -735,7 +745,8 @@ def save_consumption_histogram(
     )
     figure.tight_layout()
 
-    output_path = Path(__file__).with_name("weekly_consumption_histogram.png")
+    if output_path is None:
+        output_path = Path(__file__).with_name("weekly_consumption_histogram.png")
     figure.savefig(output_path, bbox_inches="tight")
     plt.close(figure)
     return output_path
@@ -771,14 +782,14 @@ def unit_price(cost: float, tokens: int) -> str:
     return "￥0.00/亿 Token"
 
 
-def print_report(
+def build_report(
     label: str,
     start: datetime,
     end: datetime,
     total_users: int,
     consumption_distribution: ConsumptionDistribution,
     stats: list[ModelStats],
-) -> None:
+) -> str:
     input_tokens = sum(item.input_tokens for item in stats)
     output_tokens = sum(item.output_tokens for item in stats)
     cache_input_tokens = sum(item.cache_input_tokens for item in stats)
@@ -816,7 +827,7 @@ def print_report(
     input_output_ratio = total_input_tokens / total_output_tokens if total_output_tokens else 0.0
     cache_hit_rate = cache_input_tokens / total_input_tokens * 100 if total_input_tokens else 0.0
 
-    print(f"""Hi 各位领导：
+    lines = [f"""Hi 各位领导：
 AI 中转站{label}统计
 统计周期：{start.strftime('%Y-%m-%d %H:%M:%S')} － {end.strftime('%Y-%m-%d %H:%M')}
 总注册人数：{total_users:,} 人
@@ -830,23 +841,20 @@ AI 中转站{label}统计
 Token 总量 {format_displayed_token_amount(displayed_total_tokens)}，总费用 {displayed_total_cost:,.0f} 元，单价：￥{displayed_average_price:.2f}/亿 Token
 输入输出倍数：{input_output_ratio:.1f} 倍，综合缓存命中率：{cache_hit_rate:.0f}%
 
-Top 5 费用的模型：""")
+Top 5 费用的模型："""]
     for index, item in enumerate(sorted(stats, key=lambda value: value.quota_cost_cny, reverse=True)[:5], start=1):
-        print(
+        lines.append(
             f"{index}. {item.name}，费用 {format_cost(item.quota_cost_cny)} 元，"
             f"Token 量 {format_token_amount(item.total_tokens)}，"
             f"单价：{unit_price(item.quota_cost_cny, item.total_tokens)}"
         )
+    return "\n".join(lines)
 
 
-def resolve_period() -> tuple[str, datetime, datetime]:
+def resolve_period(period: str) -> tuple[str, datetime, datetime]:
     tz = timezone(timedelta(hours=8))
     now = datetime.now(tz)
-    print("请选择统计周期：")
-    print("  1. 上周（上周一 ~ 上周五 18:30）")
-    print("  2. 本周（本周一 ~ 本周五 18:30）")
-    choice = input("请输入 1 或 2：").strip()
-    if choice == "2":
+    if period == "current":
         monday = now - timedelta(days=now.weekday())
         label = "本周"
     else:
@@ -857,8 +865,123 @@ def resolve_period() -> tuple[str, datetime, datetime]:
     return label, start, end
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="生成 AI 中转站周报")
+    parser.add_argument(
+        "--period",
+        choices=("current", "last"),
+        default="current",
+        help="统计周期：current 为本周，last 为上周；默认 current",
+    )
+    parser.add_argument(
+        "--send-feishu",
+        action="store_true",
+        help="将文字周报和消费柱状图发送到 FEISHU_WEBHOOK_URL 指定的飞书群机器人",
+    )
+    return parser.parse_args()
+
+
+def post_feishu_webhook(payload: dict[str, Any]) -> None:
+    webhook_url = FEISHU_WEBHOOK_URL.strip()
+    if not webhook_url:
+        raise RuntimeError("请先在脚本顶部填写 FEISHU_WEBHOOK_URL")
+
+    request = urllib.request.Request(
+        webhook_url,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            response_body = response.read().decode("utf-8")
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"飞书群机器人请求失败：{exc}") from exc
+
+    try:
+        result = json.loads(response_body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("飞书群机器人返回了无法解析的响应") from exc
+    response_code = result.get("code", result.get("StatusCode", 0))
+    if response_code != 0:
+        message = result.get("msg", result.get("StatusMessage", "未知错误"))
+        raise RuntimeError(f"飞书群机器人发送失败：{message}")
+
+
+def get_feishu_tenant_access_token() -> str:
+    app_id = FEISHU_APP_ID.strip()
+    app_secret = FEISHU_APP_SECRET.strip()
+    if not app_id or not app_secret:
+        raise RuntimeError("发送图片前请先在脚本顶部填写 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+
+    payload = json.dumps({"app_id": app_id, "app_secret": app_secret}).encode("utf-8")
+    request = urllib.request.Request(
+        "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
+        data=payload,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            response_body = response.read().decode("utf-8")
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"获取飞书 tenant_access_token 失败：{exc}") from exc
+
+    try:
+        result = json.loads(response_body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("飞书鉴权接口返回了无法解析的响应") from exc
+    if result.get("code") != 0 or not result.get("tenant_access_token"):
+        raise RuntimeError(f"获取飞书 tenant_access_token 失败：{result.get('msg', '未知错误')}")
+    return str(result["tenant_access_token"])
+
+
+def upload_feishu_image(image_path: Path, tenant_access_token: str) -> str:
+    boundary = "----WeeklyStatsFeishuImageBoundary"
+    image_bytes = image_path.read_bytes()
+    body = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="image_type"\r\n\r\n'
+        "message\r\n"
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="image"; filename="{image_path.name}"\r\n'
+        "Content-Type: image/png\r\n\r\n"
+    ).encode("utf-8") + image_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    request = urllib.request.Request(
+        "https://open.feishu.cn/open-apis/im/v1/images",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {tenant_access_token}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            response_body = response.read().decode("utf-8")
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"上传飞书图片失败：{exc}") from exc
+
+    try:
+        result = json.loads(response_body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("飞书图片上传接口返回了无法解析的响应") from exc
+    image_key = result.get("data", {}).get("image_key")
+    if result.get("code") != 0 or not image_key:
+        raise RuntimeError(f"上传飞书图片失败：{result.get('msg', '未知错误')}")
+    return str(image_key)
+
+
+def send_report_to_feishu(report: str, chart_path: Path) -> None:
+    tenant_access_token = get_feishu_tenant_access_token()
+    image_key = upload_feishu_image(chart_path, tenant_access_token)
+    post_feishu_webhook({"msg_type": "text", "content": {"text": report}})
+    post_feishu_webhook({"msg_type": "image", "content": {"image_key": image_key}})
+
+
 def main() -> int:
-    label, start, end = resolve_period()
+    args = parse_args()
+    label, start, end = resolve_period(args.period)
     start_ts = int(start.timestamp())
     end_ts = int(end.timestamp())
     conn = psycopg2.connect(DEFAULT_DSN)
@@ -898,13 +1021,27 @@ def main() -> int:
     finally:
         conn.close()
 
-    if fallback_rows:
+    if fallback_rows and not args.send_feishu:
         print(
             f"提示：{fallback_rows:,} 条日志因历史计费快照不完整或表达式无法线性拆分，"
             "已按该条日志的四类 Token 占比分配最终 quota。",
             file=sys.stderr,
         )
-    print_report(label, start, end, total_users, consumption_distribution, stats)
+    report = build_report(label, start, end, total_users, consumption_distribution, stats)
+    if args.send_feishu:
+        with tempfile.TemporaryDirectory(prefix="weekly_stats_") as temporary_directory:
+            chart_path = save_consumption_histogram(
+                label,
+                start,
+                end,
+                total_users,
+                consumption_distribution,
+                Path(temporary_directory) / "weekly_consumption_histogram.png",
+            )
+            send_report_to_feishu(report, chart_path)
+        return 0
+
+    print(report)
     chart_path = save_consumption_histogram(
         label,
         start,
