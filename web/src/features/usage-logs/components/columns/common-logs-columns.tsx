@@ -41,7 +41,11 @@ import { useDemoMode } from '@/hooks/use-demo-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { stringToColor } from '@/lib/colors'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
-import { getDemoModeUsername } from '@/lib/demo-mode'
+import {
+  DEMO_MODE_MASK,
+  getDemoModeUsername,
+  maskFormattedCurrencyAmount,
+} from '@/lib/demo-mode'
 import {
   formatLogQuota,
   formatTimestampToDate,
@@ -133,14 +137,16 @@ function buildDetailSegments(
   other: LogOtherData | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
   isAdmin = false,
-  canViewGroupRatio = isAdmin
+  canViewGroupRatio = isAdmin,
+  demoMode = false
 ): DetailSegment[] {
   const segments = buildTypeDetailSegments(
     log,
     other,
     t,
     isAdmin,
-    canViewGroupRatio
+    canViewGroupRatio,
+    demoMode
   )
   const adminSegments: DetailSegment[] = []
   // Quota saturation is a rare, admin-only anomaly marker; surface it first
@@ -165,7 +171,8 @@ function buildTypeDetailSegments(
   other: LogOtherData | null,
   t: (key: string, opts?: Record<string, unknown>) => string,
   isAdmin: boolean,
-  canViewGroupRatio = isAdmin
+  canViewGroupRatio = isAdmin,
+  demoMode = false
 ): DetailSegment[] {
   // Audit (type=3) and login (type=7) logs: render localized content from the
   // structured op descriptor instead of the raw (English-fallback) content.
@@ -183,6 +190,10 @@ function buildTypeDetailSegments(
   const isViolation = isViolationFeeLog(other)
   if (isViolation) {
     const segments: DetailSegment[] = []
+    const formattedFee = formatLogQuota(other?.fee_quota ?? log.quota)
+    const visibleFee = demoMode
+      ? maskFormattedCurrencyAmount(formattedFee)
+      : formattedFee
     segments.push({ text: t('Violation Fee'), danger: true })
     if (other?.violation_fee_code) {
       segments.push({
@@ -191,7 +202,7 @@ function buildTypeDetailSegments(
       })
     }
     segments.push({
-      text: `${t('Fee')}: ${formatLogQuota(other?.fee_quota ?? log.quota)}`,
+      text: `${t('Fee')}: ${visibleFee}`,
       muted: true,
     })
     return segments
@@ -202,10 +213,14 @@ function buildTypeDetailSegments(
   const segments: DetailSegment[] = []
 
   const priceOpts = { digitsLarge: 4, digitsSmall: 6, abbreviate: false }
-  const formatPrice = (price: number) =>
-    `${formatBillingCurrencyFromUSD(price, priceOpts)}/M`
-  const formatPriceCompact = (price: number) =>
-    formatBillingCurrencyFromUSD(price, priceOpts)
+  const formatVisiblePrice = (price: number) => {
+    const formattedPrice = formatBillingCurrencyFromUSD(price, priceOpts)
+    return demoMode
+      ? maskFormattedCurrencyAmount(formattedPrice)
+      : formattedPrice
+  }
+  const formatPrice = (price: number) => `${formatVisiblePrice(price)}/M`
+  const formatPriceCompact = (price: number) => formatVisiblePrice(price)
   const formatPriceList = (prices: string[], showUnit: boolean) => {
     const text = prices.join(' / ')
     return showUnit ? `${text}/M` : text
@@ -273,7 +288,7 @@ function buildTypeDetailSegments(
     if (isPerCall) {
       const modelPrice = other.model_price ?? 0
       segments.push({
-        text: `${t('Per-call')} · ${formatBillingCurrencyFromUSD(modelPrice * groupPriceRatio, priceOpts)}`,
+        text: `${t('Per-call')} · ${formatVisiblePrice(modelPrice * groupPriceRatio)}`,
       })
     } else if (other.model_ratio != null) {
       const inputPriceUSD = other.model_ratio * 2.0 * groupPriceRatio
@@ -785,8 +800,12 @@ export function useCommonLogsColumns(
           ? rawUseChannel.map(String).filter(Boolean)
           : []
         const hasRetryChain = useChannel.length > 1
-        const channelChain = hasRetryChain ? useChannel.join(' → ') : undefined
-        const channelIdDisplay = `#${log.channel}`
+        const visibleChannelChain = demoMode
+          ? useChannel.map(() => DEMO_MODE_MASK)
+          : useChannel
+        const channelChain = hasRetryChain
+          ? visibleChannelChain.join(' → ')
+          : undefined
         const channelDisplay = getUsageLogChannelDisplay(
           log.channel_name,
           log.channel,
@@ -809,8 +828,9 @@ export function useCommonLogsColumns(
               >
                 <div className='relative inline-flex w-fit items-center gap-1'>
                   <StatusBadge
-                    label={channelIdDisplay}
+                    label={channelDisplay.id}
                     variant={getChannelBadgeVariant(String(log.channel))}
+                    copyable={!demoMode}
                     copyText={String(log.channel)}
                     size='sm'
                     showDot={false}
@@ -936,6 +956,9 @@ export function useCommonLogsColumns(
         const { sensitiveVisible } = useUsageLogsContext()
         const log = row.original
         const requestMessage = useRequestMessage(log.request_id)
+        if (demoMode) {
+          return <span className='text-muted-foreground'>***</span>
+        }
         if (!sensitiveVisible) {
           return <span className='text-muted-foreground/40'>••••</span>
         }
@@ -1082,7 +1105,9 @@ export function useCommonLogsColumns(
         let group = log.group
         if (!group) group = other?.group || ''
         const metaParts: string[] = []
-        const groupRatioText = getGroupRatioText(other, canViewGroupRatio)
+        const groupRatioText = demoMode
+          ? null
+          : getGroupRatioText(other, canViewGroupRatio)
         if (group) {
           metaParts.push(sensitiveVisible ? group : '••••')
         }
@@ -1132,7 +1157,8 @@ export function useCommonLogsColumns(
           other,
           t,
           isAdmin,
-          canViewGroupRatio
+          canViewGroupRatio,
+          demoMode
         )
         const primary = segments[0]
         const hasMore = segments.length > 1

@@ -463,7 +463,7 @@ export function DynamicPricingBreakdown({
                       const value = field.value(tier)
                       let displayedPrice = '-'
                       if (maskPrices) {
-                        displayedPrice = DEMO_MODE_MASK
+                        displayedPrice = `${symbol}${DEMO_MODE_MASK}`
                       } else if (value > 0) {
                         displayedPrice = formatBreakdownPrice(
                           value * effectivePriceMultiplier,
@@ -576,6 +576,7 @@ export function DynamicPricingBreakdown({
                   if (maskPrices) {
                     return (
                       <span className={cn(!compact && 'font-semibold')}>
+                        {symbol}
                         {DEMO_MODE_MASK}
                       </span>
                     )

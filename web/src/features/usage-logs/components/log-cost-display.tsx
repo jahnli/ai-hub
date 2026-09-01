@@ -9,6 +9,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useDemoMode } from '@/hooks/use-demo-mode'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { formatLogQuota } from '@/lib/format'
 
 import { hasToolSurcharge } from '../lib/format'
@@ -60,20 +62,22 @@ function ToolSurchargeMarker() {
   )
 }
 
-function QuotaBadge(props: { quota: number }) {
-  const quotaDisplay = splitQuotaDisplay(formatLogQuota(props.quota))
+function QuotaBadge(props: { quota: number; masked?: boolean }) {
+  const formattedQuota = formatLogQuota(props.quota)
+  const quotaDisplay = splitQuotaDisplay(formattedQuota)
+  const amount = props.masked ? DEMO_MODE_MASK : quotaDisplay.amount
 
   return (
     <span className='border-border/80 bg-muted/60 inline-flex h-6 w-fit items-center rounded-md border px-2 [font-family:var(--font-body)] text-sm leading-none font-semibold tabular-nums'>
       {quotaDisplay.prefix ? (
         <span className='mr-1'>{quotaDisplay.prefix}</span>
       ) : null}
-      <span>{quotaDisplay.amount}</span>
+      <span>{amount}</span>
     </span>
   )
 }
 
-function SubscriptionCost(props: { quota: number }) {
+function SubscriptionCost(props: { quota: number; masked?: boolean }) {
   const { t } = useTranslation()
 
   return (
@@ -81,7 +85,7 @@ function SubscriptionCost(props: { quota: number }) {
       <TooltipTrigger
         render={<span className='inline-flex w-fit cursor-help' tabIndex={0} />}
       >
-        <QuotaBadge quota={props.quota} />
+        <QuotaBadge quota={props.quota} masked={props.masked} />
       </TooltipTrigger>
       <TooltipContent>{t('Subscription')}</TooltipContent>
     </Tooltip>
@@ -89,13 +93,14 @@ function SubscriptionCost(props: { quota: number }) {
 }
 
 export function LogCostDisplay(props: LogCostDisplayProps) {
+  const demoMode = useDemoMode()
   const isSubscription = props.other?.billing_source === 'subscription'
   const showToolSurcharge = hasToolSurcharge(props.other)
 
   if (!isSubscription && !showToolSurcharge) {
     return (
       <div className='flex flex-col gap-0.5'>
-        <QuotaBadge quota={props.quota} />
+        <QuotaBadge quota={props.quota} masked={demoMode} />
       </div>
     )
   }
@@ -104,9 +109,9 @@ export function LogCostDisplay(props: LogCostDisplayProps) {
     <TooltipProvider>
       <div className='inline-flex items-center gap-1'>
         {isSubscription ? (
-          <SubscriptionCost quota={props.quota} />
+          <SubscriptionCost quota={props.quota} masked={demoMode} />
         ) : (
-          <QuotaBadge quota={props.quota} />
+          <QuotaBadge quota={props.quota} masked={demoMode} />
         )}
         {showToolSurcharge ? <ToolSurchargeMarker /> : null}
       </div>

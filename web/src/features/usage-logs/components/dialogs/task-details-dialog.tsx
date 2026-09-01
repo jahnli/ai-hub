@@ -23,6 +23,8 @@ import { useTranslation } from 'react-i18next'
 import { Dialog } from '@/components/dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Label } from '@/components/ui/label'
+import { useDemoMode } from '@/hooks/use-demo-mode'
+import { DEMO_MODE_MASK, maskFormattedCurrencyAmount } from '@/lib/demo-mode'
 import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -83,6 +85,7 @@ interface TaskDetailsDialogProps {
 
 export function TaskDetailsDialog(props: TaskDetailsDialogProps) {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const access = resolveTaskDetailAccess(props.log, props.isAdmin, props.isRoot)
   const plugin = access.plugin
   const runtime = access.runtime
@@ -177,13 +180,17 @@ export function TaskDetailsDialog(props: TaskDetailsDialogProps) {
             />
             <DetailRow
               label={t('Channel')}
-              value={`#${props.log.channel_id}`}
+              value={demoMode ? DEMO_MODE_MASK : `#${props.log.channel_id}`}
               mono
             />
             <DetailRow label={t('Group')} value={props.log.group || '-'} />
             <DetailRow
               label={t('Quota')}
-              value={formatLogQuota(props.log.quota)}
+              value={
+                demoMode
+                  ? maskFormattedCurrencyAmount(formatLogQuota(props.log.quota))
+                  : formatLogQuota(props.log.quota)
+              }
               mono
             />
             {props.log.admin_info?.request_id ? (

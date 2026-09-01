@@ -11,6 +11,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useDemoMode } from '@/hooks/use-demo-mode'
+import { DEMO_MODE_MASK } from '@/lib/demo-mode'
 import { formatTimestampToDate, formatTokens } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -156,15 +158,18 @@ export function createChannelColumn<T>(config: {
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title={headerLabel} />
     ),
-    cell: ({ row }) => {
+    cell: function ChannelCell({ row }) {
+      const demoMode = useDemoMode()
       const channelId = row.getValue(accessorKey) as number
       if (!channelId) {
         return <span className='text-muted-foreground/60 text-xs'>-</span>
       }
+      const channelIdDisplay = demoMode ? DEMO_MODE_MASK : `#${channelId}`
       return (
         <StatusBadge
-          label={`#${channelId}`}
+          label={channelIdDisplay}
           autoColor={String(channelId)}
+          copyable={!demoMode}
           copyText={String(channelId)}
           size='sm'
           showDot={false}
