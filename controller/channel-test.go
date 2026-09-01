@@ -984,7 +984,11 @@ func runChannelTestWorkers(
 					if channel != nil && channel.Status != common.ChannelStatusManuallyDisabled {
 						result = run(ctx, channel)
 					}
-					results <- result
+					select {
+					case <-ctx.Done():
+						return
+					case results <- result:
+					}
 					if common.RequestInterval > 0 {
 						select {
 						case <-ctx.Done():
