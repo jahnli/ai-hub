@@ -19,9 +19,10 @@ For commercial licensing, please contact support@quantumnous.com
 import { fireEvent, render, screen } from '@testing-library/react'
 import i18next from 'i18next'
 import type React from 'react'
-import { beforeAll, describe, expect, test } from 'vitest'
+import { afterEach, beforeAll, describe, expect, test } from 'vitest'
 
 import { formatLogQuota } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { LogCostDisplay } from '../log-cost-display'
 
@@ -42,6 +43,10 @@ describe('log cost display', () => {
       'Deducted by subscription': 'Deducted by subscription',
       'Includes tool-call surcharge': 'Includes tool-call surcharge',
     })
+  })
+
+  afterEach(() => {
+    useAuthStore.getState().auth.reset()
   })
 
   test('keeps the regular cost visible and adds an accessible surcharge marker', () => {
@@ -83,5 +88,48 @@ describe('log cost display', () => {
     expect(
       screen.getByRole('img', { name: 'Includes tool-call surcharge' })
     ).toHaveAttribute('data-tool-surcharge-indicator', 'true')
+  })
+
+  test('masks the amount when demo mode is enabled', () => {
+    useAuthStore.getState().auth.setUser({
+      id: 1,
+      username: 'demo-user',
+      role: 1,
+      setting: { demo_mode: true },
+    })
+
+    const rendered = renderCost({
+      quota: 12500,
+      other: null,
+    })
+
+    const currencyPrefix = formatLogQuota(12500).match(
+      /^([^0-9+\-.,\s]+)/
+    )?.[1]
+    expect(rendered.container.textContent).toContain('*')
+    expect(currencyPrefix).toBeTruthy()
+    expect(rendered.container.textContent).toContain(currencyPrefix)
+    expect(rendered.container.textContent).not.toContain(
+      formatLogQuota(12500)
+    )
+  })
+
+  test('masks subscription amounts when demo mode is enabled', () => {
+    useAuthStore.getState().auth.setUser({
+      id: 1,
+      username: 'demo-user',
+      role: 1,
+      setting: { demo_mode: true },
+    })
+
+    const rendered = renderCost({
+      quota: 5000,
+      other: { billing_source: 'subscription' },
+    })
+
+    expect(rendered.container.textContent).toContain('*')
+    expect(rendered.container.textContent).not.toContain(
+      formatLogQuota(5000)
+    )
   })
 })

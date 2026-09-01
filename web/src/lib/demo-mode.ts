@@ -10,6 +10,11 @@ export function getDemoModeUsername(
   return demoMode ? DEMO_MODE_USERNAME_MASK : username
 }
 
+export function maskFormattedCurrencyAmount(value: string): string {
+  const currencyPrefix = value.match(/^([^0-9+\-.,\s]+)/)?.[1] ?? ''
+  return `${currencyPrefix}${DEMO_MODE_MASK}`
+}
+
 export function isDemoModeEnabled(
   setting: AuthUser['setting'] | undefined
 ): boolean {

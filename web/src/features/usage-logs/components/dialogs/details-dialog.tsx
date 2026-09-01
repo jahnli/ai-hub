@@ -42,7 +42,12 @@ import { Label } from '@/components/ui/label'
 import { DynamicPricingBreakdown } from '@/features/pricing/components/dynamic-pricing-breakdown'
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+import {
+  DEMO_MODE_MASK,
+  maskFormattedCurrencyAmount,
+} from '@/lib/demo-mode'
 import { formatLogQuota, formatTokens, formatUseTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -155,6 +160,13 @@ function formatRatio(ratio: number | undefined): string {
   return ratio.toFixed(4)
 }
 
+function formatVisibleLogQuota(quota: number, demoMode: boolean): string {
+  const formattedQuota = formatLogQuota(quota)
+  return demoMode
+    ? maskFormattedCurrencyAmount(formattedQuota)
+    : formattedQuota
+}
+
 function getUsageBillingPathLabel(
   t: TFunction,
   adminInfo: LogOtherData['admin_info']
@@ -208,6 +220,7 @@ export function BillingBreakdown(props: {
   canViewGroupRatio?: boolean
 }) {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const { log, other, isAdmin } = props
   const canViewGroupRatio = props.canViewGroupRatio ?? isAdmin
   const isPerCall = isPerCallBilling(other.model_price)
@@ -218,7 +231,12 @@ export function BillingBreakdown(props: {
 
   const rows: Array<{ label: string; value: string }> = []
   const priceOpts = { digitsLarge: 4, digitsSmall: 6, abbreviate: false }
-  const fmtPrice = (usd: number) => formatBillingCurrencyFromUSD(usd, priceOpts)
+  const fmtPrice = (usd: number) => {
+    const formattedPrice = formatBillingCurrencyFromUSD(usd, priceOpts)
+    return demoMode
+      ? maskFormattedCurrencyAmount(formattedPrice)
+      : formattedPrice
+  }
   const baseInputUSD =
     other.model_ratio != null ? other.model_ratio * 2.0 * groupPriceRatio : 0
 
@@ -280,7 +298,7 @@ export function BillingBreakdown(props: {
   ) {
     rows.push({
       label: isUserGR ? t('User Exclusive Ratio') : t('Group Ratio'),
-      value: `${formatRatio(effectiveGR)}x`,
+      value: demoMode ? DEMO_MODE_MASK : `${formatRatio(effectiveGR)}x`,
     })
   }
 
@@ -410,7 +428,7 @@ export function BillingBreakdown(props: {
       )}
       <DetailRow
         label={t('Total Cost')}
-        value={formatLogQuota(log.quota)}
+        value={formatVisibleLogQuota(log.quota, demoMode)}
         mono
       />
     </DetailSection>
@@ -572,6 +590,7 @@ interface DetailsDialogProps {
 
 export function DetailsDialog(props: DetailsDialogProps) {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const { copiedText, copyToClipboard } = useCopyToClipboard({ notify: false })
   const details = props.log.content ?? ''
   const other = parseLogOther(props.log.other)
@@ -702,9 +721,14 @@ export function DetailsDialog(props: DetailsDialogProps) {
     (other?.request_path || conversionChain.length > 0)
 
   const useChannel = other?.admin_info?.use_channel
+  const visibleUseChannel = demoMode
+    ? useChannel?.map(() => DEMO_MODE_MASK)
+    : useChannel
   const channelChain =
-    canViewChannelDetails && useChannel && useChannel.length > 0
-      ? useChannel.join(' → ')
+    canViewChannelDetails &&
+    visibleUseChannel &&
+    visibleUseChannel.length > 0
+      ? visibleUseChannel.join(' → ')
       : undefined
   const reasoningEffortVariant = getReasoningEffortVariant(
     other?.reasoning_effort
@@ -759,15 +783,19 @@ export function DetailsDialog(props: DetailsDialogProps) {
             <DetailRow
               label={t('Channel')}
               value={
-                <span>
-                  {props.log.channel}
-                  {props.log.channel_name && (
-                    <span className='text-muted-foreground'>
-                      {' '}
-                      ({props.log.channel_name})
-                    </span>
-                  )}
-                </span>
+                demoMode ? (
+                  DEMO_MODE_MASK
+                ) : (
+                  <span>
+                    {props.log.channel}
+                    {props.log.channel_name && (
+                      <span className='text-muted-foreground'>
+                        {' '}
+                        ({props.log.channel_name})
+                      </span>
+                    )}
+                  </span>
+                )
               }
               mono
             />
@@ -947,7 +975,10 @@ export function DetailsDialog(props: DetailsDialogProps) {
             )}
             <DetailRow
               label={t('Fee Amount')}
-              value={formatLogQuota(other.fee_quota ?? props.log.quota)}
+              value={formatVisibleLogQuota(
+                other.fee_quota ?? props.log.quota,
+                demoMode
+              )}
               mono
             />
           </DetailSection>
@@ -1249,6 +1280,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
               requestRules={other.request_rules}
               hideCacheColumns={!hasAnyCacheTokens(other)}
               priceMultiplier={getEffectiveLogGroupRatio(other)}
+              maskPrices={demoMode}
               usageSchema={billingUsageSchema}
               usageFacts={other.usage_facts}
             />
@@ -1337,7 +1369,10 @@ export function DetailsDialog(props: DetailsDialogProps) {
             {other.subscription_pre_consumed != null && (
               <DetailRow
                 label={t('Pre-consumed')}
-                value={formatLogQuota(other.subscription_pre_consumed)}
+                value={formatVisibleLogQuota(
+                  other.subscription_pre_consumed,
+                  demoMode
+                )}
                 mono
               />
             )}
@@ -1345,21 +1380,27 @@ export function DetailsDialog(props: DetailsDialogProps) {
               other.subscription_post_delta !== 0 && (
                 <DetailRow
                   label={t('Post Delta')}
-                  value={formatLogQuota(other.subscription_post_delta)}
+                  value={formatVisibleLogQuota(
+                    other.subscription_post_delta,
+                    demoMode
+                  )}
                   mono
                 />
               )}
             {other.subscription_consumed != null && (
               <DetailRow
                 label={t('Final Consumed')}
-                value={formatLogQuota(other.subscription_consumed)}
+                value={formatVisibleLogQuota(
+                  other.subscription_consumed,
+                  demoMode
+                )}
                 mono
               />
             )}
             {other.subscription_remain != null && (
               <DetailRow
                 label={t('Remaining')}
-                value={`${formatLogQuota(other.subscription_remain)}${other.subscription_total != null ? ` / ${formatLogQuota(other.subscription_total)}` : ''}`}
+                value={`${formatVisibleLogQuota(other.subscription_remain, demoMode)}${other.subscription_total != null ? ` / ${formatVisibleLogQuota(other.subscription_total, demoMode)}` : ''}`}
                 mono
               />
             )}

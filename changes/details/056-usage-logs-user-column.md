@@ -1,6 +1,6 @@
 # 使用日志增强：用户信息、请求内容与审计
 
-**日期**: 2026-08-25
+**日期**: 2026-09-01
 
 ## 涉及文件
 
@@ -123,3 +123,17 @@
 
 - `web/src/features/usage-logs/components/model-badge.tsx` — 模型映射详情由点击弹窗改为悬浮或键盘聚焦显示，浮层宽度调整为 24rem，并允许请求模型和实际模型的长名称完整换行。
 - `web/src/features/usage-logs/components/__tests__/model-badge-interaction.test.tsx` — 回归覆盖模型映射详情使用悬浮卡片、24rem 宽度及长模型名称不截断。
+
+## 2026-09-01 演示模式日志隐私遮蔽
+
+- `web/src/lib/demo-mode.ts` — 增加通用金额遮蔽函数，仅将格式化后的金额数字替换为星号并保留货币符号。
+- `web/src/lib/__tests__/demo-mode.test.ts` — 回归覆盖美元、人民币及无货币符号金额的演示模式遮蔽规则。
+- `web/src/features/usage-logs/components/log-cost-display.tsx` — 使用日志费用列在演示模式下隐藏普通费用和订阅费用数字，同时保留配置的货币符号。
+- `web/src/features/usage-logs/components/__tests__/cost-display.test.tsx` — 回归覆盖普通费用、订阅费用及货币符号保留行为。
+- `web/src/features/usage-logs/lib/channel-visibility.ts` — 演示模式统一遮蔽渠道编号、渠道名称和悬浮详情，避免无名称渠道继续泄露编号。
+- `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 渠道徽章、悬浮详情和重试链隐藏渠道信息；详情列金额保留货币符号并隐藏数字；令牌列不再展示分组倍率；请求内容列改为星号占位并移除完整内容入口。
+- `web/src/features/usage-logs/components/columns/column-helpers.tsx` — 任务日志和绘图日志共用渠道列在演示模式下隐藏渠道编号并禁用复制。
+- `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框隐藏渠道、重试链和分组倍率，并遮蔽计费明细、违规费用、订阅额度与动态价格中的金额数字。
+- `web/src/features/usage-logs/components/dialogs/task-details-dialog.tsx` — 任务详情弹框隐藏渠道编号和配额数字，保留配额货币符号。
+- `web/src/features/usage-logs/components/usage-logs-table.tsx` — 演示模式停止批量加载请求内容，避免已遮蔽的正文继续进入前端。
+- `web/src/features/pricing/components/dynamic-pricing-breakdown.tsx` — 动态计费价格被遮蔽时保留当前配置的货币符号。

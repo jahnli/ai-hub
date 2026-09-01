@@ -27,6 +27,7 @@ import {
   DataTableRow,
   useDataTable,
 } from '@/components/data-table'
+import { useDemoMode } from '@/hooks/use-demo-mode'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
@@ -81,6 +82,7 @@ interface UsageLogsTableProps {
 
 export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   const { t } = useTranslation()
+  const demoMode = useDemoMode()
   const {
     canManageScope,
     isAdminView: isAdmin,
@@ -89,7 +91,8 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
   } = useLogsViewScope()
   const currentUserRole = useAuthStore((state) => state.auth.user?.role)
   const currentUsername = useAuthStore((state) => state.auth.user?.username)
-  const canViewRequestContent = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
+  const canViewRequestContent =
+    !demoMode && (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const canViewChannelColumn = (currentUserRole ?? 0) >= ROLE.SUPER_ADMIN
   const pageKey = `${logCategory}Page`
   const pageSizeKey = `${logCategory}PageSize`
