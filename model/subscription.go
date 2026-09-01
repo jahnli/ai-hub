@@ -1290,7 +1290,10 @@ func resetUserSubscriptionTx(tx *gorm.DB, sub *UserSubscription, plan *Subscript
 	if tx == nil || sub == nil || plan == nil {
 		return errors.New("invalid reset args")
 	}
+	// Keep admin-triggered resets consistent with periodic resets: the quota
+	// returns to the plan definition and manual adjustments are dropped.
 	sub.AmountUsed = 0
+	sub.AmountTotal = plan.TotalAmount
 	if advanceResetTime {
 		nextReset := calcNextResetTime(time.Unix(now, 0), plan, sub.EndTime)
 		sub.NextResetTime = nextReset
@@ -1565,7 +1568,10 @@ func maybeResetUserSubscriptionWithPlanTx(tx *gorm.DB, sub *UserSubscription, pl
 		}
 		return nil
 	}
+	// A reset re-syncs the quota to the plan definition, so any manual quota
+	// adjustment only applies to the period in which it was made.
 	sub.AmountUsed = 0
+	sub.AmountTotal = plan.TotalAmount
 	sub.LastResetTime = base.Unix()
 	sub.NextResetTime = next
 	return tx.Save(sub).Error

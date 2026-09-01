@@ -177,6 +177,106 @@ func TestAdminResetPlanSubscriptionsResetsAllActiveUsers(t *testing.T) {
 	assert.EqualValues(t, 1400, getSubscriptionResetSub(t, 9506).AmountUsed)
 }
 
+func TestResetDueSubscriptionsRestoresPlanQuotaAfterManualIncrease(t *testing.T) {
+	truncateTables(t)
+
+	const planQuota int64 = 10000
+	const manuallyRaisedQuota int64 = 15000
+
+	now := GetDBTimestamp()
+	plan := &SubscriptionPlan{
+		Id:               9701,
+		Title:            "Plan A",
+		PriceAmount:      100,
+		DurationUnit:     SubscriptionDurationYear,
+		DurationValue:    1,
+		TotalAmount:      planQuota,
+		QuotaResetPeriod: SubscriptionResetMonthly,
+	}
+	seedSubscriptionResetPlan(t, plan)
+	InvalidateSubscriptionPlanCache(plan.Id)
+
+	subscriptionStart := time.Unix(now, 0).AddDate(0, -2, 0).Unix()
+	subscriptionEnd := time.Unix(now, 0).AddDate(1, 0, 0).Unix()
+	adjustedSubscriptionId := 9702
+	untouchedSubscriptionId := 9703
+	seedSubscriptionResetSub(t, &UserSubscription{Id: adjustedSubscriptionId, UserId: 501, PlanId: plan.Id, AmountTotal: manuallyRaisedQuota, AmountUsed: 12000, StartTime: subscriptionStart, EndTime: subscriptionEnd, Status: "active", LastResetTime: subscriptionStart, NextResetTime: now - 60})
+	seedSubscriptionResetSub(t, &UserSubscription{Id: untouchedSubscriptionId, UserId: 502, PlanId: plan.Id, AmountTotal: planQuota, AmountUsed: 4000, StartTime: subscriptionStart, EndTime: subscriptionEnd, Status: "active", LastResetTime: subscriptionStart, NextResetTime: now - 60})
+
+	resetCount, err := ResetDueSubscriptions(100)
+
+	require.NoError(t, err)
+	assert.Equal(t, 2, resetCount)
+
+	manuallyAdjusted := getSubscriptionResetSub(t, adjustedSubscriptionId)
+	assert.EqualValues(t, planQuota, manuallyAdjusted.AmountTotal)
+	assert.Zero(t, manuallyAdjusted.AmountUsed)
+	assert.Greater(t, manuallyAdjusted.NextResetTime, now)
+
+	untouched := getSubscriptionResetSub(t, untouchedSubscriptionId)
+	assert.EqualValues(t, planQuota, untouched.AmountTotal)
+	assert.Zero(t, untouched.AmountUsed)
+}
+
+func TestAdminResetUserSubscriptionsByPlanRestoresPlanQuotaAfterManualIncrease(t *testing.T) {
+	truncateTables(t)
+
+	const planQuota int64 = 10000
+
+	now := GetDBTimestamp()
+	plan := &SubscriptionPlan{
+		Id:               9711,
+		Title:            "Plan A",
+		PriceAmount:      100,
+		DurationUnit:     SubscriptionDurationYear,
+		DurationValue:    1,
+		TotalAmount:      planQuota,
+		QuotaResetPeriod: SubscriptionResetMonthly,
+	}
+	seedSubscriptionResetPlan(t, plan)
+	InvalidateSubscriptionPlanCache(plan.Id)
+
+	subscriptionId := 9712
+	seedSubscriptionResetSub(t, &UserSubscription{Id: subscriptionId, UserId: 601, PlanId: plan.Id, AmountTotal: 15000, AmountUsed: 12000, StartTime: now - 3600, EndTime: time.Unix(now, 0).AddDate(1, 0, 0).Unix(), Status: "active", LastResetTime: now - 3600, NextResetTime: now + 86400})
+
+	result, err := AdminResetUserSubscriptionsByPlan(601, plan.Id, true)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	subscription := getSubscriptionResetSub(t, subscriptionId)
+	assert.EqualValues(t, planQuota, subscription.AmountTotal)
+	assert.Zero(t, subscription.AmountUsed)
+}
+
+func TestResetDueSubscriptionsKeepsUnlimitedPlanQuota(t *testing.T) {
+	truncateTables(t)
+
+	now := GetDBTimestamp()
+	plan := &SubscriptionPlan{
+		Id:               9721,
+		Title:            "Unlimited",
+		PriceAmount:      100,
+		DurationUnit:     SubscriptionDurationYear,
+		DurationValue:    1,
+		TotalAmount:      0,
+		QuotaResetPeriod: SubscriptionResetMonthly,
+	}
+	seedSubscriptionResetPlan(t, plan)
+	InvalidateSubscriptionPlanCache(plan.Id)
+
+	subscriptionStart := time.Unix(now, 0).AddDate(0, -2, 0).Unix()
+	subscriptionId := 9722
+	seedSubscriptionResetSub(t, &UserSubscription{Id: subscriptionId, UserId: 701, PlanId: plan.Id, AmountTotal: 0, AmountUsed: 5000, StartTime: subscriptionStart, EndTime: time.Unix(now, 0).AddDate(1, 0, 0).Unix(), Status: "active", LastResetTime: subscriptionStart, NextResetTime: now - 60})
+
+	resetCount, err := ResetDueSubscriptions(100)
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, resetCount)
+	subscription := getSubscriptionResetSub(t, subscriptionId)
+	assert.Zero(t, subscription.AmountTotal)
+	assert.Zero(t, subscription.AmountUsed)
+}
+
 func TestAdminResetPlanSubscriptionsNoMatchSucceeds(t *testing.T) {
 	truncateTables(t)
 
