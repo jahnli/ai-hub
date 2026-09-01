@@ -35,7 +35,6 @@
 - `setting/ratio_setting/group_ratio.go` — 新增分组供应商倍率配置、校验、复制、JSON 转换及统一优先级解析器。
 - `setting/ratio_setting/group_vendor_ratio_test.go` — 覆盖倍率优先级、免费倍率、无供应商回退、配置校验及 JSON 往返行为。
 - `types/price_data.go` — 扩展分组倍率信息，携带供应商倍率命中状态与供应商 ID。
-- `web/src/features/models/components/drawers/model-mutate-drawer.tsx` — 模型编辑表单初始化时补充供应商倍率 option 字段。
 - `web/src/features/pricing/hooks/use-pricing-data.ts` — 按模型供应商生成有效分组倍率，并保持用户特殊倍率最高优先级。
 - `web/src/features/pricing/index.tsx` — 模型详情使用所选模型计算后的有效分组倍率。
 - `web/src/features/pricing/types.ts` — 补充供应商倍率和特殊倍率分组的接口类型。
