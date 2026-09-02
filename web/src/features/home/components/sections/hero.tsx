@@ -15,6 +15,13 @@ interface HeroProps {
 export function Hero(props: HeroProps) {
   const { t } = useTranslation()
   const { status } = useStatus()
+  const registerEnabled =
+    status?.register_enabled ?? status?.data?.register_enabled ?? false
+  const passwordRegisterEnabled =
+    status?.password_register_enabled ??
+    status?.data?.password_register_enabled ??
+    false
+  const showPasswordRegistration = registerEnabled && passwordRegisterEnabled
   const docsUrl =
     (status?.docs_link as string | undefined) ||
     'https://semi-tech.feishu.cn/docx/GhoWd4iMookr4BxbBXcc2Qudn2c'
@@ -125,6 +132,15 @@ export function Hero(props: HeroProps) {
                   {t('Get Started')}
                   <ArrowRight className='ml-1.5 size-4 transition-transform duration-200 group-hover:translate-x-0.5' />
                 </Button>
+                {showPasswordRegistration && (
+                  <Button
+                    className='group h-11 rounded-lg px-5 text-sm font-medium'
+                    render={<Link to='/sign-up' />}
+                  >
+                    {t('Create account')}
+                    <ArrowRight className='ml-1.5 size-4 transition-transform duration-200 group-hover:translate-x-0.5' />
+                  </Button>
+                )}
                 {renderDocsButton()}
               </>
             )}

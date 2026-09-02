@@ -1,6 +1,6 @@
 # 首页定制
 
-**日期**: 2026-06-18 ~ 2026-06-23
+**日期**: 2026-09-02
 
 ## 涉及文件
 
@@ -30,3 +30,5 @@
 - `web/default/src/features/home/components/orbit-animation.tsx` — 双轨道动画整体左移（内环 left 45%→26%，外环 55%→36%）
 - `web/default/src/features/home/components/sections/hero.tsx` — Hero 渐变标题「海量 AI 模型」添加 `hero-gradient-shimmer` class，实现白色微光扫光动画
 - `web/default/src/styles/index.css` — 新增 `.hero-gradient-shimmer` 样式：`::after` 伪元素白色渐变光带，3.5s 循环，1.5s 延迟，暗色模式降低光带透明度，含 reduced-motion 支持
+- `web/src/features/home/components/sections/hero.tsx` — 全局注册与密码注册开关同时开启时，在首页 Hero 的「开始使用」旁新增同尺寸、同样式的「创建账户」按钮并跳转 `/sign-up`；关闭任一开关时仅保留原入口
+- `web/src/features/home/components/sections/__tests__/registration-action.test.tsx` — 覆盖两个按钮并存且样式一致、注册链接目标以及两个注册开关的隐藏条件
