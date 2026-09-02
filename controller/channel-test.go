@@ -259,6 +259,13 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			AIGatewayError: types.NewError(err, types.ErrorCodeChannelModelMappedError),
 		}
 	}
+	if err = helper.ApplyReasoningModelSuffix(info, request); err != nil {
+		return testResult{
+			context:        c,
+			localErr:       err,
+			AIGatewayError: types.NewErrorWithStatusCode(err, types.ErrorCodeConvertRequestFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry()),
+		}
+	}
 
 	testModel = info.UpstreamModelName
 	// 更新请求中的模型名称
@@ -935,7 +942,7 @@ func testChannelForHealthCheck(ctx context.Context, channel *model.Channel, test
 		summary.Failed++
 	}
 	if allowDisable && isChannelEnabled && shouldBanChannel && channel.GetAutoBan() {
-		processChannelError(result.context, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, common.GetContextKeyString(result.context, constant.ContextKeyChannelKey), channel.GetAutoBan()), aiGatewayError)
+		processChannelError(result.context, *types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, common.GetContextKeyString(result.context, constant.ContextKeyChannelKey), channel.GetAutoBan()), aiGatewayError, nil)
 		summary.Disabled++
 	}
 	if result.localErr == nil && !isChannelEnabled && service.ShouldEnableChannel(aiGatewayError, channel.Status) {
@@ -984,11 +991,7 @@ func runChannelTestWorkers(
 					if channel != nil && channel.Status != common.ChannelStatusManuallyDisabled {
 						result = run(ctx, channel)
 					}
-					select {
-					case <-ctx.Done():
-						return
-					case results <- result:
-					}
+					results <- result
 					if common.RequestInterval > 0 {
 						select {
 						case <-ctx.Done():
