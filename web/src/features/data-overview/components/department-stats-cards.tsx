@@ -33,11 +33,6 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
     return `${(tokens / 1_0000_0000).toFixed(2)} 亿`
   }
 
-  const formatTokensDetail = (tokens: number | undefined): string => {
-    if (!tokens) return '0'
-    return tokens.toLocaleString()
-  }
-
   const buildTokenBreakdownTooltip = (): ReactNode => {
     const breakdownRows: { label: string; desc: string; value: number }[] = [
       {
@@ -66,7 +61,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
         <div className='flex items-baseline justify-between gap-4'>
           <span className='text-xs'>{t('Total Tokens')}</span>
           <span className='font-mono text-xs font-semibold'>
-            {formatTokensDetail(stat.total_tokens)}
+            {formatTokens(stat.total_tokens)}
           </span>
         </div>
         <div className='border-border/40 space-y-1.5 border-t pt-1.5'>
@@ -262,7 +257,7 @@ export function DepartmentStatsCards(props: { stat: DepartmentStat }) {
       desc: t('Based on active users only'),
       icon: Layers,
       iconTone: 'chart-4',
-      tooltip: formatTokensDetail(tokensPerActiveUser),
+      tooltip: formatTokens(tokensPerActiveUser),
     },
     {
       title: t('Error Rate'),

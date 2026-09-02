@@ -18,9 +18,9 @@ function formatCost(value: number): string {
   return `¥${value.toFixed(2)}`
 }
 
-function formatTokensDetail(tokens: number): string {
-  if (tokens <= 0) return '-'
-  return tokens.toLocaleString()
+function formatTokens(tokens: number): string {
+  if (!tokens) return '0'
+  return `${(tokens / 1_0000_0000).toFixed(2)} 亿`
 }
 
 function formatUnitPrice(
@@ -54,6 +54,27 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
       tokens: item.total_tokens,
     }))
 
+    const markTooltip = {
+      title: {
+        value: (d: { name?: string }) => d.name ?? '',
+      },
+      content: [
+        {
+          key: () => t('Total Cost'),
+          value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
+        },
+        {
+          key: 'Token',
+          value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+        },
+        {
+          key: () => t('Unit Price'),
+          value: (d: { cost?: number; tokens?: number }) =>
+            formatUnitPrice(d.cost ?? 0, d.tokens ?? 0, t('100M Tokens')),
+        },
+      ],
+    }
+
     return {
       type: 'bar' as const,
       data: [{ values }],
@@ -85,35 +106,8 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
         },
       ],
       tooltip: {
-        dimension: {
-          content: [
-            {
-              key: (d: { name?: string }) => d.name ?? '',
-              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
-            },
-          ],
-        },
-        mark: {
-          title: {
-            value: (d: { name?: string }) => d.name ?? '',
-          },
-          content: [
-            {
-              key: () => t('Total Cost'),
-              value: (d: { cost?: number }) => formatCost(d.cost ?? 0),
-            },
-            {
-              key: () => t('Tokens Used'),
-              value: (d: { tokens?: number }) =>
-                formatTokensDetail(d.tokens ?? 0),
-            },
-            {
-              key: () => t('Unit Price'),
-              value: (d: { cost?: number; tokens?: number }) =>
-                formatUnitPrice(d.cost ?? 0, d.tokens ?? 0, t('100M Tokens')),
-            },
-          ],
-        },
+        dimension: markTooltip,
+        mark: markTooltip,
       },
       animationAppear: {
         duration: 800,
@@ -179,7 +173,7 @@ export function UserConsumptionCharts(props: UserConsumptionChartsProps) {
             {
               key: () => t('Tokens Used'),
               value: (d: { tokens?: number }) =>
-                formatTokensDetail(d.tokens ?? 0),
+                formatTokens(d.tokens ?? 0),
             },
             {
               key: () => t('Percentage'),

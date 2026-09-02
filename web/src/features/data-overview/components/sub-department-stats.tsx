@@ -298,8 +298,22 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
     [sortedData]
   )
 
-  const barSpec = useMemo(
-    () => ({
+  const barSpec = useMemo(() => {
+    const tooltipContent = [
+      {
+        key: 'Token',
+        value: (d: { tokens?: number }) => formatTokens(d.tokens ?? 0),
+      },
+      {
+        key: t('Cost'),
+        value: (d: { cost?: number }) => {
+          const v = d.cost ?? 0
+          return v === 0 ? '¥0' : `¥${v.toFixed(2)}`
+        },
+      },
+    ]
+
+    return {
       type: 'bar' as const,
       data: [
         {
@@ -341,28 +355,13 @@ export function SubDepartmentStats(props: SubDepartmentStatsProps) {
         },
       ],
       tooltip: {
-        mark: {
-          content: [
-            {
-              key: 'Tokens',
-              value: (d: { tokens?: number }) =>
-                formatTokensDetail(d.tokens ?? 0),
-            },
-            {
-              key: t('Cost'),
-              value: (d: { cost?: number }) => {
-                const v = d.cost ?? 0
-                return v === 0 ? '¥0' : `¥${v.toFixed(2)}`
-              },
-            },
-          ],
-        },
+        mark: { content: tooltipContent },
+        dimension: { content: tooltipContent },
       },
       theme: resolvedTheme === 'dark' ? 'dark' : 'light',
       background: 'transparent',
-    }),
-    [sortedData, resolvedTheme, t]
-  )
+    }
+  }, [sortedData, resolvedTheme, t])
 
   const pieSpec = useMemo(
     () => ({

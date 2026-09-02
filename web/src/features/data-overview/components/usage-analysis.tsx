@@ -257,11 +257,6 @@ function formatTokenValue(v: number): string {
   return `${(v / 1_0000_0000).toFixed(2)} 亿`
 }
 
-function formatTokensDetail(tokens: number): string {
-  if (tokens <= 0) return '-'
-  return tokens.toLocaleString()
-}
-
 const DATA_ZOOM_THRESHOLD = 14
 
 function makeDataZoom(chartType: 'area' | 'line') {
@@ -431,7 +426,7 @@ function TokenTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
     const tooltipContent = [
       {
         key: () => 'Token',
-        value: (d: { value?: number }) => formatTokensDetail(d.value ?? 0),
+        value: (d: { value?: number }) => formatTokenValue(d.value ?? 0),
       },
       {
         key: () => t('Total Cost'),
@@ -694,7 +689,7 @@ function ModelCallDistributionChart(
             {
               key: () => 'Token',
               value: (datum: { tokens?: number }) =>
-                formatTokensDetail(datum.tokens ?? 0),
+                formatTokenValue(datum.tokens ?? 0),
             },
             {
               key: () => t('Total Cost'),
@@ -801,7 +796,7 @@ function ModelCostRankChart(
             {
               key: () => 'Token',
               value: (d: { tokens?: number }) =>
-                formatTokensDetail(d.tokens ?? 0),
+                formatTokenValue(d.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
@@ -824,7 +819,7 @@ function ModelCostRankChart(
             {
               key: () => 'Token',
               value: (d: { tokens?: number }) =>
-                formatTokensDetail(d.tokens ?? 0),
+                formatTokenValue(d.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
@@ -913,7 +908,7 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             {
               key: () => 'Token',
               value: (datum: { tokens?: number }) =>
-                formatTokensDetail(datum.tokens ?? 0),
+                formatTokenValue(datum.tokens ?? 0),
             },
             {
               key: () => t('Requests'),
@@ -945,7 +940,7 @@ function CostTrendChart(props: ChartBaseProps & { data: DailyStat[] }) {
             {
               key: () => 'Token',
               value: (datum: { tokens?: number }) =>
-                formatTokensDetail(datum.tokens ?? 0),
+                formatTokenValue(datum.tokens ?? 0),
             },
             {
               key: () => t('Requests'),

@@ -1,6 +1,13 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 08-27（最后更新 08-27）
+**日期**: 2026-06-25 ~ 09-02（最后更新 09-02）
+
+### 2026-09-02 Token 用量悬浮显示格式统一
+
+- `web/src/features/data-overview/components/department-stats-cards.tsx` — 部门统计卡片 Token 详情与人均 Token Tooltip 统一为 xx.xx 亿格式，移除原始数字展示
+- `web/src/features/data-overview/components/sub-department-stats.tsx` — 各部门 Token 用量柱状图 mark 与 dimension 两种悬浮提示统一：键名由 "Tokens" 改为字面量 "Token"（不走 i18n），值由原始数字改为 xx.xx 亿
+- `web/src/features/data-overview/components/user-consumption-charts.tsx` — 用户消耗排行与占比图表悬浮提示：Token 键名改为字面量 "Token"、值统一为 xx.xx 亿，排行柱状图 mark 与 dimension 提示一致
+- `web/src/features/data-overview/components/usage-analysis.tsx` — 使用分析板块各图表（Token 用量趋势、模型调用分布、模型消耗排行、费用趋势）Token 悬浮显示统一为 xx.xx 亿格式
 
 ### 2026-08-27 使用分析趋势图时间粒度
 
