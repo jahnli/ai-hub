@@ -708,6 +708,17 @@ export function processUserChartData(
 
   const formatVal = (raw: number) => renderQuotaCompat(raw, 2)
 
+  const formatTokenAmount = (tokens: number): string => {
+    if (!tokens) return '0'
+    if (tokens >= 1_0000_0000) {
+      return `${(tokens / 1_0000_0000).toFixed(2)} 亿`
+    }
+    if (tokens >= 1_0000) {
+      return `${(tokens / 1_0000).toFixed(2)} 万`
+    }
+    return tokens.toLocaleString()
+  }
+
   const emptyResult: ProcessedUserChartData = {
     spec_user_rank: {
       type: 'bar',
@@ -761,10 +772,26 @@ export function processUserChartData(
     }
   })
   const userQuotaTotal = new Map<string, number>()
+  const userTokenTotal = new Map<string, number>()
+
   data.forEach((item) => {
     const username = item.username || 'unknown'
-    const prev = userQuotaTotal.get(username) || 0
-    userQuotaTotal.set(username, prev + (Number(item.quota) || 0))
+    userQuotaTotal.set(
+      username,
+      (userQuotaTotal.get(username) || 0) + (Number(item.quota) || 0)
+    )
+
+    const tokens =
+      (Number(item.uncached_input_tokens) || 0) +
+      (Number(item.uncached_output_tokens) || 0) +
+      (Number(item.cache_read_tokens) || 0) +
+      (Number(item.cache_write_tokens) || 0)
+    if (tokens > 0) {
+      userTokenTotal.set(
+        username,
+        (userTokenTotal.get(username) || 0) + tokens
+      )
+    }
   })
 
   const sorted = [...userQuotaTotal.entries()].sort((a, b) => b[1] - a[1])
@@ -780,6 +807,7 @@ export function processUserChartData(
       avatarUrl: profile?.avatarUrl || '',
       rawQuota: quota,
       Usage: Number((quota / quotaPerUnit).toFixed(2)),
+      tokens: userTokenTotal.get(username) || 0,
     }
   })
 
@@ -951,6 +979,11 @@ export function processUserChartData(
               value: (datum: Record<string, unknown>) =>
                 formatVal(Number(datum?.rawQuota) || 0),
             },
+            {
+              key: () => 'Token',
+              value: (datum: Record<string, unknown>) =>
+                formatTokenAmount(Number(datum?.tokens) || 0),
+            },
           ],
           updateContent: (
             array: Array<{
@@ -960,6 +993,42 @@ export function processUserChartData(
             }>
           ) => {
             for (let i = 0; i < array.length; i++) {
+              if (array[i].key === 'Token') continue
+              const rawQuota = array[i].datum?.rawQuota
+              const value =
+                rawQuota === undefined ? array[i].value : Number(rawQuota)
+              array[i].value = formatVal(Number(value) || 0)
+            }
+            return array
+          },
+        },
+        dimension: {
+          title: {
+            value: (datum: Record<string, unknown>) =>
+              datum?.displayName || datum?.User,
+          },
+          content: [
+            {
+              key: (datum: Record<string, unknown>) =>
+                datum?.displayName || datum?.User,
+              value: (datum: Record<string, unknown>) =>
+                formatVal(Number(datum?.rawQuota) || 0),
+            },
+            {
+              key: () => 'Token',
+              value: (datum: Record<string, unknown>) =>
+                formatTokenAmount(Number(datum?.tokens) || 0),
+            },
+          ],
+          updateContent: (
+            array: Array<{
+              key: string
+              value: string | number
+              datum?: Record<string, unknown>
+            }>
+          ) => {
+            for (let i = 0; i < array.length; i++) {
+              if (array[i].key === 'Token') continue
               const rawQuota = array[i].datum?.rawQuota
               const value =
                 rawQuota === undefined ? array[i].value : Number(rawQuota)
