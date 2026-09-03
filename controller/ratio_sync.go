@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -303,7 +304,9 @@ func FetchUpstreamRatios(c *gin.Context) {
 			}
 
 			// Content-Type 和响应体大小校验
-			if ct := resp.Header.Get("Content-Type"); ct != "" && !strings.Contains(strings.ToLower(ct), "application/json") {
+			if ct := resp.Header.Get("Content-Type"); ct != "" &&
+				!strings.Contains(strings.ToLower(ct), "application/json") &&
+				!strings.Contains(strings.ToLower(ct), "text/plain") {
 				logger.LogWarn(c.Request.Context(), "unexpected content-type from "+chItem.Name+": "+ct)
 			}
 			limited := io.LimitReader(resp.Body, maxRatioConfigBytes)
@@ -336,6 +339,21 @@ func FetchUpstreamRatios(c *gin.Context) {
 				}
 				ch <- upstreamResult{Name: uniqueName, Data: converted}
 				return
+			}
+
+			trimmedBody := bytes.TrimSpace(bodyBytes)
+			if len(trimmedBody) > 0 && trimmedBody[0] != '{' {
+				decrypted, err := common.DecryptAESGCM(
+					string(trimmedBody),
+					os.Getenv(modelSquareAESKeyEnv),
+					[]byte(modelSquareAESAAD),
+				)
+				if err != nil {
+					logger.LogWarn(c.Request.Context(), "decrypt pricing response failed from "+chItem.Name+": "+err.Error())
+					ch <- upstreamResult{Name: uniqueName, Err: "failed to decrypt pricing response"}
+					return
+				}
+				bodyBytes = decrypted
 			}
 
 			// 兼容两种上游接口格式：

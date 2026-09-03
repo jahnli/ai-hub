@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
 
+import { decryptPricingPayload } from './lib/pricing-encryption'
 import type { PricingData } from './types'
 
 // ----------------------------------------------------------------------------
@@ -8,6 +9,8 @@ import type { PricingData } from './types'
 
 // Get model pricing data
 export async function getPricing(): Promise<PricingData> {
-  const res = await api.get('/api/pricing')
-  return res.data
+  const res = await api.get<string>('/api/pricing', {
+    responseType: 'text',
+  })
+  return decryptPricingPayload(res.data, __MODEL_SQUARE_AES_KEY__)
 }

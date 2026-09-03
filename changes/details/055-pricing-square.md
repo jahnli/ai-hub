@@ -1,6 +1,6 @@
 # 模型广场优化
 
-**日期**: 2026-08-25
+**日期**: 2026-09-03
 
 ## 涉及文件
 
@@ -57,3 +57,20 @@
 - `web/src/i18n/locales/_reports/ja.untranslated.json` — 更新日语未翻译项报告。
 - `web/src/i18n/locales/_reports/ru.untranslated.json` — 更新俄语未翻译项报告。
 - `web/src/i18n/locales/_reports/vi.untranslated.json` — 更新越南语未翻译项报告。
+
+## 模型广场响应加密
+
+- `common/aes_gcm.go` — 新增基于 SHA-256 密钥派生、随机 nonce 和附加认证数据的 AES-256-GCM 加解密工具，并要求密钥材料至少 32 字节。
+- `common/aes_gcm_test.go` — 覆盖加解密往返、随机 nonce、空密钥、短密钥及附加认证数据不一致等边界。
+- `controller/pricing.go` — 将完整模型广场响应序列化后加密为 Base64 文本返回，禁止缓存；密钥缺失或加密失败时拒绝降级返回明文。
+- `controller/pricing_encryption_test.go` — 验证接口不暴露模型明文、密文可还原原始响应、响应类型与缓存头正确，以及缺少密钥时返回错误。
+- `controller/ratio_sync.go` — 倍率同步支持识别并解密加密后的 `/api/pricing` 响应，同时保持对原有明文 JSON 上游的兼容。
+- `web/src/features/pricing/api.ts` — 模型广场请求改为接收文本响应，解密成功后继续以原 `PricingData` 类型交给页面。
+- `web/src/features/pricing/lib/pricing-encryption.ts` — 使用浏览器 Web Crypto API 完成 Base64 解码、AES-GCM 解密、UTF-8 转换、JSON 解析和响应结构校验。
+- `web/src/features/pricing/lib/__tests__/pricing-encryption.test.ts` — 覆盖正确密钥解密、错误密钥、短密钥和非法响应结构。
+- `web/src/env.d.ts` — 声明模型广场前端构建期密钥常量。
+- `web/rsbuild.config.ts` — 从进程环境或仓库根目录 `.env` 读取模型广场密钥并在前端构建时注入。
+- `.env.example` — 补充模型广场 AES 密钥长度、前后端一致性和 Docker 构建参数说明。
+- `Dockerfile` — 前端镜像构建阶段支持通过 `MODEL_SQUARE_AES_KEY` build arg 注入密钥。
+- `docker-compose.yml` — 正式容器运行时向后端传递模型广场 AES 密钥。
+- `docker-compose.dev.yml` — 本地容器开发环境向后端传递模型广场 AES 密钥。

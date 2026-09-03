@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
@@ -8,6 +11,11 @@ import (
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
+)
+
+const (
+	modelSquareAESKeyEnv = "MODEL_SQUARE_AES_KEY"
+	modelSquareAESAAD    = "new-api:model-square:v1"
 )
 
 func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string]string) []model.Pricing {
@@ -90,7 +98,7 @@ func GetPricing(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
+	response := gin.H{
 		"success":              true,
 		"data":                 pricing,
 		"vendors":              model.GetVendors(),
@@ -101,7 +109,31 @@ func GetPricing(c *gin.Context) {
 		"supported_endpoint":   model.GetSupportedEndpointMap(),
 		"auto_groups":          autoGroups,
 		"pricing_version":      "a42d372ccf0b5dd13ecf71203521f9d2",
-	})
+	}
+	plaintext, err := common.Marshal(response)
+	if err != nil {
+		common.SysError("marshal model square pricing response failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "failed to prepare model square response",
+		})
+		return
+	}
+	ciphertext, err := common.EncryptAESGCM(
+		plaintext,
+		os.Getenv(modelSquareAESKeyEnv),
+		[]byte(modelSquareAESAAD),
+	)
+	if err != nil {
+		common.SysError("encrypt model square pricing response failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "model square encryption is not configured",
+		})
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte(ciphertext))
 }
 
 func ResetModelRatio(c *gin.Context) {

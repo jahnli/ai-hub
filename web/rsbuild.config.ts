@@ -10,6 +10,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(({ envMode }) => {
   const env = loadEnv({ mode: envMode, prefixes: ['VITE_'] })
+  const rootEnv = loadEnv({
+    cwd: path.resolve(__dirname, '..'),
+    mode: envMode,
+    prefixes: ['MODEL_SQUARE_'],
+    processEnv: {},
+  })
   const serverUrl =
     process.env.VITE_REACT_APP_SERVER_URL ||
     env.rawPublicVars.VITE_REACT_APP_SERVER_URL ||
@@ -55,6 +61,13 @@ export default defineConfig(({ envMode }) => {
     source: {
       entry: {
         index: './src/main.tsx',
+      },
+      define: {
+        __MODEL_SQUARE_AES_KEY__: JSON.stringify(
+          process.env.MODEL_SQUARE_AES_KEY ??
+            rootEnv.parsed.MODEL_SQUARE_AES_KEY ??
+            ''
+        ),
       },
     },
     resolve: {
