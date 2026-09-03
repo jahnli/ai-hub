@@ -144,3 +144,10 @@ web/           — 前端（React 19、Rsbuild、Base UI、Tailwind）
 - 前端 UI 文本必须使用 `i18next`/`react-i18next` 支持国际化。使用 `web/src/i18n/locales/{lang}.json` 中的扁平 JSON 区域文件，以英文原文为键。
 - 在 React 组件中使用 `useTranslation()` 并调用 `t('English key')` 处理用户可见文本。
 - 详细前端约定（包括 TypeScript、组件结构、样式、可访问性、测试和构建检查）参见 `web/AGENTS.md`。
+
+### 拉取请求
+
+- 创建拉取请求前，先比较当前 Git 用户（`git config user.name` / `git config user.email`）与仓库历史核心开发者（例如 `git log` 中反复出现的主要作者）；不得修改 Git 配置。
+- 如果当前 Git 用户不是历史核心开发者之一，必须在 PR 正文中明确说明代码由 AI 生成或由 AI 辅助。
+- 为项目所有者创建拉取请求时，中文请求使用普通模板 `.github/PULL_REQUEST_TEMPLATE.md`，英文请求使用 `.github/PULL_REQUEST_TEMPLATE/en.md`。除非项目所有者明确要求，否则不得使用 `.agents/github/PR.md`。
+- 对于其他由 Agent 创建的拉取请求，必须以 `.agents/github/PR.md` 作为完整正文；除非项目所有者明确要求，否则不得使用普通 PR 模板。

@@ -44,10 +44,7 @@ import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useDemoMode } from '@/hooks/use-demo-mode'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
-import {
-  DEMO_MODE_MASK,
-  maskFormattedCurrencyAmount,
-} from '@/lib/demo-mode'
+import { DEMO_MODE_MASK, maskFormattedCurrencyAmount } from '@/lib/demo-mode'
 import { formatLogQuota, formatTokens, formatUseTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -162,9 +159,7 @@ function formatRatio(ratio: number | undefined): string {
 
 function formatVisibleLogQuota(quota: number, demoMode: boolean): string {
   const formattedQuota = formatLogQuota(quota)
-  return demoMode
-    ? maskFormattedCurrencyAmount(formattedQuota)
-    : formattedQuota
+  return demoMode ? maskFormattedCurrencyAmount(formattedQuota) : formattedQuota
 }
 
 function getUsageBillingPathLabel(
@@ -725,9 +720,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
     ? useChannel?.map(() => DEMO_MODE_MASK)
     : useChannel
   const channelChain =
-    canViewChannelDetails &&
-    visibleUseChannel &&
-    visibleUseChannel.length > 0
+    canViewChannelDetails && visibleUseChannel && visibleUseChannel.length > 0
       ? visibleUseChannel.join(' → ')
       : undefined
   const reasoningEffortVariant = getReasoningEffortVariant(
@@ -943,13 +936,13 @@ export function DetailsDialog(props: DetailsDialogProps) {
         )}
 
         {/* Reject reason (admin only) */}
-        {props.isAdmin && other?.reject_reason && (
+        {props.isAdmin && adminInfo?.reject_reason && (
           <DetailSection
             icon={<AlertTriangle className='size-3.5' aria-hidden='true' />}
             label={t('Reject Reason')}
             variant='danger'
           >
-            <p className='text-xs wrap-break-word'>{other.reject_reason}</p>
+            <p className='text-xs wrap-break-word'>{adminInfo.reject_reason}</p>
           </DetailSection>
         )}
 

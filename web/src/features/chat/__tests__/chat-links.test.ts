@@ -21,14 +21,14 @@ import { describe, expect, test } from 'vitest'
 import { resolveChatUrl } from '../lib/chat-links'
 
 describe('chat link branding', () => {
-  test('uses the AI Gateway name in AQBot configuration', () => {
+  test('uses the ai-gateway identifier in AQBot configuration', () => {
     const resolved = resolveChatUrl({
       template: 'aqbot://providers?{aqbotConfig}',
       apiKey: 'secret',
       serverAddress: 'https://gateway.example',
     })
 
-    expect(resolved).toContain('name=AI%20Gateway')
+    expect(resolved).toContain('name=ai-gateway')
     expect(resolved).not.toContain('New%20API')
   })
 })
