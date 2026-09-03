@@ -1,6 +1,6 @@
 # 新增在线生图功能
 
-**日期**: 2026-08-25
+**日期**: 2026-09-03
 
 ## 涉及文件
 
@@ -22,9 +22,9 @@
 - `web/default/src/features/image-studio/components/generate-panel.tsx`、`web/default/src/features/image-studio/components/result-grid.tsx` — 生成进度文案移除单图预估时间，思考动画加快，清空按钮改为重置。
 - `web/default/src/i18n/locales/*.json`、`web/default/src/i18n/locales/_reports/*.json`、`web/default/src/i18n/locales/_extras/*.json` — 补齐图片参数日志详情和并行生成失败占位文案的多语言翻译，并更新同步报告、清理过期额外翻译清单。
 - `model/image_studio.go` — 新增 ImageStudioGeneration 数据库模型，含图片元数据（尺寸、格式、大小）和收藏/用量字段，CRUD 方法支持按用户分页查询、收藏标记、用量更新和删除。
-- `controller/image_studio_storage.go`、`controller/image_studio_storage_backend.go` — 图片存储由本地磁盘迁移至 MinIO，支持通过环境变量配置 Bucket，对象统一写入 `image` 目录，并继续通过 API 提供访问、删除等能力。
-- `controller/image_studio_storage_backend_test.go` — 验证 MinIO 对象目录为 `image`，并验证使用环境变量配置的 Bucket。
-- `.env.example`、`docker-compose.yml` — 补充在线生图 MinIO 连接信息和 Bucket 环境变量配置。
+- `controller/image_studio_storage.go`、`controller/image_studio_storage_backend.go` — 图片存储由本地磁盘迁移至 MinIO，对象统一写入 `image` 目录，并继续通过 API 提供访问、删除等能力；MinIO 地址、访问账号、访问密码和 Bucket 改由单个 DSN 环境变量配置，并校验连接信息完整性。
+- `controller/image_studio_storage_backend_test.go` — 验证 MinIO 对象目录为 `image`、从 DSN 读取 Bucket，以及缺失访问凭据时拒绝初始化。
+- `.env.example`、`docker-compose.yml` — 在线生图 MinIO 配置统一使用单个 DSN 环境变量，并说明凭据特殊字符的百分号编码要求。
 - `go.mod`、`go.sum` — 引入 MinIO Go SDK 依赖。
 - `model/main.go` — 注册 ImageStudioGeneration 模型的数据库迁移。
 - `router/api-router.go` — 注册 /api/image-studio 路由组（CRUD + 静态文件访问）。

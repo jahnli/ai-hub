@@ -83,20 +83,26 @@ func getImageStudioStorage() (*imageStudioMinIOStorage, error) {
 }
 
 func newImageStudioMinIOStorage() (*imageStudioMinIOStorage, error) {
-	endpoint := strings.TrimSpace(os.Getenv("IMAGE_STUDIO_MINIO_ENDPOINT"))
-	accessKey := strings.TrimSpace(os.Getenv("IMAGE_STUDIO_MINIO_ACCESS_KEY"))
-	secretKey := strings.TrimSpace(os.Getenv("IMAGE_STUDIO_MINIO_SECRET_KEY"))
-	bucket := strings.TrimSpace(os.Getenv("IMAGE_STUDIO_MINIO_BUCKET"))
-	if endpoint == "" || accessKey == "" || secretKey == "" || bucket == "" {
-		return nil, errors.New("incomplete MinIO image studio storage configuration")
+	dsn := strings.TrimSpace(os.Getenv("IMAGE_STUDIO_MINIO_DSN"))
+	if dsn == "" {
+		return nil, errors.New("missing MinIO image studio DSN")
 	}
 
-	parsed, err := url.Parse(endpoint)
+	parsed, err := url.Parse(dsn)
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return nil, errors.New("invalid MinIO image studio endpoint")
+		return nil, errors.New("invalid MinIO image studio DSN")
 	}
-	if parsed.Path != "" && parsed.Path != "/" {
-		return nil, errors.New("MinIO image studio endpoint must not contain a path")
+	if parsed.User == nil {
+		return nil, errors.New("MinIO image studio DSN must include access key, secret key, and bucket")
+	}
+	accessKey := parsed.User.Username()
+	secretKey, hasSecretKey := parsed.User.Password()
+	bucket := strings.TrimPrefix(parsed.Path, "/")
+	if accessKey == "" || !hasSecretKey || secretKey == "" || bucket == "" || strings.Contains(bucket, "/") {
+		return nil, errors.New("MinIO image studio DSN must include access key, secret key, and bucket")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return nil, errors.New("MinIO image studio DSN must not contain a query or fragment")
 	}
 
 	client, err := minio.New(parsed.Host, &minio.Options{

@@ -17,12 +17,18 @@ func TestImageStudioMinIOObjectNamePreservesAssetPath(t *testing.T) {
 }
 
 func TestNewImageStudioMinIOStorageUsesConfiguredBucket(t *testing.T) {
-	t.Setenv("IMAGE_STUDIO_MINIO_ENDPOINT", "http://127.0.0.1:9000")
-	t.Setenv("IMAGE_STUDIO_MINIO_ACCESS_KEY", "access-key")
-	t.Setenv("IMAGE_STUDIO_MINIO_SECRET_KEY", "secret-key")
-	t.Setenv("IMAGE_STUDIO_MINIO_BUCKET", "generated-images")
+	t.Setenv("IMAGE_STUDIO_MINIO_DSN", "http://access-key:secret-key@127.0.0.1:9000/generated-images")
 
 	storage, err := newImageStudioMinIOStorage()
 	require.NoError(t, err)
 	assert.Equal(t, "generated-images", storage.bucket)
+}
+
+func TestNewImageStudioMinIOStorageRejectsIncompleteDSN(t *testing.T) {
+	t.Setenv("IMAGE_STUDIO_MINIO_DSN", "http://127.0.0.1:9000/generated-images")
+
+	storage, err := newImageStudioMinIOStorage()
+
+	require.Error(t, err)
+	assert.Nil(t, storage)
 }
