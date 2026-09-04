@@ -5,7 +5,6 @@
   "API Base URL": "API Base URL",
   "Auto-save API image generations": "自动保存 API 生图记录",
   "Bind DN": "Bind DN",
-  "Bind Password": "Bind 密码",
   "Continue with LDAP": "使用 LDAP 继续",
   "Custom label for the LDAP login button": "LDAP 登录按钮的自定义文案",
   "Enable LDAP Login": "启用 LDAP 登录",
