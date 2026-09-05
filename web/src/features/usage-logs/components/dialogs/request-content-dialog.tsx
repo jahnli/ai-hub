@@ -1,5 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
-import { Check, ChevronDown, Copy, ShieldAlert } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
+  Copy,
+  ShieldAlert,
+} from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -42,6 +49,10 @@ function formatParameters(parameters: string): string {
 export function RequestContentDialog(props: RequestContentDialogProps) {
   const { t } = useTranslation()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
+  const [messageOpenState, setMessageOpenState] = useState<
+    Record<string, boolean>
+  >({})
   const [userData, setUserData] = useState<UserColumnRow>(props.user)
   const fetchedUserRef = useRef(false)
   const { copiedText, copyToClipboard } = useCopyToClipboard({ notify: false })
@@ -121,6 +132,12 @@ export function RequestContentDialog(props: RequestContentDialogProps) {
     props.onOpenChange(nextOpen)
   }
 
+  const handleCopy = async (text: string, target: string): Promise<void> => {
+    if (await copyToClipboard(text)) {
+      setCopiedTarget(target)
+    }
+  }
+
   // 消息内容可能重复，用 内容前缀+出现次序 组成稳定 key；最新的消息排在最上面
   const seenCount = new Map<string, number>()
   const entries = messages
@@ -135,6 +152,9 @@ export function RequestContentDialog(props: RequestContentDialogProps) {
       }
     })
     .reverse()
+  const allMessagesExpanded = entries.every(
+    (entry) => messageOpenState[entry.key] !== false
+  )
 
   return (
     <>
@@ -198,11 +218,15 @@ export function RequestContentDialog(props: RequestContentDialogProps) {
                         size='sm'
                         className='h-6 w-6 shrink-0 p-0'
                         onClick={() =>
-                          copyToClipboard(props.requestMessage.request_id)
+                          void handleCopy(
+                            props.requestMessage.request_id,
+                            'request-id'
+                          )
                         }
                         title={t('Copy to clipboard')}
                       >
-                        {copiedText === props.requestMessage.request_id ? (
+                        {copiedTarget === 'request-id' &&
+                        copiedText === props.requestMessage.request_id ? (
                           <Check className='size-3 text-green-600' />
                         ) : (
                           <Copy className='size-3' />
@@ -238,10 +262,44 @@ export function RequestContentDialog(props: RequestContentDialogProps) {
           <div className='grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-4 overflow-hidden md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)] md:grid-rows-[minmax(0,1fr)]'>
             <div className='h-full min-h-0 [scrollbar-gutter:stable] overflow-y-scroll overscroll-contain pr-3'>
               <div className='space-y-3'>
+                {entries.length > 1 && (
+                  <div className='bg-background/95 sticky top-0 z-10 flex justify-end pb-1 backdrop-blur-sm'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      className='text-muted-foreground hover:text-foreground h-8 rounded-full px-3 shadow-sm'
+                      onClick={() => {
+                        if (allMessagesExpanded) {
+                          setMessageOpenState(
+                            Object.fromEntries(
+                              entries.map((entry) => [entry.key, false])
+                            )
+                          )
+                          return
+                        }
+                        setMessageOpenState({})
+                      }}
+                    >
+                      {allMessagesExpanded ? (
+                        <ChevronsUp data-icon='inline-start' />
+                      ) : (
+                        <ChevronsDown data-icon='inline-start' />
+                      )}
+                      {t(allMessagesExpanded ? 'Collapse All' : 'Expand All')}
+                    </Button>
+                  </div>
+                )}
                 {entries.map((entry) => (
                   <Collapsible
                     key={entry.key}
-                    defaultOpen
+                    open={messageOpenState[entry.key] ?? true}
+                    onOpenChange={(open) =>
+                      setMessageOpenState((current) => ({
+                        ...current,
+                        [entry.key]: open,
+                      }))
+                    }
                     className='group/message rounded-lg border'
                   >
                     <div className='flex items-center gap-1 px-3 py-2'>
@@ -260,10 +318,13 @@ export function RequestContentDialog(props: RequestContentDialogProps) {
                         variant='ghost'
                         size='sm'
                         className='h-7 w-7 shrink-0 p-0'
-                        onClick={() => copyToClipboard(entry.message)}
+                        onClick={() =>
+                          void handleCopy(entry.message, entry.key)
+                        }
                         title={t('Copy to clipboard')}
                       >
-                        {copiedText === entry.message ? (
+                        {copiedTarget === entry.key &&
+                        copiedText === entry.message ? (
                           <Check className='size-3.5 text-green-600' />
                         ) : (
                           <Copy className='size-3.5' />
