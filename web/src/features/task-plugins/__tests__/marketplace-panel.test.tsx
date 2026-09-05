@@ -49,7 +49,7 @@ const githubSource: MarketplaceSource = {
 
 const officialIndex: MarketplaceIndex = {
   indexVersion: 1,
-  name: 'Official catalog',
+  name: 'New API Official Plugins',
   plugins: [],
 }
 const githubIndex: MarketplaceIndex = {
@@ -102,15 +102,16 @@ afterEach(() => {
 })
 
 describe('MarketplacePanel source switch', () => {
-  test('selects only the official source by default and hides both URLs', async () => {
+  test('shows a neutral official heading and hides both URLs', async () => {
     const fetchMock = installIndexFetchMock()
     renderPanel()
 
     expect(
       await screen.findByRole('heading', {
-        name: officialIndex.name,
+        name: 'Official Plugins',
       })
     ).toBeInTheDocument()
+    expect(screen.queryByText(officialIndex.name)).toBeNull()
     expect(screen.queryByText(DEFAULT_MARKETPLACE_INDEX_URL)).toBeNull()
     expect(screen.queryByText(GITHUB_MARKETPLACE_INDEX_URL)).toBeNull()
     expect(screen.getByRole('button', { name: 'Official' })).toHaveAttribute(
@@ -125,7 +126,7 @@ describe('MarketplacePanel source switch', () => {
     const fetchMock = installIndexFetchMock()
     const user = userEvent.setup()
     renderPanel()
-    await screen.findByRole('heading', { name: officialIndex.name })
+    await screen.findByRole('heading', { name: 'Official Plugins' })
 
     expect(fetchMock).not.toHaveBeenCalledWith(GITHUB_MARKETPLACE_INDEX_URL)
 
@@ -135,7 +136,7 @@ describe('MarketplacePanel source switch', () => {
       await screen.findByRole('heading', { name: githubIndex.name })
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('heading', { name: officialIndex.name })
+      screen.queryByRole('heading', { name: 'Official Plugins' })
     ).toBeNull()
     expect(screen.getByRole('button', { name: 'GitHub' })).toHaveAttribute(
       'aria-pressed',

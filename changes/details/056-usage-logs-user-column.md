@@ -1,6 +1,6 @@
 # 使用日志增强：用户信息、请求内容与审计
 
-**日期**: 2026-09-01
+**日期**: 2026-09-05
 
 ## 涉及文件
 
@@ -83,6 +83,8 @@
 - `web/default/src/components/ui/combobox.tsx` — 透传 ComboboxInput 的自定义值提示和 value 过滤开关
 - `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 令牌列和详情列摘要仅在管理员日志视图中展示分组倍率或用户专属倍率，避免普通用户及「仅自己」视图泄露倍率
 - `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 日志详情弹框的计费明细仅向管理员日志视图展示分组倍率或用户专属倍率
+- `web/src/features/usage-logs/components/dialogs/request-content-dialog.tsx` — 多条请求消息新增单个胶囊按钮，可根据当前状态一键切换全部展开或收起；复制反馈按消息唯一标识隔离，避免重复内容同时显示已复制。
+- `web/src/features/usage-logs/components/dialogs/__tests__/request-content-collapse.test.tsx`、`request-content-copy.test.tsx` — 回归覆盖批量展开/收起、单条折叠以及重复消息仅高亮实际点击的复制按钮。
 
 ## 「仅自己」用户信息展示修复
 
