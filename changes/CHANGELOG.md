@@ -36,7 +36,7 @@
 | 029 | 2026-06-23 | 移除 GitHub、Discord、Telegram、LinuxDO OAuth 登录：删除 User 表 4 个 ID 字段、后端提供商实现、前端设置/登录/绑定界面及所有语言翻译 | [详情](details/029-remove-github-discord-telegram-linuxdo-oauth.md) |
 | 030 | 2026-06-23 | 修复 LDAP 系统设置不回显配置，并在保存 LDAP 登录状态后刷新前端状态缓存 | `web/default/src/features/system-settings/auth/section-registry.tsx`、`web/default/src/features/system-settings/hooks/use-update-option.ts` |
 | 031 | 2026-06-23 | 清理认证系统设置中已移除 OAuth 提供商的残留前端参数 | `web/default/src/features/system-settings/auth/section-registry.tsx` |
-| 032 | 2026-06-27 | 首页底部飞书卡片支持点击跳转飞书聊天：后端通过 FEISHU_SUPPORT_OPEN_ID 环境变量暴露 openId，前端动态构造 applink 链接；未配置时隐藏卡片 | `setting/system_setting/feishu.go`、`controller/misc.go`、`web/default/src/features/home/components/sections/cta.tsx` |
+| 032 | 2026-09-05 | 飞书支持联系人入口：后端通过 FEISHU_SUPPORT_OPEN_ID 暴露 openId，首页与错误页复用联系卡片并动态构造 applink；未配置时隐藏 | [详情](details/032-feishu-support-contact.md) |
 | 033 | 2026-06-23 | 登录页切换按钮与登录按钮大小统一，去掉多余的 h-11 rounded-lg | `web/default/src/features/auth/sign-in/components/user-auth-form.tsx` |
 | 034 | 2026-06-23 | 用户头像下拉菜单增强：头像旁显示用户名、角色标签前加图标（👑🏅🧑‍💼）、下拉菜单改为悬停触发、移除分组显示 | [详情](details/034-profile-dropdown-enhance.md) |
 | 035 | 2026-06-24 | 常见问答面板重构：移除问答列表，改为插画图标+外链按钮跳转飞书文档；经典前端注释掉 FAQ 面板 | [详情](details/035-faq-panel-redesign.md) |
@@ -76,3 +76,4 @@
 | 071 | 2026-08-19 | 移除中心 BP（role=3）角色：删除后端 RoleCenterBP 常量及所有相关分支，前端去掉 CENTER_BP 选项与翻译，数据库中 role=3 统一替换为 role=2；AI BP 角色改名为 BP（七语言同步更新） | [详情](details/071-remove-center-bp-role.md) |
 | 072 | 2026-08-24 | 路由可靠性新增飞书群机器人通知：配置官方 Webhook 后，在渠道确认自动禁用或启用时异步发送群消息，并统一 Midjourney 无可用账号实例的自动禁用链路 | [详情](details/072-feishu-channel-status-notify.md) |
 | 073 | 2026-09-03 | 渠道分组字段长度由 64 扩展至 1024 个字符，支持为单个渠道配置更多分组 | `model/channel.go` |
+| 074 | 2026-09-05 | 任务插件官方市场标题去除 New API 品牌前缀，统一显示为 Official Plugins，并补齐七语言翻译 | [详情](details/074-task-plugin-official-title.md) |

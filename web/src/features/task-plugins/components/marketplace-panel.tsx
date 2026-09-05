@@ -199,6 +199,10 @@ type MarketplaceSourceSectionProps = {
 function MarketplaceSourceSection(props: MarketplaceSourceSectionProps) {
   const { t } = useTranslation()
   const isOfficial = isDefaultMarketplaceSource(props.source.index_url)
+  const sourceName =
+    props.index?.name === 'New API Official Plugins'
+      ? t('Official Plugins')
+      : props.index?.name || props.source.name
   const missingHashes = props.index
     ? !indexHasIntegrityHashes(props.index)
     : false
@@ -206,9 +210,7 @@ function MarketplaceSourceSection(props: MarketplaceSourceSectionProps) {
   return (
     <section className='space-y-3'>
       <div className='flex flex-wrap items-center gap-2'>
-        <h3 className='text-sm font-semibold'>
-          {props.index?.name || props.source.name}
-        </h3>
+        <h3 className='text-sm font-semibold'>{sourceName}</h3>
         {isOfficial ? (
           <Badge variant='secondary'>{t('Official')}</Badge>
         ) : (
