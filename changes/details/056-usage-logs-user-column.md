@@ -139,3 +139,7 @@
 - `web/src/features/usage-logs/components/dialogs/task-details-dialog.tsx` — 任务详情弹框隐藏渠道编号和配额数字，保留配额货币符号。
 - `web/src/features/usage-logs/components/usage-logs-table.tsx` — 演示模式停止批量加载请求内容，避免已遮蔽的正文继续进入前端。
 - `web/src/features/pricing/components/dynamic-pricing-breakdown.tsx` — 动态计费价格被遮蔽时保留当前配置的货币符号。
+
+## 2026-09-05 普通日志模型下拉筛选
+
+- `web/src/features/usage-logs/components/common-logs-filter-bar.tsx` — 模型筛选由文本输入改为可搜索下拉框；管理员从全部渠道聚合、去重并排序模型，普通用户加载自身可用模型，同时保留自定义模型名称输入。
