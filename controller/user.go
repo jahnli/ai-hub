@@ -370,6 +370,16 @@ func autoSubscribeUserAfterCreate(userId int, company string, source string) {
 	common.SysLog(fmt.Sprintf("[%s] auto-subscribe succeeded for user %d plan %d: %s", source, userId, autoSubscribePlanId, msg))
 }
 
+// stripExternalModeFields clears user fields that should not be exposed
+// when External Mode is enabled (department, job title, custom fields, join date, etc.).
+func stripExternalModeFields(user *model.User) {
+	user.DepartmentName = ""
+	user.Departments = "[]"
+	user.JobTitle = ""
+	user.CustomFieldValues = "{}"
+	user.JoinDate = ""
+}
+
 func GetAllUsers(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 	if common.IsComputedSortColumn(pageInfo.SortBy) {
@@ -626,6 +636,9 @@ func attachSubscriptionQuota(users []*model.User) []userWithSubQuota {
 
 	result := make([]userWithSubQuota, len(users))
 	for i, u := range users {
+		if operation_setting.ExternalModeEnabled {
+			stripExternalModeFields(u)
+		}
 		item := userWithSubQuota{User: u}
 		stat, hasStat := userStats[u.Id]
 		if s, ok := subMap[u.Id]; ok {

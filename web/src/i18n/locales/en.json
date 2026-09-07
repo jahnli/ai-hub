@@ -4850,6 +4850,8 @@
     "Selected when creating a token and used as the default billing group for API calls.": "Selected when creating a token and used as the default billing group for API calls.",
     "Selecting a plugin fills its declared models.": "Selecting a plugin fills its declared models.",
     "Self-Use Mode": "Self-Use Mode",
+    "External Mode": "External Mode",
+    "Hide internal user details from user lists": "Hide internal user details from user lists",
     "Semiconductor & Chips": "Semiconductor & Chips",
     "Send": "Send",
     "Send a request": "Send a request",

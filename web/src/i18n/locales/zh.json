@@ -4850,6 +4850,8 @@
     "Selected when creating a token and used as the default billing group for API calls.": "创建令牌时选择，用作 API 调用的默认计费分组。",
     "Selecting a plugin fills its declared models.": "选择插件后将自动填入其声明的模型。",
     "Self-Use Mode": "自用模式",
+    "External Mode": "对外模式",
+    "Hide internal user details from user lists": "隐藏用户内部信息",
     "Semiconductor & Chips": "半导体与芯片",
     "Send": "发送",
     "Send a request": "发送请求",

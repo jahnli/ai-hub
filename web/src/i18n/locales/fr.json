@@ -4850,6 +4850,8 @@
     "Selected when creating a token and used as the default billing group for API calls.": "Sélectionné lors de la création d’un jeton et utilisé comme groupe de facturation par défaut pour les appels API.",
     "Selecting a plugin fills its declared models.": "La sélection remplit les modèles déclarés.",
     "Self-Use Mode": "Mode d'utilisation personnelle",
+    "External Mode": "Mode externe",
+    "Hide internal user details from user lists": "Masquer les informations internes des utilisateurs",
     "Semiconductor & Chips": "Semiconductor & Chips",
     "Send": "Envoyer",
     "Send a request": "Envoyer une requête",

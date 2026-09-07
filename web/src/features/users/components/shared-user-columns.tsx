@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ModelBadge } from '@/features/usage-logs/components/model-badge'
 import { useDemoMode } from '@/hooks/use-demo-mode'
+import { useExternalMode } from '@/hooks/use-external-mode'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import { getDemoModeUsername } from '@/lib/demo-mode'
@@ -677,28 +678,39 @@ export function useSharedUserColumns<T extends UserColumnRow>(
 ): ColumnDef<T>[] {
   const { t } = useTranslation()
   const demoMode = useDemoMode()
+  const externalMode = useExternalMode()
 
   return useMemo(
-    () => [
-      userIdColumn<T>(t),
-      userNameColumn<T>(t, demoMode),
-      userQuotaColumn<T>(t, {
-        headerDescription: opts.quotaHeaderDescription,
-      }),
-      userTokensColumn<T>(t, { accessor: opts.tokensAccessor }),
-      userCostColumn<T>(t, { accessor: opts.costAccessor }),
-      userAveragePriceColumn<T>(t, {
-        costAccessor: opts.costAccessor,
-        tokensAccessor: opts.tokensAccessor,
-      }),
-      userRequestsColumn<T>(t, { accessor: opts.requestsAccessor }),
-      userDepartmentColumn<T>(t),
-      userJobLevelColumn<T>(t),
-      userLastLoginColumn<T>(t),
-      userModelColumn<T>(t, { accessor: opts.modelAccessor, variant: 'badge' }),
-      userJoinDateColumn<T>(t),
-      userCreatedAtColumn<T>(t),
-      {
+    () => {
+      const columns: ColumnDef<T>[] = [
+        userIdColumn<T>(t),
+        userNameColumn<T>(t, demoMode),
+        userQuotaColumn<T>(t, {
+          headerDescription: opts.quotaHeaderDescription,
+        }),
+        userTokensColumn<T>(t, { accessor: opts.tokensAccessor }),
+        userCostColumn<T>(t, { accessor: opts.costAccessor }),
+        userAveragePriceColumn<T>(t, {
+          costAccessor: opts.costAccessor,
+          tokensAccessor: opts.tokensAccessor,
+        }),
+        userRequestsColumn<T>(t, { accessor: opts.requestsAccessor }),
+      ]
+
+      if (!externalMode) {
+        columns.push(userDepartmentColumn<T>(t))
+        columns.push(userJobLevelColumn<T>(t))
+      }
+
+      columns.push(userLastLoginColumn<T>(t))
+      columns.push(userModelColumn<T>(t, { accessor: opts.modelAccessor, variant: 'badge' }))
+
+      if (!externalMode) {
+        columns.push(userJoinDateColumn<T>(t))
+      }
+
+      columns.push(userCreatedAtColumn<T>(t))
+      columns.push({
         ...userRoleColumn<T>(t),
         filterFn: (
           row: { getValue: (id: string) => unknown },
@@ -707,8 +719,8 @@ export function useSharedUserColumns<T extends UserColumnRow>(
         ) => {
           return value.includes(String(row.getValue(id)))
         },
-      },
-      {
+      })
+      columns.push({
         ...userStatusColumn<T>(t, {
           showRequestCount: true,
           requestCountAccessor: opts.requestCountAccessor as keyof T,
@@ -720,8 +732,8 @@ export function useSharedUserColumns<T extends UserColumnRow>(
         ) => {
           return value.includes(String(row.getValue(id)))
         },
-      },
-      {
+      })
+      columns.push({
         ...userGroupColumn<T>(t, {
           withBadgeCell: opts.withGroupBadgeCell ?? true,
         }),
@@ -736,11 +748,14 @@ export function useSharedUserColumns<T extends UserColumnRow>(
           const searchValue = String(value).toLowerCase()
           return group.includes(searchValue)
         },
-      },
-    ],
+      })
+
+      return columns
+    },
     [
       t,
       demoMode,
+      externalMode,
       opts.costAccessor,
       opts.tokensAccessor,
       opts.requestsAccessor,
