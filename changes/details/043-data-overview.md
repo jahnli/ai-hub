@@ -2,6 +2,10 @@
 
 **日期**: 2026-06-25 ~ 09-07（最后更新 09-07）
 
+### 2026-09-07 用户统计弹窗头像+名称展示
+
+- `web/src/features/data-overview/components/user-stats-dialog.tsx` — 用户统计弹窗新增头像+名称展示，仿照请求内容弹窗：标题栏下方用 `UserProfileHoverCard` 包裹 `Avatar`（size-9），右侧显示 `displayName` 和 `username`，鼠标悬停弹出用户资料卡片；`DepartmentUser` 数据映射为 `UserColumnRow` 供悬停卡片使用；`DialogTitle` 移除名称后缀
+
 ### 2026-09-02 Token 用量悬浮显示格式统一
 
 - `web/src/features/data-overview/components/department-stats-cards.tsx` — 部门统计卡片 Token 详情与人均 Token Tooltip 统一为 xx.xx 亿格式，移除原始数字展示
