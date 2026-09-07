@@ -1,6 +1,6 @@
 # 数据总览页增强与公司配置管理
 
-**日期**: 2026-06-25 ~ 09-02（最后更新 09-02）
+**日期**: 2026-06-25 ~ 09-07（最后更新 09-07）
 
 ### 2026-09-02 Token 用量悬浮显示格式统一
 
@@ -235,8 +235,8 @@
 - `web/src/features/data-overview/components/__tests__/stats-card-tooltip.test.tsx` — 测试夹具补充费用分桶字段
 - `web/src/i18n/locales/*.json` — 七语言补充费用分桶相关文案（`Cost Distribution`、`Spent ¥0`、`Spent ¥{{min}}~¥{{max}}`、`Spent over ¥{{min}}`、`Users spending more than ¥10` 等）
 
-### 2026-08-19 数据总览日志敏感字段权限
+### 2026-09-07 数据总览日志渠道列权限调整
 
-- `web/src/features/data-overview/components/user-logs-section.tsx` — 数据总览的部门日志和部门用户日志隐藏渠道列；日志详情中的渠道、重试链和分组倍率仅向超级管理员开放。
+- `web/src/features/data-overview/components/user-logs-section.tsx` — 数据总览的部门日志和部门用户日志渠道列对超级管理员可见，普通管理员隐藏；日志详情中的渠道、重试链和分组倍率仅向超级管理员开放。
 - `web/src/features/usage-logs/components/columns/common-logs-columns.tsx` — 公共日志列增加渠道详情与分组倍率的独立可见性选项，并将权限传递给详情弹窗和详情摘要。
 - `web/src/features/usage-logs/components/dialogs/details-dialog.tsx` — 详情弹窗按独立权限隐藏渠道、重试链和分组倍率，避免普通管理员在数据总览日志中看到敏感信息。
