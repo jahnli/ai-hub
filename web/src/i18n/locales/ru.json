@@ -4823,6 +4823,8 @@
     "Selected when creating a token and used as the default billing group for API calls.": "Выбирается при создании токена и используется как группа тарификации по умолчанию для вызовов API.",
     "Selecting a plugin fills its declared models.": "Выбор плагина заполняет заявленные модели.",
     "Self-Use Mode": "Режим самоиспользования",
+    "External Mode": "Внешний режим",
+    "Hide internal user details from user lists": "Скрыть внутреннюю информацию о пользователях",
     "Semiconductor & Chips": "Semiconductor & Chips",
     "Send": "Отправить",
     "Send a request": "Отправить запрос",

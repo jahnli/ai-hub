@@ -77,3 +77,4 @@
 | 072 | 2026-08-24 | 路由可靠性新增飞书群机器人通知：配置官方 Webhook 后，在渠道确认自动禁用或启用时异步发送群消息，并统一 Midjourney 无可用账号实例的自动禁用链路 | [详情](details/072-feishu-channel-status-notify.md) |
 | 073 | 2026-09-03 | 渠道分组字段长度由 64 扩展至 1024 个字符，支持为单个渠道配置更多分组 | `model/channel.go` |
 | 074 | 2026-09-05 | 任务插件官方市场标题去除 New API 品牌前缀，统一显示为 Official Plugins，并补齐七语言翻译 | [详情](details/074-task-plugin-official-title.md) |
+| 075 | 2026-09-07 | 新增对外模式：系统行为设置中可隐藏用户内部信息（部门、岗位职级、入职日期），后端同步不传这些字段 | [详情](details/075-external-mode.md) |

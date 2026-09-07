@@ -4823,6 +4823,8 @@
     "Selected when creating a token and used as the default billing group for API calls.": "Được chọn khi tạo token và dùng làm nhóm tính phí mặc định cho các lệnh gọi API.",
     "Selecting a plugin fills its declared models.": "Chọn plugin sẽ điền các model đã khai báo.",
     "Self-Use Mode": "Chế độ tự sử dụng",
+    "External Mode": "Chế độ bên ngoài",
+    "Hide internal user details from user lists": "Ẩn thông tin nội bộ của người dùng",
     "Semiconductor & Chips": "Semiconductor & Chips",
     "Send": "Gửi",
     "Send a request": "Gửi yêu cầu",

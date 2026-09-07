@@ -4823,6 +4823,8 @@
     "Selected when creating a token and used as the default billing group for API calls.": "トークン作成時に選択され、API 呼び出しのデフォルト課金グループとして使われます。",
     "Selecting a plugin fills its declared models.": "プラグインを選択すると宣言済みモデルが入力されます。",
     "Self-Use Mode": "セルフユースモード",
+    "External Mode": "外部モード",
+    "Hide internal user details from user lists": "ユーザーの内部情報を非表示にする",
     "Semiconductor & Chips": "Semiconductor & Chips",
     "Send": "送信",
     "Send a request": "リクエストを送信",
