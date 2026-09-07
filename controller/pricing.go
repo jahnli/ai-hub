@@ -101,6 +101,7 @@ func GetPricing(c *gin.Context) {
 	response := gin.H{
 		"success":              true,
 		"data":                 pricing,
+		"recommendations":      model.GetModelSquareRecommendations(pricing),
 		"vendors":              model.GetVendors(),
 		"group_ratio":          groupRatio,
 		"group_vendor_ratio":   groupVendorRatio,

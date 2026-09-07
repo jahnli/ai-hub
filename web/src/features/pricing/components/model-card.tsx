@@ -40,6 +40,7 @@ import { getTaskNumberFields } from '../lib/task-expr'
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
 import { ModelPerfBadge, type ModelPerfBadgeData } from './model-perf-badge'
+import { ModelRecommendationBadge } from './model-recommendation-badge'
 
 export interface ModelCardProps {
   model: PricingModel
@@ -257,9 +258,16 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
     <div
       className={cn(
         'group relative flex flex-col rounded-xl border p-3 transition-colors sm:p-5',
-        'hover:bg-muted/20'
+        props.model.is_recommended
+          ? 'border-amber-300/70 bg-linear-to-br from-amber-50/60 via-card to-card hover:border-amber-400 dark:border-amber-700/60 dark:from-amber-950/20 dark:hover:border-amber-600'
+          : 'hover:bg-muted/20'
       )}
     >
+      {props.model.is_recommended && (
+        <div className='pointer-events-none absolute top-0 right-3 flex max-w-[calc(100%-1.5rem)] -translate-y-1/2 sm:right-5 sm:max-w-[calc(100%-2.5rem)]'>
+          <ModelRecommendationBadge prominent />
+        </div>
+      )}
       {/* Header: icon + name + price + actions */}
       <div className='flex items-start justify-between gap-2.5 sm:gap-3'>
         <div className='flex min-w-0 items-start gap-2.5 sm:gap-3'>

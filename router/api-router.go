@@ -208,6 +208,12 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/subscription/epay/notify", controller.SubscriptionEpayNotify)
 		apiRouter.GET("/subscription/epay/return", controller.SubscriptionEpayReturn)
 		apiRouter.POST("/subscription/epay/return", anonymousRequestBodyLimit, controller.SubscriptionEpayReturn)
+		modelSquareRoute := apiRouter.Group("/model-square")
+		modelSquareRoute.Use(func(c *gin.Context) { c.Header("Cache-Control", "no-store") }, middleware.RootAuth())
+		{
+			modelSquareRoute.GET("/config", controller.GetModelSquareConfig)
+			modelSquareRoute.PUT("/config", controller.UpdateModelSquareConfig)
+		}
 		optionRoute := apiRouter.Group("/option")
 		optionRoute.Use(middleware.RootAuth())
 		{

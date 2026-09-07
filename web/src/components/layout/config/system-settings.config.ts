@@ -72,7 +72,13 @@ function getSystemSettingsNavGroups(t: TFunction): NavGroup[] {
           title: t('Models & Routing'),
           icon: Box,
           defaultOpen: true,
-          items: getModelsSectionNavItems(t),
+          items: [
+            ...getModelsSectionNavItems(t),
+            {
+              title: t('Model Square Settings'),
+              url: '/system-settings/model-square',
+            },
+          ],
         },
         {
           title: t('Security & Limits'),
