@@ -11,12 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Switch } from '@/components/ui/switch'
 import { FormNavigationGuard } from '@/features/system-settings/components/form-navigation-guard'
 import { handleServerError } from '@/lib/handle-server-error'
@@ -70,7 +65,7 @@ export function ModelSquareSettingsForm(props: ModelSquareConfigData) {
       <form
         noValidate
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
-        className='max-w-5xl space-y-6'
+        className='w-full space-y-6'
         aria-label={t('Model Square Settings')}
         aria-busy={mutation.isPending}
       >
@@ -91,7 +86,7 @@ export function ModelSquareSettingsForm(props: ModelSquareConfigData) {
             {t('Enable model recommendations')}
           </FieldLabel>
         </Field>
-        <FieldGroup>
+        <div className='grid w-full grid-cols-1 gap-4 md:grid-cols-2'>
           {entries.fields.map((entry, index) => (
             <RecommendationFields
               key={entry.id}
@@ -101,7 +96,7 @@ export function ModelSquareSettingsForm(props: ModelSquareConfigData) {
               onRemove={() => entries.remove(index)}
             />
           ))}
-        </FieldGroup>
+        </div>
         {entries.fields.length === 0 && (
           <p className='text-muted-foreground text-sm'>
             {t('No recommendations configured')}

@@ -27,13 +27,21 @@ const model: PricingModel = {
   enable_groups: ['default'],
   group_ratio: { default: 0.5 },
   is_recommended: true,
+  recommendation_scenarios: ['coding', 'chat'],
 }
 const i18n = createInstance()
 await i18n.init({
   lng: 'en',
   resources: {
     en: { translation: {} },
-    zh: { translation: { Recommended: '推荐' } },
+    zh: {
+      translation: {
+        Recommended: '推荐',
+        Scenario: '适用场景',
+        Coding: '编程',
+        'Daily chat': '日常对话',
+      },
+    },
   },
 })
 afterEach(() => {
@@ -50,11 +58,24 @@ test('recommended card shows one badge and retains pricing and details actions',
     </I18nextProvider>
   )
   expect(screen.getAllByText('Recommended')).toHaveLength(1)
+  expect(screen.getByText('Coding')).toBeVisible()
+  expect(screen.getByText('Daily chat')).toBeVisible()
+  expect(screen.queryByText('Scenario')).not.toBeInTheDocument()
+  expect(screen.getByRole('list', { name: 'Scenario' })).toBeVisible()
+  expect(screen.getByText('Coding')).toHaveClass(
+    'px-2.5',
+    'py-1',
+    'text-[13px]'
+  )
   expect(screen.getByText('$1')).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Details' }))
   expect(onClick).toHaveBeenCalledOnce()
   await act(() => i18n.changeLanguage('zh'))
   expect(screen.getByText('推荐')).toBeVisible()
+  expect(screen.getByText('编程')).toBeVisible()
+  expect(screen.getByText('日常对话')).toBeVisible()
+  expect(screen.queryByText('适用场景')).not.toBeInTheDocument()
+  expect(screen.getByRole('list', { name: '适用场景' })).toBeVisible()
   rerender(
     <I18nextProvider i18n={i18n}>
       <ModelCard
@@ -120,6 +141,14 @@ test('table marks only recommended models and keeps row details clickable', asyn
   expect(screen.getAllByText('Recommended')).toHaveLength(1)
   const recommendedRow = screen.getByRole('row', { name: /recommended-model/ })
   expect(within(recommendedRow).getByText('Recommended')).toBeVisible()
+  expect(within(recommendedRow).getByText('Coding')).toBeVisible()
+  expect(within(recommendedRow).getByText('Daily chat')).toBeVisible()
+  expect(within(recommendedRow).queryByText('Scenario')).not.toBeInTheDocument()
+  expect(within(recommendedRow).getByText('Coding')).toHaveClass(
+    'px-2',
+    'py-0.5',
+    'text-xs'
+  )
   expect(
     within(recommendedRow).getByText('Recommended').parentElement
   ).not.toHaveClass('absolute', 'border')
@@ -185,6 +214,8 @@ test('catalog joins enabled recommendations by exact name without duplicates or 
     </QueryClientProvider>
   )
   expect(screen.getAllByText('Recommended')).toHaveLength(1)
+  expect(screen.getByText('Coding')).toBeVisible()
+  expect(screen.getByText('Daily chat')).toBeVisible()
   expect(
     screen.getAllByRole('heading').map((item) => item.textContent)
   ).toEqual(['recommended-model', 'ordinary-model'])

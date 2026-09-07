@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useStatus } from '@/hooks/use-status'
 
 import { getPricing } from '../api'
+import type { ModelRecommendationScenario } from '../types'
 
 export function usePricingData(enabled = true) {
   const { status } = useStatus()
@@ -29,11 +30,23 @@ export function usePricingData(enabled = true) {
     if (!data?.data || !data?.vendors) return []
 
     const vendorMap = new Map(data.vendors.map((v) => [v.id, v]))
-    const recommendedNames = new Set(
-      (data.recommendations ?? [])
-        .filter((item) => item.enabled)
-        .map((item) => item.model_name)
-    )
+    const recommendationScenarios = new Map<
+      string,
+      ModelRecommendationScenario[]
+    >()
+    for (const recommendation of data.recommendations ?? []) {
+      if (!recommendation.enabled) continue
+      const scenarios = recommendationScenarios.get(recommendation.model_name)
+      if (scenarios) {
+        if (!scenarios.includes(recommendation.scenario)) {
+          scenarios.push(recommendation.scenario)
+        }
+      } else {
+        recommendationScenarios.set(recommendation.model_name, [
+          recommendation.scenario,
+        ])
+      }
+    }
     const groupVendorRatio = data.group_vendor_ratio || {}
     // 命中用户特殊倍率的分组优先于供应商倍率，保持后端 group_ratio 中的覆盖值
     const specialGroups = new Set(data.group_special_ratios || [])
@@ -58,10 +71,12 @@ export function usePricingData(enabled = true) {
       const vendor = model.vendor_id
         ? vendorMap.get(model.vendor_id)
         : undefined
+      const scenarios = recommendationScenarios.get(model.model_name) ?? []
       return {
         ...model,
         key: model.model_name,
-        is_recommended: recommendedNames.has(model.model_name),
+        is_recommended: scenarios.length > 0,
+        recommendation_scenarios: scenarios,
         vendor_name: vendor?.name,
         vendor_icon: vendor?.icon,
         vendor_description: vendor?.description,

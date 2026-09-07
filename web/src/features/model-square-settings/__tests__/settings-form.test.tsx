@@ -45,6 +45,53 @@ function renderSettings(
 }
 
 describe('model square settings interactions', () => {
+  test('uses the full content width with an equal two-column grid', async () => {
+    renderSettings(async (config) => ({
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+      data: {
+        success: true,
+        data: {
+          enabled: true,
+          recommendations: [
+            {
+              model_name: 'coding-model',
+              scenario: 'coding',
+              enabled: true,
+            },
+            {
+              model_name: 'chat-model',
+              scenario: 'chat',
+              enabled: true,
+            },
+          ],
+        },
+        models: ['coding-model', 'chat-model'],
+      },
+    }))
+
+    const firstCard = await screen.findByRole('group', {
+      name: 'Recommendation 1',
+    })
+    const secondCard = screen.getByRole('group', {
+      name: 'Recommendation 2',
+    })
+    const form = screen.getByRole('form', { name: 'Model Square Settings' })
+
+    expect(form).toHaveClass('w-full')
+    expect(form).not.toHaveClass('max-w-5xl')
+    expect(firstCard.parentElement).toBe(secondCard.parentElement)
+    expect(firstCard.parentElement).toHaveClass(
+      'grid',
+      'w-full',
+      'grid-cols-1',
+      'md:grid-cols-2'
+    )
+    expect(firstCard.parentElement).not.toHaveClass('flex', 'flex-col')
+  })
+
   test.each([
     ['updates a clean cached form when fresh configuration arrives', false],
     ['preserves dirty edits when fresh configuration replaces the cache', true],

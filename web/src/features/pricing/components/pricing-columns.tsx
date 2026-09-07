@@ -46,6 +46,7 @@ import {
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
 import { ModelRecommendationBadge } from './model-recommendation-badge'
+import { ModelRecommendationScenarios } from './model-recommendation-scenarios'
 
 // ----------------------------------------------------------------------------
 // Pricing Table Columns
@@ -89,12 +90,22 @@ export function usePricingColumns(
         const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 14) : null
 
         return (
-          <div className='flex max-w-full min-w-0 items-center gap-2'>
+          <div className='flex max-w-full min-w-0 items-start gap-2'>
             {modelIcon}
-            <span className='truncate font-mono text-sm font-medium'>
-              {model.model_name}
-            </span>
-            {model.is_recommended && <ModelRecommendationBadge />}
+            <div className='min-w-0'>
+              <div className='flex min-w-0 items-center gap-2'>
+                <span className='truncate font-mono text-sm font-medium'>
+                  {model.model_name}
+                </span>
+                {model.is_recommended && <ModelRecommendationBadge />}
+              </div>
+              {model.is_recommended && (
+                <ModelRecommendationScenarios
+                  scenarios={model.recommendation_scenarios}
+                  compact
+                />
+              )}
+            </div>
           </div>
         )
       },

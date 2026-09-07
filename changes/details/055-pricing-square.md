@@ -77,7 +77,7 @@
 
 ## 独立模型推荐配置
 
-超级管理员通过「系统设置 → 模型与路由 → 模型广场配置」（`/system-settings/model-square`）维护推荐，不依赖原有模型元信息页面。旧地址 `/model-square-settings` 自动跳转至新地址，页面沿用系统设置侧边栏和超级管理员权限。后台保留场景及启停配置；广场在模型卡片右上边缘显示「推荐」标记，表格在模型名称旁显示相同标记，不再展示独立推荐区域，不改变原列表排序、搜索、筛选和分页。同一模型在多个场景被推荐时仍只显示一个标记，且不受原先每场景六个模型的限制。
+超级管理员通过「系统设置 → 模型与路由 → 模型广场配置」（`/system-settings/model-square`）维护推荐，不依赖原有模型元信息页面。旧地址 `/model-square-settings` 自动跳转至新地址，页面沿用系统设置侧边栏和超级管理员权限。后台保留场景及启停配置；广场在模型卡片右上边缘显示「推荐」标记，并在卡片正文下方展示适用场景，表格在模型名称旁显示标记、名称下方显示紧凑场景标签，不再展示独立推荐区域，不改变原列表排序、搜索、筛选和分页。同一模型配置多个场景时合并展示且仍只显示一个推荐标记。
 
 配置默认关闭、推荐列表为空。配置以独立 `ModelSquareConfig` JSON 项存储于既有 `options` 表，无新增模型字段或表迁移。保存节点立即更新内存，其他节点通过既有配置同步周期刷新（默认 60 秒）；浏览器沿用定价查询缓存，保存后主动使该缓存失效。已下架模型保留在后台配置中以供修改或删除，公开推荐仅包含当前用户可见的启用模型。推荐标记采用暖金色实心星标、淡琥珀色胶囊底和清晰文字，固定在卡片右上边缘且不占用内容布局；星标与边缘微光以同一 3 秒周期同步呼吸，并遵循系统减少动态效果设置。表格复用紧凑的静态样式，兼容浅色/深色主题及七语言文案。
 
@@ -96,6 +96,7 @@
 - `web/src/routes/_authenticated/model-square-settings/index.tsx` — 旧地址兼容跳转。
 - `web/src/components/layout/config/system-settings.config.ts` — 在「模型与路由」分组中加入配置入口。
 - `web/src/features/pricing/components/model-recommendation-badge.tsx` — 统一科技风格的推荐标记。
+- `web/src/features/pricing/components/model-recommendation-scenarios.tsx` — 在卡片和表格中按当前语言展示推荐模型的适用场景。
 - `web/src/features/pricing/components/model-card.tsx`、`web/src/features/pricing/components/pricing-columns.tsx` — 卡片和表格模型名称旁显示标记。
 - `web/src/features/pricing/components/__tests__/recommendation-badge.test.tsx` — 标记启停、多场景去重、精确模型匹配、价格及详情交互、长名称布局和语言切换回归测试。
 - `web/src/features/pricing/index.tsx`、`web/src/features/pricing/types.ts`、`web/src/features/pricing/hooks/use-pricing-data.ts` — 接入推荐数据，复用分组价格、搜索和筛选条件。

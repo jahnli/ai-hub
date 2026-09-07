@@ -30,6 +30,8 @@ export type PricingModel = {
   model_name: string
   /** Derived from enabled recommendations in the viewer's pricing response. */
   is_recommended?: boolean
+  /** Enabled recommendation scenarios associated with this model. */
+  recommendation_scenarios?: ModelRecommendationScenario[]
   description?: string
   icon?: string
   vendor_id?: number
@@ -110,10 +112,17 @@ export type PricingData = {
 
 export type ModelRecommendation = {
   model_name: string
-  scenario: 'general' | 'coding' | 'chat' | 'writing' | 'image'
+  scenario: ModelRecommendationScenario
   reason: string
   enabled: boolean
 }
+
+export type ModelRecommendationScenario =
+  | 'general'
+  | 'coding'
+  | 'chat'
+  | 'writing'
+  | 'image'
 
 export type TokenUnit = 'M' | 'K'
 export type PriceType =
