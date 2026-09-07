@@ -134,7 +134,6 @@ export function ModelSquareSettingsForm(props: ModelSquareConfigData) {
                 model_name: '',
                 scenario: 'general',
                 enabled: true,
-                priority: 0,
               })
             }
           >

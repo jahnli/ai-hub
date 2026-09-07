@@ -16,13 +16,6 @@ export function createModelSquareConfigSchema(t: TFunction) {
               .max(128, t('Model name must not exceed 128 characters')),
             scenario: z.enum(MODEL_SQUARE_SCENARIOS),
             enabled: z.boolean(),
-            priority: z
-              .number({
-                error: t('Priority must be an integer from 0 to 9999'),
-              })
-              .int(t('Priority must be an integer from 0 to 9999'))
-              .min(0, t('Priority must be an integer from 0 to 9999'))
-              .max(9999, t('Priority must be an integer from 0 to 9999')),
           })
         )
         .max(100, t('You can configure up to 100 recommendations')),

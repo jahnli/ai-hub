@@ -75,7 +75,7 @@ func TestModelSquareOptionPersistence(t *testing.T) {
 				common.OptionMapRWMutex.Unlock()
 			})
 			config := setting.ModelSquareConfig{Enabled: true, Recommendations: []setting.ModelSquareRecommendation{
-				{ModelName: " live ", Scenario: "coding", Reason: " 编程推荐 ", Enabled: true, Priority: 9},
+				{ModelName: " live ", Scenario: "coding", Reason: " 编程推荐 ", Enabled: true},
 			}}
 			saved, err := SaveModelSquareConfig(config)
 			require.NoError(t, err)

@@ -13,7 +13,6 @@ export type ModelSquareRecommendation = {
   scenario: ModelSquareScenario
   reason?: string
   enabled: boolean
-  priority: number
 }
 
 export type ModelSquareConfig = {

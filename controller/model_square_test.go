@@ -98,8 +98,8 @@ func TestModelSquareConfigAPIRoundTrip(t *testing.T) {
 	require.NoError(t, db.AutoMigrate(&model.Option{}))
 	require.NoError(t, db.Create(&model.Ability{Group: "default", Model: "live", ChannelId: 9101, Enabled: true}).Error)
 	model.InvalidatePricingCache()
-	setModelSquareTestOption(t, `{"enabled":true,"recommendations":[{"model_name":"retired","scenario":"coding","reason":"old","enabled":true,"priority":0}]}`)
-	body := `{"enabled":true,"recommendations":[{"model_name":"retired","scenario":"coding","reason":"edited","enabled":false,"priority":1},{"model_name":" live ","scenario":"chat","reason":" 推荐 ","enabled":true,"priority":2}]}`
+	setModelSquareTestOption(t, `{"enabled":true,"recommendations":[{"model_name":"retired","scenario":"coding","reason":"old","enabled":true}]}`)
+	body := `{"enabled":true,"recommendations":[{"model_name":"retired","scenario":"coding","reason":"edited","enabled":false},{"model_name":" live ","scenario":"chat","reason":" 推荐 ","enabled":true}]}`
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(http.MethodPut, "/api/model-square/config", strings.NewReader(body))
@@ -140,7 +140,7 @@ func TestModelSquarePricingRecommendationsStayEncryptedAndRespectGroups(t *testi
 		{Group: "restricted-model-square-test", Model: "secret", ChannelId: 9103, Enabled: true},
 	}).Error)
 	model.InvalidatePricingCache()
-	setModelSquareTestOption(t, `{"enabled":true,"recommendations":[{"model_name":"visible","scenario":"coding","reason":"visible reason","enabled":true,"priority":1},{"model_name":"secret","scenario":"chat","reason":"secret reason","enabled":true,"priority":0}]}`)
+	setModelSquareTestOption(t, `{"enabled":true,"recommendations":[{"model_name":"visible","scenario":"coding","reason":"visible reason","enabled":true},{"model_name":"secret","scenario":"chat","reason":"secret reason","enabled":true}]}`)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(http.MethodGet, "/api/pricing", nil)

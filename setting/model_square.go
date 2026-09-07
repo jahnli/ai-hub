@@ -2,7 +2,6 @@ package setting
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -17,7 +16,6 @@ type ModelSquareRecommendation struct {
 	Scenario  string `json:"scenario"`
 	Reason    string `json:"reason"`
 	Enabled   bool   `json:"enabled"`
-	Priority  int    `json:"priority"`
 }
 
 type ModelSquareConfig struct {
@@ -33,7 +31,6 @@ func ParseModelSquareConfig(raw string) (ModelSquareConfig, error) {
 			Scenario  *string `json:"scenario"`
 			Reason    string  `json:"reason"`
 			Enabled   *bool   `json:"enabled"`
-			Priority  *int    `json:"priority"`
 		} `json:"recommendations"`
 	}
 	config := ModelSquareConfig{Recommendations: []ModelSquareRecommendation{}}
@@ -48,12 +45,12 @@ func ParseModelSquareConfig(raw string) (ModelSquareConfig, error) {
 	}
 	config.Enabled = *wire.Enabled
 	for i, item := range *wire.Recommendations {
-		if item.ModelName == nil || item.Scenario == nil || item.Enabled == nil || item.Priority == nil {
-			return config, fmt.Errorf("recommendation %d: model_name, scenario, enabled and priority are required and cannot be null", i+1)
+		if item.ModelName == nil || item.Scenario == nil || item.Enabled == nil {
+			return config, fmt.Errorf("recommendation %d: model_name, scenario and enabled are required and cannot be null", i+1)
 		}
 		config.Recommendations = append(config.Recommendations, ModelSquareRecommendation{
 			ModelName: *item.ModelName, Scenario: *item.Scenario, Reason: item.Reason,
-			Enabled: *item.Enabled, Priority: *item.Priority,
+			Enabled: *item.Enabled,
 		})
 	}
 	return NormalizeModelSquareConfig(config)
@@ -78,9 +75,6 @@ func NormalizeModelSquareConfig(config ModelSquareConfig) (ModelSquareConfig, er
 		case "general", "coding", "chat", "writing", "image":
 		default:
 			return config, fmt.Errorf("recommendation %d: invalid scenario", i+1)
-		}
-		if item.Priority < 0 || item.Priority > 9999 {
-			return config, fmt.Errorf("recommendation %d: priority must be between 0 and 9999", i+1)
 		}
 		key := [2]string{item.Scenario, item.ModelName}
 		if seen[key] {
@@ -115,14 +109,5 @@ func (config ModelSquareConfig) VisibleRecommendations(modelNames map[string]boo
 			items = append(items, item)
 		}
 	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if items[i].Priority != items[j].Priority {
-			return items[i].Priority < items[j].Priority
-		}
-		if items[i].ModelName != items[j].ModelName {
-			return items[i].ModelName < items[j].ModelName
-		}
-		return items[i].Scenario < items[j].Scenario
-	})
 	return items
 }

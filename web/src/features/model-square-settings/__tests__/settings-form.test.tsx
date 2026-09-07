@@ -56,7 +56,6 @@ describe('model square settings interactions', () => {
           model_name: 'cached-model',
           scenario: 'chat',
           enabled: true,
-          priority: 0,
         },
       ],
     }
@@ -67,7 +66,6 @@ describe('model square settings interactions', () => {
           model_name: 'fresh-model',
           scenario: 'coding',
           enabled: true,
-          priority: 12,
         },
       ],
     }
@@ -97,16 +95,13 @@ describe('model square settings interactions', () => {
       client
     )
 
-    expect(
-      await screen.findByRole('spinbutton', { name: 'Priority' })
-    ).toHaveValue(0)
+    expect(await screen.findByRole('combobox', { name: 'Model' })).toHaveValue(
+      'cached-model'
+    )
     if (editBeforeRefresh) {
-      await user.clear(
-        screen.getByRole('spinbutton', { name: 'Priority' })
-      )
-      await user.type(
-        screen.getByRole('spinbutton', { name: 'Priority' }),
-        '24'
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Scenario' }),
+        'writing'
       )
     }
     await act(async () => {
@@ -121,9 +116,9 @@ describe('model square settings interactions', () => {
     )
 
     await waitFor(() =>
-      expect(
-        screen.getByRole('spinbutton', { name: 'Priority' })
-      ).toHaveValue(editBeforeRefresh ? 24 : 12)
+      expect(screen.getByRole('combobox', { name: 'Scenario' })).toHaveValue(
+        editBeforeRefresh ? 'writing' : 'coding'
+      )
     )
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue(
       editBeforeRefresh ? 'cached-model' : 'fresh-model'
@@ -177,8 +172,6 @@ describe('model square settings interactions', () => {
     expect(
       screen.queryByRole('textbox', { name: 'Recommendation reason' })
     ).not.toBeInTheDocument()
-    await user.clear(screen.getByRole('spinbutton', { name: 'Priority' }))
-    await user.type(screen.getByRole('spinbutton', { name: 'Priority' }), '12')
     await user.click(screen.getByRole('switch', { name: 'Enabled' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() =>
@@ -189,7 +182,6 @@ describe('model square settings interactions', () => {
             model_name: 'gpt-code',
             scenario: 'coding',
             enabled: false,
-            priority: 12,
           },
         ],
       })
@@ -212,7 +204,6 @@ describe('model square settings interactions', () => {
           scenario: 'chat',
           reason: 'Legacy chat',
           enabled: true,
-          priority: 0,
         },
       ],
     }
@@ -239,12 +230,14 @@ describe('model square settings interactions', () => {
     expect(
       screen.getByRole('button', { name: 'Add recommendation' })
     ).toBeDisabled()
-    await user.clear(screen.getByRole('spinbutton', { name: 'Priority' }))
-    await user.type(screen.getByRole('spinbutton', { name: 'Priority' }), '12')
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Scenario' }),
+      'writing'
+    )
     await user.click(screen.getByRole('button', { name: 'Reset changes' }))
-    expect(
-      screen.getByRole('spinbutton', { name: 'Priority' })
-    ).toHaveValue(0)
+    expect(screen.getByRole('combobox', { name: 'Scenario' })).toHaveValue(
+      'chat'
+    )
     await user.click(
       screen.getByRole('switch', { name: 'Enable model recommendations' })
     )
@@ -255,7 +248,6 @@ describe('model square settings interactions', () => {
           model_name: 'retired-model',
           scenario: 'chat',
           enabled: true,
-          priority: 0,
         },
       ])
     )
@@ -313,7 +305,6 @@ describe('model square settings interactions', () => {
       model_name: 'actual-model',
       scenario: 'general',
       enabled: true,
-      priority: 0,
     })
   })
 
@@ -352,9 +343,7 @@ describe('model square settings interactions', () => {
     expect(
       await screen.findByRole('button', { name: 'Saving...' })
     ).toBeDisabled()
-    expect(
-      screen.getByRole('spinbutton', { name: 'Priority' })
-    ).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Scenario' })).toBeDisabled()
     expect(
       screen.getByRole('switch', { name: 'Enable model recommendations' })
     ).toHaveAttribute('aria-disabled', 'true')

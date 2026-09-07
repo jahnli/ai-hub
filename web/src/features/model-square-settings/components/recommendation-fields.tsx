@@ -20,7 +20,6 @@ import {
   FieldLegend,
   FieldSet,
 } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Switch } from '@/components/ui/switch'
 
@@ -133,25 +132,6 @@ export function RecommendationFields(props: RecommendationFieldsProps) {
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </Field>
-        <Field data-invalid={Boolean(errors?.priority)}>
-          <FieldLabel htmlFor={`${prefix}.priority`}>
-            {t('Priority')}
-          </FieldLabel>
-          <Input
-            id={`${prefix}.priority`}
-            type='number'
-            min={0}
-            max={9999}
-            step={1}
-            {...form.register(`${prefix}.priority`, { valueAsNumber: true })}
-            aria-invalid={Boolean(errors?.priority)}
-            aria-describedby={`${prefix}.priority-error`}
-          />
-          <FieldError
-            id={`${prefix}.priority-error`}
-            errors={[errors?.priority]}
-          />
         </Field>
         <Field orientation='horizontal' className='self-end'>
           <Controller

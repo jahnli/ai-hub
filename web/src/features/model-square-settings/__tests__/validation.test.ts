@@ -11,35 +11,28 @@ const entry: ModelSquareRecommendation = {
   model_name: 'actual-model',
   scenario: 'coding',
   enabled: true,
-  priority: 0,
 }
 
 describe('recommendation configuration validation', () => {
-  test('preserves exact model names and priority without requiring a reason', () => {
+  test('preserves exact model names without requiring a reason', () => {
     const config = schema.parse({
       enabled: false,
       recommendations: [
         {
           ...entry,
           model_name: ' actual-model ',
-          priority: 9999,
         },
       ],
     })
     expect(config.recommendations[0]).toEqual({
       ...entry,
       model_name: ' actual-model ',
-      priority: 9999,
     })
   })
 
   test.each([
     ['empty model', { model_name: '' }],
     ['long model', { model_name: 'm'.repeat(129) }],
-    ['negative priority', { priority: -1 }],
-    ['large priority', { priority: 10000 }],
-    ['fractional priority', { priority: 0.5 }],
-    ['missing priority', { priority: Number.NaN }],
     ['unknown scenario', { scenario: 'other' }],
   ])('rejects %s before saving', (_name, override) => {
     expect(

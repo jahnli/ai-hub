@@ -113,7 +113,6 @@ export type ModelRecommendation = {
   scenario: 'general' | 'coding' | 'chat' | 'writing' | 'image'
   reason: string
   enabled: boolean
-  priority: number
 }
 
 export type TokenUnit = 'M' | 'K'
