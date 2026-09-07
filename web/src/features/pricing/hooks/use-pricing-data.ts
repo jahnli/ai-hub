@@ -29,6 +29,11 @@ export function usePricingData(enabled = true) {
     if (!data?.data || !data?.vendors) return []
 
     const vendorMap = new Map(data.vendors.map((v) => [v.id, v]))
+    const recommendedNames = new Set(
+      (data.recommendations ?? [])
+        .filter((item) => item.enabled)
+        .map((item) => item.model_name)
+    )
     const groupVendorRatio = data.group_vendor_ratio || {}
     // 命中用户特殊倍率的分组优先于供应商倍率，保持后端 group_ratio 中的覆盖值
     const specialGroups = new Set(data.group_special_ratios || [])
@@ -56,6 +61,7 @@ export function usePricingData(enabled = true) {
       return {
         ...model,
         key: model.model_name,
+        is_recommended: recommendedNames.has(model.model_name),
         vendor_name: vendor?.name,
         vendor_icon: vendor?.icon,
         vendor_description: vendor?.description,

@@ -1,0 +1,48 @@
+@property --model-recommendation-pulse {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@keyframes model-recommendation-pulse {
+  0%,
+  100% {
+    --model-recommendation-pulse: 0;
+  }
+  50% {
+    --model-recommendation-pulse: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* One inherited progress value keeps the star and halo in phase. */
+  .model-recommendation-glow {
+    animation: model-recommendation-pulse 3s ease-in-out infinite;
+  }
+
+  .model-recommendation-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      0 0 0 2px rgb(245 158 11 / 15%),
+      0 0 12px 3px rgb(245 158 11 / 40%);
+    opacity: calc(0.15 + var(--model-recommendation-pulse) * 0.85);
+    transform: scale(calc(1 + var(--model-recommendation-pulse) * 0.04));
+  }
+
+  .model-recommendation-breathe {
+    overflow: visible;
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(calc(1 + var(--model-recommendation-pulse) * 0.15));
+    opacity: calc(0.8 + var(--model-recommendation-pulse) * 0.2);
+    filter: drop-shadow(
+      0 0 calc(1px + var(--model-recommendation-pulse) * 4px)
+        rgb(245 158 11 / calc(0.1 + var(--model-recommendation-pulse) * 0.6))
+    );
+  }
+}

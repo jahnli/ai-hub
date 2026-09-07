@@ -28,6 +28,8 @@ export type BillingUsageExample = {
 export type PricingModel = {
   id: number
   model_name: string
+  /** Derived from enabled recommendations in the viewer's pricing response. */
+  is_recommended?: boolean
   description?: string
   icon?: string
   vendor_id?: number
@@ -94,6 +96,7 @@ export type PricingData = {
   success: boolean
   message?: string
   data: PricingModel[]
+  recommendations?: ModelRecommendation[]
   vendors: PricingVendor[]
   group_ratio: Record<string, number>
   /** group -> { vendorId(string) -> ratio }; replaces the group base ratio for that vendor's models */
@@ -103,6 +106,13 @@ export type PricingData = {
   usable_group: Record<string, { desc: string; ratio: number }>
   supported_endpoint: Record<string, string>
   auto_groups: string[]
+}
+
+export type ModelRecommendation = {
+  model_name: string
+  scenario: 'general' | 'coding' | 'chat' | 'writing' | 'image'
+  reason: string
+  enabled: boolean
 }
 
 export type TokenUnit = 'M' | 'K'

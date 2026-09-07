@@ -145,6 +145,10 @@ func UpdateOption(c *gin.Context) {
 		common.ApiErrorMsg(c, "合规确认字段不允许通过通用设置接口修改")
 		return
 	}
+	if option.Key == setting.ModelSquareConfigKey {
+		common.ApiErrorMsg(c, "模型广场配置请通过独立设置接口修改")
+		return
+	}
 	if option.Key == "TaskPublicAddress" && option.Value.(string) != "" {
 		if err := service.ValidateTaskArtifactBaseURL(option.Value.(string)); err != nil {
 			common.ApiErrorMsg(c, err.Error())

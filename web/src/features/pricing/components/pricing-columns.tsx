@@ -45,6 +45,7 @@ import {
 } from '../lib/price'
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
+import { ModelRecommendationBadge } from './model-recommendation-badge'
 
 // ----------------------------------------------------------------------------
 // Pricing Table Columns
@@ -93,6 +94,7 @@ export function usePricingColumns(
             <span className='truncate font-mono text-sm font-medium'>
               {model.model_name}
             </span>
+            {model.is_recommended && <ModelRecommendationBadge />}
           </div>
         )
       },
