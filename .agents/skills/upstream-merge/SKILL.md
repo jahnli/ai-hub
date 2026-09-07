@@ -325,6 +325,35 @@ git diff HEAD upstream/main -- <file-path>
 
 复盘必须基于 merge commit 的两个父提交、共同基线、最终代码和 `changes/CHANGELOG.md`，不得只复述上游 commit message。报告默认只读，不得为上游同步或冲突解决新增二开 CHANGELOG 条目。
 
+## 合并分支清理（第 10 步，不可跳过）
+
+合并完成并将目标分支 `v1` 成功推送到 `origin/v1` 后，必须删除本次使用的旧合并分支，避免长期残留 `merge/upstream-*` 分支。
+
+删除前必须同时确认：
+
+1. 当前 `v1` 与 `origin/v1` 指向同一提交；
+2. 本地合并分支的 tip 已包含在 `v1`；
+3. 若存在同名远端分支，其 tip 已包含在 `origin/v1`；
+4. 当前不在待删除的合并分支上。
+
+```bash
+# 确认 v1 已推送完成
+test "$(git rev-parse v1)" = "$(git rev-parse origin/v1)"
+
+# 确认本地与远端合并分支均已进入目标分支
+git merge-base --is-ancestor merge/upstream-YYYY-MM-DD v1
+git merge-base --is-ancestor origin/merge/upstream-YYYY-MM-DD origin/v1
+
+# 先删除远端分支（若存在），再安全删除本地分支
+git push origin --delete merge/upstream-YYYY-MM-DD
+git branch -d merge/upstream-YYYY-MM-DD
+```
+
+- 只能使用 `git branch -d` 安全删除；如果 Git 判断分支尚未合并，禁止改用 `-D` 强制删除，必须先查明遗漏提交。
+- 若同名远端分支不存在，可跳过远端删除，但仍须删除本地合并分支。
+- 删除后使用 `git branch --list` 和 `git branch -r --list` 确认本地、远端引用均已消失，并在最终交付中记录清理结果。
+- 尚未完成合并提交、复盘验证或 `v1` 推送时，不得提前删除合并分支。
+
 ## 异常处理
 
 - **合并冲突过多（>50 个文件）**：建议分批合并，按目录逐步进行。
