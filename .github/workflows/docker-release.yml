@@ -40,5 +40,7 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/ai-gateway:latest
             ${{ secrets.DOCKER_USERNAME }}/ai-gateway:${{ env.VERSION }}
+          build-args: |
+            MODEL_SQUARE_AES_KEY=${{ secrets.MODEL_SQUARE_AES_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

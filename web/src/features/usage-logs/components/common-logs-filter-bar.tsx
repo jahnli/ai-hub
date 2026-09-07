@@ -25,6 +25,7 @@ import {
 import { getChannels } from '@/features/channels/api'
 import { CHANNEL_STATUS } from '@/features/channels/constants'
 import { channelsQueryKeys } from '@/features/channels/lib/channel-actions'
+import { getUserModels } from '@/lib/api'
 import { ROLE, getRoleLabelKey } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -170,6 +171,22 @@ export function CommonLogsFilterBar<TData>(
       },
     }
   )
+  const { data: userModels, isLoading: userModelsLoading } = useQuery({
+    queryKey: ['user-models'],
+    queryFn: getUserModels,
+    enabled: !isAdmin,
+    staleTime: 60_000,
+  })
+  const modelsLoading = isAdmin ? channelsLoading : userModelsLoading
+  const modelOptions = useMemo(() => {
+    const models = isAdmin
+      ? availableChannels.flatMap((channel) => channel.models.split(','))
+      : (userModels?.data ?? [])
+
+    return [...new Set(models.map((model) => model.trim()).filter(Boolean))]
+      .sort((first, second) => first.localeCompare(second))
+      .map((model) => ({ value: model, label: model }))
+  }, [availableChannels, isAdmin, userModels])
 
   const searchState = useMemo<CommonLogDraft>(() => {
     const { start, end } = getDefaultTimeRange()
@@ -430,11 +447,16 @@ export function CommonLogsFilterBar<TData>(
   )
   const modelFilter = (
     <LogsFilterField>
-      <LogsFilterInput
-        placeholder={t('Model Name')}
+      <Combobox
+        options={modelOptions}
+        placeholder={modelsLoading ? t('Loading...') : t('Model Name')}
+        searchPlaceholder={modelsLoading ? t('Loading...') : t('Model Name')}
         value={filters.model || ''}
-        onChange={(e) => handleChange('model', e.target.value)}
-        onKeyDown={handleKeyDown}
+        onValueChange={(value) => handleChange('model', value || undefined)}
+        emptyText='No data'
+        allowCustomValue
+        showCustomValueHint={false}
+        openOnFocus
       />
     </LogsFilterField>
   )
