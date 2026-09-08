@@ -197,8 +197,8 @@ func TestOpenAIChatTokenLimitCompatibility(t *testing.T) {
 			{name: "legacy only", input: `{"max_tokens":100}`, want: `{"max_completion_tokens":100}`},
 			{name: "completion only", input: `{"max_completion_tokens":50}`, want: `{"max_completion_tokens":50}`},
 			{name: "both positive stay present", input: `{"max_tokens":100,"max_completion_tokens":50}`, want: `{"max_tokens":100,"max_completion_tokens":50}`},
-			{name: "zero completion falls back", input: `{"max_tokens":100,"max_completion_tokens":0}`, want: `{"max_completion_tokens":100}`},
-			{name: "legacy zero stays present", input: `{"max_tokens":0}`, want: `{"max_tokens":0}`},
+			{name: "zero completion stays explicit", input: `{"max_tokens":100,"max_completion_tokens":0}`, want: `{"max_tokens":100,"max_completion_tokens":0}`},
+			{name: "legacy zero converts without being dropped", input: `{"max_tokens":0}`, want: `{"max_completion_tokens":0}`},
 			{name: "completion zero stays present", input: `{"max_completion_tokens":0}`, want: `{"max_completion_tokens":0}`},
 			{name: "both zero stay present", input: `{"max_tokens":0,"max_completion_tokens":0}`, want: `{"max_tokens":0,"max_completion_tokens":0}`},
 		} {

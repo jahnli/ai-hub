@@ -33,7 +33,6 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/model_setting"
 	"github.com/QuantumNous/new-api/setting/reasoning"
-	"github.com/samber/lo"
 
 	"github.com/gin-gonic/gin"
 )
@@ -406,7 +405,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 
 	capabilities := dto.GetOpenAIChatCapabilities(info.UpstreamModelName, info.ReasoningEffort)
 	if capabilities.UseMaxCompletionTokens {
-		if lo.FromPtrOr(request.MaxCompletionTokens, uint(0)) == 0 && lo.FromPtrOr(request.MaxTokens, uint(0)) != 0 {
+		if request.MaxCompletionTokens == nil && request.MaxTokens != nil {
 			request.MaxCompletionTokens = request.MaxTokens
 			request.MaxTokens = nil
 		}
